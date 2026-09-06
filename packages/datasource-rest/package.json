@@ -23,8 +23,8 @@
 		"directory": "packages/datasource-rest"
 	},
 	"publishConfig": {
-		"registry": "https://npm.pkg.github.com",
-		"access": "restricted"
+		"registry": "https://registry.npmjs.org",
+		"access": "public"
 	},
 	"scripts": {
 		"build": "bun run ../../build.ts",

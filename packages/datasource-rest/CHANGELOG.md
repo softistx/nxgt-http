@@ -1,5 +1,26 @@
 # @nxgt/datasource-rest
 
+## 1.0.2
+
+### Patch Changes
+
+- [#17](https://github.com/softistx/nxgt-core/pull/17) [`f1829a2`](https://github.com/softistx/nxgt-core/commit/f1829a2f2284e216a7f786e5d3698c4743797a1a) Thanks [@SteveGT96](https://github.com/SteveGT96)! - Write a real README for every package.
+  
+  The README is in `files`, so it is the package's page on npmjs — the first
+  thing anyone outside these repositories reads. Ten of the twelve shipped the
+  `bun init` boilerplate ("To run: `bun run src/index.ts`", which is not how a
+  library is used), and five of those carried the **wrong package name** in the
+  heading: `@nxgt/shared-logging` announced itself as `@nxgt/shared`,
+  `@nxgt/shared-graphql` as `@nxgt/shared-exceptions`.
+  
+  Each now says what the package is, tables its subpaths, and names what will
+  bite a consumer — `SHARED_SCHEMA_PATH` rather than a path into `src/`, `code`
+  against `errorCode`, why mongoose must be imported from `@nxgt/shared-mongo`,
+  which principal shape a context carries.
+- Updated dependencies [[`f1829a2`](https://github.com/softistx/nxgt-core/commit/f1829a2f2284e216a7f786e5d3698c4743797a1a)]:
+  - @nxgt/shared@1.0.2
+  - @nxgt/shared-exceptions@1.0.2
+
 ## 1.0.1
 
 ### Patch Changes

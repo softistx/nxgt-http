@@ -1,3 +1,5 @@
+export type { GeneratedFile } from './emit';
+export type { UnknownKeys } from './emit/context';
 export {
 	CodegenError,
 	type Diagnostic,
@@ -5,6 +7,13 @@ export {
 	formatDiagnostic,
 	type Severity,
 } from './errors';
+export {
+	type GenerateContext,
+	type GenerateOptions,
+	type GenerateResult,
+	generate,
+	generateFiles,
+} from './generate';
 export { buildIR, type IROptions } from './ir';
 export {
 	type Additional,

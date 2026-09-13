@@ -2,6 +2,8 @@
 	"extends": "../../tsconfig.base.json",
 	"compilerOptions": {
 		"rootDirs": ["src"],
-		"outDir": "dist"
+		"outDir": "dist",
+		// The generated goldens under test/ must type without falling back to any.
+		"noImplicitAny": true
 	}
 }

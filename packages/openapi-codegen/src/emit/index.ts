@@ -1,6 +1,9 @@
+import type { Diagnostic } from '../errors';
 import type { ApiIR } from '../ir/types';
 import { EmitContext, type EmitOptions } from './context';
-import { emitTypes } from './types';
+import { emitOperations, operationTypes } from './operations';
+import { file } from './printer';
+import { schemaTypes } from './types';
 import { emitZod } from './zod';
 
 export interface GeneratedFile {
@@ -8,11 +11,27 @@ export interface GeneratedFile {
 	content: string;
 }
 
-/** Every generated file, named relative to the output directory. */
-export function emitFiles(ir: ApiIR, options: EmitOptions): GeneratedFile[] {
+/** Every generated file, named relative to the output directory, and what it does not enforce. */
+export function emitFiles(
+	ir: ApiIR,
+	options: EmitOptions,
+): { files: GeneratedFile[]; warnings: Diagnostic[] } {
 	const ctx = new EmitContext(ir, options);
-	return [
-		{ path: 'types.gen.ts', content: emitTypes(ctx) },
+	const operations = emitOperations(ctx);
+	const files = [
+		{
+			path: 'types.gen.ts',
+			content: file([ctx.header, ...schemaTypes(ctx), ...operationTypes(ctx)]),
+		},
 		{ path: 'zod.gen.ts', content: emitZod(ctx) },
+		{
+			path: 'operations.gen.ts',
+			content: file([
+				ctx.header,
+				operations.imports.join('\n'),
+				...operations.sections,
+			]),
+		},
 	];
+	return { files, warnings: ctx.warnings };
 }

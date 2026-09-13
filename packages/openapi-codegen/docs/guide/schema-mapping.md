@@ -1,0 +1,142 @@
+# How schemas map
+
+Each JSON Schema construct is generated faithfully, refused with an error, or
+accepted with a warning that says what is not enforced. Nothing is
+approximated silently.
+
+## Scalars
+
+| JSON Schema | TypeScript | Zod |
+| --- | --- | --- |
+| `type: string` | `string` | `z.string()` |
+| `minLength`, `maxLength`, `pattern` | | `.min()`, `.max()`, `.regex()` |
+| `format: date-time` | `string` | `z.iso.datetime({ offset: true })` |
+| `format: date`, `time`, `duration` | `string` | `z.iso.date()`, `z.iso.time()`, `z.iso.duration()` |
+| `format: email`, `uri` | `string` | `z.email()`, `z.url()` |
+| `format: uuid` | `string` | `z.guid()` |
+| `format: ipv4`, `ipv6` | `string` | `z.ipv4()`, `z.ipv6()` |
+| `format: byte`, `contentEncoding: base64` | `string` | `z.base64()` |
+| `format: binary`, a non-text `contentMediaType` | `globalThis.File` | `z.file()` |
+| any other string `format` | `string` | `z.string()`, with an `unknown_format` warning |
+| `type: integer` | `number` | `z.int()`; `format: int32` gives `z.int32()`, any other format is ignored |
+| `type: number` | `number` | `z.number()` |
+| `minimum`, `maximum` | | `.min()`, `.max()` |
+| `exclusiveMinimum`, `exclusiveMaximum` | | `.gt()`, `.lt()` |
+| `multipleOf` | | `.multipleOf()` |
+| `type: boolean` | `boolean` | `z.boolean()` |
+| `{}`, `true` | `unknown` | `z.unknown()` |
+| `false` | `never` | `z.never()` |
+
+Some of these choices are deliberate:
+
+- **`date-time` is a string**, as it is on the wire, and RFC 3339 requires the
+  offset. `2024-01-01T00:00:00Z` passes; `2024-01-01T00:00:00` does not.
+- **`uuid` is `z.guid()`.** JSON Schema's `uuid` is the 8-4-4-4-12 shape.
+  `z.uuid()` would also refuse ids whose version and variant bits are not
+  RFC 9562's.
+- **`int64` is `z.int()`**, a safe integer. A JSON number past 2^53 has lost
+  precision before any validator sees it.
+
+## Null, literals and lists
+
+| JSON Schema | TypeScript | Zod |
+| --- | --- | --- |
+| `type: [string, 'null']` | `string \| null` | `z.string().nullable()` |
+| `enum: [a, b, null]` | `'a' \| 'b' \| null` | `z.enum(['a', 'b']).nullable()` |
+| `oneOf: [{ $ref: X }, { type: 'null' }]` | `X \| null` | `zX.nullable()` |
+| 3.0's `nullable: true` | `T \| null` | `.nullable()`, with a `legacy_nullable` warning |
+| `enum` of strings | `'a' \| 'b'` | `z.enum(['a', 'b'])` |
+| `const: 1`, a mixed `enum` | `1`, `'a' \| 1` | `z.literal(1)`, `z.literal(['a', 1])` |
+| `type: [string, number]` | `string \| number` | `z.union([z.string(), z.number()])` |
+| `type: array`, `items: T` | `T[]` | `z.array(T)` |
+| `minItems`, `maxItems` | | `.min()`, `.max()` |
+| `uniqueItems` | | not enforced: `not_enforced` warning |
+
+## Objects
+
+| JSON Schema | TypeScript | Zod |
+| --- | --- | --- |
+| `properties`, `required` | `interface`; optional as `?: T \| undefined` | `z.object()`; `.optional()` |
+| no `additionalProperties` | | per [`unknownKeys`](options.md#unknownkeys), stripped by default |
+| `additionalProperties: false` | | `z.strictObject()` |
+| `additionalProperties: true` | `[key: string]: unknown` | `z.looseObject()` |
+| `additionalProperties: S` beside `properties` | `{ … } & { [key: string]: S }` | `.catchall(S)` |
+| `additionalProperties: S` alone, or no `properties` | `{ [key: string]: S }` | `z.record(z.string(), S)` |
+| `default` on an optional property | present in `X`, optional in `XInput` | `.default(v)` |
+| `minProperties`, `maxProperties` | | not enforced: `not_enforced` warning |
+
+## Composition
+
+| JSON Schema | TypeScript | Zod |
+| --- | --- | --- |
+| `allOf` of objects | `interface X extends A, B` | `zA.extend(zB.shape).extend({ … })` |
+| `allOf` with a `required` naming a parent's property | that property made required | that property made required |
+| `allOf` of anything else | `A & B` | `zA.and(zB)`: a key is refused only when every member refuses it |
+| `additionalProperties: false` on an `allOf` member whose siblings strip | | not enforced: extra keys are dropped, `not_enforced` warning |
+| `$ref` beside other keywords | as `allOf: [$ref, rest]` | as `allOf` |
+| `oneOf`, `anyOf` | `A \| B` | `z.union([zA, zB])` |
+| with `discriminator.propertyName` | `A \| B` | `z.discriminatedUnion('kind', [zA, zB])` |
+| a schema that reaches itself | a recursive type | annotated `z.ZodType<X, XInput>`, lazy where it must be |
+
+A discriminator is kept only when every variant is an object with that
+property required and a constant, distinct in each variant. Otherwise the
+union is validated by trying each variant, with a `discriminator_fallback`
+warning. A union over a recursive variant is also validated that way, with no
+warning: Zod needs the object's shape up front for a discriminated union. It
+accepts and refuses the same values; only the error messages differ. `oneOf`'s "exactly one" is not enforced: a value matching two
+variants passes.
+
+## Annotations
+
+`description` and `deprecated` become JSDoc on the type. `default` is
+documented as `@default`, and filled in when it sits on an optional property.
+`readOnly`, `writeOnly`, `title`, `example` and `examples` have no effect on
+the generated code.
+
+## Refused
+
+Each of these is an error at its own pointer, and they are all reported
+together:
+
+| Construct | Why |
+| --- | --- |
+| `not`, `if` / `then` / `else` | no faithful type |
+| `dependentSchemas`, `dependentRequired` | no faithful type |
+| `patternProperties`, `propertyNames` | no faithful type |
+| `unevaluatedProperties`, `unevaluatedItems` | no faithful type |
+| `prefixItems`, `items` as a list (tuples) | not supported yet |
+| `contains`, `minContains`, `maxContains` | no faithful type |
+| `$dynamicRef`, `$dynamicAnchor`, `$recursiveRef` | not supported |
+| `oneOf` and `anyOf` in the same schema | ambiguous |
+| a boolean `exclusiveMinimum` / `exclusiveMaximum` | OpenAPI 3.0; in 3.1 the keyword is the bound |
+| an invalid `pattern` | would throw at runtime |
+| an object or array inside `enum` or `const` | not supported |
+
+## Parameters
+
+Parameters are read off a URL or a header, so fewer shapes fit:
+
+| Allowed | Refused |
+| --- | --- |
+| `in: path`, `query`, `header` | `in: cookie`, `in: querystring` |
+| scalars, enums, unions of them | objects, maps, nested lists |
+| lists in `query` and `header` | lists in `path` |
+| `style: simple` (path, header), `form` (query) | any other `style`, `deepObject` included |
+| `schema` | `content` |
+
+`Accept`, `Content-Type` and `Authorization` header parameters are ignored,
+as OpenAPI specifies. HTTP carries those itself.
+
+## Operations
+
+| Construct | Result |
+| --- | --- |
+| `get`, `put`, `post`, `delete`, `options`, `head`, `patch`, `trace` | generated |
+| `query` (OpenAPI 3.2) | generated; refused in a 3.1 document |
+| `additionalOperations` (3.2) | refused |
+| a missing `operationId` | derived from method and path (`putEmployeesById`), with a warning |
+| a duplicate `operationId` | refused |
+| `{name}` in the path with no matching `in: path` parameter, or the reverse | refused |
+| an exact status code: `200`, `404` | generated |
+| `default`, `4XX` responses | ignored, with a warning: replies are typed by exact status |
+| `callbacks`, `webhooks` | ignored, with a warning |

@@ -3,9 +3,12 @@ import type {
 	ApiIR,
 	NamedSchema,
 	ObjectNode,
+	OperationIR,
+	ParamIR,
 	Property,
 	SchemaNode,
 } from '../ir/types';
+import type { Location } from '../loader/location';
 
 /** What an object does with keys it does not declare, when the spec does not say. */
 export type UnknownKeys = 'strip' | 'strict' | 'loose';
@@ -27,6 +30,48 @@ export interface EmitOptions {
 export const appliesDefault = (property: Property): boolean =>
 	!property.required && property.schema.default !== undefined;
 
+/** An operation's key in `Operations` and in the table: `put /employees/{id}`. */
+export const operationKey = (operation: OperationIR): string =>
+	`${operation.method} ${operation.path}`;
+
+/** Header names are case-insensitive: validated headers are keyed lowercased, as Hono reads them. */
+export const paramKey = (param: ParamIR): string =>
+	param.in === 'header' ? param.name.toLowerCase() : param.name;
+
+/** An operation's parameters in one location, validated together. */
+export interface ParamGroup {
+	/** Where Hono's `c.req.valid()` finds them. */
+	target: 'param' | 'query' | 'header';
+	/** `GetPetQuery`, whose validator is `zGetPetQuery`. */
+	name: string;
+	params: ParamIR[];
+	/** A default makes what a caller passes differ from what a handler gets. */
+	hasInput: boolean;
+}
+
+const GROUPS = [
+	['path', 'param', 'Param'],
+	['query', 'query', 'Query'],
+	['header', 'header', 'Header'],
+] as const;
+
+export function paramGroups(operation: OperationIR): ParamGroup[] {
+	return GROUPS.flatMap(([location, target, suffix]) => {
+		const params = operation.parameters.filter((p) => p.in === location);
+		if (params.length === 0) return [];
+		return [
+			{
+				target,
+				name: `${operation.name}${suffix}`,
+				params,
+				hasInput: params.some(
+					(p) => !p.required && p.schema.default !== undefined,
+				),
+			},
+		];
+	});
+}
+
 /** The IR plus what both emitters need to agree on. */
 export class EmitContext {
 	readonly ir: ApiIR;
@@ -34,12 +79,15 @@ export class EmitContext {
 	readonly #byId: Map<string, NamedSchema>;
 	/** Schemas whose validator accepts something other than what it returns. */
 	readonly #inputs = new Set<string>();
+	/** What the generated code accepts but the spec would refuse. */
+	readonly warnings: Diagnostic[] = [];
 
 	constructor(ir: ApiIR, options: EmitOptions) {
 		this.ir = ir;
 		this.options = options;
 		this.#byId = new Map(ir.schemas.map((schema) => [schema.id, schema]));
 		this.#findInputs();
+		this.#findLoosened();
 		this.#checkNames();
 	}
 
@@ -73,14 +121,13 @@ export class EmitContext {
 	}
 
 	/**
-	 * The object's unknown-key mode. An object that is one member of an
-	 * intersection strips when the spec does not say: each member of a Zod
-	 * intersection parses the whole input, so a strict member would reject the
-	 * other members' keys.
+	 * The object's unknown-key mode. An intersection member keeps its own: a
+	 * Zod intersection reports an unknown key only when every member does.
 	 */
-	mode(node: ObjectNode, member = false): ObjectMode {
-		if (node.additional !== 'default') return node.additional;
-		return member ? 'strip' : this.options.unknownKeys;
+	mode(node: ObjectNode): ObjectMode {
+		return node.additional === 'default'
+			? this.options.unknownKeys
+			: node.additional;
 	}
 
 	/** The mode of a named object schema. */
@@ -167,37 +214,122 @@ export class EmitContext {
 		}
 	}
 
-	/** `Employee` wants `EmployeeInput`; a schema already called that is a collision. */
+	/**
+	 * An `additionalProperties: false` on an `allOf` member that the generated
+	 * validator cannot keep. JSON Schema refuses every key that member does not
+	 * declare. A Zod intersection refuses a key only when every member does,
+	 * and `.extend()` takes the child's mode, so beside a member that strips
+	 * the extra keys are dropped instead.
+	 */
+	#findLoosened(): void {
+		const refuses = (
+			node: SchemaNode,
+			seen = new Set<SchemaNode>(),
+		): boolean => {
+			const target = this.resolve(node);
+			if (seen.has(target)) return true;
+			seen.add(target);
+			switch (target.kind) {
+				case 'object':
+					return this.mode(target) === 'strict';
+				case 'union':
+					return target.variants.every((v) => refuses(v, seen));
+				case 'intersection':
+					return target.members.some((m) => refuses(m, seen));
+				default:
+					return true;
+			}
+		};
+		const said = (node: SchemaNode): boolean => {
+			const target = this.resolve(node);
+			return target.kind === 'object' && target.additional === 'strict';
+		};
+		for (const schema of this.ir.schemas) {
+			let loosened = false;
+			const visit = (node: SchemaNode): void => {
+				if (node.kind === 'array') visit(node.items);
+				else if (node.kind === 'record') visit(node.values);
+				else if (node.kind === 'union') node.variants.forEach(visit);
+				else if (node.kind === 'intersection') {
+					if (
+						node.members.some(said) &&
+						!node.members.every((m) => refuses(m))
+					) {
+						loosened = true;
+					}
+					node.members.forEach(visit);
+				} else if (node.kind === 'object') {
+					const parents = node.extends.map(
+						(target): SchemaNode => ({ kind: 'ref', target }),
+					);
+					const strict = this.mode(node) === 'strict';
+					const kept = parents.every((p) => this.isZodObject(p))
+						? strict
+						: parents.every((p) => refuses(p)) &&
+							(strict || node.properties.length === 0);
+					if (parents.some(said) && !kept) loosened = true;
+					for (const property of node.properties) visit(property.schema);
+					if (typeof node.additional === 'object') {
+						visit(node.additional.schema);
+					}
+				}
+			};
+			visit(schema.node);
+			if (!loosened) continue;
+			this.warnings.push({
+				severity: 'warning',
+				code: 'not_enforced',
+				message: `${schema.name}: \`additionalProperties: false\` on an allOf member is not enforced. A key it does not declare is dropped, not refused, when another member accepts it`,
+				file: schema.location.file,
+				pointer: schema.location.pointer,
+			});
+		}
+	}
+
+	/**
+	 * Every generated name, once. A schema's `XInput`, or an operation's
+	 * `XQuery`, can land on a name a schema already has.
+	 */
 	#checkNames(): void {
 		const owners = new Map<string, string>();
 		const diagnostics: Diagnostic[] = [];
-		const claim = (name: string, owner: NamedSchema): void => {
+		const claim = (name: string, owner: string, at: Location): void => {
 			const holder = owners.get(name);
 			if (holder === undefined) {
-				owners.set(name, owner.name);
+				owners.set(name, owner);
 				return;
 			}
 			diagnostics.push({
 				severity: 'error',
 				code: 'name_collision',
-				message: `${holder} needs the name ${name} for its input type, and a schema already has it. Rename one with the \`names\` option`,
-				file: owner.location.file,
-				pointer: owner.location.pointer,
+				message: `${holder} and ${owner} would both generate ${name}. Rename the schema with the \`names\` option`,
+				file: at.file,
+				pointer: at.pointer,
 			});
 		};
-		for (const schema of this.ir.schemas) claim(schema.name, schema);
+		for (const schema of this.ir.schemas) {
+			claim(schema.name, `schema ${schema.name}`, schema.location);
+		}
 		for (const alias of this.ir.aliases) {
-			claim(alias.name, { ...this.schema(alias.target), name: alias.name });
+			claim(alias.name, `schema ${alias.name}`, alias.location);
 		}
 		for (const schema of this.ir.schemas) {
-			if (this.#inputs.has(schema.id)) claim(`${schema.name}Input`, schema);
+			if (this.#inputs.has(schema.id)) {
+				claim(`${schema.name}Input`, `schema ${schema.name}`, schema.location);
+			}
 		}
 		for (const alias of this.ir.aliases) {
 			if (this.#inputs.has(alias.target)) {
-				claim(`${alias.name}Input`, {
-					...this.schema(alias.target),
-					name: alias.name,
-				});
+				claim(`${alias.name}Input`, `schema ${alias.name}`, alias.location);
+			}
+		}
+		for (const operation of this.ir.operations) {
+			const owner = `operation ${operation.operationId}`;
+			for (const group of paramGroups(operation)) {
+				claim(group.name, owner, operation.location);
+				if (group.hasInput) {
+					claim(`${group.name}Input`, owner, operation.location);
+				}
 			}
 		}
 		if (diagnostics.length > 0) {

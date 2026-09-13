@@ -1,0 +1,458 @@
+/**
+ * The HTTP side of the spec.
+ *
+ * In `types.gen.ts`: `Operations`, keyed `'<method> <path>'`, whose entries
+ * carry an operation's parameters, bodies and replies as types, plus
+ * `OperationIds` and `PathsByMethod`. In `operations.gen.ts`: the same
+ * operations as data, with the validators that read them off a request —
+ * what the Hono integration, and a client later, are built on.
+ */
+import {
+	HTTP_METHODS,
+	type MediaIR,
+	type ObjectNode,
+	type OperationIR,
+	type ParamIR,
+	type Scalar,
+	type SchemaNode,
+} from '../ir/types';
+import {
+	type EmitContext,
+	operationKey,
+	type ParamGroup,
+	paramGroups,
+	paramKey,
+} from './context';
+import { docComment, jsString, list, propertyKey } from './printer';
+import { type } from './types';
+import { bounds, defaultValue, expr, literal, type Scope } from './zod';
+
+type Helper = 'flag' | 'none' | 'numeric';
+
+/** Declared at the top of `operations.gen.ts` when a validator uses them. */
+const HELPERS: Record<Helper, string> = {
+	flag: [
+		'/** `true` or `false`, as JSON spells them. */',
+		"const flag = z.stringbool({ truthy: ['true'], falsy: ['false'] });",
+	].join('\n'),
+	none: [
+		'/** A location with no parameters declared: whatever arrives there is dropped. */',
+		'const none = z.object({});',
+	].join('\n'),
+	numeric: [
+		"/** A number in a path, a query or a header: digits, where z.coerce.number() would read '' as 0. */",
+		'const numeric = z',
+		'\t.string()',
+		'\t.regex(/^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$/)',
+		'\t.transform(Number);',
+	].join('\n'),
+};
+
+const SPEC_TYPES = `/** How a server reads a parameter, and how a client writes it. */
+export interface ParameterSpec {
+	readonly name: string;
+	readonly in: 'path' | 'query' | 'header';
+	readonly required: boolean;
+	/** A query list as \`?a=1&a=2\` (true) or \`?a=1,2\` (false). */
+	readonly explode: boolean;
+	/** Validated as a list: every value of a repeated query key, or one split on commas. */
+	readonly list: boolean;
+}
+
+export interface MediaSpec {
+	readonly kind: 'json' | 'form' | 'text' | 'binary';
+	/** Absent for binary content, which is passed through unvalidated. */
+	readonly schema?: z.ZodType;
+}
+
+export interface OperationSpec {
+	readonly operationId: string;
+	readonly method: ${HTTP_METHODS.map(jsString).join(' | ')};
+	readonly path: string;
+	readonly honoPath: string;
+	readonly parameters: readonly ParameterSpec[];
+	/** Validates the path parameters, each read as a string. */
+	readonly param: z.ZodType;
+	/** Validates the query: a string per parameter, or every value of a list. */
+	readonly query: z.ZodType;
+	/** Validates the headers, keyed by lowercased name. */
+	readonly header: z.ZodType;
+	readonly body?: {
+		readonly required: boolean;
+		readonly content: { readonly [mediaType: string]: MediaSpec };
+	};
+	readonly responses: {
+		readonly [status: number]: { readonly [mediaType: string]: MediaSpec };
+	};
+}`;
+
+/** A parameter's schema as it is validated: documented as the parameter, never null. */
+function valueSchema(param: ParamIR): SchemaNode {
+	return {
+		...param.schema,
+		nullable: false,
+		description: param.description ?? param.schema.description,
+		deprecated: param.deprecated === true || param.schema.deprecated === true,
+	};
+}
+
+function groupObject(group: ParamGroup): ObjectNode {
+	return {
+		kind: 'object',
+		properties: group.params.map((param) => ({
+			name: paramKey(param),
+			required: param.required,
+			schema: valueSchema(param),
+		})),
+		// Undeclared parameters are dropped whatever `unknownKeys` says: no index signature.
+		additional: 'strict',
+		extends: [],
+	};
+}
+
+function operationDocs(operation: OperationIR): string[] {
+	const lines: string[] = [];
+	if (operation.summary) lines.push(operation.summary);
+	if (operation.description && operation.description !== operation.summary) {
+		if (lines.length > 0) lines.push('');
+		lines.push(operation.description);
+	}
+	if (operation.deprecated) lines.push('@deprecated');
+	return lines;
+}
+
+// ---------------------------------------------------------------- types.gen.ts
+
+export function operationTypes(ctx: EmitContext): string[] {
+	const blocks: string[] = [];
+	for (const operation of ctx.ir.operations) {
+		for (const group of paramGroups(operation)) {
+			const object = groupObject(group);
+			blocks.push(
+				`export interface ${group.name} ${type(ctx, object, false, '')}`,
+			);
+			if (group.hasInput) {
+				blocks.push(
+					[
+						`/** \`${group.name}\` as a caller passes it, before defaults are filled in. */`,
+						`export interface ${group.name}Input ${type(ctx, object, true, '')}`,
+					].join('\n'),
+				);
+			}
+		}
+	}
+	blocks.push(
+		operationsType(ctx),
+		operationIdsType(ctx),
+		pathsByMethodType(ctx),
+	);
+	return blocks;
+}
+
+function operationsType(ctx: EmitContext): string {
+	const entries = ctx.ir.operations.map((operation) =>
+		operationEntry(ctx, operation),
+	);
+	return entries.length === 0
+		? 'export interface Operations {}'
+		: `export interface Operations {\n${entries.join('\n')}\n}`;
+}
+
+function operationEntry(ctx: EmitContext, operation: OperationIR): string {
+	const indent = '\t\t';
+	const groups = new Map(paramGroups(operation).map((g) => [g.target, g]));
+	const lines = [
+		...docComment(operationDocs(operation), '\t'),
+		`\t${jsString(operationKey(operation))}: {`,
+		`${indent}operationId: ${jsString(operation.operationId)};`,
+		`${indent}method: ${jsString(operation.method)};`,
+		`${indent}path: ${jsString(operation.path)};`,
+		`${indent}honoPath: ${jsString(operation.honoPath)};`,
+	];
+	for (const target of ['param', 'query', 'header'] as const) {
+		const group = groups.get(target);
+		const output = group?.name ?? '{}';
+		const input = group?.hasInput ? `${group.name}Input` : output;
+		lines.push(
+			`${indent}${target}: ${output};`,
+			`${indent}${target}Input: ${input};`,
+		);
+	}
+	const { body } = operation;
+	for (const kind of ['json', 'form'] as const) {
+		const media = body?.content.find((m) => m.kind === kind);
+		if (!body || !media?.schema) continue;
+		const absent = body.required ? '' : ' | undefined';
+		lines.push(
+			`${indent}${kind}: ${type(ctx, media.schema, false, indent)}${absent};`,
+			`${indent}${kind}Input: ${type(ctx, media.schema, true, indent)}${absent};`,
+		);
+	}
+	lines.push(
+		`${indent}responses: ${responsesType(ctx, operation, indent)};`,
+		'\t};',
+	);
+	return lines.join('\n');
+}
+
+function responsesType(
+	ctx: EmitContext,
+	operation: OperationIR,
+	indent: string,
+): string {
+	if (operation.responses.length === 0) return '{}';
+	const inner = `${indent}\t`;
+	const lines = operation.responses.flatMap((response) => [
+		...docComment(response.description ? [response.description] : [], inner),
+		`${inner}${response.status}: ${contentType(ctx, response.content, inner)};`,
+	]);
+	return `{\n${lines.join('\n')}\n${indent}}`;
+}
+
+function contentType(
+	ctx: EmitContext,
+	content: readonly MediaIR[],
+	indent: string,
+): string {
+	if (content.length === 0) return '{}';
+	const inner = `${indent}\t`;
+	const lines = content.map((media) => {
+		const value = media.schema
+			? type(ctx, media.schema, false, inner)
+			: 'globalThis.Blob';
+		return `${inner}${jsString(media.mediaType)}: ${value};`;
+	});
+	return `{\n${lines.join('\n')}\n${indent}}`;
+}
+
+function operationIdsType(ctx: EmitContext): string {
+	const lines = ctx.ir.operations.map(
+		(operation) =>
+			`\t${propertyKey(operation.operationId)}: ${jsString(operationKey(operation))};`,
+	);
+	return lines.length === 0
+		? 'export interface OperationIds {}'
+		: `export interface OperationIds {\n${lines.join('\n')}\n}`;
+}
+
+function pathsByMethodType(ctx: EmitContext): string {
+	const lines = HTTP_METHODS.map((method) => {
+		const paths = [
+			...new Set(
+				ctx.ir.operations
+					.filter((operation) => operation.method === method)
+					.map((operation) => jsString(operation.path)),
+			),
+		];
+		return `\t${method}: ${paths.length === 0 ? 'never' : paths.join(' | ')};`;
+	});
+	return `export interface PathsByMethod {\n${lines.join('\n')}\n}`;
+}
+
+// ----------------------------------------------------------- operations.gen.ts
+
+export function emitOperations(ctx: EmitContext): {
+	sections: string[];
+	imports: string[];
+} {
+	const helpers = new Set<Helper>();
+	const uses = new Set<string>();
+	const declared = new Set(ctx.ir.schemas.map((schema) => schema.id));
+	const scope = (indent: string): Scope => ({
+		declared,
+		lazy: false,
+		indent,
+		uses,
+	});
+
+	const validators: string[] = [];
+	for (const operation of ctx.ir.operations) {
+		for (const group of paramGroups(operation)) {
+			validators.push(
+				`export const z${group.name} = ${paramObject(ctx, group, helpers, scope)};`,
+			);
+		}
+	}
+	const table = operationTable(ctx, helpers, scope);
+
+	const ext = ctx.options.importExtension;
+	const imports = ["import { z } from 'zod';"];
+	if (uses.size > 0) {
+		const names = [...uses].map((id) => `z${ctx.schema(id).name}`).sort();
+		imports.push(
+			`import ${list('{ ', names, ' }', '')} from './zod.gen${ext}';`,
+		);
+	}
+	imports.push(`import type { Operations } from './types.gen${ext}';`);
+	return {
+		imports,
+		sections: [
+			SPEC_TYPES,
+			...[...helpers].sort().map((helper) => HELPERS[helper]),
+			...validators,
+			table,
+		],
+	};
+}
+
+function paramObject(
+	ctx: EmitContext,
+	group: ParamGroup,
+	helpers: Set<Helper>,
+	scope: (indent: string) => Scope,
+): string {
+	const entries = group.params.map((param) => {
+		let value = fromString(ctx, valueSchema(param), helpers, scope('\t'));
+		const fallback = param.schema.default;
+		if (!param.required) {
+			value +=
+				fallback === undefined
+					? '.optional()'
+					: `.default(${defaultValue(fallback.value)})`;
+		}
+		return `\t${propertyKey(paramKey(param))}: ${value},`;
+	});
+	return `z.object({\n${entries.join('\n')}\n})`;
+}
+
+/**
+ * The validator for a value that arrives as text — a path segment, a query
+ * value, a header — reading numbers and booleans out of it strictly.
+ */
+function fromString(
+	ctx: EmitContext,
+	node: SchemaNode,
+	helpers: Set<Helper>,
+	scope: Scope,
+): string {
+	const resolved = ctx.resolve(node);
+	switch (resolved.kind) {
+		case 'number':
+			helpers.add('numeric');
+			return `numeric.pipe(${expr(ctx, node, scope)})`;
+		case 'boolean':
+			helpers.add('flag');
+			return node.kind === 'boolean'
+				? 'flag'
+				: `flag.pipe(${expr(ctx, node, scope)})`;
+		case 'literal':
+			return literalFromString(ctx, node, resolved.values, helpers, scope);
+		case 'union': {
+			const inner: Scope = { ...scope, indent: `${scope.indent}\t` };
+			const variants = resolved.variants.map((variant) =>
+				fromString(ctx, variant, helpers, inner),
+			);
+			return `z.union(${list('[', variants, ']', scope.indent)})`;
+		}
+		case 'array':
+			return `z.array(${fromString(ctx, resolved.items, helpers, scope)})${bounds(resolved.minItems, resolved.maxItems)}`;
+		default:
+			return expr(ctx, node, scope);
+	}
+}
+
+/** An enum of numbers is read as numbers, one of strings as it is, a mix as both. */
+function literalFromString(
+	ctx: EmitContext,
+	node: SchemaNode,
+	values: readonly Scalar[],
+	helpers: Set<Helper>,
+	scope: Scope,
+): string {
+	const pieces: string[] = [];
+	const whole = expr(ctx, node, scope);
+	for (const [kind, helper] of [
+		['number', 'numeric'],
+		['boolean', 'flag'],
+		['string', undefined],
+	] as const) {
+		const some = values.filter((value) => typeof value === kind);
+		if (some.length === 0) continue;
+		const piece =
+			some.length === values.length ? whole : literal(some, scope.indent);
+		if (helper) helpers.add(helper);
+		pieces.push(helper ? `${helper}.pipe(${piece})` : piece);
+	}
+	const [only] = pieces;
+	return pieces.length === 1 && only !== undefined
+		? only
+		: `z.union(${list('[', pieces, ']', scope.indent)})`;
+}
+
+function operationTable(
+	ctx: EmitContext,
+	helpers: Set<Helper>,
+	scope: (indent: string) => Scope,
+): string {
+	const entries = ctx.ir.operations.map((operation) => {
+		const groups = new Map(paramGroups(operation).map((g) => [g.target, g]));
+		const validator = (target: ParamGroup['target']): string => {
+			const group = groups.get(target);
+			if (group) return `z${group.name}`;
+			helpers.add('none');
+			return 'none';
+		};
+		const parameters = operation.parameters.map(
+			(param) =>
+				`{ name: ${jsString(param.name)}, in: ${jsString(param.in)}, required: ${param.required}, explode: ${param.explode}, list: ${ctx.resolve(param.schema).kind === 'array'} }`,
+		);
+		const lines = [
+			`\t${jsString(operationKey(operation))}: {`,
+			`\t\toperationId: ${jsString(operation.operationId)},`,
+			`\t\tmethod: ${jsString(operation.method)},`,
+			`\t\tpath: ${jsString(operation.path)},`,
+			`\t\thonoPath: ${jsString(operation.honoPath)},`,
+			`\t\tparameters: ${list('[', parameters, ']', '\t\t')},`,
+			`\t\tparam: ${validator('param')},`,
+			`\t\tquery: ${validator('query')},`,
+			`\t\theader: ${validator('header')},`,
+		];
+		if (operation.body) {
+			lines.push(
+				'\t\tbody: {',
+				`\t\t\trequired: ${operation.body.required},`,
+				`\t\t\tcontent: ${contentSpec(ctx, operation.body.content, scope, '\t\t\t')},`,
+				'\t\t},',
+			);
+		}
+		lines.push(
+			`\t\tresponses: ${responsesSpec(ctx, operation, scope, '\t\t')},`,
+			'\t},',
+		);
+		return lines.join('\n');
+	});
+	const body = entries.length === 0 ? '{}' : `{\n${entries.join('\n')}\n}`;
+	return `export const operations: {\n\treadonly [K in keyof Operations]: OperationSpec;\n} = ${body};`;
+}
+
+function contentSpec(
+	ctx: EmitContext,
+	content: readonly MediaIR[],
+	scope: (indent: string) => Scope,
+	indent: string,
+): string {
+	if (content.length === 0) return '{}';
+	const inner = `${indent}\t`;
+	const lines = content.map((media) => {
+		const schema = media.schema
+			? `, schema: ${expr(ctx, media.schema, scope(inner))}`
+			: '';
+		return `${inner}${jsString(media.mediaType)}: { kind: ${jsString(media.kind)}${schema} },`;
+	});
+	return `{\n${lines.join('\n')}\n${indent}}`;
+}
+
+function responsesSpec(
+	ctx: EmitContext,
+	operation: OperationIR,
+	scope: (indent: string) => Scope,
+	indent: string,
+): string {
+	if (operation.responses.length === 0) return '{}';
+	const inner = `${indent}\t`;
+	const lines = operation.responses.map(
+		(response) =>
+			`${inner}${response.status}: ${contentSpec(ctx, response.content, scope, inner)},`,
+	);
+	return `{\n${lines.join('\n')}\n${indent}}`;
+}

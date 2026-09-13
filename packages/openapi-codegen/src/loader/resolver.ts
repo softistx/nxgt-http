@@ -337,8 +337,9 @@ export class Resolver {
 				}
 				path.push(id);
 				const document = this.#documents.get(at.file);
-				const found = document && lookup(document, at.pointer);
-				const value = found?.found ? found.value : undefined;
+				const found: ReturnType<typeof lookup> | undefined =
+					document && lookup(document, at.pointer);
+				const value: unknown = found?.found ? found.value : undefined;
 				at = isReference(value)
 					? this.#targets.get(refKey(at.file, value.$ref))
 					: undefined;

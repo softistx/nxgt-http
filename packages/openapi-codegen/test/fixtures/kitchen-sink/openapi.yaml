@@ -1,0 +1,156 @@
+# One schema per mapping row, so the golden files show every one of them.
+openapi: 3.1.0
+info:
+  title: Kitchen sink
+  version: 0.0.1
+paths: {}
+components:
+  schemas:
+    Formats:
+      type: object
+      required: [when]
+      properties:
+        when: { type: string, format: date-time }
+        day: { type: string, format: date }
+        at: { type: string, format: time }
+        took: { type: string, format: duration }
+        email: { type: string, format: email }
+        site: { type: string, format: uri }
+        id: { type: string, format: uuid }
+        v4: { type: string, format: ipv4 }
+        v6: { type: string, format: ipv6 }
+        blob: { type: string, format: byte }
+        code: { type: string, minLength: 2, maxLength: 16, pattern: '^[a-z]+/[0-9]+$' }
+        slug: { type: string, pattern: '^[a-z/-]+$' }
+    Numbers:
+      type: object
+      properties:
+        count: { type: integer, format: int32, minimum: 0 }
+        big: { type: integer, format: int64 }
+        ratio: { type: number, exclusiveMinimum: 0, exclusiveMaximum: 1 }
+        step: { type: number, multipleOf: 0.5 }
+    Literals:
+      type: object
+      properties:
+        status: { type: string, enum: [open, closed] }
+        maybe: { type: [string, 'null'], enum: ['yes', 'no', null] }
+        one: { const: 1 }
+        mixed: { enum: [a, 1, true] }
+    Defaults:
+      type: object
+      properties:
+        page: { type: integer, minimum: 1, default: 1 }
+        sort: { type: string, enum: [asc, desc], default: asc }
+        filter:
+          type: object
+          properties: { q: { type: string } }
+          default: {}
+        tags: { type: array, items: { type: string }, default: [] }
+        note: { type: [string, 'null'], default: null }
+    UsesDefaults:
+      type: object
+      properties:
+        defaults: { $ref: '#/components/schemas/Defaults' }
+    Maps:
+      type: object
+      properties:
+        counts: { type: object, additionalProperties: { type: integer } }
+        anything: { type: object }
+        maybeObject:
+          type: [object, 'null']
+          properties: { x: { type: string } }
+    Strict:
+      type: object
+      additionalProperties: false
+      properties: { a: { type: string } }
+    Loose:
+      type: object
+      additionalProperties: true
+      properties: { a: { type: string } }
+    Catchall:
+      type: object
+      additionalProperties: { type: integer }
+      properties: { a: { type: integer } }
+    Cat:
+      type: object
+      required: [kind, lives]
+      properties:
+        kind: { const: cat }
+        lives: { type: integer }
+    Dog:
+      type: object
+      required: [kind]
+      properties:
+        kind: { const: dog }
+        good: { type: boolean }
+    Pet:
+      oneOf:
+        - $ref: '#/components/schemas/Cat'
+        - $ref: '#/components/schemas/Dog'
+      discriminator: { propertyName: kind }
+    MaybePet:
+      type: object
+      properties:
+        pet:
+          oneOf:
+            - $ref: '#/components/schemas/Pet'
+            - type: 'null'
+    StringOrNumber:
+      type: [string, number]
+    Timestamps:
+      type: object
+      properties:
+        createdAt: { type: string, format: date-time }
+    Named:
+      allOf:
+        - $ref: '#/components/schemas/Strict'
+        - $ref: '#/components/schemas/Timestamps'
+        - type: object
+          properties: { name: { type: string } }
+      required: [a]
+    Owned:
+      allOf:
+        - $ref: '#/components/schemas/Pet'
+        - type: object
+          properties: { owner: { type: string } }
+    Tree:
+      type: object
+      required: [value]
+      properties:
+        value: { type: string }
+        children:
+          type: array
+          items: { $ref: '#/components/schemas/Tree' }
+    Nested:
+      type: array
+      items: { $ref: '#/components/schemas/Nested' }
+    Ping:
+      type: object
+      properties:
+        pong: { $ref: '#/components/schemas/Pong' }
+    Pong:
+      type: object
+      required: [n]
+      properties:
+        n: { type: integer }
+        ping: { $ref: '#/components/schemas/Ping' }
+    Keys:
+      type: object
+      properties:
+        x-trace-id: { type: string }
+        __proto__: { type: string }
+        default: { type: string }
+    Documented:
+      description: |-
+        A schema with docs.
+        A second line, with */ in it.
+      deprecated: true
+      type: object
+      properties:
+        old: { type: string, deprecated: true, description: Use `new`. }
+    Upload:
+      type: object
+      properties:
+        file: { type: string, format: binary }
+    Identifier:
+      $ref: '#/components/schemas/Strict'

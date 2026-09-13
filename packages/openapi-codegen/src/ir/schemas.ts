@@ -85,6 +85,8 @@ const STRING_FORMATS = new Set([
 
 const NUMBER_FORMATS = new Set(['int32', 'int64', 'float', 'double']);
 
+const IDENTIFIER = /^[A-Za-z_$][\w$]*$/;
+
 /** Shapes worth a name when a body or a response writes them inline. */
 const NAMED_KINDS = new Set<SchemaNode['kind']>([
 	'object',
@@ -417,7 +419,12 @@ export class SchemaBuilder {
 			return this.#union(s, at);
 		}
 		if ('const' in s) return this.#literal([s.const], child(at, 'const'));
-		if (Array.isArray(s.enum)) return this.#literal(s.enum, child(at, 'enum'));
+		if (Array.isArray(s.enum)) {
+			const key = 'x-enum-varnames' in s ? 'x-enum-varnames' : 'x-enumNames';
+			const names =
+				key in s ? { key, value: s[key], at: child(at, key) } : undefined;
+			return this.#literal(s.enum, child(at, 'enum'), names);
+		}
 
 		const { types, nullable, any } = this.#types(s, at);
 		let node: SchemaNode;
@@ -667,7 +674,11 @@ export class SchemaBuilder {
 		return { schema: this.node(value, at) };
 	}
 
-	#literal(values: unknown[], at: Location): SchemaNode {
+	#literal(
+		values: unknown[],
+		at: Location,
+		names?: { key: string; value: unknown; at: Location },
+	): SchemaNode {
 		const kept: Scalar[] = [];
 		let nullable = false;
 		for (const value of values) {
@@ -687,9 +698,39 @@ export class SchemaBuilder {
 			}
 		}
 		if (kept.length === 0) return { kind: 'null' };
-		return nullable
-			? { kind: 'literal', values: kept, nullable }
-			: { kind: 'literal', values: kept };
+		const named =
+			names && this.#enumNames(values, names.value, names.at, names.key);
+		return {
+			kind: 'literal',
+			values: kept,
+			...(nullable ? { nullable } : {}),
+			...(named ? { names: named } : {}),
+		};
+	}
+
+	/** `x-enum-varnames`: one distinct identifier per `enum` value, the one for `null` dropped. */
+	#enumNames(
+		values: unknown[],
+		names: unknown,
+		at: Location,
+		key: string,
+	): string[] | undefined {
+		if (
+			!Array.isArray(names) ||
+			names.length !== values.length ||
+			!names.every(
+				(name) => typeof name === 'string' && IDENTIFIER.test(name),
+			) ||
+			new Set(names).size !== names.length
+		) {
+			this.#diagnostics.error(
+				'invalid_schema',
+				`${key} must list one distinct identifier per enum value`,
+				at,
+			);
+			return undefined;
+		}
+		return names.filter((_, index) => values[index] !== null);
 	}
 
 	#union(s: Record<string, unknown>, at: Location): SchemaNode {

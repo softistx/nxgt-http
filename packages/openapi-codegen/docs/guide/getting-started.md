@@ -47,8 +47,8 @@ Four files land in `output`:
 
 | File | Holds | Imports |
 | --- | --- | --- |
-| `types.gen.ts` | a type per schema, and the `Operations` map | nothing |
-| `zod.gen.ts` | a `z<Name>` validator per schema | `zod`; types from `types.gen.ts` when a schema is recursive |
+| `types.gen.ts` | a type per schema, an `as const` object per named enum, and the `Operations` map | nothing |
+| `zod.gen.ts` | a `z<Name>` validator per schema | `zod`; from `types.gen.ts`, the enum objects and, when a schema is recursive, its types |
 | `operations.gen.ts` | every operation as data, with its parameter validators | `zod`, `zod.gen.ts`, types from `types.gen.ts` |
 | `paths.gen.ts` | `paths`, `operations` and `components`, as openapi-typescript prints them | types from `types.gen.ts` |
 

@@ -37,7 +37,12 @@ export interface Employee extends NewEmployee {
 	manager?: Employee | null | undefined;
 }
 
-export type EmployeeStatus = 'active' | 'on_leave' | 'left';
+export const EmployeeStatus = {
+	Active: 'active',
+	OnLeave: 'on_leave',
+	Left: 'left',
+} as const;
+export type EmployeeStatus = (typeof EmployeeStatus)[keyof typeof EmployeeStatus];
 ```
 
 - **An interface wherever one can be written.** It keeps its name in errors
@@ -58,16 +63,25 @@ export type EmployeeStatus = 'active' | 'on_leave' | 'left';
   ```
 
 - **Descriptions and `deprecated`** become JSDoc.
-- **Nothing is imported**: the file costs nothing at runtime, and a front end
-  can use the types without shipping Zod.
+- **A named enum is an `as const` object** and the union of its values.
+  - `EmployeeStatus.OnLeave` reads as a value, and a plain `'on_leave'` still
+    types as `EmployeeStatus`. A TypeScript `enum` would refuse that, and
+    `erasableSyntaxOnly` refuses the `enum` itself.
+  - Member names come from `x-enum-varnames` (or `x-enumNames`) when the spec
+    gives them. Otherwise each value is PascalCased.
+  - Inline enums, enums with a boolean, and single constants stay unions.
+  - [`enums: 'union'`](options.md#enums) turns the objects off.
+- **Nothing is imported.** The enum objects are the only runtime values, so a
+  front end can use the types without shipping Zod.
 
 ## `zod.gen.ts`
 
 ```ts
 import { z } from 'zod';
+import { EmployeeStatus } from './types.gen.js';
 import type { Employee } from './types.gen.js';
 
-export const zEmployeeStatus = z.enum(['active', 'on_leave', 'left']);
+export const zEmployeeStatus = z.enum(EmployeeStatus);
 
 export const zNewEmployee = z.object({
 	name: z.string().min(1),

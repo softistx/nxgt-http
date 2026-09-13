@@ -33,7 +33,8 @@ await generate({ input: 'openapi/openapi.yaml', output: 'src/generated' });
 
 This writes four files:
 
-- `types.gen.ts`: a type per schema, and the `Operations` map;
+- `types.gen.ts`: a type per schema, an `as const` object per named enum,
+  and the `Operations` map;
 - `zod.gen.ts`: a `z<Name>` validator per schema;
 - `operations.gen.ts`: every operation as data, with its parameter
   validators;

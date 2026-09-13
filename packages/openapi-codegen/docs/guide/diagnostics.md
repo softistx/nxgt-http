@@ -35,7 +35,7 @@ prints one the same way.
 
 | Code | Severity | Meaning | Fix |
 | --- | --- | --- | --- |
-| `invalid_schema` | error | not a valid schema: an unknown `type`, a bad `pattern`, a 3.0 boolean `exclusiveMinimum` | fix the schema |
+| `invalid_schema` | error | not a valid schema: an unknown `type`, a bad `pattern`, a 3.0 boolean `exclusiveMinimum`, an `x-enum-varnames` that is not one distinct identifier per value | fix the schema |
 | `unsupported_keyword` | error | a keyword with no faithful translation (`not`, `if`, tuples…) | rewrite it; see [Refused](schema-mapping.md#refused) |
 | `legacy_nullable` | warning, or error with `legacyNullable: 'error'` | 3.0's `nullable: true` | write `type: [T, 'null']` |
 | `unknown_format` | warning | a `format` Zod has no validator for | none needed: it is checked as a plain string |

@@ -8,6 +8,7 @@ await generate({
 	output: 'src/generated',
 	unknownKeys: 'strip',
 	importExtension: '.js',
+	enums: 'object',
 	names: { 'components/schemas/Error.yaml': 'ApiError' },
 	legacyNullable: 'warn',
 	check: false,
@@ -20,6 +21,7 @@ await generate({
 | `output` | required | the directory the files are written to |
 | [`unknownKeys`](#unknownkeys) | `'strip'` | what an object does with keys it does not declare |
 | [`importExtension`](#importextension) | `'.js'` | how generated files import each other |
+| [`enums`](#enums) | `'object'` | a named enum as an `as const` object, or a plain union |
 | [`names`](#names) | `{}` | renames schemas |
 | [`legacyNullable`](#legacynullable) | `'warn'` | tolerate or refuse 3.0's `nullable: true` |
 | `check` | `false` | write nothing, report in `drifted` what would change |
@@ -58,6 +60,18 @@ nothing. Its extra keys are dropped, and a `not_enforced` warning says so.
 | `'.js'` | `'./types.gen.js'` | every `moduleResolution`, Node's included |
 | `''` | `'./types.gen'` | bundlers only |
 | `'.ts'` | `'./types.gen.ts'` | `allowImportingTsExtensions` |
+
+## `enums`
+
+A named `enum` of two or more strings or numbers:
+
+| Value | `types.gen.ts` | `zod.gen.ts` |
+| --- | --- | --- |
+| `'object'` | `export const Status = { Active: 'active', … } as const` and `type Status = 'active' \| …` | `z.enum(Status)` |
+| `'union'` | `type Status = 'active' \| …` | `z.enum(['active', …])`, or `z.literal([1, 2])` for numbers |
+
+Either way the type accepts plain literals. `'object'` adds a runtime value
+per enum, `Status.Active`, which `zod.gen.ts` imports.
 
 ## `names`
 

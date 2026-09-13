@@ -60,6 +60,7 @@ describe('generated operations', () => {
 			['ids', 'query', false, true],
 			['verbose', 'query', true, false],
 			['level', 'query', true, false],
+			['tier', 'query', true, false],
 			['X-Request-Id', 'header', false, false],
 		]);
 	});

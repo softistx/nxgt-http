@@ -1,5 +1,5 @@
 export type { GeneratedFile } from './emit';
-export type { UnknownKeys } from './emit/context';
+export type { Enums, UnknownKeys } from './emit/context';
 export {
 	CodegenError,
 	type Diagnostic,

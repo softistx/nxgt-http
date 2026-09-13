@@ -29,6 +29,9 @@ paths:
         - name: level
           in: query
           schema: { enum: [1, 2, max] }
+        - name: tier
+          in: query
+          schema: { $ref: '#/components/schemas/Tier' }
         - name: X-Request-Id
           in: header
           required: true
@@ -103,6 +106,24 @@ components:
         blob: { type: string, format: byte }
         code: { type: string, minLength: 2, maxLength: 16, pattern: '^[a-z]+/[0-9]+$' }
         slug: { type: string, pattern: '^[a-z/-]+$' }
+    Status:
+      description: Where an employee stands.
+      type: string
+      enum: [active, on_leave, left]
+    Tier:
+      type: integer
+      enum: [1, 2, 3]
+    Grade:
+      enum: [low, 2]
+    MaybeStatus:
+      type: [string, 'null']
+      enum: [on, off, null]
+    Coded:
+      type: string
+      enum: [a-1, b-2]
+      x-enum-varnames: [Alpha, Beta]
+    Flagged:
+      enum: ['yes', true]
     Numbers:
       type: object
       properties:

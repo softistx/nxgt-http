@@ -67,6 +67,8 @@ export interface SimpleNode extends Annotations {
 export interface LiteralNode extends Annotations {
 	kind: 'literal';
 	values: Scalar[];
+	/** A member name per value, from `x-enum-varnames` or `x-enumNames`. */
+	names?: string[];
 }
 
 export interface ArrayNode extends Annotations {

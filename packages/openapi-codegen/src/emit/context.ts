@@ -1,6 +1,7 @@
 import { CodegenError, type Diagnostic } from '../errors';
 import type {
 	ApiIR,
+	LiteralNode,
 	NamedSchema,
 	ObjectNode,
 	OperationIR,
@@ -13,11 +14,15 @@ import type { Location } from '../loader/location';
 /** What an object does with keys it does not declare, when the spec does not say. */
 export type UnknownKeys = 'strip' | 'strict' | 'loose';
 
+/** A named enum as an `as const` object that `z.enum()` reuses, or as a plain union. */
+export type Enums = 'object' | 'union';
+
 /** What an object does with undeclared keys once the `unknownKeys` default is applied. */
 export type ObjectMode = UnknownKeys | { schema: SchemaNode };
 
 export interface EmitOptions {
 	unknownKeys: UnknownKeys;
+	enums: Enums;
 	/** Appended to imports between generated files: `.js` works under every `moduleResolution`. */
 	importExtension: '' | '.js' | '.ts';
 	/** The spec, relative to the output directory, for the header. */
@@ -114,6 +119,23 @@ export class EmitContext {
 		const out = input && this.#inputs.has(id) ? `${name}Input` : name;
 		this.#typeUses?.add(out);
 		return out;
+	}
+
+	/**
+	 * The node of a named schema printed as an `as const` object: an `enum` of
+	 * two or more strings or numbers. `z.enum()` takes no booleans, and a
+	 * single value is a constant, not a choice.
+	 */
+	enumOf(id: string): LiteralNode | undefined {
+		if (this.options.enums !== 'object') return undefined;
+		const { node } = this.schema(id);
+		return node.kind === 'literal' &&
+			node.values.length > 1 &&
+			node.values.every(
+				(value) => typeof value === 'string' || typeof value === 'number',
+			)
+			? node
+			: undefined;
 	}
 
 	/** Runs `print`, and returns what it printed and every type name it used. */

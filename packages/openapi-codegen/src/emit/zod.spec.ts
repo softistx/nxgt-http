@@ -1,5 +1,7 @@
 /** What the generated validators do at runtime, against the golden files. */
 import { describe, expect, it } from 'bun:test';
+import { operations } from '../../test/generated/kitchen-sink/operations.gen';
+import * as T from '../../test/generated/kitchen-sink/types.gen';
 import * as K from '../../test/generated/kitchen-sink/zod.gen';
 import * as S from '../../test/generated/split/zod.gen';
 
@@ -9,6 +11,22 @@ const ok = (
 ) => schema.safeParse(value).success;
 
 describe('generated validators', () => {
+	it('validates named enums against the objects of types.gen.ts', () => {
+		expect(T.Status.OnLeave).toBe('on_leave');
+		expect(K.zStatus.parse('on_leave')).toBe(T.Status.OnLeave);
+		expect(ok(K.zStatus, 'gone')).toBe(false);
+		expect(K.zTier.options).toEqual([1, 2, 3]);
+		expect(ok(K.zGrade, 2)).toBe(true);
+		expect(ok(K.zGrade, '2')).toBe(false);
+		expect(T.Coded.Alpha).toBe('a-1');
+		expect(K.zMaybeStatus.parse(null)).toBeNull();
+		// A boolean has no place in z.enum(): that one stays a union of literals.
+		expect(ok(K.zFlagged, true)).toBe(true);
+		const pet = operations['get /pets/{petId}'];
+		expect(pet.query.parse({ tier: '2' })).toMatchObject({ tier: 2 });
+		expect(pet.query.safeParse({ tier: '4' }).success).toBe(false);
+	});
+
 	it('fills in defaults, a fresh object each time', () => {
 		const first = K.zDefaults.parse({});
 		expect(first).toEqual({

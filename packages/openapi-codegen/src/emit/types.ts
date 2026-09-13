@@ -1,10 +1,16 @@
 /**
  * The schema half of `types.gen.ts`: one TypeScript type per named schema,
  * and an `XInput` type beside it when its validator accepts something other
- * than what it returns. Nothing is imported, so the file costs a consumer
- * nothing at runtime.
+ * than what it returns. Nothing is imported; its only runtime values are the
+ * `as const` objects of named enums, which `zod.gen.ts` reuses.
  */
-import type { NamedSchema, ObjectNode, Scalar, SchemaNode } from '../ir/types';
+import type {
+	LiteralNode,
+	NamedSchema,
+	ObjectNode,
+	Scalar,
+	SchemaNode,
+} from '../ir/types';
 import { appliesDefault, type EmitContext } from './context';
 import { docComment, docLines, group, jsString, propertyKey } from './printer';
 
@@ -15,6 +21,11 @@ export function schemaTypes(ctx: EmitContext): string[] {
 		if (ctx.hasInput(schema.id)) blocks.push(declaration(ctx, schema, true));
 	}
 	for (const alias of ctx.ir.aliases) {
+		if (ctx.enumOf(alias.target)) {
+			blocks.push(
+				`export const ${alias.name} = ${ctx.schema(alias.target).name};`,
+			);
+		}
 		blocks.push(
 			`export type ${alias.name} = ${ctx.typeName(alias.target, false)};`,
 		);
@@ -39,6 +50,8 @@ function declaration(
 			]
 		: docComment(docLines(schema.node), '');
 	const { node } = schema;
+	const enumNode = ctx.enumOf(schema.id);
+	if (enumNode) return enumDeclaration(name, enumNode, docs);
 	// An interface where one can be written: it names itself in errors and hovers.
 	if (
 		node.kind === 'object' &&
@@ -100,6 +113,59 @@ export function type(
 
 const literalType = (value: Scalar): string =>
 	typeof value === 'string' ? jsString(value) : String(value);
+
+/**
+ * `export const X = { … } as const`, and `X` as the union of its values:
+ * `z.enum(X)` validates against the same object, and plain literals still
+ * type as `X`, which a TypeScript `enum` would refuse.
+ */
+function enumDeclaration(
+	name: string,
+	node: LiteralNode,
+	docs: readonly string[],
+): string {
+	const keys = enumKeys(node);
+	const members = node.values.map(
+		(value, index) =>
+			`\t${propertyKey(keys[index] ?? String(index))}: ${literalType(value)},`,
+	);
+	const union = `(typeof ${name})[keyof typeof ${name}]${node.nullable ? ' | null' : ''}`;
+	return [
+		...docs,
+		`export const ${name} = {\n${members.join('\n')}\n} as const;`,
+		...docs,
+		`export type ${name} = ${union};`,
+	].join('\n');
+}
+
+/**
+ * The members' names: the spec's `x-enum-varnames`, else each value in
+ * PascalCase (`on_leave` → `OnLeave`, `2` → `_2`), numbered on a clash.
+ */
+export function enumKeys(node: LiteralNode): string[] {
+	if (node.names) return node.names;
+	const used = new Set<string>();
+	return node.values.map((value) => {
+		const base =
+			typeof value === 'number'
+				? `_${String(value).replace('-', 'Minus').replace('.', '_')}`
+				: memberName(String(value));
+		let key = base;
+		for (let n = 2; used.has(key); n++) key = `${base}${n}`;
+		used.add(key);
+		return key;
+	});
+}
+
+function memberName(value: string): string {
+	const name = value
+		.split(/[^A-Za-z\d]+/)
+		.filter(Boolean)
+		.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+		.join('');
+	if (name === '') return 'Empty';
+	return /^\d/.test(name) ? `_${name}` : name;
+}
 
 function bare(
 	ctx: EmitContext,

@@ -143,4 +143,53 @@ describe('generate', () => {
 			'Loosened: `additionalProperties: false`',
 		);
 	});
+
+	const enumSpec = (status: Record<string, unknown>) =>
+		createMemoryFileSystem({
+			'/s/openapi.json': JSON.stringify({
+				openapi: '3.1.0',
+				info: { title: 't', version: '1' },
+				paths: {},
+				components: { schemas: { Status: status } },
+			}),
+		});
+
+	it('prints a named enum as an object, or as a union with enums: union', async () => {
+		const fs = enumSpec({
+			type: ['string', 'null'],
+			enum: ['active', 'on_leave', null],
+			'x-enum-varnames': ['Active', 'OnLeave', 'None'],
+		});
+		const options = { input: '/s/openapi.json', output: '/s/gen' };
+		const object = await generateFiles(options, { fs });
+		const [types, zod] = object.files.map((f) => f.content);
+		expect(types).toContain(
+			"export const Status = {\n\tActive: 'active',\n\tOnLeave: 'on_leave',\n} as const;",
+		);
+		expect(types).toContain(
+			'export type Status = (typeof Status)[keyof typeof Status] | null;',
+		);
+		expect(zod).toContain("import { Status } from './types.gen.js';");
+		expect(zod).toContain('export const zStatus = z.enum(Status).nullable();');
+		const union = await generateFiles({ ...options, enums: 'union' }, { fs });
+		expect(union.files[0]?.content).not.toContain('export const Status');
+		expect(union.files[1]?.content).toContain(
+			"export const zStatus = z.enum(['active', 'on_leave']).nullable();",
+		);
+		await expect(
+			generateFiles({ ...options, enums: 'native' as never }, { fs }),
+		).rejects.toThrow('enums must be object or union, not native');
+	});
+
+	it('refuses an x-enum-varnames that does not name every value', async () => {
+		const fs = enumSpec({ enum: ['a', 'b'], 'x-enum-varnames': ['A'] });
+		const error = await generateFiles(
+			{ input: '/s/openapi.json', output: '/s/gen' },
+			{ fs },
+		).catch((caught: unknown) => caught);
+		expect(error).toBeInstanceOf(CodegenError);
+		expect((error as CodegenError).diagnostics.map((d) => d.code)).toEqual([
+			'invalid_schema',
+		]);
+	});
 });

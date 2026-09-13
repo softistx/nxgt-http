@@ -46,6 +46,14 @@ What both printers must agree on, computed once:
   `globalThis.Blob`. A spec with its own `File` schema cannot shadow either.
 - `type(ctx, node, input, indent)` is exported. The operations printer uses it
   for parameters, bodies and responses.
+- **Enums.** A schema that `ctx.enumOf` accepts (a named `enum` of two or
+  more strings or numbers, with `enums: 'object'`) prints as
+  `export const X = { … } as const` beside `type X`. `enumKeys` names the
+  members, and an alias of one re-exports the object.
+  - The type is the union of the object's values, so it agrees with
+    `z.enum(X)` and still accepts plain literals.
+  - There is no TypeScript `enum`: it is nominal, and `erasableSyntaxOnly`
+    refuses it.
 
 ## Zod (`zod.ts`)
 
@@ -78,6 +86,10 @@ What both printers must agree on, computed once:
     `not_enforced` warning.
 - **Defaults.** An object or array default is printed as a closure,
   `.default(() => ({}))`, so no two parses share one mutable value.
+- **Enums.** An enum object prints as `z.enum(X)` over the object it imports,
+  as a value, from `types.gen.ts`. It gets `.nullable()` when the enum lists
+  `null`. Parameter validators reach it through `zX` like any other named
+  schema: `numeric.pipe(zTier)` for numbers.
 - **Formats.** The table is in `STRING_FORMATS`, and each choice is explained
   in [How schemas map](../guide/schema-mapping.md#scalars).
 - **Patterns.** A pattern is printed as a regex literal that matches what

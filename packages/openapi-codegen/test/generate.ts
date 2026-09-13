@@ -35,6 +35,7 @@ async function agreement(input: string): Promise<string> {
 	const ir = buildIR(await loadDocument(input));
 	const ctx = new EmitContext(ir, {
 		unknownKeys: 'strip',
+		enums: 'object',
 		importExtension: '.js',
 		source: '',
 		rootDir: TEST_DIR,

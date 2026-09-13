@@ -56,6 +56,8 @@ const STRING_FORMATS: Record<StringFormat, string> = {
 
 export function emitZod(ctx: EmitContext): string {
 	const types = new Set<string>();
+	/** The enum objects of `types.gen.ts`, imported as values for `z.enum()`. */
+	const values = new Set<string>();
 	const declared = new Set<string>();
 	const blocks: string[] = [];
 	for (const schema of ctx.ir.schemas) {
@@ -66,10 +68,15 @@ export function emitZod(ctx: EmitContext): string {
 			annotation = `: z.ZodType<${schema.name}, ${input}>`;
 		}
 		const scope: Scope = { declared, lazy: false, indent: '' };
+		const members = ctx.enumOf(schema.id);
+		if (members) values.add(schema.name);
+		const value = members
+			? `z.enum(${schema.name})${members.nullable ? '.nullable()' : ''}`
+			: expr(ctx, schema.node, scope);
 		blocks.push(
 			[
 				...docComment(docLines(schema.node), ''),
-				`export const z${schema.name}${annotation} = ${expr(ctx, schema.node, scope)};`,
+				`export const z${schema.name}${annotation} = ${value};`,
 			].join('\n'),
 		);
 		declared.add(schema.id);
@@ -80,6 +87,11 @@ export function emitZod(ctx: EmitContext): string {
 		);
 	}
 	const imports = [`import { z } from 'zod';`];
+	if (values.size > 0) {
+		imports.push(
+			`import ${list('{ ', [...values].sort(), ' }', '')} from './types.gen${ctx.options.importExtension}';`,
+		);
+	}
 	if (types.size > 0) {
 		imports.push(
 			`import type ${list('{ ', [...types].sort(), ' }', '')} from './types.gen${ctx.options.importExtension}';`,

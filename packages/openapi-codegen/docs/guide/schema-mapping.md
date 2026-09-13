@@ -42,15 +42,29 @@ Some of these choices are deliberate:
 | JSON Schema | TypeScript | Zod |
 | --- | --- | --- |
 | `type: [string, 'null']` | `string \| null` | `z.string().nullable()` |
-| `enum: [a, b, null]` | `'a' \| 'b' \| null` | `z.enum(['a', 'b']).nullable()` |
+| `enum: [a, b, null]`, inline or with `enums: 'union'` | `'a' \| 'b' \| null` | `z.enum(['a', 'b']).nullable()` |
 | `oneOf: [{ $ref: X }, { type: 'null' }]` | `X \| null` | `zX.nullable()` |
 | 3.0's `nullable: true` | `T \| null` | `.nullable()`, with a `legacy_nullable` warning |
-| `enum` of strings | `'a' \| 'b'` | `z.enum(['a', 'b'])` |
-| `const: 1`, a mixed `enum` | `1`, `'a' \| 1` | `z.literal(1)`, `z.literal(['a', 1])` |
+| a named `enum` of strings or numbers | `const X = { A: 'a', B: 'b' } as const` and `type X = 'a' \| 'b'` | `z.enum(X)` |
+| `enum` of strings, inline or with [`enums: 'union'`](options.md#enums) | `'a' \| 'b'` | `z.enum(['a', 'b'])` |
+| `x-enum-varnames`, `x-enumNames` | the members' names in `X` | |
+| `const: 1`, an `enum` with a boolean, an inline mixed `enum` | `1`, `'a' \| 1` | `z.literal(1)`, `z.literal(['a', 1])` |
 | `type: [string, number]` | `string \| number` | `z.union([z.string(), z.number()])` |
 | `type: array`, `items: T` | `T[]` | `z.array(T)` |
 | `minItems`, `maxItems` | | `.min()`, `.max()` |
 | `uniqueItems` | | not enforced: `not_enforced` warning |
+
+An enum object's members are named by `x-enum-varnames` (or `x-enumNames`).
+It must list one distinct identifier per value, `null` included, or the run
+fails with `invalid_schema`. Without either extension, each value is
+PascalCased:
+
+| Values | Members |
+| --- | --- |
+| `active`, `on_leave`, `a-b` | `Active`, `OnLeave`, `AB` |
+| `2fa`, and `1`, `-1`, `1.5` | `_2fa`, and `_1`, `_Minus1`, `_1_5` |
+| `Active` beside `active` | `Active`, `Active2` |
+| `''` | `Empty` |
 
 ## Objects
 

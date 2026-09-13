@@ -27,7 +27,7 @@ interface ApiIR {
 | `number` | `integer`, `format`, the bounds, `multipleOf` | `type: integer`, `number` |
 | `boolean`, `null`, `unknown`, `never` | nothing more | `type`, `{}`, `false` |
 | `binary` | nothing more | `format: binary`, non-text `contentMediaType` |
-| `literal` | `values` | `enum`, `const` |
+| `literal` | `values`; `names`, from `x-enum-varnames` or `x-enumNames` | `enum`, `const` |
 | `array` | `items`, `minItems`, `maxItems` | `type: array` |
 | `object` | `properties`, `additional`, `extends`, `requires` | `type: object`, `allOf` of objects |
 | `record` | `values` | an object that declares no properties |

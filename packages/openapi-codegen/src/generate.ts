@@ -1,6 +1,6 @@
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { emitFiles, type GeneratedFile } from './emit';
-import type { UnknownKeys } from './emit/context';
+import type { Enums, UnknownKeys } from './emit/context';
 import { CodegenError, type Diagnostic } from './errors';
 import { buildIR, type IROptions } from './ir';
 import { loadDocument } from './loader/document';
@@ -23,6 +23,11 @@ export interface GenerateOptions extends IROptions {
 	 * `allowImportingTsExtensions`.
 	 */
 	importExtension?: '' | '.js' | '.ts';
+	/**
+	 * A named `enum` of strings or numbers: an `as const` object that
+	 * `z.enum()` reuses (`object`, the default), or a plain union (`union`).
+	 */
+	enums?: Enums;
 }
 
 export interface GenerateContext {
@@ -38,6 +43,7 @@ export interface GenerateResult extends WriteResult {
 
 const UNKNOWN_KEYS: readonly string[] = ['strip', 'strict', 'loose'];
 const EXTENSIONS: readonly string[] = ['', '.js', '.ts'];
+const ENUMS: readonly string[] = ['object', 'union'];
 
 const invalid = (message: string): CodegenError =>
 	new CodegenError([{ severity: 'error', code: 'invalid_option', message }]);
@@ -63,12 +69,17 @@ export async function generateFiles(
 			`importExtension must be '', '.js' or '.ts', not ${importExtension}`,
 		);
 	}
+	const enums = options.enums ?? 'object';
+	if (!ENUMS.includes(enums)) {
+		throw invalid(`enums must be object or union, not ${enums}`);
+	}
 	const input = resolve(cwd, options.input);
 	const output = resolve(cwd, options.output);
 	const doc = await loadDocument(input, { fs, cwd });
 	const ir = buildIR(doc, options);
 	const { files, warnings } = emitFiles(ir, {
 		unknownKeys,
+		enums,
 		importExtension,
 		source: relative(output, input).split(sep).join('/'),
 		rootDir: dirname(doc.entry.file),

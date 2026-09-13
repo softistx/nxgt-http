@@ -1,8 +1,9 @@
 # The generated code
 
-Every example on this page comes from one small spec: an `Employee` API with
+Most examples on this page come from one small spec: an `Employee` API with
 `GET /employees` (paged with `page` and `size`), `POST /employees`, and
-`GET`, `PUT` and `DELETE /employees/{id}`.
+`GET`, `PUT` and `DELETE /employees/{id}`. The `getPet` and `upload`
+examples come from a second one, with a pet store's parameters and a form.
 
 ## Names
 
@@ -14,6 +15,7 @@ Every example on this page comes from one small spec: an `Employee` API with
 | … as `getEmployee`'s 200 response | `GetEmployee200Response` | `zGetEmployee200Response` |
 | a body or response shared through `components` | named after itself: `NotFoundResponse` | `zNotFoundResponse` |
 | `getPet`'s path, query or header parameters | `GetPetParam`, `GetPetQuery`, `GetPetHeader` | `zGetPetParam`, … |
+| `upload`'s form body, read from text | the body's own type | `zUploadForm`, in `operations.gen.ts` |
 | a schema whose defaults make input differ from output | `Employee` and `EmployeeInput` | `zEmployee` |
 
 Scalars and lists written inline stay inline: only objects, unions,
@@ -113,24 +115,19 @@ The package's own tests check, for every schema of every fixture, that
 
 ## The `Operations` map
 
-`types.gen.ts` also describes every operation, keyed `'<method> <path>'` as
-the spec writes it:
+`types.gen.ts` also describes every operation, keyed by its `operationId`,
+as a server sees it:
 
 ```ts
 export interface Operations {
-	'put /employees/{id}': {
-		operationId: 'updateEmployee';
+	updateEmployee: {
 		method: 'put';
 		path: '/employees/{id}';
 		honoPath: '/employees/:id';
 		param: UpdateEmployeeParam;
-		paramInput: UpdateEmployeeParam;
 		query: {};
-		queryInput: {};
 		header: {};
-		headerInput: {};
 		json: NewEmployee;
-		jsonInput: NewEmployeeInput; // or NewEmployee, when they agree
 		responses: {
 			200: { 'application/json': Employee };
 			404: { 'application/json': ErrorResponse };
@@ -142,61 +139,76 @@ export interface Operations {
 
 | Key | Holds |
 | --- | --- |
+| `method`, `path`, `honoPath` | the route, as the spec writes it and as Hono does |
 | `param`, `query`, `header` | parameters as validated: numbers are numbers, defaults filled in |
-| `paramInput`, `queryInput`, `headerInput` | parameters as a caller passes them, before defaults |
-| `json`, `jsonInput` | a JSON request body, when there is one; `\| undefined` when it is optional |
-| `form`, `formInput` | a form or multipart body, when there is one |
+| `json` | a JSON request body as validated, when there is one; `\| undefined` when it is optional |
+| `form` | a form or multipart body, likewise |
 | `responses` | status code → media type → body; `{}` for a response with no content |
 
-Two indexes come with it:
+What a caller sends, before defaults, is in [`paths.gen.ts`](#pathsgents).
+
+Four indexes come with it:
 
 ```ts
-export interface OperationIds {
-	updateEmployee: 'put /employees/{id}';
+/** The operation behind each route: `routes.put(path)` finds it here. */
+export interface OperationsByRoute {
+	'put /employees/{id}': 'updateEmployee';
 	// …
 }
 
+/** The paths with an operation for each method. */
 export interface PathsByMethod {
 	get: '/employees' | '/employees/{id}';
 	put: '/employees/{id}';
 	options: never; // every method is listed
 	// …
 }
+
+/** The operations under each tag. */
+export interface OperationsByTag {
+	employees: 'listEmployees' | 'createEmployee' | 'getEmployee' | …;
+}
+
+/** `PathsByMethod`, for each tag. */
+export interface PathsByTag {
+	employees: { get: '/employees' | '/employees/{id}'; /* … */ };
+}
 ```
 
-They are enough to type a client of your own:
+They are plain interfaces, so a lookup costs TypeScript the same whatever
+the size of the spec:
 
 ```ts
-import type { Operations } from './generated/types.gen.js';
+import type { Operations, OperationsByRoute } from './generated/types.gen.js';
 
-type Reply<K extends keyof Operations, S extends keyof Operations[K]['responses']> =
-	Operations[K]['responses'][S] extends { 'application/json': infer Body }
-		? Body
-		: undefined;
-
-type Updated = Reply<'put /employees/{id}', 200>; // Employee
+type Id = OperationsByRoute['put /employees/{id}']; // 'updateEmployee'
+type Updated = Operations[Id]['responses'][200]['application/json']; // Employee
 ```
 
 ## `operations.gen.ts`
 
-The same operations as data, for code that reads or writes requests at
-runtime:
+The same operations as data, for code that reads requests at runtime:
 
 ```ts
 import { operations } from './generated/operations.gen.js';
 
-const op = operations['get /pets/{petId}'];
+const op = operations.getPet;
 op.param.parse({ petId: '7' }); // { petId: 7 }
 op.query.parse({ ids: ['1', '2'], verbose: 'true' }); // { ids: [1, 2], verbose: true }
 op.header.parse({ 'x-request-id': '3f1c2a4e-8b7d-4c1e-9a2b-1c2d3e4f5a6b' });
 op.responses[200]?.['application/json']?.schema?.parse(body);
 ```
 
-Each entry holds `operationId`, `method`, `path`, `honoPath`, a `parameters`
-list, the `param`, `query` and `header` validators, the `body` media types
-with their validators, and the same for each response. The table is typed
-`{ readonly [K in keyof Operations]: OperationSpec }`: this keeps it cheap for
-TypeScript on large specs, and the precise types are in `Operations`.
+Each entry, keyed by `operationId`, holds:
+- `method`, `path`, `honoPath` and `tags`;
+- a `parameters` list;
+- the `param`, `query` and `header` validators;
+- the `body` media types with their validators, and the same for each
+  response.
+
+The table is typed `{ readonly [K in keyof Operations]: OperationSpec }`:
+this keeps it cheap for TypeScript on large specs, and the precise types are
+in `Operations`.
 
 Parameters arrive as text, so their validators read them strictly:
 
@@ -212,6 +224,10 @@ A list parameter is marked `list: true` in `parameters`. Pass every value of
 a repeated query key (`?ids=1&ids=2`, `explode: true`, the default) or split
 the one value on commas (`?ids=1,2`, `explode: false`, and headers). Headers
 are keyed by lowercased name. A parameter that is not declared is dropped.
+
+A form body carries text too. When its schema is a flat object, it gets a
+validator of its own, `z<Operation>Form`, that reads each field the same
+way. A list field sent once is taken as a list of one.
 
 ## `paths.gen.ts`
 
@@ -278,3 +294,24 @@ const { data } = await api.GET('/employees/{id}', {
 - **Not filled in.** `webhooks` and `$defs` are empty, and so are
   `components`' `responses`, `parameters`, `requestBodies`, `headers` and
   `pathItems`: they are resolved into `operations`.
+
+## `hono.gen.ts`
+
+Written with the [`hono` option](options.md#hono) only. It holds:
+- `Replies`: what each operation may send, as Hono types a reply;
+- `HonoSpec`;
+- `createRoutes` and `createApi`, bound to the spec.
+
+[Typed Hono routes](hono.md) covers how to use them.
+
+```ts
+export interface Replies {
+	updateEmployee:
+		| Hono.TypedResponse<Employee, 200, 'json'>
+		| Hono.TypedResponse<ErrorResponse, 404, 'json'>;
+	deleteEmployee:
+		| Hono.TypedResponse<null, 204, 'body'>
+		| Hono.TypedResponse<ErrorResponse, 404, 'json'>;
+	// …
+}
+```

@@ -1,7 +1,7 @@
 # Emitters
 
 `emitFiles(ir, options)` (`src/emit/index.ts`) prints four files from one
-`EmitContext`:
+`EmitContext`, and a fifth with the `hono` option:
 
 | File | Printed by |
 | --- | --- |
@@ -9,6 +9,7 @@
 | `zod.gen.ts` | `emitZod` (`zod.ts`) |
 | `operations.gen.ts` | `emitOperations` (`operations.ts`) |
 | `paths.gen.ts` | `emitPaths` (`paths.ts`) |
+| `hono.gen.ts` | `emitHono` (`hono.ts`), with `hono` only |
 
 Code is printed as text, with no TypeScript compiler API. That keeps the
 generator independent of the compiler version its consumers run.
@@ -32,8 +33,11 @@ What both printers must agree on, computed once:
 - **Parameter groups** (`paramGroups`): an operation's path, query and header
   parameters, each validated as one object named `${Op}Param`, `${Op}Query`
   or `${Op}Header`.
-- **Every generated name, once.** `XInput` or `XQuery` landing on an existing
-  schema's name is a `name_collision`.
+- **Every generated name, once.** `XInput`, `XQuery` or `XForm` landing on an
+  existing schema's name is a `name_collision`. So is a schema named like
+  what the files declare themselves: `Operations` and its four indexes and,
+  with `hono`, `Replies`, `HonoSpec` and `Hono`. Two interfaces of one name
+  would merge silently, not fail.
 
 ## Types (`types.ts`)
 
@@ -102,9 +106,13 @@ What both printers must agree on, computed once:
 
 ## Operations (`operations.ts`)
 
-- **`Operations`, `OperationIds` and `PathsByMethod`** are plain interfaces
-  with no conditional types, so looking up one operation costs TypeScript
-  O(1), whatever the size of the spec.
+- **`Operations`** is keyed by `operationId` and holds what a handler gets:
+  parameters and bodies as validated, and the replies. What a caller sends
+  is in `paths.gen.ts`, so the map carries no second, input-side copy.
+- **`OperationsByRoute`, `PathsByMethod`, `OperationsByTag` and
+  `PathsByTag`** index it: from `'put /employees/{id}'`, from a method, from
+  a tag. All are plain interfaces with no conditional types, so looking up
+  one operation costs TypeScript O(1), whatever the size of the spec.
 - **The runtime table** is annotated
   `{ readonly [K in keyof Operations]: OperationSpec }`, not inferred. An
   inferred table would carry a literal type for every validator of every
@@ -119,6 +127,36 @@ What both printers must agree on, computed once:
     string piece.
 - **Headers** are keyed by lowercased name, as Hono and the Fetch `Headers`
   object read them.
+- **Form bodies** get a validator of their own, `z<Operation>Form`.
+  - A form carries text and files, so each field is read like a parameter.
+  - A list field takes a lone value as a list of one (the `repeated`
+    helper).
+  - Only a flat object qualifies (`ctx.formOf`): no `allOf` parent, and no
+    schema for extra keys. Any other form schema is validated as written.
+
+## Hono (`hono.ts`)
+
+Written only with the `hono` option.
+
+- **`Replies`** is keyed by `operationId`. Each entry is the union of what
+  the operation may send, as Hono's `TypedResponse`:
+
+  | Response | Reply |
+  | --- | --- |
+  | JSON | `TypedResponse<T, status, 'json'>` |
+  | text | `TypedResponse<T, status, 'text'>`, `string` without a schema |
+  | binary, or any other media type | `TypedResponse<unknown, status, 'body'>`, for `c.body()` |
+  | no content | `TypedResponse<null, status, 'body'>`, plus `TypedResponse<undefined, status, 'redirect'>` for a 3xx other than 304 |
+  | no exact status at all | `Response` |
+
+  A status that Hono's `StatusCode` does not name is typed `any`, with a
+  `not_enforced` warning.
+- **`HonoSpec`** gathers `Operations`, `Replies` and the four indexes. The
+  runtime's types read nothing else.
+- **Imports are namespaced:** `import type * as Hono from 'hono'` and
+  `import * as runtime from '@nxgt/openapi-codegen/hono'`. Schema types are
+  imported by name, so `Replies`, `HonoSpec` and `Hono` are claimed in
+  `#checkNames`, as a schema's name would be.
 
 ## openapi-typescript's shape (`paths.ts`)
 

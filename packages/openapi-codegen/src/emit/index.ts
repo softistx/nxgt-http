@@ -1,6 +1,7 @@
 import type { Diagnostic } from '../errors';
 import type { ApiIR } from '../ir/types';
 import { EmitContext, type EmitOptions } from './context';
+import { emitHono } from './hono';
 import { emitOperations, operationTypes } from './operations';
 import { emitPaths } from './paths';
 import { file } from './printer';
@@ -34,6 +35,7 @@ export function emitFiles(
 			]),
 		},
 		{ path: 'paths.gen.ts', content: emitPaths(ctx) },
+		...(options.hono ? [{ path: 'hono.gen.ts', content: emitHono(ctx) }] : []),
 	];
 	return { files, warnings: ctx.warnings };
 }

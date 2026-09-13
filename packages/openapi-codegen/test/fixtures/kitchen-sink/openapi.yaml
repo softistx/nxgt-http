@@ -252,7 +252,11 @@ components:
         old: { type: string, deprecated: true, description: Use `new`. }
     Upload:
       type: object
+      required: [copies]
       properties:
         file: { type: string, format: binary }
+        copies: { type: integer, minimum: 1 }
+        public: { type: boolean, default: false }
+        labels: { type: array, items: { type: string } }
     Identifier:
       $ref: '#/components/schemas/Strict'

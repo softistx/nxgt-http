@@ -12,10 +12,12 @@ import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { GeneratedFile } from '../src/emit';
 import { EmitContext, paramGroups } from '../src/emit/context';
-import { file } from '../src/emit/printer';
+import { file, jsString } from '../src/emit/printer';
 import { generateFiles } from '../src/generate';
+import { createMemoryFileSystem } from '../src/index';
 import { buildIR } from '../src/ir';
 import { loadDocument } from '../src/loader/document';
+import { PERF_SIZE, perfRoutes, perfSpec } from './perf';
 
 const TEST_DIR = fileURLToPath(new URL('./', import.meta.url));
 export const CASES = ['split', 'query', 'kitchen-sink'] as const;
@@ -24,11 +26,44 @@ export const CASES = ['split', 'query', 'kitchen-sink'] as const;
 export async function fixtureFiles(name: string): Promise<GeneratedFile[]> {
 	const input = `${TEST_DIR}fixtures/${name}/openapi.yaml`;
 	const output = `${TEST_DIR}generated/${name}`;
-	const { files } = await generateFiles({ input, output });
+	const { files } = await generateFiles({ input, output, hono: true });
 	return [
 		...files,
 		{ path: `${output}/agreement.ts`, content: await agreement(input) },
 	];
+}
+
+/**
+ * The perf case: `PERF_SIZE` generated operations, a route for each, and a
+ * `tsconfig.json` so `src/hono/perf.spec.ts` can measure them alone.
+ */
+export async function perfFiles(): Promise<GeneratedFile[]> {
+	const input = '/perf/openapi.json';
+	const output = `${TEST_DIR}generated/perf`;
+	const { files } = await generateFiles(
+		{ input, output, hono: true },
+		{
+			fs: createMemoryFileSystem({
+				[input]: JSON.stringify(perfSpec(PERF_SIZE)),
+			}),
+		},
+	);
+	return [
+		...files,
+		{ path: `${output}/routes.ts`, content: perfRoutes(PERF_SIZE) },
+		// With the routes, and without: the difference is what the routes cost.
+		tsconfig(`${output}/tsconfig.json`, { include: ['./*.ts'] }),
+		tsconfig(`${output}/tsconfig.base.json`, { files: ['./hono.gen.ts'] }),
+	];
+}
+
+function tsconfig(path: string, sources: object): GeneratedFile {
+	const config = {
+		extends: '../../../tsconfig.json',
+		compilerOptions: { rootDir: '../../..', noEmit: true },
+		...sources,
+	};
+	return { path, content: `${JSON.stringify(config, null, '\t')}\n` };
 }
 
 async function agreement(input: string): Promise<string> {
@@ -37,6 +72,7 @@ async function agreement(input: string): Promise<string> {
 		unknownKeys: 'strip',
 		enums: 'object',
 		importExtension: '.js',
+		hono: true,
 		source: '',
 		rootDir: TEST_DIR,
 	});
@@ -54,6 +90,14 @@ async function agreement(input: string): Promise<string> {
 			(group) =>
 				`\tAgree<Equal<z.output<typeof O.z${group.name}>, T.${group.name}>>,`,
 		);
+	// A form validator reads text, but returns what the operation's form type says.
+	const forms = ir.operations
+		.filter((operation) => ctx.formOf(operation))
+		.map(
+			(operation) =>
+				`\tAgree<Equal<z.output<typeof O.z${operation.name}Form>, NonNullable<T.Operations[${jsString(operation.operationId)}]['form']>>>,`,
+		);
+	parameters.push(...forms);
 	const imports = [
 		"import type { z } from 'zod';",
 		...(parameters.length > 0
@@ -87,10 +131,9 @@ async function agreement(input: string): Promise<string> {
 if (import.meta.main) {
 	// From scratch, so a file the generator stopped writing does not linger.
 	await rm(`${TEST_DIR}generated`, { recursive: true, force: true });
-	for (const name of CASES) {
-		for (const generated of await fixtureFiles(name)) {
-			await mkdir(dirname(generated.path), { recursive: true });
-			await writeFile(generated.path, generated.content);
-		}
+	const cases = await Promise.all(CASES.map((name) => fixtureFiles(name)));
+	for (const generated of [...cases.flat(), ...(await perfFiles())]) {
+		await mkdir(dirname(generated.path), { recursive: true });
+		await writeFile(generated.path, generated.content);
 	}
 }

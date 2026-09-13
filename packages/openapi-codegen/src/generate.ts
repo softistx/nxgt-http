@@ -28,6 +28,11 @@ export interface GenerateOptions extends IROptions {
 	 * `z.enum()` reuses (`object`, the default), or a plain union (`union`).
 	 */
 	enums?: Enums;
+	/**
+	 * Also emit `hono.gen.ts`: typed routes for a Hono app. It imports `hono`
+	 * and `@nxgt/openapi-codegen/hono`, so both become runtime dependencies.
+	 */
+	hono?: boolean;
 }
 
 export interface GenerateContext {
@@ -73,6 +78,10 @@ export async function generateFiles(
 	if (!ENUMS.includes(enums)) {
 		throw invalid(`enums must be object or union, not ${enums}`);
 	}
+	const hono = options.hono ?? false;
+	if (typeof hono !== 'boolean') {
+		throw invalid(`hono must be true or false, not ${String(hono)}`);
+	}
 	const input = resolve(cwd, options.input);
 	const output = resolve(cwd, options.output);
 	const doc = await loadDocument(input, { fs, cwd });
@@ -81,6 +90,7 @@ export async function generateFiles(
 		unknownKeys,
 		enums,
 		importExtension,
+		hono,
 		source: relative(output, input).split(sep).join('/'),
 		rootDir: dirname(doc.entry.file),
 	});

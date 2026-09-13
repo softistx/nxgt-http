@@ -20,6 +20,11 @@
 			"import": "./dist/index.js",
 			"default": "./dist/index.js"
 		},
+		"./hono": {
+			"types": "./dist/hono/index.d.ts",
+			"import": "./dist/hono/index.js",
+			"default": "./dist/hono/index.js"
+		},
 		"./package.json": "./package.json"
 	},
 	"repository": {
@@ -40,16 +45,24 @@
 	"nxgt": {
 		"entrypoints": [
 			"src/index.ts",
+			"src/hono/index.ts",
 			"src/cli.ts"
 		]
 	},
 	"devDependencies": {
 		"@types/bun": "^1.4.0",
+		"hono": "^4.13.4",
 		"openapi-fetch": "^0.17.0",
 		"zod": "^4.5.4"
 	},
 	"peerDependencies": {
+		"hono": "^4.13.4",
 		"typescript": "^6.0.3",
 		"zod": "^4.5.4"
+	},
+	"peerDependenciesMeta": {
+		"hono": {
+			"optional": true
+		}
 	}
 }

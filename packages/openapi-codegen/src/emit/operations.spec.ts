@@ -3,7 +3,7 @@ import { describe, expect, it } from 'bun:test';
 import { operations as pets } from '../../test/generated/kitchen-sink/operations.gen';
 import { operations } from '../../test/generated/split/operations.gen';
 
-const getPet = pets['get /pets/{petId}'];
+const getPet = pets.getPet;
 
 describe('generated operations', () => {
 	it('reads path parameters strictly as numbers', () => {
@@ -66,7 +66,7 @@ describe('generated operations', () => {
 	});
 
 	it('points bodies and replies at their validators', () => {
-		const create = operations['post /employees'];
+		const create = operations.createEmployee;
 		const json = create.body?.content['application/json'];
 		expect(create.body?.required).toBe(true);
 		expect(
@@ -74,18 +74,19 @@ describe('generated operations', () => {
 				.success,
 		).toBe(true);
 		expect(Object.keys(create.responses)).toEqual(['201', '400']);
-		const upload = pets['post /uploads'];
+		const upload = pets.upload;
 		expect(upload.body?.content['application/octet-stream']).toEqual({
 			kind: 'binary',
 		});
+		expect(upload.tags).toEqual([]);
 		expect(upload.responses[201]).toEqual({
 			'application/pdf': { kind: 'binary' },
 		});
 	});
 
 	it('drops parameters where none are declared', () => {
-		expect(
-			operations['post /employees'].query.parse({ anything: '1' }),
-		).toEqual({});
+		expect(operations.createEmployee.query.parse({ anything: '1' })).toEqual(
+			{},
+		);
 	});
 });

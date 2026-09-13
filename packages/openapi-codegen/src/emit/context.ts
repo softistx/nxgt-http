@@ -2,6 +2,7 @@ import { CodegenError, type Diagnostic } from '../errors';
 import type {
 	ApiIR,
 	LiteralNode,
+	MediaIR,
 	NamedSchema,
 	ObjectNode,
 	OperationIR,
@@ -29,14 +30,25 @@ export interface EmitOptions {
 	source: string;
 	/** Where diagnostics are reported relative to. */
 	rootDir: string;
+	/** Also emit `hono.gen.ts`. */
+	hono?: boolean;
 }
 
 /** A property whose default the validator fills in: optional going in, present coming out. */
 export const appliesDefault = (property: Property): boolean =>
 	!property.required && property.schema.default !== undefined;
 
-/** An operation's key in `Operations` and in the table: `put /employees/{id}`. */
-export const operationKey = (operation: OperationIR): string =>
+/** What `types.gen.ts` declares beside the schemas, printed by `operationTypes`. */
+export const OPERATION_INDEXES = [
+	'Operations',
+	'OperationsByRoute',
+	'PathsByMethod',
+	'OperationsByTag',
+	'PathsByTag',
+] as const;
+
+/** An operation's route, its key in `OperationsByRoute`: `put /employees/{id}`. */
+export const routeKey = (operation: OperationIR): string =>
 	`${operation.method} ${operation.path}`;
 
 /** Header names are case-insensitive: validated headers are keyed lowercased, as Hono reads them. */
@@ -50,8 +62,6 @@ export interface ParamGroup {
 	/** `GetPetQuery`, whose validator is `zGetPetQuery`. */
 	name: string;
 	params: ParamIR[];
-	/** A default makes what a caller passes differ from what a handler gets. */
-	hasInput: boolean;
 }
 
 const GROUPS = [
@@ -64,16 +74,7 @@ export function paramGroups(operation: OperationIR): ParamGroup[] {
 	return GROUPS.flatMap(([location, target, suffix]) => {
 		const params = operation.parameters.filter((p) => p.in === location);
 		if (params.length === 0) return [];
-		return [
-			{
-				target,
-				name: `${operation.name}${suffix}`,
-				params,
-				hasInput: params.some(
-					(p) => !p.required && p.schema.default !== undefined,
-				),
-			},
-		];
+		return [{ target, name: `${operation.name}${suffix}`, params }];
 	});
 }
 
@@ -135,6 +136,25 @@ export class EmitContext {
 				(value) => typeof value === 'string' || typeof value === 'number',
 			)
 			? node
+			: undefined;
+	}
+
+	/**
+	 * The operation's form body, when its fields can be read from text: an
+	 * object with no `allOf` parent and no schema for extra keys. It gets a
+	 * validator of its own, `z<Operation>Form`.
+	 */
+	formOf(
+		operation: OperationIR,
+	): { media: MediaIR; object: ObjectNode } | undefined {
+		const media = operation.body?.content.find((m) => m.kind === 'form');
+		if (!media?.schema || media.schema.nullable) return undefined;
+		const object = this.resolve(media.schema);
+		return object.kind === 'object' &&
+			!object.nullable &&
+			object.extends.length === 0 &&
+			typeof object.additional !== 'object'
+			? { media, object }
 			: undefined;
 	}
 
@@ -325,8 +345,10 @@ export class EmitContext {
 	}
 
 	/**
-	 * Every generated name, once. A schema's `XInput`, or an operation's
-	 * `XQuery`, can land on a name a schema already has.
+	 * Every generated name, once. A schema's `XInput`, an operation's `XQuery`,
+	 * or a name `types.gen.ts` and `hono.gen.ts` declare themselves, can land
+	 * on a name a schema already has. Interfaces of one name would merge, not
+	 * fail, so this is the only place the clash is caught.
 	 */
 	#checkNames(): void {
 		const owners = new Map<string, string>();
@@ -345,6 +367,14 @@ export class EmitContext {
 				pointer: at.pointer,
 			});
 		};
+		const root = { file: this.options.rootDir, pointer: '' };
+		for (const name of OPERATION_INDEXES) claim(name, 'types.gen.ts', root);
+		if (this.options.hono) {
+			// Declared or imported by hono.gen.ts, which also imports schemas by name.
+			for (const name of ['Replies', 'HonoSpec', 'Hono']) {
+				claim(name, 'hono.gen.ts', root);
+			}
+		}
 		for (const schema of this.ir.schemas) {
 			claim(schema.name, `schema ${schema.name}`, schema.location);
 		}
@@ -365,9 +395,9 @@ export class EmitContext {
 			const owner = `operation ${operation.operationId}`;
 			for (const group of paramGroups(operation)) {
 				claim(group.name, owner, operation.location);
-				if (group.hasInput) {
-					claim(`${group.name}Input`, owner, operation.location);
-				}
+			}
+			if (this.formOf(operation)) {
+				claim(`${operation.name}Form`, owner, operation.location);
 			}
 		}
 		if (diagnostics.length > 0) {

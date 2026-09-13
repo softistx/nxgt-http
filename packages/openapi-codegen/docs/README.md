@@ -10,7 +10,8 @@ long one: a **guide** for generating and using the code, and the
 | --- | --- |
 | [Getting started](guide/getting-started.md) | generating code from a spec for the first time |
 | [Command line](guide/cli.md) | running `nxgt-openapi` from a config file, a script or CI |
-| [The generated code](guide/generated-code.md) | using `types.gen.ts`, `zod.gen.ts`, `operations.gen.ts` and `paths.gen.ts` |
+| [Typed Hono routes](guide/hono.md) | serving the spec with Hono: routes, validation errors, modules, reply checks |
+| [The generated code](guide/generated-code.md) | using `types.gen.ts`, `zod.gen.ts`, `operations.gen.ts`, `paths.gen.ts` and `hono.gen.ts` |
 | [Options](guide/options.md) | changing what is generated, or renaming a schema |
 | [How schemas map](guide/schema-mapping.md) | wondering what a keyword becomes, or why it was refused |
 | [Diagnostics](guide/diagnostics.md) | the generator reported an error or a warning |
@@ -23,4 +24,5 @@ long one: a **guide** for generating and using the code, and the
 | [Loader](architecture/loader.md) | reading a spec split across files, resolving `$ref` |
 | [Intermediate representation](architecture/ir.md) | what the spec means, reduced to one shape per construct |
 | [Emitters](architecture/emitters.md) | printing TypeScript and Zod from the IR, and why it prints what it does |
+| [Hono runtime](architecture/hono.md) | registering routes, validating requests and replies, and what the route types cost |
 | [Testing](architecture/testing.md) | fixtures, snapshots, and the check that types and validators agree |

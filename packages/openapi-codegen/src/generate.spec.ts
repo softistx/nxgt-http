@@ -192,4 +192,28 @@ describe('generate', () => {
 			'invalid_schema',
 		]);
 	});
+
+	it('refuses a schema named like an index the files declare', async () => {
+		const named = (name: string) =>
+			createMemoryFileSystem({
+				'/s/openapi.json': JSON.stringify({
+					openapi: '3.1.0',
+					info: { title: 't', version: '1' },
+					paths: {},
+					components: { schemas: { [name]: { type: 'object' } } },
+				}),
+			});
+		const options = { input: '/s/openapi.json', output: '/s/gen' };
+		const refused = async (name: string, hono = false) => {
+			const error = await generateFiles(
+				{ ...options, hono },
+				{ fs: named(name) },
+			).catch((caught: unknown) => caught);
+			if (!(error instanceof CodegenError)) return undefined;
+			return error.diagnostics.map((d) => d.code);
+		};
+		expect(await refused('PathsByTag')).toEqual(['name_collision']);
+		expect(await refused('Replies')).toBeUndefined();
+		expect(await refused('Replies', true)).toEqual(['name_collision']);
+	});
 });

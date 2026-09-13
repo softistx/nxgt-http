@@ -141,6 +141,23 @@ Parameters are read off a URL or a header, so fewer shapes fit:
 `Accept`, `Content-Type` and `Authorization` header parameters are ignored,
 as OpenAPI specifies. HTTP carries those itself.
 
+## Form bodies
+
+A `multipart/form-data` or `application/x-www-form-urlencoded` body arrives
+as text and files, like parameters. When the first form media type's
+schema is a flat object (not nullable, no `allOf` parent, no schema for
+extra keys), the operation also gets a `z<Operation>Form` validator that
+reads each field from text:
+
+| Field | Read as |
+| --- | --- |
+| `integer`, `number`, `boolean`, enums | as a [parameter](#parameters) of that type |
+| `format: binary` | a `File`, as sent |
+| `type: array` | every value of the field; a field sent once is a list of one |
+| an object | validated as sent: a form cannot carry one |
+
+Any other form schema is validated as written, by its own `z<Name>`.
+
 ## Operations
 
 | Construct | Result |

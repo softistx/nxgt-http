@@ -1,0 +1,42 @@
+openapi: 3.2.0
+info:
+  title: Search
+  version: 1.0.0
+paths:
+  /employees:
+    query:
+      operationId: searchEmployees
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: [string, 'null']
+                first:
+                  type: integer
+                  minimum: 1
+                  maximum: 100
+                  default: 20
+      responses:
+        '200':
+          description: The matching employees.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Hit'
+components:
+  schemas:
+    Hit:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+          format: uuid
+        score:
+          type: number

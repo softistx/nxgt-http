@@ -1,0 +1,691 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`buildIR on whole specs builds a spec split across files and shared fragments 1`] = `
+{
+  "aliases": [],
+  "apiVersion": "1.0.0",
+  "openapi": "3.2.0",
+  "operations": [
+    {
+      "deprecated": false,
+      "honoPath": "/employees",
+      "location": {
+        "file": "<packages>/openapi-codegen/test/fixtures/split/paths/employees.yaml",
+        "pointer": "/get",
+      },
+      "method": "get",
+      "name": "ListEmployees",
+      "operationId": "listEmployees",
+      "parameters": [
+        {
+          "description": "The page number to return.",
+          "explode": true,
+          "in": "query",
+          "location": {
+            "file": "<packages>/shared-openapi/openapi/components/parameters/page.yaml",
+            "pointer": "",
+          },
+          "name": "page",
+          "required": false,
+          "schema": {
+            "integer": true,
+            "kind": "number",
+            "minimum": 1,
+          },
+        },
+        {
+          "description": "The number of items to return per page.",
+          "explode": true,
+          "in": "query",
+          "location": {
+            "file": "<packages>/shared-openapi/openapi/components/parameters/size.yaml",
+            "pointer": "",
+          },
+          "name": "size",
+          "required": false,
+          "schema": {
+            "integer": true,
+            "kind": "number",
+            "minimum": 1,
+          },
+        },
+        {
+          "explode": true,
+          "in": "query",
+          "location": {
+            "file": "<packages>/openapi-codegen/test/fixtures/split/paths/employees.yaml",
+            "pointer": "/get/parameters/2",
+          },
+          "name": "status",
+          "required": false,
+          "schema": {
+            "kind": "ref",
+            "target": "<packages>/openapi-codegen/test/fixtures/split/components/schemas/EmployeeStatus.yaml#",
+          },
+        },
+      ],
+      "path": "/employees",
+      "responses": [
+        {
+          "content": [
+            {
+              "kind": "json",
+              "mediaType": "application/json",
+              "schema": {
+                "items": {
+                  "kind": "ref",
+                  "target": "<packages>/openapi-codegen/test/fixtures/split/components/schemas/Employee.yaml#",
+                },
+                "kind": "array",
+              },
+            },
+          ],
+          "description": "The employees.",
+          "location": {
+            "file": "<packages>/openapi-codegen/test/fixtures/split/paths/employees.yaml",
+            "pointer": "/get/responses/200",
+          },
+          "status": 200,
+        },
+        {
+          "content": [
+            {
+              "kind": "json",
+              "mediaType": "application/json",
+              "schema": {
+                "kind": "ref",
+                "target": "<packages>/shared-openapi/openapi/components/schemas/ErrorResponse.yaml#",
+              },
+            },
+          ],
+          "description": "The request was invalid.",
+          "location": {
+            "file": "<packages>/shared-openapi/openapi/components/responses/BadRequest.yaml",
+            "pointer": "",
+          },
+          "status": 400,
+        },
+      ],
+      "tags": [
+        "employees",
+      ],
+    },
+    {
+      "body": {
+        "content": [
+          {
+            "kind": "json",
+            "mediaType": "application/json",
+            "schema": {
+              "kind": "ref",
+              "target": "<packages>/openapi-codegen/test/fixtures/split/components/schemas/NewEmployee.yaml#",
+            },
+          },
+        ],
+        "required": true,
+      },
+      "deprecated": false,
+      "honoPath": "/employees",
+      "location": {
+        "file": "<packages>/openapi-codegen/test/fixtures/split/paths/employees.yaml",
+        "pointer": "/post",
+      },
+      "method": "post",
+      "name": "CreateEmployee",
+      "operationId": "createEmployee",
+      "parameters": [],
+      "path": "/employees",
+      "responses": [
+        {
+          "content": [
+            {
+              "kind": "json",
+              "mediaType": "application/json",
+              "schema": {
+                "kind": "ref",
+                "target": "<packages>/openapi-codegen/test/fixtures/split/components/schemas/Employee.yaml#",
+              },
+            },
+          ],
+          "description": "Created.",
+          "location": {
+            "file": "<packages>/openapi-codegen/test/fixtures/split/paths/employees.yaml",
+            "pointer": "/post/responses/201",
+          },
+          "status": 201,
+        },
+        {
+          "content": [
+            {
+              "kind": "json",
+              "mediaType": "application/json",
+              "schema": {
+                "kind": "ref",
+                "target": "<packages>/shared-openapi/openapi/components/schemas/ErrorResponse.yaml#",
+              },
+            },
+          ],
+          "description": "The request was invalid.",
+          "location": {
+            "file": "<packages>/shared-openapi/openapi/components/responses/BadRequest.yaml",
+            "pointer": "",
+          },
+          "status": 400,
+        },
+      ],
+      "tags": [
+        "employees",
+      ],
+    },
+    {
+      "deprecated": false,
+      "honoPath": "/employees/:id",
+      "location": {
+        "file": "<packages>/openapi-codegen/test/fixtures/split/paths/employees_id.yaml",
+        "pointer": "/get",
+      },
+      "method": "get",
+      "name": "GetEmployee",
+      "operationId": "getEmployee",
+      "parameters": [
+        {
+          "description": "The unique identifier of the entity.",
+          "explode": false,
+          "in": "path",
+          "location": {
+            "file": "<packages>/shared-openapi/openapi/components/parameters/id.yaml",
+            "pointer": "",
+          },
+          "name": "id",
+          "required": true,
+          "schema": {
+            "kind": "string",
+          },
+        },
+      ],
+      "path": "/employees/{id}",
+      "responses": [
+        {
+          "content": [
+            {
+              "kind": "json",
+              "mediaType": "application/json",
+              "schema": {
+                "kind": "ref",
+                "target": "<packages>/openapi-codegen/test/fixtures/split/components/schemas/Employee.yaml#",
+              },
+            },
+          ],
+          "description": "The employee.",
+          "location": {
+            "file": "<packages>/openapi-codegen/test/fixtures/split/paths/employees_id.yaml",
+            "pointer": "/get/responses/200",
+          },
+          "status": 200,
+        },
+        {
+          "content": [
+            {
+              "kind": "json",
+              "mediaType": "application/json",
+              "schema": {
+                "kind": "ref",
+                "target": "<packages>/shared-openapi/openapi/components/schemas/ErrorResponse.yaml#",
+              },
+            },
+          ],
+          "description": "The requested resource was not found.",
+          "location": {
+            "file": "<packages>/shared-openapi/openapi/components/responses/NotFound.yaml",
+            "pointer": "",
+          },
+          "status": 404,
+        },
+      ],
+      "tags": [
+        "employees",
+      ],
+    },
+    {
+      "body": {
+        "content": [
+          {
+            "kind": "json",
+            "mediaType": "application/json",
+            "schema": {
+              "kind": "ref",
+              "target": "<packages>/openapi-codegen/test/fixtures/split/components/schemas/NewEmployee.yaml#",
+            },
+          },
+        ],
+        "required": true,
+      },
+      "deprecated": false,
+      "honoPath": "/employees/:id",
+      "location": {
+        "file": "<packages>/openapi-codegen/test/fixtures/split/paths/employees_id.yaml",
+        "pointer": "/put",
+      },
+      "method": "put",
+      "name": "UpdateEmployee",
+      "operationId": "updateEmployee",
+      "parameters": [
+        {
+          "description": "The unique identifier of the entity.",
+          "explode": false,
+          "in": "path",
+          "location": {
+            "file": "<packages>/shared-openapi/openapi/components/parameters/id.yaml",
+            "pointer": "",
+          },
+          "name": "id",
+          "required": true,
+          "schema": {
+            "kind": "string",
+          },
+        },
+      ],
+      "path": "/employees/{id}",
+      "responses": [
+        {
+          "content": [
+            {
+              "kind": "json",
+              "mediaType": "application/json",
+              "schema": {
+                "kind": "ref",
+                "target": "<packages>/openapi-codegen/test/fixtures/split/components/schemas/Employee.yaml#",
+              },
+            },
+          ],
+          "description": "The updated employee.",
+          "location": {
+            "file": "<packages>/openapi-codegen/test/fixtures/split/paths/employees_id.yaml",
+            "pointer": "/put/responses/200",
+          },
+          "status": 200,
+        },
+        {
+          "content": [
+            {
+              "kind": "json",
+              "mediaType": "application/json",
+              "schema": {
+                "kind": "ref",
+                "target": "<packages>/shared-openapi/openapi/components/schemas/ErrorResponse.yaml#",
+              },
+            },
+          ],
+          "description": "The requested resource was not found.",
+          "location": {
+            "file": "<packages>/shared-openapi/openapi/components/responses/NotFound.yaml",
+            "pointer": "",
+          },
+          "status": 404,
+        },
+      ],
+      "tags": [
+        "employees",
+      ],
+    },
+    {
+      "deprecated": false,
+      "honoPath": "/employees/:id",
+      "location": {
+        "file": "<packages>/openapi-codegen/test/fixtures/split/paths/employees_id.yaml",
+        "pointer": "/delete",
+      },
+      "method": "delete",
+      "name": "DeleteEmployee",
+      "operationId": "deleteEmployee",
+      "parameters": [
+        {
+          "description": "The unique identifier of the entity.",
+          "explode": false,
+          "in": "path",
+          "location": {
+            "file": "<packages>/shared-openapi/openapi/components/parameters/id.yaml",
+            "pointer": "",
+          },
+          "name": "id",
+          "required": true,
+          "schema": {
+            "kind": "string",
+          },
+        },
+      ],
+      "path": "/employees/{id}",
+      "responses": [
+        {
+          "content": [],
+          "description": "The resource was successfully deleted",
+          "location": {
+            "file": "<packages>/shared-openapi/openapi/components/responses/ResourceDeleted.yaml",
+            "pointer": "",
+          },
+          "status": 204,
+        },
+        {
+          "content": [
+            {
+              "kind": "json",
+              "mediaType": "application/json",
+              "schema": {
+                "kind": "ref",
+                "target": "<packages>/shared-openapi/openapi/components/schemas/ErrorResponse.yaml#",
+              },
+            },
+          ],
+          "description": "The requested resource was not found.",
+          "location": {
+            "file": "<packages>/shared-openapi/openapi/components/responses/NotFound.yaml",
+            "pointer": "",
+          },
+          "status": 404,
+        },
+      ],
+      "tags": [
+        "employees",
+      ],
+    },
+  ],
+  "schemas": [
+    {
+      "id": "<packages>/openapi-codegen/test/fixtures/split/components/schemas/EmployeeStatus.yaml#",
+      "location": {
+        "file": "<packages>/openapi-codegen/test/fixtures/split/components/schemas/EmployeeStatus.yaml",
+        "pointer": "",
+      },
+      "name": "EmployeeStatus",
+      "node": {
+        "kind": "literal",
+        "values": [
+          "active",
+          "on_leave",
+          "left",
+        ],
+      },
+      "recursive": false,
+      "source": "component",
+    },
+    {
+      "id": "<packages>/openapi-codegen/test/fixtures/split/components/schemas/NewEmployee.yaml#",
+      "location": {
+        "file": "<packages>/openapi-codegen/test/fixtures/split/components/schemas/NewEmployee.yaml",
+        "pointer": "",
+      },
+      "name": "NewEmployee",
+      "node": {
+        "additional": "default",
+        "extends": [],
+        "kind": "object",
+        "properties": [
+          {
+            "name": "name",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "minLength": 1,
+            },
+          },
+          {
+            "name": "email",
+            "required": true,
+            "schema": {
+              "format": "email",
+              "kind": "string",
+            },
+          },
+          {
+            "name": "status",
+            "required": false,
+            "schema": {
+              "kind": "ref",
+              "target": "<packages>/openapi-codegen/test/fixtures/split/components/schemas/EmployeeStatus.yaml#",
+            },
+          },
+          {
+            "name": "tags",
+            "required": false,
+            "schema": {
+              "items": {
+                "kind": "string",
+              },
+              "kind": "array",
+            },
+          },
+        ],
+      },
+      "recursive": false,
+      "source": "component",
+    },
+    {
+      "id": "<packages>/openapi-codegen/test/fixtures/split/components/schemas/Employee.yaml#",
+      "location": {
+        "file": "<packages>/openapi-codegen/test/fixtures/split/components/schemas/Employee.yaml",
+        "pointer": "",
+      },
+      "name": "Employee",
+      "node": {
+        "additional": "default",
+        "extends": [
+          "<packages>/openapi-codegen/test/fixtures/split/components/schemas/NewEmployee.yaml#",
+        ],
+        "kind": "object",
+        "properties": [
+          {
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "kind": "string",
+              "readOnly": true,
+            },
+          },
+          {
+            "name": "createdAt",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "kind": "string",
+            },
+          },
+          {
+            "name": "manager",
+            "required": false,
+            "schema": {
+              "description": "Who this employee reports to, if anyone.",
+              "kind": "ref",
+              "nullable": true,
+              "target": "<packages>/openapi-codegen/test/fixtures/split/components/schemas/Employee.yaml#",
+            },
+          },
+        ],
+      },
+      "recursive": true,
+      "source": "component",
+    },
+    {
+      "id": "<packages>/shared-openapi/openapi/components/schemas/ErrorResponse.yaml#",
+      "location": {
+        "file": "<packages>/shared-openapi/openapi/components/schemas/ErrorResponse.yaml",
+        "pointer": "",
+      },
+      "name": "ErrorResponse",
+      "node": {
+        "additional": "default",
+        "extends": [],
+        "kind": "object",
+        "properties": [
+          {
+            "name": "status",
+            "required": false,
+            "schema": {
+              "description": "Error status code",
+              "integer": true,
+              "kind": "number",
+            },
+          },
+          {
+            "name": "message",
+            "required": false,
+            "schema": {
+              "description": "A human-readable error message.",
+              "kind": "string",
+            },
+          },
+          {
+            "name": "debugMessage",
+            "required": false,
+            "schema": {
+              "description": "An optional debug message for troubleshooting.",
+              "kind": "string",
+            },
+          },
+        ],
+      },
+      "recursive": false,
+      "source": "component",
+    },
+  ],
+  "title": "Employees",
+  "version": "3.2",
+  "warnings": [],
+}
+`;
+
+exports[`buildIR on whole specs builds an OpenAPI 3.2 \`query\` operation 1`] = `
+{
+  "aliases": [],
+  "apiVersion": "1.0.0",
+  "openapi": "3.2.0",
+  "operations": [
+    {
+      "body": {
+        "content": [
+          {
+            "kind": "json",
+            "mediaType": "application/json",
+            "schema": {
+              "kind": "ref",
+              "target": "<packages>/openapi-codegen/test/fixtures/query/openapi.yaml#/paths/~1employees/query/requestBody/content/application~1json/schema",
+            },
+          },
+        ],
+        "required": true,
+      },
+      "deprecated": false,
+      "honoPath": "/employees",
+      "location": {
+        "file": "<packages>/openapi-codegen/test/fixtures/query/openapi.yaml",
+        "pointer": "/paths/~1employees/query",
+      },
+      "method": "query",
+      "name": "SearchEmployees",
+      "operationId": "searchEmployees",
+      "parameters": [],
+      "path": "/employees",
+      "responses": [
+        {
+          "content": [
+            {
+              "kind": "json",
+              "mediaType": "application/json",
+              "schema": {
+                "items": {
+                  "kind": "ref",
+                  "target": "<packages>/openapi-codegen/test/fixtures/query/openapi.yaml#/components/schemas/Hit",
+                },
+                "kind": "array",
+              },
+            },
+          ],
+          "description": "The matching employees.",
+          "location": {
+            "file": "<packages>/openapi-codegen/test/fixtures/query/openapi.yaml",
+            "pointer": "/paths/~1employees/query/responses/200",
+          },
+          "status": 200,
+        },
+      ],
+      "tags": [],
+    },
+  ],
+  "schemas": [
+    {
+      "id": "<packages>/openapi-codegen/test/fixtures/query/openapi.yaml#/components/schemas/Hit",
+      "location": {
+        "file": "<packages>/openapi-codegen/test/fixtures/query/openapi.yaml",
+        "pointer": "/components/schemas/Hit",
+      },
+      "name": "Hit",
+      "node": {
+        "additional": "default",
+        "extends": [],
+        "kind": "object",
+        "properties": [
+          {
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "kind": "string",
+            },
+          },
+          {
+            "name": "score",
+            "required": false,
+            "schema": {
+              "integer": false,
+              "kind": "number",
+            },
+          },
+        ],
+      },
+      "recursive": false,
+      "source": "component",
+    },
+    {
+      "id": "<packages>/openapi-codegen/test/fixtures/query/openapi.yaml#/paths/~1employees/query/requestBody/content/application~1json/schema",
+      "location": {
+        "file": "<packages>/openapi-codegen/test/fixtures/query/openapi.yaml",
+        "pointer": "/paths/~1employees/query/requestBody/content/application~1json/schema",
+      },
+      "name": "SearchEmployeesBody",
+      "node": {
+        "additional": "default",
+        "extends": [],
+        "kind": "object",
+        "properties": [
+          {
+            "name": "name",
+            "required": false,
+            "schema": {
+              "kind": "string",
+              "nullable": true,
+            },
+          },
+          {
+            "name": "first",
+            "required": false,
+            "schema": {
+              "default": {
+                "value": 20,
+              },
+              "integer": true,
+              "kind": "number",
+              "maximum": 100,
+              "minimum": 1,
+            },
+          },
+        ],
+      },
+      "recursive": false,
+      "source": "inline",
+    },
+  ],
+  "title": "Search",
+  "version": "3.2",
+  "warnings": [],
+}
+`;

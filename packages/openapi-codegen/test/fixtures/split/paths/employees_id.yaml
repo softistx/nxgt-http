@@ -1,0 +1,40 @@
+parameters:
+  - $ref: ../../../../../shared-openapi/openapi/components/parameters/id.yaml
+get:
+  operationId: getEmployee
+  tags: [employees]
+  responses:
+    '200':
+      description: The employee.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/Employee.yaml
+    '404':
+      $ref: ../../../../../shared-openapi/openapi/components/responses/NotFound.yaml
+put:
+  operationId: updateEmployee
+  tags: [employees]
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: ../components/schemas/NewEmployee.yaml
+  responses:
+    '200':
+      description: The updated employee.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/Employee.yaml
+    '404':
+      $ref: ../../../../../shared-openapi/openapi/components/responses/NotFound.yaml
+delete:
+  operationId: deleteEmployee
+  tags: [employees]
+  responses:
+    '204':
+      $ref: ../../../../../shared-openapi/openapi/components/responses/ResourceDeleted.yaml
+    '404':
+      $ref: ../../../../../shared-openapi/openapi/components/responses/NotFound.yaml

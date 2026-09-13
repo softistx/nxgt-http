@@ -14,7 +14,22 @@ export type DiagnosticCode =
 	| 'pointer_not_found'
 	| 'ref_cycle'
 	| 'missing_version'
-	| 'unsupported_version';
+	| 'unsupported_version'
+	| 'invalid_schema'
+	| 'invalid_option'
+	| 'unsupported_keyword'
+	| 'legacy_nullable'
+	| 'unknown_format'
+	| 'not_enforced'
+	| 'discriminator_fallback'
+	| 'name_collision'
+	| 'invalid_operation'
+	| 'unsupported_operation'
+	| 'unsupported_parameter'
+	| 'path_parameter_mismatch'
+	| 'missing_operation_id'
+	| 'duplicate_operation_id'
+	| 'ignored';
 
 export type Severity = 'error' | 'warning';
 

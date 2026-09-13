@@ -1,0 +1,17 @@
+allOf:
+  - $ref: ./NewEmployee.yaml
+  - type: object
+    required: [id, createdAt]
+    properties:
+      id:
+        type: string
+        format: uuid
+        readOnly: true
+      createdAt:
+        type: string
+        format: date-time
+      manager:
+        description: Who this employee reports to, if anyone.
+        oneOf:
+          - $ref: ./Employee.yaml
+          - type: 'null'

@@ -1,0 +1,15 @@
+type: object
+required: [name, email]
+properties:
+  name:
+    type: string
+    minLength: 1
+  email:
+    type: string
+    format: email
+  status:
+    $ref: ./EmployeeStatus.yaml
+  tags:
+    type: array
+    items:
+      type: string

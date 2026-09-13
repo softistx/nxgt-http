@@ -1,0 +1,39 @@
+get:
+  operationId: listEmployees
+  tags: [employees]
+  parameters:
+    - $ref: ../../../../../shared-openapi/openapi/components/parameters/page.yaml
+    - $ref: ../../../../../shared-openapi/openapi/components/parameters/size.yaml
+    - name: status
+      in: query
+      schema:
+        $ref: ../components/schemas/EmployeeStatus.yaml
+  responses:
+    '200':
+      description: The employees.
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: ../components/schemas/Employee.yaml
+    '400':
+      $ref: ../../../../../shared-openapi/openapi/components/responses/BadRequest.yaml
+post:
+  operationId: createEmployee
+  tags: [employees]
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: ../components/schemas/NewEmployee.yaml
+  responses:
+    '201':
+      description: Created.
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/Employee.yaml
+    '400':
+      $ref: ../../../../../shared-openapi/openapi/components/responses/BadRequest.yaml

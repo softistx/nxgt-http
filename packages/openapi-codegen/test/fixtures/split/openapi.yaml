@@ -1,0 +1,19 @@
+openapi: 3.2.0
+info:
+  title: Employees
+  version: 1.0.0
+paths:
+  /employees:
+    $ref: paths/employees.yaml
+  /employees/{id}:
+    $ref: paths/employees_id.yaml
+components:
+  schemas:
+    Employee:
+      $ref: components/schemas/Employee.yaml
+    NewEmployee:
+      $ref: components/schemas/NewEmployee.yaml
+    EmployeeStatus:
+      $ref: components/schemas/EmployeeStatus.yaml
+    ErrorResponse:
+      $ref: ../../../../shared-openapi/openapi/components/schemas/ErrorResponse.yaml

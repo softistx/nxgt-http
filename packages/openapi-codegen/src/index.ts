@@ -1,3 +1,10 @@
+export {
+	CONFIG_FILES,
+	type CodegenConfig,
+	defineConfig,
+	type LoadedConfig,
+	loadConfig,
+} from './config';
 export type { GeneratedFile } from './emit';
 export type { Enums, UnknownKeys } from './emit/context';
 export {

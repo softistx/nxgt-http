@@ -26,6 +26,9 @@ await generate({
 | [`legacyNullable`](#legacynullable) | `'warn'` | tolerate or refuse 3.0's `nullable: true` |
 | `check` | `false` | write nothing, report in `drifted` what would change |
 
+A [config file](cli.md#config-file) takes the same options, `check` aside,
+and resolves its paths against its own directory.
+
 Relative paths resolve against the current directory. Pass `{ cwd }` as a
 second argument to change that. `{ fs }` replaces how the spec is read, for
 example with `createMemoryFileSystem({ '/spec/openapi.yaml': '…' })` in a

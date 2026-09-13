@@ -20,6 +20,7 @@ yet.
 | type agreement | `test/generated/<case>/agreement.ts` | `tsc` fails if a type and its validator disagree |
 | client typing | `test/types/client.ts` | a typed `request()` can be built from `Operations` alone |
 | openapi-fetch typing | `test/types/paths.ts` | `createClient<paths>()` types requests and replies from `paths.gen.ts` alone |
+| command line | `src/cli/run.spec.ts` | flags, config files, `--check` and exit codes through `run()`, and `src/cli.ts` as a process |
 
 ## Fixtures
 

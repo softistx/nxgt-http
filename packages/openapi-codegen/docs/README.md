@@ -9,6 +9,7 @@ long one: a **guide** for generating and using the code, and the
 | Page | Read it when |
 | --- | --- |
 | [Getting started](guide/getting-started.md) | generating code from a spec for the first time |
+| [Command line](guide/cli.md) | running `nxgt-openapi` from a config file, a script or CI |
 | [The generated code](guide/generated-code.md) | using `types.gen.ts`, `zod.gen.ts`, `operations.gen.ts` and `paths.gen.ts` |
 | [Options](guide/options.md) | changing what is generated, or renaming a schema |
 | [How schemas map](guide/schema-mapping.md) | wondering what a keyword becomes, or why it was refused |

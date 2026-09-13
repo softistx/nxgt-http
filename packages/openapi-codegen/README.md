@@ -25,6 +25,24 @@ The generator runs on Bun; the code it generates runs anywhere.
 
 ### Generate
 
+From the command line, with a config file:
+
+```ts
+// openapi-codegen.config.ts
+import { defineConfig } from '@nxgt/openapi-codegen';
+
+export default defineConfig({
+	input: 'openapi/openapi.yaml',
+	output: 'src/generated',
+});
+```
+
+```sh
+bunx nxgt-openapi generate
+```
+
+Or from code:
+
 ```ts
 import { generate } from '@nxgt/openapi-codegen';
 
@@ -58,6 +76,12 @@ const query = operations['get /employees'].query.parse({ page: '2' }); // { page
 
 ### Fail CI when the generated code is stale
 
+```sh
+bunx nxgt-openapi generate --check
+```
+
+It writes nothing, lists what is missing or stale, and exits 1. From code:
+
 ```ts
 const { drifted } = await generate({
 	input: 'openapi/openapi.yaml',
@@ -86,7 +110,9 @@ each with a stable `code`.
 
 ### Lower-level API
 
-`generateFiles` returns the files instead of writing them. `formatDiagnostic`
+`defineConfig` types a config file, and `loadConfig` finds and reads one the
+way the command line does. `generateFiles` returns the files instead of
+writing them. `formatDiagnostic`
 prints one diagnostic the way `CodegenError` does. The pipeline stages are
 exported too, for tools built on the spec:
 
@@ -98,6 +124,8 @@ exported too, for tools built on the spec:
 
 ## Traps
 
+- **The `nxgt-openapi` bin runs on Bun.** Its first line is
+  `#!/usr/bin/env bun`: run it with `bunx`, or with Bun on the `PATH`.
 - **OpenAPI 3.1 and 3.2 only.** A 3.0 or Swagger 2.0 document is refused;
   convert it. 3.0's `nullable: true` is read with a warning, and
   `legacyNullable: 'error'` refuses it.
@@ -119,6 +147,7 @@ exported too, for tools built on the spec:
 
 The package ships a `docs/` folder:
 
+- [the command line](docs/guide/cli.md): flags, config files, exit codes;
 - [the guide](docs/README.md): the generated code, every option, how each
   JSON Schema keyword maps, and every diagnostic code;
 - [the architecture](docs/architecture/overview.md), for working on the

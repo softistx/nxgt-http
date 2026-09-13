@@ -12,6 +12,25 @@ itself runs on Bun; the code it generates runs anywhere.
 
 ## Generate
 
+With a config file and the `nxgt-openapi` command:
+
+```ts
+// openapi-codegen.config.ts
+import { defineConfig } from '@nxgt/openapi-codegen';
+
+export default defineConfig({
+	input: 'openapi/openapi.yaml',
+	output: 'src/generated',
+});
+```
+
+```sh
+bunx nxgt-openapi generate
+```
+
+[The command line](cli.md) covers its flags and exit codes. Or from a script
+of your own:
+
 ```ts
 // scripts/generate-api.ts
 import { generate } from '@nxgt/openapi-codegen';
@@ -68,6 +87,12 @@ const input = zNewEmployee.parse(await request.json()); // throws a ZodError on 
 [The generated code](generated-code.md) walks through all three files.
 
 ## Keep the files in step, in CI
+
+```sh
+bunx nxgt-openapi generate --check
+```
+
+It writes nothing, lists what is missing or stale, and exits 1. From code:
 
 ```ts
 import { generate } from '@nxgt/openapi-codegen';

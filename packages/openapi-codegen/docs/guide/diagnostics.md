@@ -43,6 +43,7 @@ prints one the same way.
 | `discriminator_fallback` | warning | a discriminator some variant cannot answer | give every variant the property, required, as a distinct constant |
 | `name_collision` | error | two schemas, or a schema and an operation's parameters, would generate the same name | rename one with [`names`](options.md#names) |
 | `invalid_option` | error | an option with a value it cannot take | fix the option |
+| `invalid_config` | error | `nxgt-openapi` found no config file, or it exports no config with an `input` and an `output` | see [the command line](cli.md#config-file) |
 
 ## Operations
 

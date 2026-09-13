@@ -18,6 +18,7 @@ before the writer.
 | [IR](ir.md) | `src/ir/` | `LoadedDocument` | `ApiIR`: named schemas in emit order, operations, warnings |
 | [Emitters](emitters.md) | `src/emit/` | `ApiIR` | `GeneratedFile[]` |
 | Writer | `src/writer/` | files | written, unchanged and drifted paths |
+| Command line | `src/cli.ts`, `src/cli/run.ts`, `src/config.ts` | arguments, a config file | `generate()` per config, an exit code |
 
 `src/errors.ts` holds the diagnostic model that every stage shares.
 

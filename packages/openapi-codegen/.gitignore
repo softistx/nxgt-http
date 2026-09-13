@@ -6,6 +6,9 @@ out
 dist
 *.tgz
 
+# fixtures' generated code: written by test/generate.ts, pinned by snapshots
+test/generated/
+
 # code coverage
 coverage
 *.lcov

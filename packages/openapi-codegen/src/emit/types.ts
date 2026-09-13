@@ -1,20 +1,14 @@
 /**
- * `types.gen.ts`: one TypeScript type per named schema, and an `XInput` type
- * beside it when its validator accepts something other than what it returns.
- * Nothing is imported, so the file costs a consumer nothing at runtime.
+ * The schema half of `types.gen.ts`: one TypeScript type per named schema,
+ * and an `XInput` type beside it when its validator accepts something other
+ * than what it returns. Nothing is imported, so the file costs a consumer
+ * nothing at runtime.
  */
 import type { NamedSchema, ObjectNode, Scalar, SchemaNode } from '../ir/types';
 import { appliesDefault, type EmitContext } from './context';
-import {
-	docComment,
-	docLines,
-	file,
-	group,
-	jsString,
-	propertyKey,
-} from './printer';
+import { docComment, docLines, group, jsString, propertyKey } from './printer';
 
-export function emitTypes(ctx: EmitContext): string {
+export function schemaTypes(ctx: EmitContext): string[] {
 	const blocks: string[] = [];
 	for (const schema of ctx.ir.schemas) {
 		blocks.push(declaration(ctx, schema, false));
@@ -30,7 +24,7 @@ export function emitTypes(ctx: EmitContext): string {
 			);
 		}
 	}
-	return file([ctx.header, ...blocks]);
+	return blocks;
 }
 
 function declaration(
@@ -68,7 +62,6 @@ function members(
 	node: ObjectNode,
 	input: boolean,
 	indent: string,
-	member = false,
 ): string[] {
 	const lines: string[] = [];
 	for (const property of node.properties) {
@@ -88,20 +81,20 @@ function members(
 			`${indent}${propertyKey(name)}: ${type(ctx, inherited.schema, input, indent)};`,
 		);
 	}
-	if (ctx.mode(node, member) === 'loose') {
+	if (ctx.mode(node) === 'loose') {
 		lines.push(`${indent}[key: string]: unknown;`);
 	}
 	return lines;
 }
 
-function type(
+/** The TypeScript type of `node`, as its validator returns it or, with `input`, accepts it. */
+export function type(
 	ctx: EmitContext,
 	node: SchemaNode,
 	input: boolean,
 	indent: string,
-	member = false,
 ): string {
-	const text = bare(ctx, node, input, indent, member);
+	const text = bare(ctx, node, input, indent);
 	return node.nullable ? `${text} | null` : text;
 }
 
@@ -113,7 +106,6 @@ function bare(
 	node: SchemaNode,
 	input: boolean,
 	indent: string,
-	member: boolean,
 ): string {
 	switch (node.kind) {
 		case 'ref':
@@ -142,10 +134,10 @@ function bare(
 				.join(' | ');
 		case 'intersection':
 			return node.members
-				.map((m) => group(type(ctx, m, input, indent, true), '|'))
+				.map((m) => group(type(ctx, m, input, indent), '|'))
 				.join(' & ');
 		case 'object':
-			return objectType(ctx, node, input, indent, member);
+			return objectType(ctx, node, input, indent);
 	}
 }
 
@@ -154,13 +146,12 @@ function objectType(
 	node: ObjectNode,
 	input: boolean,
 	indent: string,
-	member: boolean,
 ): string {
 	const parts = node.extends.map((id) => ctx.typeName(id, input));
-	const body = members(ctx, node, input, `${indent}\t`, member);
+	const body = members(ctx, node, input, `${indent}\t`);
 	if (body.length > 0) parts.push(`{\n${body.join('\n')}\n${indent}}`);
 	else if (parts.length === 0) parts.push('{}');
-	const mode = ctx.mode(node, member);
+	const mode = ctx.mode(node);
 	if (typeof mode === 'object') {
 		parts.push(`{ [key: string]: ${type(ctx, mode.schema, input, indent)} }`);
 	}

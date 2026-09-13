@@ -67,7 +67,7 @@ export async function generateFiles(
 	const output = resolve(cwd, options.output);
 	const doc = await loadDocument(input, { fs, cwd });
 	const ir = buildIR(doc, options);
-	const files = emitFiles(ir, {
+	const { files, warnings } = emitFiles(ir, {
 		unknownKeys,
 		importExtension,
 		source: relative(output, input).split(sep).join('/'),
@@ -75,7 +75,7 @@ export async function generateFiles(
 	});
 	return {
 		files: files.map((file) => ({ ...file, path: join(output, file.path) })),
-		warnings: ir.warnings,
+		warnings: [...ir.warnings, ...warnings],
 	};
 }
 

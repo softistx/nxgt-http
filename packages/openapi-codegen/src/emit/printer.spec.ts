@@ -38,8 +38,8 @@ describe('printer', () => {
 		]);
 		for (const pattern of cases) {
 			const literal = regexLiteral(pattern);
-			// biome-ignore lint/security/noGlobalEval: checking the literal parses to the same regex
-			const parsed = (0, eval)(literal) as RegExp;
+			// Parses the literal as JavaScript would, to compare it with the regex.
+			const parsed = new Function(`return ${literal}`)() as RegExp;
 			expect(parsed.source).toBe(new RegExp(pattern).source);
 		}
 	});

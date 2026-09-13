@@ -29,12 +29,14 @@ import {
 	regexLiteral,
 } from './printer';
 
-interface Scope {
+export interface Scope {
 	/** Schemas whose `const` is initialized by the time this code runs. */
 	declared: ReadonlySet<string>;
 	/** Inside a getter, which runs only after every `const` is initialized. */
 	lazy: boolean;
 	indent: string;
+	/** Collects the schemas referenced, for a file that imports them. */
+	uses?: Set<string>;
 }
 
 const STRING_FORMATS: Record<StringFormat, string> = {
@@ -86,22 +88,12 @@ export function emitZod(ctx: EmitContext): string {
 	return file([ctx.header, imports.join('\n'), ...blocks]);
 }
 
-function expr(
-	ctx: EmitContext,
-	node: SchemaNode,
-	scope: Scope,
-	member = false,
-): string {
-	const text = bare(ctx, node, scope, member);
+export function expr(ctx: EmitContext, node: SchemaNode, scope: Scope): string {
+	const text = bare(ctx, node, scope);
 	return node.nullable ? `${text}.nullable()` : text;
 }
 
-function bare(
-	ctx: EmitContext,
-	node: SchemaNode,
-	scope: Scope,
-	member: boolean,
-): string {
+function bare(ctx: EmitContext, node: SchemaNode, scope: Scope): string {
 	switch (node.kind) {
 		case 'ref':
 			return reference(ctx, node.target, scope);
@@ -128,28 +120,35 @@ function bare(
 		case 'union':
 			return union(ctx, node, scope);
 		case 'intersection':
-			return intersection(node.members.map((m) => expr(ctx, m, scope, true)));
+			return intersection(node.members.map((m) => expr(ctx, m, scope)));
 		case 'object':
-			return object(ctx, node, scope, member);
+			return object(ctx, node, scope);
 	}
 }
 
+/** `zEmployee`, noted as used so the file that prints it can import it. */
+function named(ctx: EmitContext, id: string, scope: Scope): string {
+	scope.uses?.add(id);
+	return `z${ctx.schema(id).name}`;
+}
+
 function reference(ctx: EmitContext, target: string, scope: Scope): string {
-	const name = `z${ctx.schema(target).name}`;
+	const name = named(ctx, target, scope);
 	return scope.lazy || scope.declared.has(target)
 		? name
 		: `z.lazy(() => ${name})`;
 }
 
-const bounds = (min?: number, max?: number): string =>
+export const bounds = (min?: number, max?: number): string =>
 	(min === undefined ? '' : `.min(${min})`) +
 	(max === undefined ? '' : `.max(${max})`);
 
 function string(node: StringNode): string {
 	let out = node.format ? STRING_FORMATS[node.format] : 'z.string()';
 	out += bounds(node.minLength, node.maxLength);
-	if (node.pattern !== undefined)
+	if (node.pattern !== undefined) {
 		out += `.regex(${regexLiteral(node.pattern)})`;
+	}
 	return out;
 }
 
@@ -172,7 +171,7 @@ function number(node: NumberNode): string {
 	return out;
 }
 
-function literal(values: readonly Scalar[], indent: string): string {
+export function literal(values: readonly Scalar[], indent: string): string {
 	const [only] = values;
 	if (values.length === 1 && only !== undefined) {
 		return `z.literal(${jsValue(only)})`;
@@ -211,13 +210,8 @@ const MODE_CALLS: Record<string, string> = {
 	loose: '.loose()',
 };
 
-function object(
-	ctx: EmitContext,
-	node: ObjectNode,
-	scope: Scope,
-	member: boolean,
-): string {
-	const mode = ctx.mode(node, member);
+function object(ctx: EmitContext, node: ObjectNode, scope: Scope): string {
+	const mode = ctx.mode(node);
 	const shape = shapeOf(ctx, node, scope);
 	const [first, ...rest] = node.extends;
 	if (first === undefined) {
@@ -235,15 +229,15 @@ function object(
 	if (
 		node.extends.every((target) => ctx.isZodObject({ kind: 'ref', target }))
 	) {
-		let out = `z${ctx.schema(first).name}`;
-		for (const id of rest) out += `.extend(z${ctx.schema(id).name}.shape)`;
+		let out = named(ctx, first, scope);
+		for (const id of rest) out += `.extend(${named(ctx, id, scope)}.shape)`;
 		if (shape !== '{}') out += `.extend(${shape})`;
 		// `.extend()` keeps the first parent's mode; this object may want another.
 		return out + restate(ctx, mode, ctx.modeOf(first), scope);
 	}
 	const members = node.extends.map((id) => reference(ctx, id, scope));
 	if (shape !== '{}') {
-		members.push(object(ctx, { ...node, extends: [] }, scope, true));
+		members.push(object(ctx, { ...node, extends: [] }, scope));
 	}
 	return intersection(members);
 }
@@ -306,7 +300,7 @@ function entry(
 	const getter =
 		!scope.lazy && refsOf(schema).some((id) => !scope.declared.has(id));
 	const inner: Scope = {
-		declared: scope.declared,
+		...scope,
 		lazy: scope.lazy || getter,
 		indent: getter ? `${indent}\t` : indent,
 	};
@@ -320,7 +314,7 @@ function entry(
 }
 
 /** An object or array default is built afresh on each parse, so no caller shares it. */
-function defaultValue(value: unknown): string {
+export function defaultValue(value: unknown): string {
 	if (Array.isArray(value)) return `() => ${jsValue(value)}`;
 	if (typeof value === 'object' && value !== null) {
 		return `() => (${jsValue(value)})`;

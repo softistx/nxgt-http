@@ -1,9 +1,90 @@
-# One schema per mapping row, so the golden files show every one of them.
+# One schema per mapping row, and one parameter per way a value reaches a
+# request, so the golden files show every one of them.
 openapi: 3.1.0
 info:
   title: Kitchen sink
   version: 0.0.1
-paths: {}
+paths:
+  /pets/{petId}:
+    parameters:
+      - name: petId
+        in: path
+        required: true
+        schema: { type: integer, minimum: 1 }
+    get:
+      operationId: getPet
+      summary: Fetch a pet.
+      parameters:
+        - name: fields
+          in: query
+          description: Which fields to return.
+          schema: { type: array, items: { type: string } }
+        - name: ids
+          in: query
+          explode: false
+          schema: { type: array, items: { type: integer } }
+        - name: verbose
+          in: query
+          schema: { type: boolean, default: false }
+        - name: level
+          in: query
+          schema: { enum: [1, 2, max] }
+        - name: X-Request-Id
+          in: header
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: The pet.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Pet' }
+        '304':
+          description: Not modified.
+    delete:
+      operationId: deletePet
+      deprecated: true
+      summary: Delete a pet.
+      description: Pets are archived instead.
+      responses:
+        '204':
+          description: Gone.
+  /pets/{petId}/tags:
+    put:
+      operationId: putTags
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: array, items: { type: string } }
+      responses:
+        '200':
+          description: The tags.
+          content:
+            application/json:
+              schema: { type: array, items: { type: string } }
+  /uploads:
+    post:
+      operationId: upload
+      requestBody:
+        content:
+          multipart/form-data:
+            schema: { $ref: '#/components/schemas/Upload' }
+          application/octet-stream: {}
+      responses:
+        '200':
+          description: A receipt.
+          content:
+            text/plain: {}
+        '201':
+          description: The document.
+          content:
+            application/pdf: {}
 components:
   schemas:
     Formats:

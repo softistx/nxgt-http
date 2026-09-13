@@ -22,7 +22,7 @@ describe('generated validators', () => {
 		expect(K.zMaybeStatus.parse(null)).toBeNull();
 		// A boolean has no place in z.enum(): that one stays a union of literals.
 		expect(ok(K.zFlagged, true)).toBe(true);
-		const pet = operations['get /pets/{petId}'];
+		const pet = operations.getPet;
 		expect(pet.query.parse({ tier: '2' })).toMatchObject({ tier: 2 });
 		expect(pet.query.safeParse({ tier: '4' }).success).toBe(false);
 	});

@@ -1,11 +1,12 @@
 /**
  * The HTTP side of the spec.
  *
- * In `types.gen.ts`: `Operations`, keyed `'<method> <path>'`, whose entries
- * carry an operation's parameters, bodies and replies as types, plus
- * `OperationIds` and `PathsByMethod`. In `operations.gen.ts`: the same
- * operations as data, with the validators that read them off a request —
- * what the Hono integration, and a client later, are built on.
+ * In `types.gen.ts`: `Operations`, keyed by `operationId`, whose entries
+ * carry what a handler gets (parameters and bodies as validated) and the
+ * replies, plus the indexes `OperationsByRoute`, `PathsByMethod`,
+ * `OperationsByTag` and `PathsByTag`. What a caller sends is `paths.gen.ts`'s
+ * business. In `operations.gen.ts`: the same operations as data, with the
+ * validators that read them off a request, which the Hono integration runs.
  */
 import {
 	HTTP_METHODS,
@@ -18,16 +19,16 @@ import {
 } from '../ir/types';
 import {
 	type EmitContext,
-	operationKey,
 	type ParamGroup,
 	paramGroups,
 	paramKey,
+	routeKey,
 } from './context';
 import { docComment, jsString, list, propertyKey } from './printer';
 import { type } from './types';
 import { bounds, defaultValue, expr, literal, type Scope } from './zod';
 
-type Helper = 'flag' | 'none' | 'numeric';
+type Helper = 'flag' | 'none' | 'numeric' | 'repeated';
 
 /** Declared at the top of `operations.gen.ts` when a validator uses them. */
 const HELPERS: Record<Helper, string> = {
@@ -45,6 +46,11 @@ const HELPERS: Record<Helper, string> = {
 		'\t.string()',
 		'\t.regex(/^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$/)',
 		'\t.transform(Number);',
+	].join('\n'),
+	repeated: [
+		'/** A form field that may repeat: one value arrives alone, several as a list. */',
+		'const repeated = (value: unknown) =>',
+		'\tvalue === undefined || Array.isArray(value) ? value : [value];',
 	].join('\n'),
 };
 
@@ -66,10 +72,10 @@ export interface MediaSpec {
 }
 
 export interface OperationSpec {
-	readonly operationId: string;
 	readonly method: ${HTTP_METHODS.map(jsString).join(' | ')};
 	readonly path: string;
 	readonly honoPath: string;
+	readonly tags: readonly string[];
 	readonly parameters: readonly ParameterSpec[];
 	/** Validates the path parameters, each read as a string. */
 	readonly param: z.ZodType;
@@ -128,26 +134,76 @@ export function operationTypes(ctx: EmitContext): string[] {
 	const blocks: string[] = [];
 	for (const operation of ctx.ir.operations) {
 		for (const group of paramGroups(operation)) {
-			const object = groupObject(group);
 			blocks.push(
-				`export interface ${group.name} ${type(ctx, object, false, '')}`,
+				`export interface ${group.name} ${type(ctx, groupObject(group), false, '')}`,
 			);
-			if (group.hasInput) {
-				blocks.push(
-					[
-						`/** \`${group.name}\` as a caller passes it, before defaults are filled in. */`,
-						`export interface ${group.name}Input ${type(ctx, object, true, '')}`,
-					].join('\n'),
-				);
-			}
 		}
 	}
+	const tags = byTag(ctx);
 	blocks.push(
 		operationsType(ctx),
-		operationIdsType(ctx),
-		pathsByMethodType(ctx),
+		index(
+			'The operation behind each route: `routes.put(path)` finds it here.',
+			'OperationsByRoute',
+			ctx.ir.operations.map(
+				(operation) =>
+					`\t${jsString(routeKey(operation))}: ${jsString(operation.operationId)};`,
+			),
+		),
+		`/** The paths with an operation for each method. */\nexport interface PathsByMethod ${pathsByMethod(ctx.ir.operations, '')}`,
+		index(
+			'The operations under each tag.',
+			'OperationsByTag',
+			[...tags].map(
+				([tag, operations]) =>
+					`\t${propertyKey(tag)}: ${operations.map((o) => jsString(o.operationId)).join(' | ')};`,
+			),
+		),
+		index(
+			'`PathsByMethod`, for each tag.',
+			'PathsByTag',
+			[...tags].map(
+				([tag, operations]) =>
+					`\t${propertyKey(tag)}: ${pathsByMethod(operations, '\t')};`,
+			),
+		),
 	);
 	return blocks;
+}
+
+function index(doc: string, name: string, lines: readonly string[]): string {
+	return lines.length === 0
+		? `/** ${doc} */\nexport interface ${name} {}`
+		: `/** ${doc} */\nexport interface ${name} {\n${lines.join('\n')}\n}`;
+}
+
+/** The operations of each tag, tags and operations in spec order. */
+function byTag(ctx: EmitContext): Map<string, OperationIR[]> {
+	const tags = new Map<string, OperationIR[]>();
+	for (const operation of ctx.ir.operations) {
+		for (const tag of new Set(operation.tags)) {
+			tags.set(tag, [...(tags.get(tag) ?? []), operation]);
+		}
+	}
+	return tags;
+}
+
+/** Every method, with the paths that have an operation for it. */
+function pathsByMethod(
+	operations: readonly OperationIR[],
+	indent: string,
+): string {
+	const lines = HTTP_METHODS.map((method) => {
+		const paths = [
+			...new Set(
+				operations
+					.filter((operation) => operation.method === method)
+					.map((operation) => jsString(operation.path)),
+			),
+		];
+		return `${indent}\t${method}: ${paths.length === 0 ? 'never' : paths.join(' | ')};`;
+	});
+	return `{\n${lines.join('\n')}\n${indent}}`;
 }
 
 function operationsType(ctx: EmitContext): string {
@@ -159,25 +215,19 @@ function operationsType(ctx: EmitContext): string {
 		: `export interface Operations {\n${entries.join('\n')}\n}`;
 }
 
+/** What a handler gets: parameters and bodies as validated, and the replies. */
 function operationEntry(ctx: EmitContext, operation: OperationIR): string {
 	const indent = '\t\t';
 	const groups = new Map(paramGroups(operation).map((g) => [g.target, g]));
 	const lines = [
 		...docComment(operationDocs(operation), '\t'),
-		`\t${jsString(operationKey(operation))}: {`,
-		`${indent}operationId: ${jsString(operation.operationId)};`,
+		`\t${propertyKey(operation.operationId)}: {`,
 		`${indent}method: ${jsString(operation.method)};`,
 		`${indent}path: ${jsString(operation.path)};`,
 		`${indent}honoPath: ${jsString(operation.honoPath)};`,
 	];
 	for (const target of ['param', 'query', 'header'] as const) {
-		const group = groups.get(target);
-		const output = group?.name ?? '{}';
-		const input = group?.hasInput ? `${group.name}Input` : output;
-		lines.push(
-			`${indent}${target}: ${output};`,
-			`${indent}${target}Input: ${input};`,
-		);
+		lines.push(`${indent}${target}: ${groups.get(target)?.name ?? '{}'};`);
 	}
 	const { body } = operation;
 	for (const kind of ['json', 'form'] as const) {
@@ -186,7 +236,6 @@ function operationEntry(ctx: EmitContext, operation: OperationIR): string {
 		const absent = body.required ? '' : ' | undefined';
 		lines.push(
 			`${indent}${kind}: ${type(ctx, media.schema, false, indent)}${absent};`,
-			`${indent}${kind}Input: ${type(ctx, media.schema, true, indent)}${absent};`,
 		);
 	}
 	lines.push(
@@ -226,30 +275,6 @@ function contentType(
 	return `{\n${lines.join('\n')}\n${indent}}`;
 }
 
-function operationIdsType(ctx: EmitContext): string {
-	const lines = ctx.ir.operations.map(
-		(operation) =>
-			`\t${propertyKey(operation.operationId)}: ${jsString(operationKey(operation))};`,
-	);
-	return lines.length === 0
-		? 'export interface OperationIds {}'
-		: `export interface OperationIds {\n${lines.join('\n')}\n}`;
-}
-
-function pathsByMethodType(ctx: EmitContext): string {
-	const lines = HTTP_METHODS.map((method) => {
-		const paths = [
-			...new Set(
-				ctx.ir.operations
-					.filter((operation) => operation.method === method)
-					.map((operation) => jsString(operation.path)),
-			),
-		];
-		return `\t${method}: ${paths.length === 0 ? 'never' : paths.join(' | ')};`;
-	});
-	return `export interface PathsByMethod {\n${lines.join('\n')}\n}`;
-}
-
 // ----------------------------------------------------------- operations.gen.ts
 
 export function emitOperations(ctx: EmitContext): {
@@ -271,6 +296,15 @@ export function emitOperations(ctx: EmitContext): {
 		for (const group of paramGroups(operation)) {
 			validators.push(
 				`export const z${group.name} = ${paramObject(ctx, group, helpers, scope)};`,
+			);
+		}
+		const form = ctx.formOf(operation);
+		if (form) {
+			validators.push(
+				[
+					`/** \`${operation.operationId}\`'s form body, its fields read from text. */`,
+					`export const z${operation.name}Form = ${formObject(ctx, form.object, helpers, scope)};`,
+				].join('\n'),
 			);
 		}
 	}
@@ -314,6 +348,44 @@ function paramObject(
 		return `\t${propertyKey(paramKey(param))}: ${value},`;
 	});
 	return `z.object({\n${entries.join('\n')}\n})`;
+}
+
+/**
+ * A form body's validator. A form carries text and files, so each field is
+ * read like a parameter, and a list field takes one value alone as a list of
+ * one. The object keeps its unknown-key mode.
+ */
+function formObject(
+	ctx: EmitContext,
+	object: ObjectNode,
+	helpers: Set<Helper>,
+	scope: (indent: string) => Scope,
+): string {
+	const entries = object.properties.map((property) => {
+		let value = fromString(ctx, property.schema, helpers, scope('\t'));
+		if (ctx.resolve(property.schema).kind === 'array') {
+			helpers.add('repeated');
+			value = `z.preprocess(repeated, ${value})`;
+		}
+		const fallback = property.schema.default;
+		if (!property.required) {
+			value +=
+				fallback === undefined
+					? '.optional()'
+					: `.default(${defaultValue(fallback.value)})`;
+		}
+		return `\t${propertyKey(property.name)}: ${value},`;
+	});
+	const mode = ctx.mode(object);
+	const create =
+		mode === 'strict'
+			? 'z.strictObject'
+			: mode === 'loose'
+				? 'z.looseObject'
+				: 'z.object';
+	return entries.length === 0
+		? `${create}({})`
+		: `${create}({\n${entries.join('\n')}\n})`;
 }
 
 /**
@@ -398,21 +470,26 @@ function operationTable(
 				`{ name: ${jsString(param.name)}, in: ${jsString(param.in)}, required: ${param.required}, explode: ${param.explode}, list: ${ctx.resolve(param.schema).kind === 'array'} }`,
 		);
 		const lines = [
-			`\t${jsString(operationKey(operation))}: {`,
-			`\t\toperationId: ${jsString(operation.operationId)},`,
+			`\t${propertyKey(operation.operationId)}: {`,
 			`\t\tmethod: ${jsString(operation.method)},`,
 			`\t\tpath: ${jsString(operation.path)},`,
 			`\t\thonoPath: ${jsString(operation.honoPath)},`,
+			`\t\ttags: ${list('[', operation.tags.map(jsString), ']', '\t\t')},`,
 			`\t\tparameters: ${list('[', parameters, ']', '\t\t')},`,
 			`\t\tparam: ${validator('param')},`,
 			`\t\tquery: ${validator('query')},`,
 			`\t\theader: ${validator('header')},`,
 		];
 		if (operation.body) {
+			const form = ctx.formOf(operation);
+			const named = form && {
+				media: form.media,
+				validator: `z${operation.name}Form`,
+			};
 			lines.push(
 				'\t\tbody: {',
 				`\t\t\trequired: ${operation.body.required},`,
-				`\t\t\tcontent: ${contentSpec(ctx, operation.body.content, scope, '\t\t\t')},`,
+				`\t\t\tcontent: ${contentSpec(ctx, operation.body.content, scope, '\t\t\t', named)},`,
 				'\t\t},',
 			);
 		}
@@ -431,13 +508,18 @@ function contentSpec(
 	content: readonly MediaIR[],
 	scope: (indent: string) => Scope,
 	indent: string,
+	/** A media type whose validator is declared above the table. */
+	named?: { media: MediaIR; validator: string },
 ): string {
 	if (content.length === 0) return '{}';
 	const inner = `${indent}\t`;
 	const lines = content.map((media) => {
-		const schema = media.schema
-			? `, schema: ${expr(ctx, media.schema, scope(inner))}`
-			: '';
+		const schema =
+			named?.media === media
+				? `, schema: ${named.validator}`
+				: media.schema
+					? `, schema: ${expr(ctx, media.schema, scope(inner))}`
+					: '';
 		return `${inner}${jsString(media.mediaType)}: { kind: ${jsString(media.kind)}${schema} },`;
 	});
 	return `{\n${lines.join('\n')}\n${indent}}`;

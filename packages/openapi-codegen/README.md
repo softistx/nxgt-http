@@ -3,7 +3,8 @@
 Generates TypeScript types, Zod 4 validators and a typed map of every
 operation from an OpenAPI 3.1 or 3.2 document, whether it is one file or
 split across many. Types and validators are printed from the same reading of
-the spec, so they cannot disagree.
+the spec, so they cannot disagree. With the `hono` option, it also types a
+Hono app's routes from the spec and validates their requests.
 
 ## Install
 
@@ -19,7 +20,21 @@ Both peers are required:
 - `typescript` 6, the version every `@nxgt` package pins. The generator does
   not call it.
 
+For typed Hono routes, the generated code imports this package at runtime,
+and `hono` is its optional peer:
+
+```sh
+bun add @nxgt/openapi-codegen hono zod
+```
+
 The generator runs on Bun; the code it generates runs anywhere.
+
+## Subpaths
+
+| Import | For |
+| --- | --- |
+| `@nxgt/openapi-codegen` | the generator: `generate()`, `defineConfig`, the pipeline stages |
+| `@nxgt/openapi-codegen/hono` | the runtime `hono.gen.ts` binds to its spec; needs `hono` |
 
 ## Usage
 
@@ -52,13 +67,15 @@ await generate({ input: 'openapi/openapi.yaml', output: 'src/generated' });
 This writes four files:
 
 - `types.gen.ts`: a type per schema, an `as const` object per named enum,
-  and the `Operations` map;
+  and the `Operations` map with its indexes;
 - `zod.gen.ts`: a `z<Name>` validator per schema;
-- `operations.gen.ts`: every operation as data, with its parameter
+- `operations.gen.ts`: every operation as data, with its parameter and form
   validators;
 - `paths.gen.ts`: `paths`, `operations` and `components` in the shape
   openapi-typescript prints, so `createClient<paths>()` from openapi-fetch
   works with no other step.
+
+With `hono: true`, it writes a fifth, `hono.gen.ts`.
 
 `$ref`s are followed across files by relative path, including into
 `node_modules` (`../node_modules/@acme/fragments/Error.yaml`).
@@ -71,8 +88,31 @@ import { zNewEmployee } from './generated/zod.gen.js';
 import { operations } from './generated/operations.gen.js';
 
 const body = zNewEmployee.parse(await request.json());
-const query = operations['get /employees'].query.parse({ page: '2' }); // { page: 2 }
+const query = operations.listEmployees.query.parse({ page: '2' }); // { page: 2 }
 ```
+
+### Serve typed Hono routes
+
+With `hono: true` in the config:
+
+```ts
+import { Hono } from 'hono';
+import { createRoutes } from './generated/hono.gen.js';
+
+const app = new Hono();
+
+createRoutes(app).put('/employees/{id}', auth, async (c) => {
+	const { id } = c.req.valid('param');
+	const employee = await employees.update(id, c.req.valid('json'));
+	if (!employee) return c.json({ message: 'errors.not-found' }, 404);
+	return c.json(employee, 200);
+});
+```
+
+`auth` runs first. A request the spec refuses then gets a 400 listing every
+issue. A reply the spec does not declare does not compile.
+[Typed Hono routes](docs/guide/hono.md) covers modules, error hooks and
+reply checks.
 
 ### Fail CI when the generated code is stale
 
@@ -112,9 +152,9 @@ each with a stable `code`.
 
 `defineConfig` types a config file, and `loadConfig` finds and reads one the
 way the command line does. `generateFiles` returns the files instead of
-writing them. `formatDiagnostic`
-prints one diagnostic the way `CodegenError` does. The pipeline stages are
-exported too, for tools built on the spec:
+writing them. `formatDiagnostic` prints one diagnostic the way
+`CodegenError` does. The pipeline stages are exported too, for tools built
+on the spec:
 
 - `loadDocument`, `Resolver`, `createMemoryFileSystem` and `nodeFileSystem`;
 - `buildIR` and the IR types;
@@ -142,12 +182,20 @@ exported too, for tools built on the spec:
   specifiers.
 - **Keep the output away from your formatter and linter.** It is printed
   tab-indented, not by your tools. Exclude the output directory.
+- **`hono.gen.ts` imports this package at runtime.** Install it as a
+  dependency, not a dev dependency, once you generate that file.
+- **Give `c.json()` a status, and reply with plain objects.** Without a
+  status, Hono types a reply with any status, and it matches no declared
+  one. A Mongoose document does not type as its schema; return `.lean()`
+  results.
 
 ## Documentation
 
 The package ships a `docs/` folder:
 
 - [the command line](docs/guide/cli.md): flags, config files, exit codes;
+- [typed Hono routes](docs/guide/hono.md): routes, validation errors,
+  modules, reply checks;
 - [the guide](docs/README.md): the generated code, every option, how each
   JSON Schema keyword maps, and every diagnostic code;
 - [the architecture](docs/architecture/overview.md), for working on the

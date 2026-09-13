@@ -57,17 +57,13 @@ export interface DeleteEmployeeParam {
 }
 
 export interface Operations {
-	'get /employees': {
-		operationId: 'listEmployees';
+	listEmployees: {
 		method: 'get';
 		path: '/employees';
 		honoPath: '/employees';
 		param: {};
-		paramInput: {};
 		query: ListEmployeesQuery;
-		queryInput: ListEmployeesQuery;
 		header: {};
-		headerInput: {};
 		responses: {
 			/** The employees. */
 			200: {
@@ -79,19 +75,14 @@ export interface Operations {
 			};
 		};
 	};
-	'post /employees': {
-		operationId: 'createEmployee';
+	createEmployee: {
 		method: 'post';
 		path: '/employees';
 		honoPath: '/employees';
 		param: {};
-		paramInput: {};
 		query: {};
-		queryInput: {};
 		header: {};
-		headerInput: {};
 		json: NewEmployee;
-		jsonInput: NewEmployee;
 		responses: {
 			/** Created. */
 			201: {
@@ -103,17 +94,13 @@ export interface Operations {
 			};
 		};
 	};
-	'get /employees/{id}': {
-		operationId: 'getEmployee';
+	getEmployee: {
 		method: 'get';
 		path: '/employees/{id}';
 		honoPath: '/employees/:id';
 		param: GetEmployeeParam;
-		paramInput: GetEmployeeParam;
 		query: {};
-		queryInput: {};
 		header: {};
-		headerInput: {};
 		responses: {
 			/** The employee. */
 			200: {
@@ -125,19 +112,14 @@ export interface Operations {
 			};
 		};
 	};
-	'put /employees/{id}': {
-		operationId: 'updateEmployee';
+	updateEmployee: {
 		method: 'put';
 		path: '/employees/{id}';
 		honoPath: '/employees/:id';
 		param: UpdateEmployeeParam;
-		paramInput: UpdateEmployeeParam;
 		query: {};
-		queryInput: {};
 		header: {};
-		headerInput: {};
 		json: NewEmployee;
-		jsonInput: NewEmployee;
 		responses: {
 			/** The updated employee. */
 			200: {
@@ -149,17 +131,13 @@ export interface Operations {
 			};
 		};
 	};
-	'delete /employees/{id}': {
-		operationId: 'deleteEmployee';
+	deleteEmployee: {
 		method: 'delete';
 		path: '/employees/{id}';
 		honoPath: '/employees/:id';
 		param: DeleteEmployeeParam;
-		paramInput: DeleteEmployeeParam;
 		query: {};
-		queryInput: {};
 		header: {};
-		headerInput: {};
 		responses: {
 			/** The resource was successfully deleted */
 			204: {};
@@ -171,14 +149,16 @@ export interface Operations {
 	};
 }
 
-export interface OperationIds {
-	listEmployees: 'get /employees';
-	createEmployee: 'post /employees';
-	getEmployee: 'get /employees/{id}';
-	updateEmployee: 'put /employees/{id}';
-	deleteEmployee: 'delete /employees/{id}';
+/** The operation behind each route: \`routes.put(path)\` finds it here. */
+export interface OperationsByRoute {
+	'get /employees': 'listEmployees';
+	'post /employees': 'createEmployee';
+	'get /employees/{id}': 'getEmployee';
+	'put /employees/{id}': 'updateEmployee';
+	'delete /employees/{id}': 'deleteEmployee';
 }
 
+/** The paths with an operation for each method. */
 export interface PathsByMethod {
 	get: '/employees' | '/employees/{id}';
 	put: '/employees/{id}';
@@ -189,6 +169,26 @@ export interface PathsByMethod {
 	patch: never;
 	trace: never;
 	query: never;
+}
+
+/** The operations under each tag. */
+export interface OperationsByTag {
+	employees: 'listEmployees' | 'createEmployee' | 'getEmployee' | 'updateEmployee' | 'deleteEmployee';
+}
+
+/** \`PathsByMethod\`, for each tag. */
+export interface PathsByTag {
+	employees: {
+		get: '/employees' | '/employees/{id}';
+		put: '/employees/{id}';
+		post: '/employees';
+		delete: '/employees/{id}';
+		options: never;
+		head: never;
+		patch: never;
+		trace: never;
+		query: never;
+	};
 }
 "
 `;
@@ -250,10 +250,10 @@ export interface MediaSpec {
 }
 
 export interface OperationSpec {
-	readonly operationId: string;
 	readonly method: 'get' | 'put' | 'post' | 'delete' | 'options' | 'head' | 'patch' | 'trace' | 'query';
 	readonly path: string;
 	readonly honoPath: string;
+	readonly tags: readonly string[];
 	readonly parameters: readonly ParameterSpec[];
 	/** Validates the path parameters, each read as a string. */
 	readonly param: z.ZodType;
@@ -300,11 +300,11 @@ export const zDeleteEmployeeParam = z.object({
 export const operations: {
 	readonly [K in keyof Operations]: OperationSpec;
 } = {
-	'get /employees': {
-		operationId: 'listEmployees',
+	listEmployees: {
 		method: 'get',
 		path: '/employees',
 		honoPath: '/employees',
+		tags: ['employees'],
 		parameters: [
 			{ name: 'page', in: 'query', required: false, explode: true, list: false },
 			{ name: 'size', in: 'query', required: false, explode: true, list: false },
@@ -322,11 +322,11 @@ export const operations: {
 			},
 		},
 	},
-	'post /employees': {
-		operationId: 'createEmployee',
+	createEmployee: {
 		method: 'post',
 		path: '/employees',
 		honoPath: '/employees',
+		tags: ['employees'],
 		parameters: [],
 		param: none,
 		query: none,
@@ -346,11 +346,11 @@ export const operations: {
 			},
 		},
 	},
-	'get /employees/{id}': {
-		operationId: 'getEmployee',
+	getEmployee: {
 		method: 'get',
 		path: '/employees/{id}',
 		honoPath: '/employees/:id',
+		tags: ['employees'],
 		parameters: [
 			{ name: 'id', in: 'path', required: true, explode: false, list: false },
 		],
@@ -366,11 +366,11 @@ export const operations: {
 			},
 		},
 	},
-	'put /employees/{id}': {
-		operationId: 'updateEmployee',
+	updateEmployee: {
 		method: 'put',
 		path: '/employees/{id}',
 		honoPath: '/employees/:id',
+		tags: ['employees'],
 		parameters: [
 			{ name: 'id', in: 'path', required: true, explode: false, list: false },
 		],
@@ -392,11 +392,11 @@ export const operations: {
 			},
 		},
 	},
-	'delete /employees/{id}': {
-		operationId: 'deleteEmployee',
+	deleteEmployee: {
 		method: 'delete',
 		path: '/employees/{id}',
 		honoPath: '/employees/:id',
+		tags: ['employees'],
 		parameters: [
 			{ name: 'id', in: 'path', required: true, explode: false, list: false },
 		],
@@ -646,6 +646,71 @@ export interface operations {
 "
 `;
 
+exports[`generated code is unchanged for split: split/hono.gen.ts 1`] = `
+"// Generated by @nxgt/openapi-codegen from ../../fixtures/split/openapi.yaml. Do not edit.
+
+import type * as Hono from 'hono';
+import * as runtime from '@nxgt/openapi-codegen/hono';
+import { operations } from './operations.gen.js';
+import type {
+	Employee,
+	ErrorResponse,
+	Operations,
+	OperationsByRoute,
+	OperationsByTag,
+	PathsByMethod,
+	PathsByTag,
+} from './types.gen.js';
+
+/** What each operation may reply: a handler returning anything else does not compile. */
+export interface Replies {
+	listEmployees:
+		| Hono.TypedResponse<Employee[], 200, 'json'>
+		| Hono.TypedResponse<ErrorResponse, 400, 'json'>;
+	createEmployee:
+		| Hono.TypedResponse<Employee, 201, 'json'>
+		| Hono.TypedResponse<ErrorResponse, 400, 'json'>;
+	getEmployee:
+		| Hono.TypedResponse<Employee, 200, 'json'>
+		| Hono.TypedResponse<ErrorResponse, 404, 'json'>;
+	updateEmployee:
+		| Hono.TypedResponse<Employee, 200, 'json'>
+		| Hono.TypedResponse<ErrorResponse, 404, 'json'>;
+	deleteEmployee:
+		| Hono.TypedResponse<null, 204, 'body'>
+		| Hono.TypedResponse<ErrorResponse, 404, 'json'>;
+}
+
+/** The spec, as \`@nxgt/openapi-codegen/hono\` reads it. */
+export interface HonoSpec {
+	operations: Operations;
+	replies: Replies;
+	routes: OperationsByRoute;
+	paths: PathsByMethod;
+	tags: OperationsByTag;
+	tagPaths: PathsByTag;
+}
+
+/**
+ * One registry for the whole spec: \`api.routes(app)\` in each module, then
+ * \`api.assertComplete()\` once every module is registered.
+ */
+export const createApi = (
+	options?: runtime.ApiOptions,
+): runtime.Api<HonoSpec> => runtime.createApi<HonoSpec>(operations, options);
+
+/** Routes on one app, with a registry of their own. */
+export const createRoutes = <
+	Prefix extends string = '',
+	Tag extends keyof OperationsByTag & string = never,
+>(
+	app: Hono.Hono<any, any, any>,
+	options?: runtime.RoutesOptions<Prefix, Tag>,
+): runtime.Routes<HonoSpec, runtime.ScopeOf<HonoSpec, Tag>, Prefix> =>
+	createApi(options).routes(app, options);
+"
+`;
+
 exports[`generated code is unchanged for query: query/types.gen.ts 1`] = `
 "// Generated by @nxgt/openapi-codegen from ../../fixtures/query/openapi.yaml. Do not edit.
 
@@ -668,19 +733,14 @@ export interface SearchEmployeesBodyInput {
 }
 
 export interface Operations {
-	'query /employees': {
-		operationId: 'searchEmployees';
+	searchEmployees: {
 		method: 'query';
 		path: '/employees';
 		honoPath: '/employees';
 		param: {};
-		paramInput: {};
 		query: {};
-		queryInput: {};
 		header: {};
-		headerInput: {};
 		json: SearchEmployeesBody;
-		jsonInput: SearchEmployeesBodyInput;
 		responses: {
 			/** The matching employees. */
 			200: {
@@ -690,10 +750,12 @@ export interface Operations {
 	};
 }
 
-export interface OperationIds {
-	searchEmployees: 'query /employees';
+/** The operation behind each route: \`routes.put(path)\` finds it here. */
+export interface OperationsByRoute {
+	'query /employees': 'searchEmployees';
 }
 
+/** The paths with an operation for each method. */
 export interface PathsByMethod {
 	get: never;
 	put: never;
@@ -705,6 +767,12 @@ export interface PathsByMethod {
 	trace: never;
 	query: '/employees';
 }
+
+/** The operations under each tag. */
+export interface OperationsByTag {}
+
+/** \`PathsByMethod\`, for each tag. */
+export interface PathsByTag {}
 "
 `;
 
@@ -750,10 +818,10 @@ export interface MediaSpec {
 }
 
 export interface OperationSpec {
-	readonly operationId: string;
 	readonly method: 'get' | 'put' | 'post' | 'delete' | 'options' | 'head' | 'patch' | 'trace' | 'query';
 	readonly path: string;
 	readonly honoPath: string;
+	readonly tags: readonly string[];
 	readonly parameters: readonly ParameterSpec[];
 	/** Validates the path parameters, each read as a string. */
 	readonly param: z.ZodType;
@@ -776,11 +844,11 @@ const none = z.object({});
 export const operations: {
 	readonly [K in keyof Operations]: OperationSpec;
 } = {
-	'query /employees': {
-		operationId: 'searchEmployees',
+	searchEmployees: {
 		method: 'query',
 		path: '/employees',
 		honoPath: '/employees',
+		tags: [],
 		parameters: [],
 		param: none,
 		query: none,
@@ -867,6 +935,56 @@ export interface operations {
 		};
 	};
 }
+"
+`;
+
+exports[`generated code is unchanged for query: query/hono.gen.ts 1`] = `
+"// Generated by @nxgt/openapi-codegen from ../../fixtures/query/openapi.yaml. Do not edit.
+
+import type * as Hono from 'hono';
+import * as runtime from '@nxgt/openapi-codegen/hono';
+import { operations } from './operations.gen.js';
+import type {
+	Hit,
+	Operations,
+	OperationsByRoute,
+	OperationsByTag,
+	PathsByMethod,
+	PathsByTag,
+} from './types.gen.js';
+
+/** What each operation may reply: a handler returning anything else does not compile. */
+export interface Replies {
+	searchEmployees: Hono.TypedResponse<Hit[], 200, 'json'>;
+}
+
+/** The spec, as \`@nxgt/openapi-codegen/hono\` reads it. */
+export interface HonoSpec {
+	operations: Operations;
+	replies: Replies;
+	routes: OperationsByRoute;
+	paths: PathsByMethod;
+	tags: OperationsByTag;
+	tagPaths: PathsByTag;
+}
+
+/**
+ * One registry for the whole spec: \`api.routes(app)\` in each module, then
+ * \`api.assertComplete()\` once every module is registered.
+ */
+export const createApi = (
+	options?: runtime.ApiOptions,
+): runtime.Api<HonoSpec> => runtime.createApi<HonoSpec>(operations, options);
+
+/** Routes on one app, with a registry of their own. */
+export const createRoutes = <
+	Prefix extends string = '',
+	Tag extends keyof OperationsByTag & string = never,
+>(
+	app: Hono.Hono<any, any, any>,
+	options?: runtime.RoutesOptions<Prefix, Tag>,
+): runtime.Routes<HonoSpec, runtime.ScopeOf<HonoSpec, Tag>, Prefix> =>
+	createApi(options).routes(app, options);
 "
 `;
 
@@ -1067,6 +1185,19 @@ export interface Documented {
 
 export interface Upload {
 	file?: globalThis.File | undefined;
+	copies: number;
+	/** @default false */
+	public: boolean;
+	labels?: string[] | undefined;
+}
+
+/** \`Upload\` as its validator accepts it, before defaults are filled in. */
+export interface UploadInput {
+	file?: globalThis.File | undefined;
+	copies: number;
+	/** @default false */
+	public?: boolean | undefined;
+	labels?: string[] | undefined;
 }
 
 export type Identifier = Strict;
@@ -1085,17 +1216,6 @@ export interface GetPetQuery {
 	tier?: Tier | undefined;
 }
 
-/** \`GetPetQuery\` as a caller passes it, before defaults are filled in. */
-export interface GetPetQueryInput {
-	/** Which fields to return. */
-	fields?: string[] | undefined;
-	ids?: number[] | undefined;
-	/** @default false */
-	verbose?: boolean | undefined;
-	level?: 1 | 2 | 'max' | undefined;
-	tier?: Tier | undefined;
-}
-
 export interface GetPetHeader {
 	'x-request-id': string;
 }
@@ -1110,17 +1230,13 @@ export interface PutTagsParam {
 
 export interface Operations {
 	/** Fetch a pet. */
-	'get /pets/{petId}': {
-		operationId: 'getPet';
+	getPet: {
 		method: 'get';
 		path: '/pets/{petId}';
 		honoPath: '/pets/:petId';
 		param: GetPetParam;
-		paramInput: GetPetParam;
 		query: GetPetQuery;
-		queryInput: GetPetQueryInput;
 		header: GetPetHeader;
-		headerInput: GetPetHeader;
 		responses: {
 			/** The pet. */
 			200: {
@@ -1136,35 +1252,26 @@ export interface Operations {
 	 * Pets are archived instead.
 	 * @deprecated
 	 */
-	'delete /pets/{petId}': {
-		operationId: 'deletePet';
+	deletePet: {
 		method: 'delete';
 		path: '/pets/{petId}';
 		honoPath: '/pets/:petId';
 		param: DeletePetParam;
-		paramInput: DeletePetParam;
 		query: {};
-		queryInput: {};
 		header: {};
-		headerInput: {};
 		responses: {
 			/** Gone. */
 			204: {};
 		};
 	};
-	'put /pets/{petId}/tags': {
-		operationId: 'putTags';
+	putTags: {
 		method: 'put';
 		path: '/pets/{petId}/tags';
 		honoPath: '/pets/:petId/tags';
 		param: PutTagsParam;
-		paramInput: PutTagsParam;
 		query: {};
-		queryInput: {};
 		header: {};
-		headerInput: {};
 		json: string[];
-		jsonInput: string[];
 		responses: {
 			/** The tags. */
 			200: {
@@ -1172,19 +1279,14 @@ export interface Operations {
 			};
 		};
 	};
-	'post /uploads': {
-		operationId: 'upload';
+	upload: {
 		method: 'post';
 		path: '/uploads';
 		honoPath: '/uploads';
 		param: {};
-		paramInput: {};
 		query: {};
-		queryInput: {};
 		header: {};
-		headerInput: {};
 		form: Upload | undefined;
-		formInput: Upload | undefined;
 		responses: {
 			/** A receipt. */
 			200: {
@@ -1198,13 +1300,15 @@ export interface Operations {
 	};
 }
 
-export interface OperationIds {
-	getPet: 'get /pets/{petId}';
-	deletePet: 'delete /pets/{petId}';
-	putTags: 'put /pets/{petId}/tags';
-	upload: 'post /uploads';
+/** The operation behind each route: \`routes.put(path)\` finds it here. */
+export interface OperationsByRoute {
+	'get /pets/{petId}': 'getPet';
+	'delete /pets/{petId}': 'deletePet';
+	'put /pets/{petId}/tags': 'putTags';
+	'post /uploads': 'upload';
 }
 
+/** The paths with an operation for each method. */
 export interface PathsByMethod {
 	get: '/pets/{petId}';
 	put: '/pets/{petId}/tags';
@@ -1216,6 +1320,12 @@ export interface PathsByMethod {
 	trace: never;
 	query: never;
 }
+
+/** The operations under each tag. */
+export interface OperationsByTag {}
+
+/** \`PathsByMethod\`, for each tag. */
+export interface PathsByTag {}
 "
 `;
 
@@ -1370,6 +1480,9 @@ export const zDocumented = z.object({
 
 export const zUpload = z.object({
 	file: z.file().optional(),
+	copies: z.int().min(1),
+	public: z.boolean().default(false),
+	labels: z.array(z.string()).optional(),
 });
 
 export const zIdentifier = zStrict;
@@ -1380,7 +1493,7 @@ exports[`generated code is unchanged for kitchen-sink: kitchen-sink/operations.g
 "// Generated by @nxgt/openapi-codegen from ../../fixtures/kitchen-sink/openapi.yaml. Do not edit.
 
 import { z } from 'zod';
-import { zPet, zTier, zUpload } from './zod.gen.js';
+import { zPet, zTier } from './zod.gen.js';
 import type { Operations } from './types.gen.js';
 
 /** How a server reads a parameter, and how a client writes it. */
@@ -1401,10 +1514,10 @@ export interface MediaSpec {
 }
 
 export interface OperationSpec {
-	readonly operationId: string;
 	readonly method: 'get' | 'put' | 'post' | 'delete' | 'options' | 'head' | 'patch' | 'trace' | 'query';
 	readonly path: string;
 	readonly honoPath: string;
+	readonly tags: readonly string[];
 	readonly parameters: readonly ParameterSpec[];
 	/** Validates the path parameters, each read as a string. */
 	readonly param: z.ZodType;
@@ -1433,6 +1546,10 @@ const numeric = z
 	.regex(/^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$/)
 	.transform(Number);
 
+/** A form field that may repeat: one value arrives alone, several as a list. */
+const repeated = (value: unknown) =>
+	value === undefined || Array.isArray(value) ? value : [value];
+
 export const zGetPetParam = z.object({
 	petId: numeric.pipe(z.int().min(1)),
 });
@@ -1457,14 +1574,22 @@ export const zPutTagsParam = z.object({
 	petId: numeric.pipe(z.int()),
 });
 
+/** \`upload\`'s form body, its fields read from text. */
+export const zUploadForm = z.object({
+	file: z.file().optional(),
+	copies: numeric.pipe(z.int().min(1)),
+	public: flag.default(false),
+	labels: z.preprocess(repeated, z.array(z.string())).optional(),
+});
+
 export const operations: {
 	readonly [K in keyof Operations]: OperationSpec;
 } = {
-	'get /pets/{petId}': {
-		operationId: 'getPet',
+	getPet: {
 		method: 'get',
 		path: '/pets/{petId}',
 		honoPath: '/pets/:petId',
+		tags: [],
 		parameters: [
 			{ name: 'petId', in: 'path', required: true, explode: false, list: false },
 			{ name: 'fields', in: 'query', required: false, explode: true, list: true },
@@ -1484,11 +1609,11 @@ export const operations: {
 			304: {},
 		},
 	},
-	'delete /pets/{petId}': {
-		operationId: 'deletePet',
+	deletePet: {
 		method: 'delete',
 		path: '/pets/{petId}',
 		honoPath: '/pets/:petId',
+		tags: [],
 		parameters: [
 			{ name: 'petId', in: 'path', required: true, explode: false, list: false },
 		],
@@ -1499,11 +1624,11 @@ export const operations: {
 			204: {},
 		},
 	},
-	'put /pets/{petId}/tags': {
-		operationId: 'putTags',
+	putTags: {
 		method: 'put',
 		path: '/pets/{petId}/tags',
 		honoPath: '/pets/:petId/tags',
+		tags: [],
 		parameters: [
 			{ name: 'petId', in: 'path', required: true, explode: false, list: false },
 		],
@@ -1522,11 +1647,11 @@ export const operations: {
 			},
 		},
 	},
-	'post /uploads': {
-		operationId: 'upload',
+	upload: {
 		method: 'post',
 		path: '/uploads',
 		honoPath: '/uploads',
+		tags: [],
 		parameters: [],
 		param: none,
 		query: none,
@@ -1534,7 +1659,7 @@ export const operations: {
 		body: {
 			required: false,
 			content: {
-				'multipart/form-data': { kind: 'form', schema: zUpload },
+				'multipart/form-data': { kind: 'form', schema: zUploadForm },
 				'application/octet-stream': { kind: 'binary' },
 			},
 		},
@@ -1584,6 +1709,7 @@ import type {
 	Timestamps,
 	Tree,
 	Upload,
+	UploadInput,
 	UsesDefaults,
 } from './types.gen.js';
 
@@ -1796,7 +1922,7 @@ export interface operations {
 		};
 		requestBody?: {
 			content: {
-				'multipart/form-data': Upload;
+				'multipart/form-data': UploadInput;
 				'application/octet-stream': globalThis.Blob;
 			};
 		};
@@ -1822,5 +1948,69 @@ export interface operations {
 		};
 	};
 }
+"
+`;
+
+exports[`generated code is unchanged for kitchen-sink: kitchen-sink/hono.gen.ts 1`] = `
+"// Generated by @nxgt/openapi-codegen from ../../fixtures/kitchen-sink/openapi.yaml. Do not edit.
+
+import type * as Hono from 'hono';
+import * as runtime from '@nxgt/openapi-codegen/hono';
+import { operations } from './operations.gen.js';
+import type {
+	Operations,
+	OperationsByRoute,
+	OperationsByTag,
+	PathsByMethod,
+	PathsByTag,
+	Pet,
+} from './types.gen.js';
+
+/** What each operation may reply: a handler returning anything else does not compile. */
+export interface Replies {
+	/** Fetch a pet. */
+	getPet:
+		| Hono.TypedResponse<Pet, 200, 'json'>
+		| Hono.TypedResponse<null, 304, 'body'>;
+	/**
+	 * Delete a pet.
+	 *
+	 * Pets are archived instead.
+	 * @deprecated
+	 */
+	deletePet: Hono.TypedResponse<null, 204, 'body'>;
+	putTags: Hono.TypedResponse<string[], 200, 'json'>;
+	upload:
+		| Hono.TypedResponse<string, 200, 'text'>
+		| Hono.TypedResponse<unknown, 201, 'body'>;
+}
+
+/** The spec, as \`@nxgt/openapi-codegen/hono\` reads it. */
+export interface HonoSpec {
+	operations: Operations;
+	replies: Replies;
+	routes: OperationsByRoute;
+	paths: PathsByMethod;
+	tags: OperationsByTag;
+	tagPaths: PathsByTag;
+}
+
+/**
+ * One registry for the whole spec: \`api.routes(app)\` in each module, then
+ * \`api.assertComplete()\` once every module is registered.
+ */
+export const createApi = (
+	options?: runtime.ApiOptions,
+): runtime.Api<HonoSpec> => runtime.createApi<HonoSpec>(operations, options);
+
+/** Routes on one app, with a registry of their own. */
+export const createRoutes = <
+	Prefix extends string = '',
+	Tag extends keyof OperationsByTag & string = never,
+>(
+	app: Hono.Hono<any, any, any>,
+	options?: runtime.RoutesOptions<Prefix, Tag>,
+): runtime.Routes<HonoSpec, runtime.ScopeOf<HonoSpec, Tag>, Prefix> =>
+	createApi(options).routes(app, options);
 "
 `;

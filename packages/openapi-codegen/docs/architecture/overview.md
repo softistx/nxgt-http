@@ -6,11 +6,13 @@ flowchart LR
 	load --> ir[ir<br/>buildIR]
 	ir --> emit[emit<br/>emitFiles]
 	emit --> write[writer<br/>writeFiles]
-	write --> out[(types.gen.ts<br/>zod.gen.ts<br/>operations.gen.ts<br/>paths.gen.ts)]
+	write --> out[(types.gen.ts<br/>zod.gen.ts<br/>operations.gen.ts<br/>paths.gen.ts<br/>hono.gen.ts, with hono)]
+	out -. hono.gen.ts .-> runtime[hono runtime<br/>createApi]
 ```
 
 `generate()` (`src/generate.ts`) runs the four stages. `generateFiles()` stops
-before the writer.
+before the writer. The Hono runtime is not a stage: it is the subpath
+`hono.gen.ts` imports, run by the consumer's app.
 
 | Stage | Directory | In | Out |
 | --- | --- | --- | --- |
@@ -19,6 +21,7 @@ before the writer.
 | [Emitters](emitters.md) | `src/emit/` | `ApiIR` | `GeneratedFile[]` |
 | Writer | `src/writer/` | files | written, unchanged and drifted paths |
 | Command line | `src/cli.ts`, `src/cli/run.ts`, `src/config.ts` | arguments, a config file | `generate()` per config, an exit code |
+| [Hono runtime](hono.md) | `src/hono/` | the operations table, a Hono app | routes that validate, then call the handler |
 
 `src/errors.ts` holds the diagnostic model that every stage shares.
 
@@ -44,11 +47,13 @@ before the writer.
    spec order; operations in spec order. No timestamps, no absolute paths.
    The `check` option and the snapshots depend on it.
 6. **Generated code imports `zod` and its sibling files, nothing else.** A
-   consumer's runtime never depends on this package for the schema code.
+   consumer's runtime never depends on this package for the schema code. The
+   one exception is `hono.gen.ts`, written only with the `hono` option: it
+   imports `hono` and `@nxgt/openapi-codegen/hono`.
 
 ## Where to start reading
 
-- `src/generate.ts`: the whole pipeline, options included, in under a
+- `src/generate.ts`: the whole pipeline, options included, in about a
   hundred lines.
 - `src/ir/types.ts`: the IR, the contract between the stages.
 - `test/fixtures/kitchen-sink/openapi.yaml`, and the snapshot of what it

@@ -9,6 +9,7 @@ await generate({
 	unknownKeys: 'strip',
 	importExtension: '.js',
 	enums: 'object',
+	hono: false,
 	names: { 'components/schemas/Error.yaml': 'ApiError' },
 	legacyNullable: 'warn',
 	check: false,
@@ -22,6 +23,7 @@ await generate({
 | [`unknownKeys`](#unknownkeys) | `'strip'` | what an object does with keys it does not declare |
 | [`importExtension`](#importextension) | `'.js'` | how generated files import each other |
 | [`enums`](#enums) | `'object'` | a named enum as an `as const` object, or a plain union |
+| [`hono`](#hono) | `false` | also write `hono.gen.ts`: typed routes for a Hono app |
 | [`names`](#names) | `{}` | renames schemas |
 | [`legacyNullable`](#legacynullable) | `'warn'` | tolerate or refuse 3.0's `nullable: true` |
 | `check` | `false` | write nothing, report in `drifted` what would change |
@@ -56,7 +58,8 @@ nothing. Its extra keys are dropped, and a `not_enforced` warning says so.
 
 ## `importExtension`
 
-`zod.gen.ts` and `operations.gen.ts` import `types.gen` and `zod.gen`:
+How the generated files import each other (`types.gen`, `zod.gen`,
+`operations.gen`):
 
 | Value | Import | Works with |
 | --- | --- | --- |
@@ -75,6 +78,16 @@ A named `enum` of two or more strings or numbers:
 
 Either way the type accepts plain literals. `'object'` adds a runtime value
 per enum, `Status.Active`, which `zod.gen.ts` imports.
+
+## `hono`
+
+`true` also writes `hono.gen.ts`:
+- `Replies`, what each operation may send, as Hono types a reply;
+- `createRoutes` and `createApi`, bound to the spec.
+
+The file imports `hono` and `@nxgt/openapi-codegen/hono`, so both become
+runtime dependencies of the app. It is off by default, so a project without
+Hono gets no file it cannot compile. See [Typed Hono routes](hono.md).
 
 ## `names`
 

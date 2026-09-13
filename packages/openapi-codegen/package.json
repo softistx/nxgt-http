@@ -5,6 +5,9 @@
 	"type": "module",
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
+	"bin": {
+		"nxgt-openapi": "./dist/cli.js"
+	},
 	"files": [
 		"dist",
 		"docs",
@@ -36,7 +39,8 @@
 	},
 	"nxgt": {
 		"entrypoints": [
-			"src/index.ts"
+			"src/index.ts",
+			"src/cli.ts"
 		]
 	},
 	"devDependencies": {

@@ -17,6 +17,7 @@ export type DiagnosticCode =
 	| 'unsupported_version'
 	| 'invalid_schema'
 	| 'invalid_option'
+	| 'invalid_config'
 	| 'unsupported_keyword'
 	| 'legacy_nullable'
 	| 'unknown_format'

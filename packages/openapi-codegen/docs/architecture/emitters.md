@@ -1,6 +1,6 @@
 # Emitters
 
-`emitFiles(ir, options)` (`src/emit/index.ts`) prints three files from one
+`emitFiles(ir, options)` (`src/emit/index.ts`) prints four files from one
 `EmitContext`:
 
 | File | Printed by |
@@ -8,6 +8,7 @@
 | `types.gen.ts` | `schemaTypes` (`types.ts`), then `operationTypes` (`operations.ts`) |
 | `zod.gen.ts` | `emitZod` (`zod.ts`) |
 | `operations.gen.ts` | `emitOperations` (`operations.ts`) |
+| `paths.gen.ts` | `emitPaths` (`paths.ts`) |
 
 Code is printed as text, with no TypeScript compiler API. That keeps the
 generator independent of the compiler version its consumers run.
@@ -106,6 +107,26 @@ What both printers must agree on, computed once:
     string piece.
 - **Headers** are keyed by lowercased name, as Hono and the Fetch `Headers`
   object read them.
+
+## openapi-typescript's shape (`paths.ts`)
+
+- **The contract is openapi-typescript's output**, not its source:
+  - `paths[path]` holds the path's `parameters` and the eight classic
+    methods, `?: never` where there is none, plus `query` on a path that has
+    one;
+  - each method points at `operations[operationId]`;
+  - every `operations` entry holds `parameters` (`query`, `header`, `path`,
+    `cookie`), `requestBody` and `responses[status]` (`headers`, `content`).
+- **Header names keep the spec's case** here, as a client writes them,
+  unlike the lowercased keys of `operations.gen.ts`.
+  `test/types/paths.ts` holds it to that contract through openapi-fetch.
+- **Optional wrappers.** A parameter location is optional when nothing in
+  it is required. openapi-fetch reads that to decide whether `params` must
+  be passed.
+- **One type per schema.** Schema types come from `types.gen.ts`, not
+  reprinted. `ctx.collectTypes` records every name `typeName` gives out while
+  the file prints, so the file imports exactly those and stays clean under
+  `noUnusedLocals`.
 
 ## Layout
 

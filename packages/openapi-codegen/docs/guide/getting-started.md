@@ -43,13 +43,14 @@ components:
 Only OpenAPI 3.1 and 3.2 are read. Convert a 3.0 or Swagger 2.0 document
 first.
 
-Three files land in `output`:
+Four files land in `output`:
 
 | File | Holds | Imports |
 | --- | --- | --- |
 | `types.gen.ts` | a type per schema, and the `Operations` map | nothing |
 | `zod.gen.ts` | a `z<Name>` validator per schema | `zod`; types from `types.gen.ts` when a schema is recursive |
 | `operations.gen.ts` | every operation as data, with its parameter validators | `zod`, `zod.gen.ts`, types from `types.gen.ts` |
+| `paths.gen.ts` | `paths`, `operations` and `components`, as openapi-typescript prints them | types from `types.gen.ts` |
 
 A file whose content would not change is not rewritten, so a file watcher
 does not fire on a run that changed nothing. Commit the files, or generate

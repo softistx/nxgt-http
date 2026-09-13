@@ -198,3 +198,69 @@ A list parameter is marked `list: true` in `parameters`. Pass every value of
 a repeated query key (`?ids=1&ids=2`, `explode: true`, the default) or split
 the one value on commas (`?ids=1,2`, `explode: false`, and headers). Headers
 are keyed by lowercased name. A parameter that is not declared is dropped.
+
+## `paths.gen.ts`
+
+The same spec in the shape openapi-typescript prints, so tools built for
+openapi-typescript's output, openapi-fetch first, read it unchanged:
+
+```ts
+export interface paths {
+	'/employees/{id}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: { id: string };
+			cookie?: never;
+		};
+		/** Fetch an employee. */
+		get: operations['getEmployee'];
+		put: operations['updateEmployee'];
+		post?: never;
+		// … every method, `?: never` where the spec has none
+	};
+}
+
+export interface operations {
+	updateEmployee: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: { id: string };
+			cookie?: never;
+		};
+		// NewEmployeeInput instead, where defaults make it differ
+		requestBody: { content: { 'application/json': NewEmployee } };
+		responses: {
+			200: {
+				headers: { [name: string]: unknown };
+				content: { 'application/json': Employee };
+			};
+		};
+	};
+}
+```
+
+```ts
+import createClient from 'openapi-fetch';
+import type { paths } from './generated/paths.gen.js';
+
+const api = createClient<paths>({ baseUrl: 'https://api.example.com' });
+const { data } = await api.GET('/employees/{id}', {
+	params: { path: { id: '42' } },
+}); // data: Employee | undefined
+```
+
+- **Same types.** Every schema is its type from `types.gen.ts`, and
+  `components['schemas']['Employee']` is `Employee`.
+- **What is sent vs what comes back.** Parameters and request bodies are
+  typed as a caller sends them (`XInput`, where defaults make it differ).
+  Responses are typed as the server returns them.
+- **Header names** keep the spec's case here, as a client writes them.
+- **Only exact status codes** appear in `responses`, as in `Operations`.
+- **Content without a schema** is `globalThis.Blob`.
+- **QUERY.** An OpenAPI 3.2 `query` operation appears under `query`, only on
+  the paths that have one. openapi-fetch has no method for it.
+- **Not filled in.** `webhooks` and `$defs` are empty, and so are
+  `components`' `responses`, `parameters`, `requestBodies`, `headers` and
+  `pathItems`: they are resolved into `operations`.

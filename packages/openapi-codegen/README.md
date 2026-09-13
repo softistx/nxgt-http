@@ -31,12 +31,15 @@ import { generate } from '@nxgt/openapi-codegen';
 await generate({ input: 'openapi/openapi.yaml', output: 'src/generated' });
 ```
 
-This writes three files:
+This writes four files:
 
 - `types.gen.ts`: a type per schema, and the `Operations` map;
 - `zod.gen.ts`: a `z<Name>` validator per schema;
 - `operations.gen.ts`: every operation as data, with its parameter
-  validators.
+  validators;
+- `paths.gen.ts`: `paths`, `operations` and `components` in the shape
+  openapi-typescript prints, so `createClient<paths>()` from openapi-fetch
+  works with no other step.
 
 `$ref`s are followed across files by relative path, including into
 `node_modules` (`../node_modules/@acme/fragments/Error.yaml`).

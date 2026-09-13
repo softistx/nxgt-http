@@ -87,7 +87,7 @@ export interface OperationSpec {
 }`;
 
 /** A parameter's schema as it is validated: documented as the parameter, never null. */
-function valueSchema(param: ParamIR): SchemaNode {
+export function valueSchema(param: ParamIR): SchemaNode {
 	return {
 		...param.schema,
 		nullable: false,
@@ -110,7 +110,8 @@ function groupObject(group: ParamGroup): ObjectNode {
 	};
 }
 
-function operationDocs(operation: OperationIR): string[] {
+/** An operation's summary, description and deprecation, for a JSDoc. */
+export function operationDocs(operation: OperationIR): string[] {
 	const lines: string[] = [];
 	if (operation.summary) lines.push(operation.summary);
 	if (operation.description && operation.description !== operation.summary) {

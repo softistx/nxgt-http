@@ -6,7 +6,7 @@ flowchart LR
 	load --> ir[ir<br/>buildIR]
 	ir --> emit[emit<br/>emitFiles]
 	emit --> write[writer<br/>writeFiles]
-	write --> out[(types.gen.ts<br/>zod.gen.ts<br/>operations.gen.ts)]
+	write --> out[(types.gen.ts<br/>zod.gen.ts<br/>operations.gen.ts<br/>paths.gen.ts)]
 ```
 
 `generate()` (`src/generate.ts`) runs the four stages. `generateFiles()` stops

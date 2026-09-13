@@ -2,6 +2,7 @@ import type { Diagnostic } from '../errors';
 import type { ApiIR } from '../ir/types';
 import { EmitContext, type EmitOptions } from './context';
 import { emitOperations, operationTypes } from './operations';
+import { emitPaths } from './paths';
 import { file } from './printer';
 import { schemaTypes } from './types';
 import { emitZod } from './zod';
@@ -32,6 +33,7 @@ export function emitFiles(
 				...operations.sections,
 			]),
 		},
+		{ path: 'paths.gen.ts', content: emitPaths(ctx) },
 	];
 	return { files, warnings: ctx.warnings };
 }

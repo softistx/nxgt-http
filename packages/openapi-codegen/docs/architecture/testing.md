@@ -19,6 +19,7 @@ yet.
 | runtime | `src/emit/zod.spec.ts`, `operations.spec.ts` | the generated validators, run on real values |
 | type agreement | `test/generated/<case>/agreement.ts` | `tsc` fails if a type and its validator disagree |
 | client typing | `test/types/client.ts` | a typed `request()` can be built from `Operations` alone |
+| openapi-fetch typing | `test/types/paths.ts` | `createClient<paths>()` types requests and replies from `paths.gen.ts` alone |
 
 ## Fixtures
 

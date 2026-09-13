@@ -81,6 +81,8 @@ export class EmitContext {
 	readonly #inputs = new Set<string>();
 	/** What the generated code accepts but the spec would refuse. */
 	readonly warnings: Diagnostic[] = [];
+	/** While set, every name `typeName` gives out, for a file that imports them. */
+	#typeUses: Set<string> | undefined;
 
 	constructor(ir: ApiIR, options: EmitOptions) {
 		this.ir = ir;
@@ -109,7 +111,21 @@ export class EmitContext {
 	/** `Employee`, or `EmployeeInput` on the input side when the two differ. */
 	typeName(id: string, input: boolean): string {
 		const { name } = this.schema(id);
-		return input && this.#inputs.has(id) ? `${name}Input` : name;
+		const out = input && this.#inputs.has(id) ? `${name}Input` : name;
+		this.#typeUses?.add(out);
+		return out;
+	}
+
+	/** Runs `print`, and returns what it printed and every type name it used. */
+	collectTypes<T>(print: () => T): { value: T; names: Set<string> } {
+		const outer = this.#typeUses;
+		const names = new Set<string>();
+		this.#typeUses = names;
+		try {
+			return { value: print(), names };
+		} finally {
+			this.#typeUses = outer;
+		}
 	}
 
 	resolve(node: SchemaNode): SchemaNode {

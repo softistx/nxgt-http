@@ -52,6 +52,20 @@ describe('defineConfig', () => {
 		]);
 	});
 
+	it('lays a shared config under a single one too', () => {
+		const one = { input: 'a.yaml', dates: 'string' } as const;
+		// The overloads refuse it; a plain `.js` config file does not know.
+		const define = defineConfig as (
+			config: typeof one,
+			shared: SharedConfig,
+		) => unknown;
+		expect(define(one, { hono: true, dates: 'date' })).toEqual({
+			input: 'a.yaml',
+			hono: true,
+			dates: 'string',
+		});
+	});
+
 	it('refuses a shared input or output', () => {
 		const shared = { output: 'gen' } as SharedConfig;
 		expect(() => defineConfig([{ input: 'a.yaml' }], shared)).toThrow(

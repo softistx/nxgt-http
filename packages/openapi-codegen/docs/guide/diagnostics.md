@@ -15,8 +15,8 @@ error paths/pets.yaml#/get/responses/200/$ref: … [pointer_not_found]
 severity   file       JSON pointer in that file         code
 ```
 
-Paths are relative to the root document. `formatDiagnostic(d, baseDir)`
-prints one the same way.
+`formatDiagnostic(d, baseDir)` prints one this way, with the path relative
+to `baseDir`; the command line passes the current directory.
 
 ## Reading the spec
 
@@ -44,7 +44,7 @@ prints one the same way.
 | `discriminator_fallback` | warning | a discriminator some variant cannot answer | give every variant the property, required, as a distinct constant |
 | `name_collision` | error | two schemas, or a schema and an operation's parameters or form, would generate the same name; a schema named `Operations`, `OperationsByRoute`, `PathsByMethod`, `OperationsByTag` or `PathsByTag`; with `hono`, one named `Replies`, `HonoSpec` or `Hono`; with `dates: 'date'`, one named `Wire` | rename one with [`names`](options.md#names) |
 | `invalid_option` | error | an option with a value it cannot take | fix the option |
-| `invalid_config` | error | `nxgt-openapi` found no config file, or it exports no config with an `input` and an `output` | see [the command line](cli.md#config-file) |
+| `invalid_config` | error | `nxgt-openapi` found no config file, cannot import it, or it exports no config with an `input`; a config holds an option the generator does not know; two configs write to the same directory, through a symlink included | see [the command line](cli.md#config-file) |
 
 ## Operations
 

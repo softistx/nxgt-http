@@ -1,5 +1,5 @@
 import { dirname, join, relative, resolve, sep } from 'node:path';
-import { emitFiles, type GeneratedFile } from './emit';
+import { emitFiles, FILE_NAMES, type GeneratedFile } from './emit';
 import type { Dates, Enums, UnknownKeys } from './emit/context';
 import { CodegenError, type Diagnostic } from './errors';
 import { buildIR, type IROptions } from './ir';
@@ -137,13 +137,23 @@ export async function generateFiles(
 }
 
 /**
- * Generates the files and writes those that changed. With `check`, writes
- * nothing and lists in `drifted` the files a run would change.
+ * Generates the files and writes those that changed, and deletes a file an
+ * earlier run generated that this one does not (`hono.ts` once `hono` is
+ * off). With `check`, writes nothing and lists in `drifted` the files a run
+ * would change.
  */
 export async function generate(
 	options: GenerateOptions & { check?: boolean },
 	context: GenerateContext = {},
 ): Promise<GenerateResult> {
 	const { files, warnings } = await generateFiles(options, context);
-	return { ...(await writeFiles(files, { check: options.check })), warnings };
+	const output = resolve(
+		context.cwd ?? process.cwd(),
+		options.output ?? DEFAULT_OUTPUT,
+	);
+	const retired = FILE_NAMES.map((name) => join(output, name));
+	return {
+		...(await writeFiles(files, { check: options.check, retired })),
+		warnings,
+	};
 }

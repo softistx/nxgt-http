@@ -13,6 +13,15 @@ export interface GeneratedFile {
 	content: string;
 }
 
+/** Every file the generator can write, whichever options are on. */
+export const FILE_NAMES = [
+	'types.ts',
+	'zod.ts',
+	'operations.ts',
+	'paths.ts',
+	'hono.ts',
+] as const;
+
 /** Every generated file, named relative to the output directory, and what it does not enforce. */
 export function emitFiles(
 	ir: ApiIR,

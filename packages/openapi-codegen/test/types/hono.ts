@@ -3,11 +3,17 @@
  * below must be an error, and every other line must compile.
  */
 import { Hono, type MiddlewareHandler } from 'hono';
+import type { Method } from '../../src/hono/types';
+import type { HttpMethod } from '../../src/ir/types';
 import { createRoutes as dateRoutes } from '../generated/dates/hono.js';
 import { createRoutes as kitchenRoutes } from '../generated/kitchen-sink/hono.js';
 import { createRoutes as searchRoutes } from '../generated/query/hono.js';
 import { createApi, createRoutes } from '../generated/split/hono.js';
 import type { Employee } from '../generated/split/types.js';
+
+type Same<X, Y> = [X] extends [Y] ? ([Y] extends [X] ? true : false) : false;
+/** The runtime routes every method the IR reads: none is left unrouted. */
+export const sameMethods: Same<Method, HttpMethod> = true;
 
 declare const ada: Employee;
 declare const auth: MiddlewareHandler;

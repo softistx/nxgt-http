@@ -5,13 +5,10 @@
 		"outDir": "dist",
 		// The generated fixtures under test/ must type without falling back to any.
 		"noImplicitAny": true,
-		// The fixtures' hono.ts imports this runtime by its published name, and
-		// test/generate.ts the generator: their sources, for tsc and for Bun
-		// alike. The generator sits beside this package; the build still roots
-		// at src.
-		"rootDir": "..",
+		// The fixtures' hono.ts imports this package by its published name. Its
+		// own source, for tsc and for Bun alike, so the specs run the engine
+		// they import, not a build of it. Siblings are workspace dependencies.
 		"paths": {
-			"@nxgt/openapi-codegen": ["../openapi-codegen/src/index.ts"],
 			"@nxgt/openapi-hono": ["./src/index.ts"]
 		}
 	}

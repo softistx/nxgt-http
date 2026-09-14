@@ -26,36 +26,33 @@ lands in `@nxgt/httpyz` first, and in the binding second.
 ## Layering
 
 ```
-httpyz                  openapi-codegen
-  └─ openapi-httpyz     openapi-hono
+httpyz            openapi-codegen
+  │                 └─ openapi-hono          (dev: generates its fixtures)
+  └─ openapi-httpyz ◄── openapi-codegen, openapi-hono   (dev: its fixtures)
 ```
 
-`@nxgt/openapi-httpyz` has `@nxgt/httpyz` as a peer and imports it as an app
-does. Nothing else depends on a sibling at runtime. The generator and the Hono
-runtime meet only in generated code: `hono.ts` imports `@nxgt/openapi-hono`.
+This is a Bun workspace, as nxgt-core is: **a package that uses a sibling
+declares it, by `workspace:^`**, and imports it by its published name, which
+resolves through `node_modules` to the sibling's `dist/`. `bun run --filter`
+builds in that dependency order. There is no tsconfig `paths` to a sibling and
+no relative import into one.
 
-**There are no cycles and there must not be one.** A published package cannot
-depend on a package that depends back on it: the version bump has no fixed
-point, and changesets cannot order the release.
+- `@nxgt/openapi-httpyz` has `@nxgt/httpyz` as a peer, and as a
+  devDependency to build against. The generator and the Hono runtime are
+  devDependencies: its specs serve the fixture they generate.
+- `@nxgt/openapi-hono` has the generator as a devDependency, for its
+  fixtures. The one `paths` entry left is its own name, so that the
+  generated `hono.ts` in its fixtures runs the engine the specs import from
+  `src`, not a build of it.
+- `@nxgt/openapi-codegen` depends on no sibling. Its fixtures' `hono.ts` is
+  excluded from its typecheck, and `@nxgt/openapi-hono` type-checks and runs
+  the same files against itself.
 
-### Siblings reach each other in tests through `paths`, not dependencies
-
-The tests need more than the layering allows. `@nxgt/openapi-hono` serves
-fixtures that `@nxgt/openapi-codegen` generates, and the generator
-type-checks its own generated `hono.ts`, which imports the runtime. As
-dependencies, that would be a cycle.
-
-So a test-time sibling is a tsconfig `paths` entry pointing at its `src/`,
-which both `tsc` and Bun honour. Such a tsconfig sets `"rootDir": ".."`, since
-the program reaches into the sibling; `tsconfig.build.json` still roots at
-`src`, which never imports a mapped sibling. `@nxgt/openapi-hono` also
-declares the generator as a devDependency, which is one way and orders the
-build.
-
-Never map a real runtime dependency. `@nxgt/openapi-httpyz` imports
-`@nxgt/httpyz` from `node_modules`, that is, from its `dist/`: mapped to
-source, the declaration build would pull the sibling's source under its
-`rootDir` and fail.
+**There are no cycles and there must not be one**, devDependencies included.
+A published package cannot depend on a package that depends back on it: the
+version bump has no fixed point, and changesets cannot order the release. A
+test that needs the other end, as the generator's `dates` routes did, moves to
+the package that sits above.
 
 ## The build
 
@@ -141,7 +138,7 @@ publishes to npm.
 
 ## Known state
 
-`bun run test` is **210 pass, 0 fail**: httpyz 26, openapi-codegen 151,
-openapi-hono 17, openapi-httpyz 16. It runs one process per package, and each
+`bun run test` is **210 pass, 0 fail**: httpyz 26, openapi-codegen 150,
+openapi-hono 18, openapi-httpyz 16. It runs one process per package, and each
 package's `test` script writes the generated fixtures its specs import first.
 Treat any failure as yours.

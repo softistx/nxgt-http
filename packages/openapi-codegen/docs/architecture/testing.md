@@ -26,8 +26,8 @@ yet.
 The routes `hono.ts` binds, their typing and its cost are tested in
 `@nxgt/openapi-hono`, against these same fixture specs: see
 [its architecture](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-hono/docs/architecture.md#testing).
-`src/emit/dates.spec.ts` still serves the `dates` routes, through a
-tsconfig `paths` entry to that package's source.
+This package depends on no sibling, so its typecheck leaves out the
+fixtures' `hono.ts`, which imports that package.
 
 ## Fixtures
 

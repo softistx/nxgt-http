@@ -375,6 +375,34 @@ not retried.
 Headers that only need a value, such as a `traceparent` from the current
 span, need no middleware: `headers` may be a function.
 
+### Caching
+
+`cache()` is a middleware that keeps `ok` replies in memory. A request made
+again while its reply is fresh is answered from memory, and `fetch` is never
+called:
+
+```ts
+import { cache, createHttpClient } from '@nxgt/httpyz';
+
+const replies = cache({ ttl: 30_000 });
+createHttpClient({ baseUrl, auth, use: [replies] });
+```
+
+| Option | Default | |
+| --- | --- | --- |
+| `ttl` | 5 minutes | how long a reply stays fresh, in milliseconds |
+| `maxEntries` | 500 | the least recently used reply goes first past it |
+| `cacheable` | `GET` and `HEAD` | `(request, call) => boolean`: a `POST` that only reads, such as a search, may be cached |
+| `vary` | `['authorization']` | the request headers that tell two replies apart |
+
+- **The key** is the method, the URL, the `vary` headers and the body. A
+  search is cached by what it searches for, and, since the middleware runs
+  inside `auth`, no caller is answered with another's reply.
+- **One cache is one store.** Share the middleware between clients to share
+  the store, as a server that makes a client per request does.
+- **`replies.clear()` empties it,** after a write, say.
+- It is in memory, per process: two instances of a service do not share it.
+
 ## Streams
 
 ### Server-sent events

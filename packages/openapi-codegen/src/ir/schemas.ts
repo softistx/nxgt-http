@@ -145,6 +145,56 @@ function replaceNode(target: SchemaNode, next: SchemaNode): void {
 	Object.assign(target, next, kept);
 }
 
+/** What may sit next to `oneOf` or `anyOf`, applied on top of the variant that matches. */
+const BESIDE_UNION = new Set([
+	'properties',
+	'additionalProperties',
+	'items',
+	'required',
+	'minProperties',
+	'maxProperties',
+]);
+
+const ANNOTATED = [
+	'description',
+	'deprecated',
+	'readOnly',
+	'writeOnly',
+	'default',
+] as const;
+
+/** `target`, given the annotations `from` has and it lacks. */
+function annotated(target: SchemaNode, from: SchemaNode): SchemaNode {
+	const copy = { ...target };
+	for (const key of ANNOTATED) {
+		if (copy[key] === undefined && from[key] !== undefined) {
+			Object.assign(copy, { [key]: from[key] });
+		}
+	}
+	return copy;
+}
+
+/** Only a `kind`, and annotations: what `{ type: string }` reads as. */
+const plain = (node: SchemaNode): boolean =>
+	Object.keys(node).every(
+		(key) => key === 'kind' || (ANNOTATED as readonly string[]).includes(key),
+	);
+
+/**
+ * What a value must be to hold both `a` and `b`, as `allOf` asks: the one
+ * that says more when the other adds nothing, else their intersection.
+ */
+function meet(a: SchemaNode, b: SchemaNode): SchemaNode {
+	if (b.kind === 'unknown' || (plain(b) && b.kind === a.kind)) {
+		return annotated(a, b);
+	}
+	if (a.kind === 'unknown' || (plain(a) && a.kind === b.kind)) {
+		return annotated(b, a);
+	}
+	if (JSON.stringify(a) === JSON.stringify(b)) return a;
+	return { kind: 'intersection', members: [a, b] };
+}
+
 export interface SchemaBuilderOptions {
 	/** The directory of the root document; names and messages are relative to it. */
 	rootDir: string;
@@ -173,7 +223,12 @@ export class SchemaBuilder {
 	readonly #options: SchemaBuilderOptions;
 	readonly #byName = new Map<string, string>();
 	readonly #queue: { id: string; value: unknown }[] = [];
-	readonly #composed: ObjectNode[] = [];
+	/** Objects `allOf` merged, and where: `#checkExtends` settles their parents. */
+	readonly #composed = new Map<ObjectNode, Location>();
+	/** Objects whose `required` names a key no property declares, and where. */
+	readonly #requiring = new Map<ObjectNode, Location>();
+	/** Such an object beside the union it applies to: `required` next to `oneOf`. */
+	readonly #besideUnion = new Map<ObjectNode, UnionNode>();
 	readonly #discriminators = new Map<UnionNode, Location>();
 	readonly #warnedFormats = new Set<string>();
 	readonly #legacyFiles = new Set<string>();
@@ -241,15 +296,7 @@ export class SchemaBuilder {
 			return { kind: 'unknown' };
 		}
 		if ('$ref' in value) return this.#reference(value, at);
-		for (const keyword of UNSUPPORTED_KEYWORDS) {
-			if (keyword in value) {
-				this.#diagnostics.error(
-					'unsupported_keyword',
-					`\`${keyword}\` is not supported`,
-					child(at, keyword),
-				);
-			}
-		}
+		this.#refuseUnsupported(value, at);
 		const node = this.#annotate(this.#structure(value, at), value, at);
 		if ('unevaluatedProperties' in value) {
 			this.#seal(
@@ -275,6 +322,14 @@ export class SchemaBuilder {
 			this.#diagnostics.error(
 				'unsupported_keyword',
 				'`unevaluatedProperties` other than `false` or `true` is not supported',
+				at,
+			);
+			return;
+		}
+		if (node.kind === 'unknown') {
+			this.#diagnostics.warning(
+				'not_enforced',
+				'`unevaluatedProperties: false` on a schema that declares nothing else is not enforced: give it `type: object` and its `properties`',
 				at,
 			);
 			return;
@@ -336,6 +391,7 @@ export class SchemaBuilder {
 	finalize(): NamedSchema[] {
 		this.drain();
 		this.#checkExtends();
+		this.#checkRequires();
 		this.#checkDiscriminators();
 
 		const ids = [...this.named.keys()];
@@ -452,6 +508,7 @@ export class SchemaBuilder {
 				key === 'unevaluatedProperties' ||
 				key.startsWith('x-'),
 		);
+		this.#refuseUnsupported(rest, at);
 		let node: SchemaNode;
 		if (Object.keys(rest).every((key) => ANNOTATION_KEYS.has(key))) {
 			node = this.#annotate(ref, rest, at);
@@ -517,12 +574,22 @@ export class SchemaBuilder {
 		if (Array.isArray(s.oneOf) || Array.isArray(s.anyOf)) {
 			return this.#union(s, at);
 		}
-		if ('const' in s) return this.#literal([s.const], child(at, 'const'));
+		if ('const' in s) {
+			return this.#typedLiteral(
+				s,
+				this.#literal([s.const], child(at, 'const')),
+				at,
+			);
+		}
 		if (Array.isArray(s.enum)) {
 			const key = 'x-enum-varnames' in s ? 'x-enum-varnames' : 'x-enumNames';
 			const names =
 				key in s ? { key, value: s[key], at: child(at, key) } : undefined;
-			return this.#literal(s.enum, child(at, 'enum'), names);
+			return this.#typedLiteral(
+				s,
+				this.#literal(s.enum, child(at, 'enum'), names),
+				at,
+			);
 		}
 
 		const { types, nullable, any } = this.#types(s, at);
@@ -564,9 +631,12 @@ export class SchemaBuilder {
 		const merged = types.includes('number')
 			? types.filter((type) => type !== 'integer')
 			: types;
-		const any = ['string', 'number', 'boolean', 'array', 'object'].every(
-			(type) => merged.includes(type),
-		);
+		// `unknown` takes null too, so every other type alone is a union.
+		const any =
+			nullable &&
+			['string', 'number', 'boolean', 'array', 'object'].every((type) =>
+				merged.includes(type),
+			);
 		return { types: merged, nullable, any };
 	}
 
@@ -599,6 +669,21 @@ export class SchemaBuilder {
 			)
 		) {
 			return this.#string(s, at);
+		}
+		// These bind only a list or an object, and saying which is `type`'s job.
+		const [constraint] = [
+			'minItems',
+			'maxItems',
+			'uniqueItems',
+			'minProperties',
+			'maxProperties',
+		].filter((key) => key in s);
+		if (constraint !== undefined) {
+			this.#diagnostics.warning(
+				'not_enforced',
+				`\`${constraint}\` without a \`type\` is not enforced: give the schema a \`type\``,
+				child(at, constraint),
+			);
 		}
 		return { kind: 'unknown' };
 	}
@@ -672,8 +757,16 @@ export class SchemaBuilder {
 	): SchemaNode {
 		const node: NumberNode = { kind: 'number', integer };
 		const format = asString(s.format);
-		if (format !== undefined && NUMBER_FORMATS.has(format)) {
-			node.format = format as NumberFormat;
+		if (format !== undefined) {
+			if (NUMBER_FORMATS.has(format)) node.format = format as NumberFormat;
+			else if (!this.#warnedFormats.has(format)) {
+				this.#warnedFormats.add(format);
+				this.#diagnostics.warning(
+					'unknown_format',
+					`format \`${format}\` is not validated; it is checked as a plain ${integer ? 'integer' : 'number'}`,
+					child(at, 'format'),
+				);
+			}
 		}
 		for (const key of ['minimum', 'maximum', 'multipleOf'] as const) {
 			const value = asNumber(s[key]);
@@ -748,6 +841,22 @@ export class SchemaBuilder {
 				);
 			}
 		}
+		// `required` may name a key no property here declares: an `allOf`
+		// sibling's, a parent's, or nobody's. `#checkRequires` settles it.
+		const undeclared = [...required].filter(
+			(name) => !properties.some((p) => p.name === name),
+		);
+		if (undeclared.length > 0) {
+			const node: ObjectNode = {
+				kind: 'object',
+				properties,
+				additional,
+				extends: [],
+				requires: undeclared,
+			};
+			this.#requiring.set(node, child(at, 'required'));
+			return node;
+		}
 		if (properties.length === 0) {
 			if (typeof additional === 'object') {
 				return { kind: 'record', values: additional.schema };
@@ -801,7 +910,9 @@ export class SchemaBuilder {
 				);
 			}
 		}
-		if (kept.length === 0) return { kind: 'null' };
+		if (kept.length === 0) {
+			return nullable ? { kind: 'null' } : { kind: 'never' };
+		}
 		const named =
 			names && this.#enumNames(values, names.value, names.at, names.key);
 		return {
@@ -875,24 +986,32 @@ export class SchemaBuilder {
 		}
 		if (nullable && node.kind !== 'null') node.nullable = true;
 
-		// Properties next to the variants apply on top of whichever one matches.
+		// Keywords next to the variants apply on top of whichever one matches.
 		const base = without(
 			s,
 			(k) =>
 				k === 'oneOf' ||
 				k === 'anyOf' ||
 				k === 'discriminator' ||
-				ANNOTATION_KEYS.has(k),
+				k === 'unevaluatedProperties' ||
+				ANNOTATION_KEYS.has(k) ||
+				k.startsWith('x-') ||
+				UNSUPPORTED_KEYWORDS.includes(k),
 		);
-		if (
-			'properties' in base ||
-			'additionalProperties' in base ||
-			'items' in base
-		) {
-			return {
-				kind: 'intersection',
-				members: [this.#structure(base, at), node],
-			};
+		for (const name of Object.keys(base)) {
+			if (name === 'type' || BESIDE_UNION.has(name)) continue;
+			this.#diagnostics.error(
+				'unsupported_keyword',
+				`\`${name}\` next to \`${key}\` is not supported: write it in each variant`,
+				child(at, name),
+			);
+		}
+		if (Object.keys(base).some((name) => BESIDE_UNION.has(name))) {
+			const structure = this.#structure(base, at);
+			if (structure.kind === 'object' && node.kind === 'union') {
+				this.#besideUnion.set(structure, node);
+			}
+			return { kind: 'intersection', members: [structure, node] };
 		}
 		return node;
 	}
@@ -952,22 +1071,43 @@ export class SchemaBuilder {
 			extends: [],
 		};
 		const wanted = [...requires];
+		let strictMember = false;
 		for (const member of members) {
 			if (member.kind === 'ref') {
 				node.extends.push(member.target);
 				continue;
 			}
 			if (member.kind !== 'object') continue;
+			// Its `required` names now go to the merged object, settled there.
+			this.#requiring.delete(member);
 			node.extends.push(...member.extends);
 			for (const property of member.properties) {
 				const index = node.properties.findIndex(
 					(p) => p.name === property.name,
 				);
-				if (index === -1) node.properties.push(property);
-				else node.properties[index] = property;
+				const earlier = node.properties[index];
+				if (!earlier) node.properties.push(property);
+				else {
+					// Every member holds, so a property two declare meets both.
+					node.properties[index] = {
+						name: property.name,
+						required: earlier.required || property.required,
+						schema: meet(earlier.schema, property.schema),
+					};
+				}
+			}
+			if (member.additional === 'strict' && members.length > 1) {
+				strictMember = true;
 			}
 			if (member.additional !== 'default') node.additional = member.additional;
 			wanted.push(...(member.requires ?? []));
+		}
+		if (strictMember) {
+			this.#diagnostics.warning(
+				'not_enforced',
+				'`additionalProperties: false` on an `allOf` member refuses, in JSON Schema, the keys the other members declare; merged into one object, they are accepted. To refuse only undeclared keys, write `unevaluatedProperties: false` next to the `allOf`',
+				at,
+			);
 		}
 		for (const name of wanted) {
 			const own = node.properties.find((p) => p.name === name);
@@ -977,13 +1117,13 @@ export class SchemaBuilder {
 				if (!node.requires.includes(name)) node.requires.push(name);
 			}
 		}
-		this.#composed.push(node);
+		this.#composed.set(node, at);
 		return node;
 	}
 
 	/** `extends` only works on object parents; anything else becomes an intersection. */
 	#checkExtends(): void {
-		for (const node of this.#composed) {
+		for (const [node, at] of this.#composed) {
 			if (node.kind !== 'object') continue;
 			const usable = node.extends.every((id) => {
 				const parent = this.named.get(id);
@@ -994,22 +1134,44 @@ export class SchemaBuilder {
 				);
 			});
 			if (usable) {
+				// A property a parent declares too: the value meets both, and
+				// what the parent requires stays required.
+				for (const property of node.properties) {
+					const inherited = this.#inherited(node, property.name);
+					if (!inherited) continue;
+					if (inherited.required) property.required = true;
+					property.schema = meet(inherited.schema, property.schema);
+				}
 				if (node.requires) {
+					const unchecked = node.requires.filter(
+						(name) => this.#propertyOf(node, name) === undefined,
+					);
 					node.requires = node.requires.filter(
-						(name) => this.#propertyOf(node, name) !== undefined,
+						(name) => !unchecked.includes(name),
 					);
 					if (node.requires.length === 0) delete node.requires;
+					this.#notChecked(unchecked, at);
 				}
 				continue;
 			}
+			// A parent that is not an object: an intersection, which still
+			// requires what `required` names, copied from the parent declaring it.
+			const properties = [...node.properties];
+			const unchecked: string[] = [];
+			for (const name of node.requires ?? []) {
+				const found = this.#inherited(node, name);
+				if (found) properties.push({ ...found, required: true });
+				else unchecked.push(name);
+			}
+			this.#notChecked(unchecked, at);
 			const members: SchemaNode[] = node.extends.map((target) => ({
 				kind: 'ref',
 				target,
 			}));
-			if (node.properties.length > 0 || node.additional !== 'default') {
+			if (properties.length > 0 || node.additional !== 'default') {
 				members.push({
 					kind: 'object',
-					properties: node.properties,
+					properties,
 					additional: node.additional,
 					extends: [],
 				});
@@ -1055,6 +1217,105 @@ export class SchemaBuilder {
 				if (seen.has(key)) return `two variants share ${key}`;
 				seen.add(key);
 			}
+		}
+		return undefined;
+	}
+
+	/** Refuses, each at its pointer, the keywords v1 cannot express. */
+	#refuseUnsupported(s: Record<string, unknown>, at: Location): void {
+		for (const keyword of UNSUPPORTED_KEYWORDS) {
+			if (keyword in s) {
+				this.#diagnostics.error(
+					'unsupported_keyword',
+					`\`${keyword}\` is not supported`,
+					child(at, keyword),
+				);
+			}
+		}
+	}
+
+	/** `type: string` beside `enum: [a, null]`: both apply, so `null` is out. */
+	#typedLiteral(
+		s: Record<string, unknown>,
+		node: SchemaNode,
+		at: Location,
+	): SchemaNode {
+		if (s.type === undefined || this.#types(s, at).nullable) return node;
+		if (node.kind === 'null') return { kind: 'never' };
+		delete node.nullable;
+		return node;
+	}
+
+	/** Says that these `required` names are not checked. */
+	#notChecked(names: readonly string[], at: Location): void {
+		if (names.length === 0) return;
+		const list = names.map((name) => `\`${name}\``).join(', ');
+		this.#diagnostics.warning(
+			'not_enforced',
+			`\`required\` names ${list}, which no \`properties\` declares: whether the key is present is not checked. Declare it under \`properties\``,
+			at,
+		);
+	}
+
+	/**
+	 * `required` names that no `properties` declares, as `#object` found
+	 * them. A key `additionalProperties` gives a schema is a required
+	 * property of that schema; beside a union, a name every variant requires
+	 * already holds; any other is not checked, and a warning says so.
+	 */
+	#checkRequires(): void {
+		for (const [node, at] of this.#requiring) {
+			const union = this.#besideUnion.get(node);
+			const names = (node.requires ?? []).filter(
+				(name) => !(union && this.#everyVariantRequires(union, name)),
+			);
+			delete node.requires;
+			const unchecked: string[] = [];
+			for (const name of names) {
+				if (typeof node.additional === 'object') {
+					node.properties.push({
+						name,
+						required: true,
+						schema: node.additional.schema,
+					});
+				} else if (node.additional === 'strict') {
+					this.#diagnostics.error(
+						'invalid_schema',
+						`\`${name}\` is required, yet no property declares it and no other key is allowed`,
+						at,
+					);
+				} else unchecked.push(name);
+			}
+			this.#notChecked(unchecked, at);
+			// Nothing declared after all: an object of anything, as without `required`.
+			if (
+				node.properties.length === 0 &&
+				(node.additional === 'default' || node.additional === 'loose')
+			) {
+				replaceNode(node, { kind: 'record', values: { kind: 'unknown' } });
+			}
+		}
+	}
+
+	#everyVariantRequires(union: UnionNode, name: string): boolean {
+		return union.variants.every((variant) => {
+			const object = this.resolve(variant);
+			if (object.kind !== 'object') return false;
+			return (
+				this.#propertyOf(object, name)?.required === true ||
+				object.requires?.includes(name) === true
+			);
+		});
+	}
+
+	/** A property one of the parents of `object` declares. */
+	#inherited(object: ObjectNode, name: string): Property | undefined {
+		for (const id of object.extends) {
+			const parent = this.named.get(id);
+			const resolved = parent && this.resolve(parent.node);
+			if (resolved?.kind !== 'object') continue;
+			const found = this.#propertyOf(resolved, name);
+			if (found) return found;
 		}
 		return undefined;
 	}

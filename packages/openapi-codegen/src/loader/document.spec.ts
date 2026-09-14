@@ -39,6 +39,16 @@ describe('loadDocument — the version gate', () => {
 		]);
 	});
 
+	it('refuses an `openapi` version YAML read as a number', async () => {
+		const error = await rejectionOf('openapi: 3.1\ninfo: {}\npaths: {}\n');
+		expect(error.diagnostics.map((d) => [d.code, d.message])).toEqual([
+			[
+				'unsupported_version',
+				'`openapi` must be a string such as "3.1.0", not the number 3.1',
+			],
+		]);
+	});
+
 	it('says a file with no `openapi` field is probably not the root', async () => {
 		const error = await rejectionOf('type: object\n');
 		expect(error.diagnostics.map((d) => d.code)).toEqual(['missing_version']);

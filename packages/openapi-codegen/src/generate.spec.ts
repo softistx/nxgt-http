@@ -260,6 +260,38 @@ describe('generate', () => {
 		expect(written).toContain(join(cwd, 'generated/openapi/types.ts'));
 	});
 
+	it('refuses a path item $ref with fields beside it, instead of losing its operations', async () => {
+		const users = JSON.stringify({
+			get: {
+				operationId: 'listUsers',
+				responses: { '200': { description: 'ok' } },
+			},
+		});
+		const root = (item: Record<string, unknown>) =>
+			JSON.stringify({
+				openapi: '3.1.0',
+				info: { title: 't', version: '1' },
+				paths: { '/users': { $ref: './users.json', ...item } },
+			});
+		const run = (item: Record<string, unknown>) =>
+			generateFiles(
+				{ input: '/s/openapi.json', output: '/s/gen' },
+				{
+					fs: createMemoryFileSystem({
+						'/s/openapi.json': root(item),
+						'/s/users.json': users,
+					}),
+				},
+			);
+		const { files } = await run({ summary: 'Users' });
+		expect(files[2]?.content).toContain('listUsers');
+		const error = await run({ parameters: [] }).catch((e: unknown) => e);
+		expect(error).toBeInstanceOf(CodegenError);
+		expect((error as CodegenError).diagnostics.map((d) => d.pointer)).toEqual([
+			'/paths/~1users/parameters',
+		]);
+	});
+
 	it('refuses a names override that is a reserved word', async () => {
 		const fs = createMemoryFileSystem({ '/s/openapi.json': SPEC });
 		const error = await generateFiles(

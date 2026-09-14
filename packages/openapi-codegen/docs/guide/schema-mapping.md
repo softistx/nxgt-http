@@ -46,6 +46,8 @@ Some of these choices are deliberate:
 | --- | --- | --- |
 | `type: [string, 'null']` | `string \| null` | `z.string().nullable()` |
 | `enum: [a, b, null]`, inline or with `enums: 'union'` | `'a' \| 'b' \| null` | `z.enum(['a', 'b']).nullable()` |
+| `type: string` beside `enum: [a, null]` | `'a'`: both apply, so `null` is out | `z.literal('a')` |
+| `enum: []` | `never` | `z.never()` |
 | `oneOf: [{ $ref: X }, { type: 'null' }]` | `X \| null` | `zX.nullable()` |
 | 3.0's `nullable: true` | `T \| null` | `.nullable()`, with a `legacy_nullable` warning |
 | a named `enum` of strings or numbers | `const X = { A: 'a', B: 'b' } as const` and `type X = 'a' \| 'b'` | `z.enum(X)` |
@@ -53,6 +55,8 @@ Some of these choices are deliberate:
 | `x-enum-varnames`, `x-enumNames` | the members' names in `X` | |
 | `const: 1`, an `enum` with a boolean, an inline mixed `enum` | `1`, `'a' \| 1` | `z.literal(1)`, `z.literal(['a', 1])` |
 | `type: [string, number]` | `string \| number` | `z.union([z.string(), z.number()])` |
+| `type` listing every type but `null` | their union: `null` is refused | `z.union([…])` |
+| `minItems`, `maxProperties`… with no `type` | | not enforced: `not_enforced` warning; give the schema a `type` |
 | `type: array`, `items: T` | `T[]` | `z.array(T)` |
 | `minItems`, `maxItems` | | `.min()`, `.max()` |
 | `uniqueItems` | | not enforced: `not_enforced` warning |
@@ -81,17 +85,21 @@ PascalCased:
 | `additionalProperties: S` alone, or no `properties` | `{ [key: string]: S }` | `z.record(z.string(), S)` |
 | `default` on an optional property | present in `X`, optional in `XInput` | `.default(v)` |
 | `minProperties`, `maxProperties` | | not enforced: `not_enforced` warning |
+| `required` naming a key no `properties` declares | with an `additionalProperties` schema, a required property of it; else its presence is not checked, with a `not_enforced` warning; beside `additionalProperties: false`, an `invalid_schema` error, since nothing could match | as the type |
 
 ## Composition
 
 | JSON Schema | TypeScript | Zod |
 | --- | --- | --- |
 | `allOf` of objects | `interface X extends A, B` | `zA.extend(zB.shape).extend({ … })` |
-| `allOf` with a `required` naming a parent's property | that property made required | that property made required |
+| `allOf` with a `required` naming a parent's or a sibling's property, with or without `properties` of its own | that property made required | that property made required |
+| a property two `allOf` members declare, or a child restates from its parent | one property holding both schemas (`A & B`, or the one that says more), required if either requires it | the same |
 | `allOf` of anything else | `A & B` | `zA.and(zB)`: a key is refused only when every member refuses it |
 | `additionalProperties: false` on an `allOf` member whose siblings strip | | not enforced: extra keys are dropped, `not_enforced` warning |
-| `$ref` beside other keywords | as `allOf: [$ref, rest]` | as `allOf` |
+| `additionalProperties: false` on an `allOf` member merged into one object | | JSON Schema would refuse the other members' keys; the merged object accepts them, with a `not_enforced` warning. Write `unevaluatedProperties: false` beside the `allOf` instead |
+| `$ref` beside other keywords | as `allOf: [$ref, rest]`; the [refused](#refused) keywords are refused there too | as `allOf` |
 | `oneOf`, `anyOf` | `A \| B` | `z.union([zA, zB])` |
+| `properties`, `required`, `items`… beside `oneOf` or `anyOf` | applied on top: `Base & (A \| B)`; a `required` every variant already has adds nothing | `zBase.and(z.union(…))` |
 | with `discriminator.propertyName` | `A \| B` | `z.discriminatedUnion('kind', [zA, zB])` |
 | a schema that reaches itself | a recursive type | annotated `z.ZodType<X, XInput>`, lazy where it must be |
 
@@ -140,6 +148,9 @@ together:
 | `contains`, `minContains`, `maxContains` | no faithful type |
 | `$dynamicRef`, `$dynamicAnchor`, `$recursiveRef` | not supported |
 | `oneOf` and `anyOf` in the same schema | ambiguous |
+| any other keyword beside `oneOf` or `anyOf` (`minLength`, `enum`…) | it binds only some variants; write it in each variant |
+| a path item `$ref` with fields beside it other than `summary` and `description` | the operations it refers to would be lost; move the fields into that file |
+| `openapi: 3.1` unquoted | YAML reads a number: write `"3.1.0"` |
 | a boolean `exclusiveMinimum` / `exclusiveMaximum` | OpenAPI 3.0; in 3.1 the keyword is the bound |
 | an invalid `pattern` | would throw at runtime |
 | an object or array inside `enum` or `const` | not supported |

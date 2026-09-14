@@ -109,7 +109,24 @@ export class OperationBuilder {
 				);
 				continue;
 			}
-			const item = this.#resolver.deref(raw, pathAt);
+			// A path item `$ref` with fields beside it is no longer a plain
+			// reference: the operations it points at would be lost silently.
+			let target: unknown = raw;
+			if (isObject(raw) && typeof raw.$ref === 'string') {
+				const extra = Object.keys(raw).filter(
+					(key) => !['$ref', 'summary', 'description'].includes(key),
+				);
+				if (extra.length > 0) {
+					this.#diagnostics.error(
+						'invalid_operation',
+						`a path item \`$ref\` with ${extra.map((key) => `\`${key}\``).join(', ')} beside it is not supported: move ${extra.length > 1 ? 'them' : 'it'} into the file it refers to`,
+						child(pathAt, extra[0] ?? '$ref'),
+					);
+					continue;
+				}
+				target = { $ref: raw.$ref };
+			}
+			const item = this.#resolver.deref(target, pathAt);
 			if (!isObject(item.value)) {
 				this.#diagnostics.error(
 					'invalid_operation',

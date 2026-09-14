@@ -32,17 +32,29 @@ export default defineConfig({
   `generated/openapi`.
 - **Paths.** `input` and `output` resolve against the config file's
   directory, wherever the command runs.
-- **`defineConfig`** only types the object. A plain `export default {…}`
-  works the same.
+- **`defineConfig`** types a single config and returns it unchanged. A
+  plain `export default {…}` works the same.
 
-A list generates several specs in one run:
+A list generates several specs in one run. A second argument holds what
+they share:
 
 ```ts
-export default defineConfig([
-	{ input: 'openapi/public.yaml', output: 'src/generated/public' },
-	{ input: 'openapi/admin.yaml', output: 'src/generated/admin' },
-]);
+export default defineConfig(
+	[
+		{ input: 'openapi/public.yaml', output: 'src/generated/public' },
+		{ input: 'openapi/admin.yaml', output: 'src/generated/admin', dates: 'string' },
+	],
+	{ hono: true, dates: 'date' },
+);
 ```
+
+- **An entry's own option wins** over the shared one: `admin` keeps its
+  dates as strings. `names` merge instead, the entry's winning per key.
+- **`input` and `output` are each spec's own.** A shared config that sets
+  one throws.
+- **Two entries that write to the same directory are refused**
+  (`invalid_config`), two entries without an `output` included: they would
+  overwrite each other's files.
 
 ## Flags
 

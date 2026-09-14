@@ -1,6 +1,6 @@
 /**
  * A request checked before it is sent, by the validators the server runs, on
- * what `@nxgt/openapi-codegen/hono` will read from it: each parameter as the
+ * what `@nxgt/openapi-hono` will read from it: each parameter as the
  * text it travels as, the JSON as it parses, a form as its fields. What the
  * server would refuse is refused here with the same issues, and nothing is
  * sent.

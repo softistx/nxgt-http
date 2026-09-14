@@ -1,8 +1,9 @@
 # Typed Hono routes
 
-With the `hono` option, the generator also writes `hono.ts`: the routes
-of the spec, typed for a Hono app and validated with the generated
-validators.
+With the `hono` option, [`@nxgt/openapi-codegen`](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-codegen/README.md)
+also writes `hono.ts`: the routes of the spec, typed for a Hono app and
+validated with the generated validators. `@nxgt/openapi-hono` is the runtime
+it binds to the spec.
 
 - A handler gets its parameters and body already validated.
 - A request the spec refuses is answered with a 400 that lists every issue.
@@ -10,11 +11,13 @@ validators.
 
 ## Setup
 
-`hono.ts` imports `@nxgt/openapi-codegen/hono` at runtime, so the
-package becomes a dependency of your app, not a dev dependency:
+`hono.ts` imports `@nxgt/openapi-hono` and `hono` at runtime, and
+`operations.ts` imports `zod`, so all three are dependencies of your app.
+The generator stays a dev dependency:
 
 ```sh
-bun add @nxgt/openapi-codegen hono zod
+bun add @nxgt/openapi-hono hono zod
+bun add -d @nxgt/openapi-codegen
 ```
 
 ```ts
@@ -82,7 +85,7 @@ A route runs as `[...middlewares, validator, handler]`, so `auth` answers
      `type/*`, then `*/*`. A required body sent empty is missing.
      - JSON is parsed and validated.
      - A form (`multipart/form-data`, `application/x-www-form-urlencoded`)
-       whose schema is a [flat object](schema-mapping.md#form-bodies) has
+       whose schema is a [flat object](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-codegen/docs/guide/schema-mapping.md#form-bodies) has
        each field read from text, and a field sent once is taken as a list
        of one where the schema expects a list.
      - Text is validated as a string.
@@ -247,7 +250,7 @@ Registering a route throws when:
   and `c.req.valid('form')` as both present. Only the one the request sent
   is filled in.
 - **Keep form schemas flat.** Only a form whose schema is a
-  [flat object](schema-mapping.md#form-bodies) is read from text. Any other
+  [flat object](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-codegen/docs/guide/schema-mapping.md#form-bodies) is read from text. Any other
   form is validated by its own `z<Name>`, so `copies=2` arrives as the
   string `'2'` and fails an integer.
 - **`security` is not enforced.** The spec's security requirements are not

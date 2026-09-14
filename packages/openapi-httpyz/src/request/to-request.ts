@@ -1,6 +1,6 @@
 /**
  * An operation's input as a call of the core client, written the way
- * `@nxgt/openapi-codegen/hono` reads it back: a query list as a repeated key,
+ * `@nxgt/openapi-hono` reads it back: a query list as a repeated key,
  * or joined with commas when the spec says `explode: false`; a header list
  * joined with commas; the body as the media type the spec declares for its
  * kind.

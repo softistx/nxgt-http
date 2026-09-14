@@ -89,9 +89,9 @@ per enum, `Status.Active`, which `zod.ts` imports.
 - `Replies`, what each operation may send, as Hono types a reply;
 - `createRoutes` and `createApi`, bound to the spec.
 
-The file imports `hono` and `@nxgt/openapi-codegen/hono`, so both become
-runtime dependencies of the app. It is off by default, so a project without
-Hono gets no file it cannot compile. See [Typed Hono routes](hono.md).
+The file imports `hono` and `@nxgt/openapi-hono`, so both become runtime
+dependencies of the app. It is off by default, so a project without Hono
+gets no file it cannot compile. See [Typed Hono routes](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-hono/docs/guide.md).
 
 ## `dates`
 

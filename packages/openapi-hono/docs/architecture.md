@@ -1,16 +1,16 @@
 # Hono runtime
 
-`src/hono/` is the `@nxgt/openapi-codegen/hono` subpath: what `hono.ts`
-binds to its spec. It imports `hono` for types only, so the subpath loads
-whether or not `hono` is installed. `hono` is an optional peer because the
-types need it.
+`@nxgt/openapi-hono` is what the generated `hono.ts` binds to its spec. It
+imports `hono` for types only, so it loads whether or not `hono` is
+installed; `hono` is its peer because the types need it.
 
 | File | Holds |
 | --- | --- |
 | `engine.ts` | `createApi`: registration, request validation, reply checks |
 | `errors.ts` | issues, failures, `validationErrorHandler` |
 | `types.ts` | the types of `routes`: `ApiSpec`, `Routes`, `Scope`, `RouteHandler` |
-| `index.ts` | the subpath's exports, named one by one |
+| `routable.ts` | `unroutable`: why Hono cannot route an operation; `@nxgt/openapi-codegen` keeps a copy, to warn at generation |
+| `index.ts` | the package's exports, named one by one |
 
 ## Registration
 
@@ -119,6 +119,19 @@ call.
 A rest tuple with the handler last is enough for TypeScript to type `c`
 from context, so there are no overloads per middleware count.
 
-`src/hono/perf.spec.ts` holds the typing to a budget: `tsc
---extendedDiagnostics` on 500 generated routes. A lookup that stops being
-an index shows up there first.
+## Testing
+
+`test/generate.ts` generates `@nxgt/openapi-codegen`'s fixture specs
+(`split`, `query`, `kitchen-sink`, `dates`) with `hono: true` into
+`test/generated/`, which git ignores; the `test` and `typecheck` scripts run
+it first. The generator is reached through a tsconfig `paths` entry to its
+source, not a dependency.
+
+| What | Where | Checks |
+| --- | --- | --- |
+| routes | `src/engine.spec.ts` | the fixtures' routes on a real Hono app, through `app.request()`: validation, errors and hooks, QUERY, forms, reply checks, modules, registration mistakes |
+| routes typing | `test/types/routes.ts` | what `routes` refuses: an undeclared status, a wrong body, a path without that method, an unknown `operationId`, a tag or a path outside the scope |
+| routes cost | `src/perf.spec.ts` | `tsc --extendedDiagnostics` on 500 generated routes (`test/perf.ts`) stays under an instantiation budget |
+
+The cost check is what holds the typing to a budget: a lookup that stops
+being an index shows up there first.

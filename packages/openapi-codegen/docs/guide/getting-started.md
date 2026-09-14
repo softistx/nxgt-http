@@ -71,7 +71,7 @@ fifth with the [`hono`](options.md#hono) option:
 | `zod.ts` | a `z<Name>` validator per schema | `zod`; from `types.ts`, the enum objects and, when a schema is recursive, its types |
 | `operations.ts` | every operation as data, with its parameter and form validators | `zod`, `zod.ts`, types from `types.ts` |
 | `paths.ts` | `paths`, `operations` and `components`, as openapi-typescript prints them | types from `types.ts` |
-| `hono.ts` | `Replies`, `createRoutes` and `createApi`, bound to the spec | `hono` types, `@nxgt/openapi-codegen/hono`, `operations.ts`, types from `types.ts` |
+| `hono.ts` | `Replies`, `createRoutes` and `createApi`, bound to the spec | `hono` types, `@nxgt/openapi-hono`, `operations.ts`, types from `types.ts` |
 
 A file whose content would not change is not rewritten, so a file watcher
 does not fire on a run that changed nothing. Commit the files, or generate
@@ -87,7 +87,7 @@ const input = zNewEmployee.parse(await request.json()); // throws a ZodError on 
 ```
 
 [The generated code](generated-code.md) walks through every file, and
-[Typed Hono routes](hono.md) covers serving the spec with Hono.
+[Typed Hono routes](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-hono/docs/guide.md) covers serving the spec with Hono.
 
 ## Keep the files in step, in CI
 

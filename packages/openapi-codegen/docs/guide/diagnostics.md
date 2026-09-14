@@ -57,7 +57,7 @@ to `baseDir`; the command line passes the current directory.
 | `path_parameter_mismatch` | error | `{name}` in the path and the `in: path` parameters disagree | declare every template variable, and only those |
 | `missing_operation_id` | warning | no `operationId`, so one was derived | add an `operationId`: the derived one changes if the path does |
 | `duplicate_operation_id` | error | two operations share an `operationId` | make it unique |
-| `ignored` | warning | present but not generated: `default` and `4XX` responses, callbacks, webhooks; with `hono`, an operation Hono cannot route (`HEAD`, a parameter sharing its path segment) | nothing, unless you relied on it; see [Hono](hono.md#mistakes-caught-at-startup) |
+| `ignored` | warning | present but not generated: `default` and `4XX` responses, callbacks, webhooks; with `hono`, an operation Hono cannot route (`HEAD`, a parameter sharing its path segment) | nothing, unless you relied on it; see [Hono](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-hono/docs/guide.md#mistakes-caught-at-startup) |
 
 ## Linting
 

@@ -14,8 +14,9 @@ flowchart LR
 
 `generate()` (`src/generate.ts`) runs the four stages, and with the `lint`
 option runs Redocly's linter between the loader and the IR. `generateFiles()`
-stops before the writer. The Hono runtime is not a stage: it is the subpath
-`hono.ts` imports, run by the consumer's app.
+stops before the writer. The Hono runtime is not a stage: it is
+`@nxgt/openapi-hono`, the package `hono.ts` imports, run by the consumer's
+app.
 
 | Stage | Directory | In | Out |
 | --- | --- | --- | --- |
@@ -25,7 +26,7 @@ stops before the writer. The Hono runtime is not a stage: it is the subpath
 | [Emitters](emitters.md) | `src/emit/` | `ApiIR` | `GeneratedFile[]` |
 | Writer | `src/writer/` | files | written, unchanged and drifted paths |
 | Command line | `src/cli.ts`, `src/cli/run.ts`, `src/config.ts` | arguments, a config file | `generate()` per config, an exit code |
-| [Hono runtime](hono.md) | `src/hono/` | the operations table, a Hono app | routes that validate, then call the handler |
+| [Hono runtime](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-hono/docs/architecture.md) | `@nxgt/openapi-hono` | the operations table, a Hono app | routes that validate, then call the handler |
 
 `src/errors.ts` holds the diagnostic model that every stage shares.
 
@@ -54,7 +55,7 @@ stops before the writer. The Hono runtime is not a stage: it is the subpath
 6. **Generated code imports `zod` and its sibling files, nothing else.** A
    consumer's runtime never depends on this package for the schema code. The
    one exception is `hono.ts`, written only with the `hono` option: it
-   imports `hono` and `@nxgt/openapi-codegen/hono`.
+   imports `hono` and `@nxgt/openapi-hono`.
 
 ## Where to start reading
 

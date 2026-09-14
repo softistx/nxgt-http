@@ -29,15 +29,21 @@
       "version": "0.0.0",
       "devDependencies": {
         "@nxgt/httpyz": "workspace:^",
+        "@nxgt/openapi-codegen": "workspace:^",
+        "@nxgt/openapi-httpyz": "workspace:^",
         "@tanstack/query-core": "^5.102.8",
         "@types/bun": "^1.4.0",
         "zod": "^4.5.4",
       },
       "peerDependencies": {
         "@nxgt/httpyz": "workspace:^",
+        "@nxgt/openapi-httpyz": "workspace:^",
         "@tanstack/query-core": "^5.90.0",
         "typescript": "^6.0.3",
       },
+      "optionalPeers": [
+        "@nxgt/openapi-httpyz",
+      ],
     },
     "packages/openapi-codegen": {
       "name": "@nxgt/openapi-codegen",

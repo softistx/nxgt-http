@@ -122,6 +122,49 @@ remove.mutate({ param: { id } });
 matches a filter's key as a prefix, so `queries.queryKey('get', '/employees/{id}')`
 matches every query of that path, whatever its `param`.
 
+## With an OpenAPI spec
+
+`@nxgt/httpyz-query/openapi` does the same for a client bound to a
+generated spec by
+[`@nxgt/openapi-httpyz`](https://www.npmjs.com/package/@nxgt/openapi-httpyz),
+an optional peer. It takes the bound client and the generated `operations`,
+which tell an operation's input from its init as they do for the client:
+
+```ts
+import { createOpenApiQueries } from '@nxgt/httpyz-query/openapi';
+import { operations } from './generated/openapi/operations.js';
+
+export const queries = createOpenApiQueries(api, operations);
+
+// As api.get() takes it: the path, the input, then the init
+useQuery(queries.queryOptions('get', '/employees/{id}', { param: { id } }));
+useQuery(queries.queryOptions('get', '/health'));
+
+useInfiniteQuery(
+	queries.infiniteQueryOptions(
+		'post',
+		'/employees/search',
+		{ json: { sort }, query: { first: 20 } },
+		{ pageParamName: 'after', initialPageParam: null as string | null, getNextPageParam },
+	),
+);
+
+const remove = useMutation(queries.mutationOptions('delete', '/employees/{id}'));
+remove.mutate({ param: { id } });
+```
+
+- Every call is typed by the spec, as the bound client's are: the path, the
+  input, and the data, a 2xx reply's, decoded when the client decodes.
+- The key holds the input, header parameters included, and never the init.
+- `pageParamName` is one of the operation's query parameters.
+- `mutate()` takes the operation's input; `mutationOptions`' third argument
+  is the init every call shares.
+
+Coming from `openapi-react-query`: `$api.queryOptions('get', path, { params:
+{ path, query }, body })` becomes `queries.queryOptions('get', path, { param,
+query, json })`, and `$api.useQuery(...)` becomes
+`useQuery(queries.queryOptions(...))`.
+
 ## Traps
 
 - **A binary body is not told apart in a key.** A `Blob` or a stream hashes

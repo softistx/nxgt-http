@@ -2,6 +2,7 @@ export { createOpenApiClient } from './client/create-openapi-client';
 export type {
 	Args,
 	ClientOperation,
+	IdOf,
 	OpenApiArgs,
 	OpenApiClient,
 	OpenApiGroup,
@@ -12,6 +13,7 @@ export type {
 	OperationStreamOf,
 	OperationsShape,
 	OperationTable,
+	PathsOf,
 	RuntimeMedia,
 	RuntimeOperation,
 	RuntimeParameter,

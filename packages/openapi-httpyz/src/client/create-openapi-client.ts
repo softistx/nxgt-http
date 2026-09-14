@@ -262,6 +262,7 @@ function bind<
 	};
 
 	const client: Record<string, unknown> = {
+		operations,
 		op: (id: string, ...args: unknown[]) => call(id, args),
 		stream: (id: string, ...args: unknown[]) => stream(id, args),
 		group: () => {

@@ -3,6 +3,7 @@
  * refused together wait on the same refresh, then are sent again once, with
  * the new token.
  */
+import { abortable } from '../cancel/abort';
 import type { Middleware } from './compose';
 
 type Token = string | null | undefined;
@@ -45,9 +46,14 @@ export function auth({
 					.finally(() => {
 						refreshing = undefined;
 					});
-				await refreshing;
+				// An aborted call stops waiting; the refresh runs on for the others.
+				await abortable(refreshing, request.signal);
 			}
-		} catch {
+		} catch (error) {
+			if (request.signal.aborted) {
+				await response.body?.cancel();
+				throw error;
+			}
 			return response;
 		}
 		const fresh = await token();

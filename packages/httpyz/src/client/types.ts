@@ -64,6 +64,12 @@ export interface CallOptions
 	retry?: number | RetryOptions | false;
 	/** Names the call, in its errors and to middleware: an OpenAPI `operationId`. */
 	operationId?: string;
+	/**
+	 * One call running per key: this call aborts the one before it with the
+	 * same `latest`, if that one still runs, which rejects with an
+	 * `AbortError`. A search typed ahead keeps only its last query in flight.
+	 */
+	latest?: string;
 }
 
 export interface ReplyOptions<
@@ -128,7 +134,20 @@ export interface SendOptions {
 	timeout?: number;
 	retry?: number | RetryOptions | false;
 	operationId?: string;
+	/** As a call's `latest`: aborts the request before it with the same key. */
+	latest?: string;
 }
+
+/** Calls that end together: a page's, a component's, a job's. */
+export type HttpGroup = HttpClient & {
+	/**
+	 * Aborts every call and stream of the group still running, with `reason`,
+	 * or an `AbortError`. The group goes on: the calls made after it run.
+	 */
+	cancel(reason?: unknown): void;
+	/** Aborts on the next `cancel()`: for work of your own that ends with the group's calls. */
+	readonly signal: AbortSignal;
+};
 
 export type HttpClient = {
 	/** A call with the method as a value: `http.request('get', '/items/{id}', { param })`. */
@@ -173,4 +192,10 @@ export type HttpClient = {
 		path: Path,
 		...args: LinesArgs<Path, I, Decoded>
 	): Stream<StreamItem<I, Decoded>>;
+	/**
+	 * The same client, for calls that end together: `group.cancel()` aborts
+	 * every call and stream made through it that still runs. A group's group
+	 * is cancelled with it.
+	 */
+	group(): HttpGroup;
 } & { readonly [M in Method]: Call };

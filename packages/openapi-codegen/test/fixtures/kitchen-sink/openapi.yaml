@@ -260,3 +260,17 @@ components:
         labels: { type: array, items: { type: string } }
     Identifier:
       $ref: '#/components/schemas/Strict'
+    Payment:
+      description: A card or a bank account, and no key either one does not declare.
+      unevaluatedProperties: false
+      oneOf:
+        - type: object
+          required: [object, number]
+          properties:
+            object: { const: card }
+            number: { type: string }
+        - type: object
+          required: [object, account]
+          properties:
+            object: { const: bank_account }
+            account: { type: string }

@@ -360,11 +360,21 @@ export class EmitContext {
 		};
 		for (const schema of this.ir.schemas) {
 			let loosened = false;
+			let unsealed = false;
 			const visit = (node: SchemaNode): void => {
 				if (node.kind === 'array') visit(node.items);
 				else if (node.kind === 'record') visit(node.values);
-				else if (node.kind === 'union') node.variants.forEach(visit);
-				else if (node.kind === 'intersection') {
+				else if (node.kind === 'ref') {
+					if (node.sealed && !refuses(node)) unsealed = true;
+				} else if (node.kind === 'union') {
+					if (node.sealed && !node.variants.every((v) => refuses(v))) {
+						unsealed = true;
+					}
+					node.variants.forEach(visit);
+				} else if (node.kind === 'intersection') {
+					if (node.sealed && !node.members.every((m) => refuses(m))) {
+						unsealed = true;
+					}
 					if (
 						node.members.some(said) &&
 						!node.members.every((m) => refuses(m))
@@ -389,6 +399,15 @@ export class EmitContext {
 				}
 			};
 			visit(schema.node);
+			if (unsealed) {
+				this.warnings.push({
+					severity: 'warning',
+					code: 'not_enforced',
+					message: `${schema.name}: \`unevaluatedProperties: false\` is not enforced over a $ref member that accepts keys it does not declare: they are dropped, not refused. Give that member \`additionalProperties: false\`, or set \`unknownKeys: 'strict'\``,
+					file: schema.location.file,
+					pointer: schema.location.pointer,
+				});
+			}
 			if (!loosened) continue;
 			this.warnings.push({
 				severity: 'warning',

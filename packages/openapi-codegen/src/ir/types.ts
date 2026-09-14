@@ -38,6 +38,8 @@ export interface Annotations {
 export interface RefNode extends Annotations {
 	kind: 'ref';
 	target: string;
+	/** Under `unevaluatedProperties: false`: the target must refuse the keys it does not declare. */
+	sealed?: boolean;
 }
 
 export interface StringNode extends Annotations {
@@ -116,11 +118,15 @@ export interface UnionNode extends Annotations {
 	exclusive: boolean;
 	/** Set only when every variant is an object with a constant for it. */
 	discriminator?: string;
+	/** `unevaluatedProperties: false`: every variant must refuse the keys it does not declare. */
+	sealed?: boolean;
 }
 
 export interface IntersectionNode extends Annotations {
 	kind: 'intersection';
 	members: SchemaNode[];
+	/** `unevaluatedProperties: false`: every member must refuse the keys no member declares. */
+	sealed?: boolean;
 }
 
 export type SchemaNode =

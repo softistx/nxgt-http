@@ -338,6 +338,84 @@ describe('buildIR — literals, lists and unions', () => {
 	});
 });
 
+describe('buildIR — unevaluatedProperties', () => {
+	const card = {
+		type: 'object',
+		properties: { number: { type: 'string' } },
+	};
+
+	it('makes an object strict, and leaves one whose extra keys are allowed', async () => {
+		const { node } = await components({
+			S: { ...card, unevaluatedProperties: false },
+			L: { ...card, additionalProperties: true, unevaluatedProperties: false },
+			T: { ...card, unevaluatedProperties: true },
+		});
+		expect(node('S')).toMatchObject({ kind: 'object', additional: 'strict' });
+		expect(node('L')).toMatchObject({ kind: 'object', additional: 'loose' });
+		expect(node('T')).toMatchObject({ kind: 'object', additional: 'default' });
+	});
+
+	it('seals a union: its inline variants strict, its $ref variants marked', async () => {
+		const { node } = await components({
+			Card: card,
+			P: {
+				unevaluatedProperties: false,
+				oneOf: [
+					ref('Card'),
+					{ type: 'object', properties: { iban: { type: 'string' } } },
+				],
+			},
+			R: { $ref: '#/components/schemas/Card', unevaluatedProperties: false },
+		});
+		expect(node('P')).toMatchObject({
+			kind: 'union',
+			sealed: true,
+			variants: [
+				{ kind: 'ref', target: id('Card'), sealed: true },
+				{ kind: 'object', additional: 'strict' },
+			],
+		});
+		expect(node('R')).toMatchObject({ kind: 'ref', sealed: true });
+	});
+
+	it('seals an object that declares nothing to accept only {}', async () => {
+		const { node } = await components({
+			E: { type: 'object', unevaluatedProperties: false },
+			U: { oneOf: [card, { type: 'object' }], unevaluatedProperties: false },
+			Open: {
+				type: 'object',
+				additionalProperties: true,
+				unevaluatedProperties: false,
+			},
+		});
+		const empty = { kind: 'object', properties: [], additional: 'strict' };
+		expect(node('E')).toMatchObject(empty);
+		expect(node('U')).toMatchObject({ variants: [{ kind: 'object' }, empty] });
+		// Every key is evaluated by `additionalProperties`: it still takes anything.
+		expect(node('Open')).toMatchObject({ kind: 'record' });
+	});
+
+	it('refuses unevaluatedProperties with a schema, or over anyOf', async () => {
+		for (const [name, schema] of [
+			['S', { ...card, unevaluatedProperties: { type: 'string' } }],
+			['A', { unevaluatedProperties: false, anyOf: [card, card] }],
+		] as const) {
+			const error = await build({ [name]: schema }).catch(
+				(caught: unknown) => caught,
+			);
+			expect(error).toBeInstanceOf(CodegenError);
+			expect(
+				(error as CodegenError).diagnostics.map((d) => [d.code, d.pointer]),
+			).toEqual([
+				[
+					'unsupported_keyword',
+					`/components/schemas/${name}/unevaluatedProperties`,
+				],
+			]);
+		}
+	});
+});
+
 describe('buildIR — allOf and $ref', () => {
 	const base = { type: 'object', properties: { id: { type: 'string' } } };
 

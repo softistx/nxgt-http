@@ -110,6 +110,21 @@ documented as `@default`, and filled in when it sits on an optional property.
 `readOnly`, `writeOnly`, `title`, `example` and `examples` have no effect on
 the generated code.
 
+## `unevaluatedProperties: false`
+
+A key that no part of the schema evaluates is refused:
+
+| Where | Result |
+| --- | --- |
+| on an object | `z.strictObject()`; nothing changes when `additionalProperties` already allows or validates extra keys. An object that declares no property accepts only `{}`, where it would otherwise be a map of anything |
+| on a `oneOf` | each inline variant becomes strict: a key the matching variant does not declare is refused |
+| on an `allOf` | each inline member becomes strict: a key no member declares is refused |
+| on an `anyOf` | refused: a value may match several variants and use keys from each |
+| next to a `$ref`, or over `$ref` members | the referenced schema must refuse unknown keys itself (`additionalProperties: false`, or `unknownKeys: 'strict'`); otherwise a `not_enforced` warning, since its unknown keys are dropped, not refused |
+
+`unevaluatedProperties: true` changes nothing, and a schema as its value is
+refused.
+
 ## Refused
 
 Each of these is an error at its own pointer, and they are all reported
@@ -120,7 +135,7 @@ together:
 | `not`, `if` / `then` / `else` | no faithful type |
 | `dependentSchemas`, `dependentRequired` | no faithful type |
 | `patternProperties`, `propertyNames` | no faithful type |
-| `unevaluatedProperties`, `unevaluatedItems` | no faithful type |
+| `unevaluatedItems`; `unevaluatedProperties` with a schema, or over `anyOf` | no faithful type |
 | `prefixItems`, `items` as a list (tuples) | not supported yet |
 | `contains`, `minContains`, `maxContains` | no faithful type |
 | `$dynamicRef`, `$dynamicAnchor`, `$recursiveRef` | not supported |

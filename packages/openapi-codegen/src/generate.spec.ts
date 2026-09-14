@@ -144,6 +144,43 @@ describe('generate', () => {
 		);
 	});
 
+	it('enforces unevaluatedProperties: false, and warns over a $ref that accepts unknown keys', async () => {
+		const spec = JSON.stringify({
+			openapi: '3.1.0',
+			info: { title: 't', version: '1' },
+			paths: {},
+			components: {
+				schemas: {
+					Card: { type: 'object', properties: { number: { type: 'string' } } },
+					Payment: {
+						unevaluatedProperties: false,
+						oneOf: [
+							{ $ref: '#/components/schemas/Card' },
+							{ type: 'object', properties: { iban: { type: 'string' } } },
+						],
+					},
+				},
+			},
+		});
+		const fs = createMemoryFileSystem({ '/s/openapi.json': spec });
+		const run = (unknownKeys: 'strict' | 'strip') =>
+			generateFiles(
+				{ input: '/s/openapi.json', output: '/s/gen', unknownKeys },
+				{ fs },
+			);
+		const strip = await run('strip');
+		expect(strip.files[1]?.content).toContain(
+			'export const zPayment = z.union([\n\tzCard,\n\tz.strictObject({',
+		);
+		const unsealed = strip.warnings.filter((w) => w.code === 'not_enforced');
+		expect(unsealed).toHaveLength(1);
+		expect(unsealed[0]?.message).toStartWith(
+			'Payment: `unevaluatedProperties: false` is not enforced over a $ref member',
+		);
+		const strict = await run('strict');
+		expect(strict.warnings.map((w) => w.code)).not.toContain('not_enforced');
+	});
+
 	const enumSpec = (status: Record<string, unknown>) =>
 		createMemoryFileSystem({
 			'/s/openapi.json': JSON.stringify({

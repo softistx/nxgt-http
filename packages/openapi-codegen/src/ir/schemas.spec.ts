@@ -587,3 +587,172 @@ describe('buildIR — names and order', () => {
 		);
 	});
 });
+
+describe('buildIR — nothing dropped silently', () => {
+	const object = (properties: Record<string, unknown>, extra = {}) => ({
+		type: 'object',
+		properties,
+		...extra,
+	});
+	const a = { a: { type: 'string' } };
+
+	it('refuses an unsupported keyword next to a $ref', async () => {
+		expect(
+			await errors({
+				A: object(a),
+				S: { $ref: '#/components/schemas/A', not: { required: ['a'] } },
+			}),
+		).toEqual([
+			{ code: 'unsupported_keyword', pointer: '/components/schemas/S/not' },
+		]);
+	});
+
+	it('requires a key the $ref declares, when `required` sits beside it', async () => {
+		const { node } = await components({
+			A: object(a),
+			S: { $ref: '#/components/schemas/A', required: ['a'] },
+		});
+		expect(node('S')).toMatchObject({
+			kind: 'object',
+			extends: [id('A')],
+			requires: ['a'],
+		});
+	});
+
+	it('requires a key no property declares, or says it is not checked', async () => {
+		const { api, node } = await components({
+			Map: {
+				type: 'object',
+				required: ['id'],
+				additionalProperties: { type: 'string' },
+			},
+			Open: { type: 'object', required: ['id'] },
+		});
+		expect(node('Map')).toMatchObject({
+			kind: 'object',
+			properties: [{ name: 'id', required: true, schema: { kind: 'string' } }],
+		});
+		expect(node('Open')).toEqual({
+			kind: 'record',
+			values: { kind: 'unknown' },
+		});
+		expect(api.warnings.map((w) => [w.code, w.pointer])).toEqual([
+			['not_enforced', '/components/schemas/Open/required'],
+		]);
+	});
+
+	it('keeps `required` next to an allOf that has properties', async () => {
+		const { node } = await components({
+			Base: object({ id: { type: 'string' } }),
+			S: {
+				allOf: [ref('Base')],
+				properties: a,
+				required: ['id', 'a'],
+			},
+		});
+		expect(node('S')).toMatchObject({
+			kind: 'object',
+			extends: [id('Base')],
+			properties: [{ name: 'a', required: true }],
+			requires: ['id'],
+		});
+	});
+
+	it('meets a property two allOf members declare, and warns on a strict member', async () => {
+		const { api, node } = await components({
+			S: {
+				allOf: [
+					object(
+						{ a: { type: 'string', format: 'email' } },
+						{ required: ['a'], additionalProperties: false },
+					),
+					object({ a: { description: 'note' }, b: { type: 'string' } }),
+				],
+			},
+		});
+		expect(node('S')).toMatchObject({
+			kind: 'object',
+			properties: [
+				{
+					name: 'a',
+					required: true,
+					schema: { kind: 'string', format: 'email', description: 'note' },
+				},
+				{ name: 'b' },
+			],
+		});
+		expect(api.warnings.map((w) => w.code)).toEqual(['not_enforced']);
+	});
+
+	it('meets a property a child restates over its parent, keeping it required', async () => {
+		const { node } = await components({
+			Base: object(a, { required: ['a'] }),
+			Narrowed: {
+				allOf: [ref('Base'), object({ a: { type: 'string', minLength: 1 } })],
+			},
+		});
+		expect(node('Narrowed')).toMatchObject({
+			kind: 'object',
+			extends: [id('Base')],
+			properties: [
+				{ name: 'a', required: true, schema: { kind: 'string', minLength: 1 } },
+			],
+		});
+	});
+
+	it('refuses a keyword next to anyOf it cannot apply, and settles `required`', async () => {
+		expect(
+			await errors({
+				S: { anyOf: [{ type: 'string' }, { type: 'number' }], minLength: 3 },
+			}),
+		).toEqual([
+			{
+				code: 'unsupported_keyword',
+				pointer: '/components/schemas/S/minLength',
+			},
+		]);
+		const variant = (kind: string) =>
+			object({ kind: { const: kind } }, { required: ['kind'] });
+		const { api, node } = await components({
+			S: { oneOf: [variant('a'), variant('b')], required: ['kind'] },
+		});
+		expect(api.warnings).toEqual([]);
+		expect(node('S')).toMatchObject({
+			kind: 'intersection',
+			members: [{ kind: 'record' }, { kind: 'union' }],
+		});
+	});
+
+	it('reads enum: [] as never, and a null value against its type', async () => {
+		const { node } = await components({
+			E: { enum: [] },
+			S: { type: 'string', enum: ['a', null] },
+		});
+		expect(node('E')).toEqual({ kind: 'never' });
+		expect(node('S')).toEqual({ kind: 'literal', values: ['a'] });
+	});
+
+	it('keeps null out of a list of every other type', async () => {
+		const all = ['string', 'number', 'boolean', 'array', 'object'];
+		expect(await nodeOf({ type: all })).toMatchObject({
+			kind: 'union',
+			variants: all.map(() => ({})),
+		});
+		expect(await nodeOf({ type: [...all, 'null'] })).toMatchObject({
+			kind: 'unknown',
+		});
+	});
+
+	it('warns about what it cannot check: keywords without a type, an unknown number format', async () => {
+		const { api } = await components({
+			A: { minItems: 2 },
+			B: { unevaluatedProperties: false },
+			C: { type: 'integer', format: 'uint8' },
+		});
+		expect(api.warnings.map((w) => [w.code, w.pointer])).toEqual([
+			['not_enforced', '/components/schemas/A/minItems'],
+			['not_enforced', '/components/schemas/B/unevaluatedProperties'],
+			['unknown_format', '/components/schemas/C/format'],
+		]);
+	});
+});

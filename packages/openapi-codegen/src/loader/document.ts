@@ -75,6 +75,15 @@ function checkVersion(
 		);
 		return undefined;
 	}
+	if (typeof openapi === 'number') {
+		// `openapi: 3.1` unquoted: YAML reads a number, and 3.10 would read 3.1.
+		diagnostics.error(
+			'unsupported_version',
+			`\`openapi\` must be a string such as "3.1.0", not the number ${openapi}`,
+			child(at, 'openapi'),
+		);
+		return undefined;
+	}
 	if (swagger !== undefined) {
 		diagnostics.error(
 			'unsupported_version',

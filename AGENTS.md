@@ -138,7 +138,7 @@ publishes to npm.
 
 ## Known state
 
-`bun run test` is **259 pass, 0 fail**: httpyz 65, openapi-codegen 154,
-openapi-hono 18, openapi-httpyz 22. It runs one process per package, and each
+`bun run test` is **267 pass, 0 fail**: httpyz 65, openapi-codegen 154,
+openapi-hono 24, openapi-httpyz 24. It runs one process per package, and each
 package's `test` script writes the generated fixtures its specs import first.
 Treat any failure as yours.

@@ -111,6 +111,37 @@ and, for JSON and text, its body. A reply that fails goes through
 `onValidationError`, as a 500 by default. The check reads every reply body
 twice, so keep it for development and tests.
 
+### Streams
+
+An operation whose reply the spec describes an item at a time, with OpenAPI
+3.2's `itemSchema`, streams it from its handler with the `hono.ts` helpers:
+
+```ts
+import { createRoutes, streamEvents, streamLines } from './generated/hono.js';
+
+createRoutes(app)
+	.get('/feed', (c) =>
+		streamEvents(c, 'watchFeed', async (stream) => {
+			await stream.write({ event: 'update', id: '7', data: item }); // Item, as JSON
+			await stream.write({ event: 'ping', data: 'still here' }); // text
+			while (!stream.aborted) await stream.sleep(15_000);
+		}),
+	)
+	.post('/export', (c) =>
+		streamLines(c, 'exportItems', async (stream) => {
+			for (const item of items) await stream.write(item);
+		}),
+	);
+```
+
+- Each event is typed by its name, and its data is sent as JSON when the
+  spec declares it JSON, as text otherwise. JSON lines go out as the media
+  type the spec declares.
+- With `validateResponses`, each item is checked before it is sent. The
+  status is out already, so a failing item goes to `onValidationError` for
+  its side effects, is not sent, and ends the stream.
+- `stream.aborted` and `stream.onAbort()` tell when the client went away.
+
 ### Modules
 
 ```ts
@@ -152,6 +183,7 @@ The generated `hono.ts` uses these. An app rarely imports them directly.
 | Export | For |
 | --- | --- |
 | `createApi` | the engine that `hono.ts` binds to its spec |
+| `streamEvents`, `streamLines`, `EventWriter`, `LineWriter` | the streams that `hono.ts` binds to its spec |
 | `validationErrorHandler` | the default hook: 400 for a request, 500 for a reply |
 | `ValidationFailure`, `ValidationIssue`, `ValidationTarget`, `ValidationErrorHook`, `SchemaIssue` | the types of a failure, for your own `onValidationError` |
 | `Api`, `ApiOptions`, `RoutesOptions`, `Routes`, `RouteHandler`, `Chain` | the types of what `createApi` and `routes` return and take |

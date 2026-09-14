@@ -3682,5 +3682,34 @@ export const createRoutes = <
 	options?: runtime.RoutesOptions<Prefix, Tag>,
 ): runtime.Routes<HonoSpec, runtime.ScopeOf<HonoSpec, Tag>, Prefix> =>
 	createApi(options).routes(app, options);
+
+/**
+ * Replies with the operation's server-sent events, from its handler: each
+ * typed by the spec and, with \`validateResponses\`, checked before it is sent.
+ *
+ * \`\`\`ts
+ * routes.get('/feed', (c) =>
+ * 	streamEvents(c, 'watchFeed', async (stream) => {
+ * 		await stream.write({ event: 'update', data: item });
+ * 	}),
+ * );
+ * \`\`\`
+ */
+export const streamEvents = <Id extends 'watchFeed' | 'listenMessages' | 'tailLogs'>(
+	c: Hono.Context<any, any, any>,
+	id: Id,
+	write: (
+		stream: runtime.EventWriter<Operations[Id]['stream']['item']>,
+	) => Promise<void>,
+): Replies[Id] => runtime.streamEvents(c, id, write) as unknown as Replies[Id];
+
+/** Replies with the operation's JSON lines, from its handler: each typed by the spec. */
+export const streamLines = <Id extends 'exportItems' | 'importItems'>(
+	c: Hono.Context<any, any, any>,
+	id: Id,
+	write: (
+		stream: runtime.LineWriter<Operations[Id]['stream']['item']>,
+	) => Promise<void>,
+): Replies[Id] => runtime.streamLines(c, id, write) as unknown as Replies[Id];
 "
 `;

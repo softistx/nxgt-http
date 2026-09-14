@@ -7,8 +7,8 @@
 
 import type { MediaIR, OperationIR, ResponseIR } from '../ir/types';
 import type { EmitContext } from './context';
-import { operationDocs } from './operations';
-import { docComment, file, list, propertyKey } from './printer';
+import { operationDocs, streamOf } from './operations';
+import { docComment, file, jsString, list, propertyKey } from './printer';
 import { unroutable } from './routable';
 import { type } from './types';
 
@@ -93,7 +93,67 @@ export const createRoutes = <
 	options?: runtime.RoutesOptions<Prefix, Tag>,
 ): runtime.Routes<HonoSpec, runtime.ScopeOf<HonoSpec, Tag>, Prefix> =>
 	createApi(options).routes(app, options);`,
+		...streamHelpers(ctx),
 	]);
+}
+
+/**
+ * `streamEvents` and `streamLines`, for the routable operations that reply
+ * with that kind of stream: an operation's items are typed by its id, one
+ * lookup in `Operations`.
+ */
+function streamHelpers(ctx: EmitContext): string[] {
+	const ids = (kind: MediaIR['kind']) =>
+		ctx.ir.operations
+			.filter(
+				(operation) =>
+					unroutable(operation) === undefined &&
+					streamOf(operation)?.kind === kind,
+			)
+			.map((operation) => jsString(operation.operationId));
+	const helper = (
+		name: string,
+		writer: string,
+		ids: string[],
+		doc: string[],
+	): string =>
+		`${doc.join('\n')}
+export const ${name} = <Id extends ${ids.join(' | ')}>(
+	c: Hono.Context<any, any, any>,
+	id: Id,
+	write: (
+		stream: runtime.${writer}<Operations[Id]['stream']['item']>,
+	) => Promise<void>,
+): Replies[Id] => runtime.${name}(c, id, write) as unknown as Replies[Id];`;
+	const helpers: string[] = [];
+	const events = ids('sse');
+	if (events.length > 0) {
+		helpers.push(
+			helper('streamEvents', 'EventWriter', events, [
+				'/**',
+				" * Replies with the operation's server-sent events, from its handler: each",
+				' * typed by the spec and, with `validateResponses`, checked before it is sent.',
+				' *',
+				' * ```ts',
+				" * routes.get('/feed', (c) =>",
+				" * \tstreamEvents(c, 'watchFeed', async (stream) => {",
+				" * \t\tawait stream.write({ event: 'update', data: item });",
+				' * \t}),',
+				' * );',
+				' * ```',
+				' */',
+			]),
+		);
+	}
+	const lines = ids('jsonl');
+	if (lines.length > 0) {
+		helpers.push(
+			helper('streamLines', 'LineWriter', lines, [
+				"/** Replies with the operation's JSON lines, from its handler: each typed by the spec. */",
+			]),
+		);
+	}
+	return helpers;
 }
 
 function repliesEntry(ctx: EmitContext, operation: OperationIR): string {

@@ -1,3 +1,4 @@
+export type { AuthOptions } from './auth';
 export { createClient } from './client';
 export {
 	type CallContext,
@@ -10,7 +11,9 @@ export {
 	type ValidationFailure,
 	type ValidationIssue,
 } from './errors';
+export type { Middleware, Next } from './middleware';
 export { unwrap } from './reply';
+export type { RetryOptions } from './retry';
 export type {
 	StandardIssue,
 	StandardResult,

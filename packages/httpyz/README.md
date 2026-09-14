@@ -10,8 +10,8 @@ parameters, the body, and each reply the operation declares. A reply is a
 union narrowed on its status, so nothing throws for a status the spec
 declares.
 
-> **0.x.** The API is still settling. Middleware and retries, typed
-> server-sent events and TanStack Query helpers are on the way.
+> **0.x.** The API is still settling. Typed server-sent events and TanStack
+> Query helpers are on the way.
 
 ## Install
 
@@ -53,6 +53,9 @@ export const api = createClient<ClientOperations, OperationsByRoute>(
 | `timeout` | none | milliseconds before a call fails with `TimeoutError` |
 | `validate` | neither | `true`, or `{ request, response }`: check with the spec's schemas. See [Validating and decoding](#validating-and-decoding) |
 | `decode` | `false` | `true` returns each reply as its schema outputs it |
+| `auth` | none | `{ token, refresh }`. See [Auth](#auth) |
+| `retry` | never | a number of retries, or `RetryOptions`. See [Retries](#retries) |
+| `use` | none | middleware around each request. See [Middleware](#middleware) |
 
 ## Calls
 
@@ -132,6 +135,87 @@ employee.hiredAt; // Date
 ```
 
 Decoding validates the reply, whatever `validate` says.
+
+## Auth
+
+```ts
+createClient<ClientOperations, OperationsByRoute>(operations, {
+	baseUrl,
+	auth: {
+		token: () => session.accessToken,
+		refresh: () => session.refresh(),
+	},
+});
+```
+
+`token` is read, and awaited, before each request, and sent as
+`Authorization: Bearer <token>`; none sends no header. On a 401, `refresh`
+runs, and the request is sent again once, body included, with the token
+`token` then returns:
+
+- Calls refused together share one refresh.
+- A call refused with a token that has since been replaced is sent again
+  without another refresh.
+- When `refresh` throws, or leaves the same token, the 401 is the reply, for
+  the app to sign out on.
+
+`scheme` replaces `Bearer`.
+
+## Retries
+
+```ts
+createClient<ClientOperations, OperationsByRoute>(operations, { baseUrl, retry: 2 });
+await api.op('createInvoice', input, { retry: false }); // or per call
+```
+
+A retry sends the request again, body included, after a failure that may
+pass:
+
+- no reply at all, a `NetworkError`;
+- a 408, 429, 502, 503 or 504.
+
+Only a method that may be repeated is retried, which is every method but
+POST and PATCH: a POST that got no reply may still have been carried out.
+
+The wait before each retry is random, up to 300 ms doubled at each retry. A
+reply's `Retry-After`, in seconds or as a date, wins over it. A `Retry-After`
+longer than `maxDelay` (10 s) is not waited for: that reply is the reply. The
+wait ends early when the call times out or is aborted.
+
+| `RetryOptions` | Default |
+| --- | --- |
+| `attempts` | 2 |
+| `methods` | every method but `post` and `patch` |
+| `statuses` | 408, 429, 502, 503, 504 |
+| `delay(attempt)` | random, up to 300 ms × 2^(attempt − 1) |
+| `maxDelay` | 10 000 |
+
+Retries are off by default. In a browser, TanStack Query already retries.
+Turn them on for server-to-server calls.
+
+## Middleware
+
+A middleware runs around each request. It can change the request or the
+response, or answer on its own, in which case `fetch` is never called:
+
+```ts
+const timing: Middleware = async (request, next, call) => {
+	const start = performance.now();
+	try {
+		return await next(request);
+	} finally {
+		metrics.record(call.operationId, performance.now() - start);
+	}
+};
+createClient<ClientOperations, OperationsByRoute>(operations, { baseUrl, use: [timing] });
+```
+
+The first in `use` is the outermost. All of them run inside `retry` and
+`auth`, so they see each try, with its token.
+
+A middleware's own error comes through as it is, and is not retried. Headers
+that only need a value, such as a `traceparent` from the current span, need
+no middleware: `headers` may be a function.
 
 ## Errors
 

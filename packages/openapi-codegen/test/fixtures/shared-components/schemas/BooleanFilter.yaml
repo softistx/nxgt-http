@@ -1,0 +1,5 @@
+type: object
+properties:
+  eq:
+    type: boolean
+    description: Filter for exact match of boolean value (used with operator EQ)

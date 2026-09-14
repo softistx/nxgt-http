@@ -1,0 +1,6 @@
+type: string
+enum: [
+  'AND',
+  'OR'
+]
+description: Logical operators for combining multiple conditions (AND, OR)

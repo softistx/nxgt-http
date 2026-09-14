@@ -1,0 +1,38 @@
+type: string
+enum:
+  - USD
+  - EUR
+  - GBP
+  - CAD
+  - AUD
+  - JPY
+  - CHF
+  - CNY
+  - SEK
+  - NZD
+  - HKD
+  - SGD
+  - KRW
+  - TRY
+  - BRL
+  - ARS
+  - MXN
+  - INR
+  - ZAR
+  - XAF
+  - XOF
+  - KES
+  - NGN
+  - EGP
+  - MAD
+  - TND
+  - ZMW
+  - BWP
+  - MUR
+  - SCR
+  - CVE
+  - STN
+  - GHS
+description: ISO 4217 currency code
+example: USD
+default: XAF

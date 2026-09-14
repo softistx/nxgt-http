@@ -1,0 +1,23 @@
+type: object
+properties:
+  id:
+    type: string
+    description: "The unique identifier of the object."
+  createdBy:
+    type: string
+    description: "The user who created the object."
+  createdDate:
+    type: string
+    format: date-time
+    description: "The date and time when the object was created."
+  lastModifiedBy:
+    type: string
+    description: "The user who last updated the object."
+  lastModifiedDate:
+    type: string
+    format: date-time
+    description: "The date and time when the object was last updated."
+  version:
+    type: integer
+    description: "The lock field for the object."
+required: [ id, createdDate, lastModifiedDate ]

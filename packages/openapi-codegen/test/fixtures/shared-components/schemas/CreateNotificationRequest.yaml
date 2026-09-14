@@ -1,0 +1,24 @@
+type: object
+required:
+  - recipient
+  - type
+properties:
+  recipient:
+    type: string
+  type:
+    type: string
+  title:
+    type: string
+  message:
+    type: string
+  template:
+    type: string
+  metadata:
+    type: object
+    additionalProperties: true
+  priority:
+    $ref: ./NotificationPriority.yaml
+  deliveryChannels:
+    type: array
+    items:
+      $ref: ./DeliveryChannel.yaml

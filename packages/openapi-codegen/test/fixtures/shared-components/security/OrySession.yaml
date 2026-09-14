@@ -1,0 +1,8 @@
+type: apiKey
+in: cookie
+name: ory_kratos_session
+description: >-
+  The Ory Kratos session cookie, as a browser on kratos-ui's host sends it. The
+  cookie is host-only, so only an API served from that host — or called from a
+  server that forwards the Cookie header — ever sees it; every other caller
+  presents a Hydra access token as Bearer instead. See the nxgt-ory repo's README.

@@ -3,14 +3,6 @@
 	"compilerOptions": {
 		"rootDirs": ["src"],
 		"outDir": "dist",
-		"noImplicitAny": true,
-		// The fixture's generated code imports the generator's runtime by its
-		// published name: its source, here, for tsc and for Bun alike. That
-		// source sits beside this package; the build still roots at src.
-		"rootDir": "..",
-		"paths": {
-			"@nxgt/openapi-codegen": ["../openapi-codegen/src/index.ts"],
-			"@nxgt/openapi-codegen/hono": ["../openapi-codegen/src/hono/index.ts"]
-		}
+		"noImplicitAny": true
 	}
 }

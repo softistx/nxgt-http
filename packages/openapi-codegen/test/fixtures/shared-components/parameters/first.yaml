@@ -1,0 +1,6 @@
+in: query
+name: first
+description: Return the first N items (forward pagination).
+schema:
+  type: integer
+  minimum: 1

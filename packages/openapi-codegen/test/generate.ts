@@ -14,10 +14,8 @@ import type { GeneratedFile } from '../src/emit';
 import { type Dates, EmitContext, paramGroups } from '../src/emit/context';
 import { file, jsString } from '../src/emit/printer';
 import { generateFiles } from '../src/generate';
-import { createMemoryFileSystem } from '../src/index';
 import { buildIR } from '../src/ir';
 import { loadDocument } from '../src/loader/document';
-import { PERF_SIZE, perfRoutes, perfSpec } from './perf';
 
 const TEST_DIR = fileURLToPath(new URL('./', import.meta.url));
 export const CASES = ['split', 'query', 'kitchen-sink', 'dates'] as const;
@@ -54,39 +52,6 @@ export async function fixtureFiles(name: string): Promise<GeneratedFile[]> {
 			content: await agreement(input, options),
 		},
 	];
-}
-
-/**
- * The perf case: `PERF_SIZE` generated operations, a route for each, and a
- * `tsconfig.json` so `src/hono/perf.spec.ts` can measure them alone.
- */
-export async function perfFiles(): Promise<GeneratedFile[]> {
-	const input = '/perf/openapi.json';
-	const output = `${TEST_DIR}generated/perf`;
-	const { files } = await generateFiles(
-		{ input, output, hono: true },
-		{
-			fs: createMemoryFileSystem({
-				[input]: JSON.stringify(perfSpec(PERF_SIZE)),
-			}),
-		},
-	);
-	return [
-		...files,
-		{ path: `${output}/routes.ts`, content: perfRoutes(PERF_SIZE) },
-		// With the routes, and without: the difference is what the routes cost.
-		tsconfig(`${output}/tsconfig.json`, { include: ['./*.ts'] }),
-		tsconfig(`${output}/tsconfig.base.json`, { files: ['./hono.ts'] }),
-	];
-}
-
-function tsconfig(path: string, sources: object): GeneratedFile {
-	const config = {
-		extends: '../../../tsconfig.json',
-		compilerOptions: { rootDir: '../../..', noEmit: true },
-		...sources,
-	};
-	return { path, content: `${JSON.stringify(config, null, '\t')}\n` };
 }
 
 async function agreement(
@@ -160,7 +125,7 @@ if (import.meta.main) {
 	await rm(`${TEST_DIR}generated`, { recursive: true, force: true });
 	const names = [...CASES, ...CONFORMANCE.map((name) => `conformance/${name}`)];
 	const cases = await Promise.all(names.map((name) => fixtureFiles(name)));
-	for (const generated of [...cases.flat(), ...(await perfFiles())]) {
+	for (const generated of cases.flat()) {
 		await mkdir(dirname(generated.path), { recursive: true });
 		await writeFile(generated.path, generated.content);
 	}

@@ -1,0 +1,6 @@
+in: query
+name: last
+description: Return the last N items (backward pagination).
+schema:
+  type: integer
+  minimum: 1

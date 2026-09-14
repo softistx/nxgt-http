@@ -31,7 +31,7 @@ export interface GenerateOptions extends IROptions {
 	enums?: Enums;
 	/**
 	 * Also emit `hono.ts`: typed routes for a Hono app. It imports `hono`
-	 * and `@nxgt/openapi-codegen/hono`, so both become runtime dependencies.
+	 * and `@nxgt/openapi-hono`, so both become runtime dependencies.
 	 */
 	hono?: boolean;
 	/**

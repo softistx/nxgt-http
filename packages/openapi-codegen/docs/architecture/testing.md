@@ -32,7 +32,7 @@ yet.
 
 | Case | Exercises |
 | --- | --- |
-| `split` | a Redocly-style spec across files, with `$ref`s into `@nxgt/shared-openapi`'s fragments, a recursive `Employee`, and `allOf` |
+| `split` | a Redocly-style spec across files, with `$ref`s into `shared-components/`, a copy of `@nxgt/shared-openapi`'s fragments, a recursive `Employee`, and `allOf` |
 | `query` | OpenAPI 3.2's `query` method, with an inline body and defaults |
 | `kitchen-sink` | one schema per mapping row, one parameter per way a value reaches a request, and a form with numbers, flags and lists |
 | `conformance/*` | real, public 3.1 and 3.2 specs, vendored unchanged; sources, licences and upstream commits are in its `README.md`. Generated and type-checked, not snapshotted |

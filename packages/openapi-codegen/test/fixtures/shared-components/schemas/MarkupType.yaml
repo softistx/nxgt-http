@@ -1,0 +1,6 @@
+type: string
+enum:
+  - FIXED
+  - PERCENTAGE
+description: Type of markup calculation for price lists.
+example: PERCENTAGE

@@ -1,5 +1,5 @@
 {
-	"name": "@nxgt/http-client",
+	"name": "@nxgt/httpyz",
 	"version": "0.0.0",
 	"license": "UNLICENSED",
 	"type": "module",
@@ -16,17 +16,17 @@
 			"import": "./dist/index.js",
 			"default": "./dist/index.js"
 		},
-		"./openapi": {
-			"types": "./dist/openapi/index.d.ts",
-			"import": "./dist/openapi/index.js",
-			"default": "./dist/openapi/index.js"
+		"./integration": {
+			"types": "./dist/integration/index.d.ts",
+			"import": "./dist/integration/index.js",
+			"default": "./dist/integration/index.js"
 		},
 		"./package.json": "./package.json"
 	},
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/softistx/nxgt-core.git",
-		"directory": "packages/http-client"
+		"url": "git+https://github.com/softistx/nxgt-http.git",
+		"directory": "packages/httpyz"
 	},
 	"publishConfig": {
 		"registry": "https://registry.npmjs.org",
@@ -34,18 +34,16 @@
 	},
 	"scripts": {
 		"build": "bun run ../../build.ts",
-		"fixtures": "bun run test/generate.ts",
-		"test": "bun run fixtures && bun test src",
-		"typecheck": "bun run fixtures && tsc --noEmit"
+		"test": "bun test src",
+		"typecheck": "tsc --noEmit"
 	},
 	"nxgt": {
 		"entrypoints": [
 			"src/index.ts",
-			"src/openapi/index.ts"
+			"src/integration/index.ts"
 		]
 	},
 	"devDependencies": {
-		"@nxgt/openapi-codegen": "workspace:^",
 		"@types/bun": "^1.4.0",
 		"hono": "^4.13.4",
 		"zod": "^4.5.4"

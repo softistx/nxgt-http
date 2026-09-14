@@ -1,0 +1,12 @@
+type: string
+enum: [
+  'EQ',
+  'NE',
+  'CONTAINS',
+  'STARTS_WITH',
+  'ENDS_WITH',
+  'REGEX',
+  'IN',
+  'NOT_IN'
+]
+description: Comparison operators for string filtering (EQ, NE, CONTAINS, STARTS_WITH, ENDS_WITH, REGEX, IN, NOT_IN)

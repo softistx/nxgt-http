@@ -1,0 +1,7 @@
+type: object
+required:
+  - files
+properties:
+  files:
+    $ref: ./UploadArray.yaml
+description: Files to upload

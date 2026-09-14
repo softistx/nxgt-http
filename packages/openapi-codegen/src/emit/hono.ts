@@ -4,11 +4,12 @@
  * generated file that imports more than `zod`: `hono`, and this package's
  * `/hono` runtime.
  */
-import { unroutable } from '../hono/routable';
+
 import type { MediaIR, OperationIR, ResponseIR } from '../ir/types';
 import type { EmitContext } from './context';
 import { operationDocs } from './operations';
 import { docComment, file, list, propertyKey } from './printer';
+import { unroutable } from './routable';
 import { type } from './types';
 
 /** The statuses Hono's `StatusCode` names. */
@@ -23,7 +24,7 @@ const STATUSES = new Set([
 /** What `c.redirect()` sends. 304 is not a redirect. */
 const REDIRECTS = new Set([300, 301, 302, 303, 305, 306, 307, 308]);
 
-const RUNTIME = '@nxgt/openapi-codegen/hono';
+const RUNTIME = '@nxgt/openapi-hono';
 
 /** The indexes of `types.ts` that `HonoSpec` gathers. */
 const INDEXES = [

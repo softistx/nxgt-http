@@ -1,0 +1,13 @@
+type: object
+properties:
+  values:
+    type: array
+    items:
+      type: string
+    description: Array of values to filter by
+  operator:
+    type: string
+    enum:
+      - and
+      - or
+    description: Logical operator to apply between values (and/or)

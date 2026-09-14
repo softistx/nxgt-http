@@ -1,0 +1,26 @@
+type: object
+properties:
+  eq:
+    type: string
+    nullable: true
+    description: Filter for exact match of ObjectID (used with operator EQ)
+  ne:
+    type: string
+    nullable: true
+    description: Filter for non-match of ObjectID (used with operator NE)
+  in:
+    type: array
+    items:
+      type: string
+    nullable: true
+    description: Filter for matching any of the specified ObjectIDs (used with operator IN)
+  notIn:
+    type: array
+    items:
+      type: string
+    nullable: true
+    description: Filter for not matching any of the specified ObjectIDs (used with operator NOT_IN)
+  exists:
+    type: boolean
+    nullable: true
+    description: Filter for existence of the ObjectID field (used with operator EXISTS)

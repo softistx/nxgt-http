@@ -2,8 +2,8 @@ get:
   operationId: listEmployees
   tags: [employees]
   parameters:
-    - $ref: ../../../../../shared-openapi/openapi/components/parameters/page.yaml
-    - $ref: ../../../../../shared-openapi/openapi/components/parameters/size.yaml
+    - $ref: ../../shared-components/parameters/page.yaml
+    - $ref: ../../shared-components/parameters/size.yaml
     - name: status
       in: query
       schema:
@@ -18,7 +18,7 @@ get:
             items:
               $ref: ../components/schemas/Employee.yaml
     '400':
-      $ref: ../../../../../shared-openapi/openapi/components/responses/BadRequest.yaml
+      $ref: ../../shared-components/responses/BadRequest.yaml
 post:
   operationId: createEmployee
   tags: [employees]
@@ -36,4 +36,4 @@ post:
           schema:
             $ref: ../components/schemas/Employee.yaml
     '400':
-      $ref: ../../../../../shared-openapi/openapi/components/responses/BadRequest.yaml
+      $ref: ../../shared-components/responses/BadRequest.yaml

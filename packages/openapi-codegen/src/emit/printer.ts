@@ -49,9 +49,21 @@ export function jsValue(value: unknown): string {
 	return 'undefined';
 }
 
+/** Whether `pattern` compiles with the `u` flag. */
+const unicode = (pattern: string): boolean => {
+	try {
+		new RegExp(pattern, 'u');
+		return true;
+	} catch {
+		return false;
+	}
+};
+
 /**
  * A regular expression literal matching what `new RegExp(pattern)` matches:
- * a `/` outside a character class is escaped, and so are line breaks.
+ * a `/` outside a character class is escaped, and so are line breaks. It has
+ * the `u` flag, since a JSON Schema pattern is Unicode (`\p{L}` is a letter
+ * only with it), unless the pattern uses a legacy escape the flag refuses.
  */
 export function regexLiteral(pattern: string): string {
 	let source = '';
@@ -71,7 +83,7 @@ export function regexLiteral(pattern: string): string {
 		else source += ch;
 	}
 	// `//` would open a comment.
-	return `/${source || '(?:)'}/`;
+	return `/${source || '(?:)'}/${unicode(pattern) ? 'u' : ''}`;
 }
 
 /** A JSDoc block, or nothing when there is nothing to say. */
@@ -127,6 +139,10 @@ function hasTopLevel(text: string, operators: string): boolean {
 		if (quote !== undefined) {
 			if (ch === '\\') i++;
 			else if (ch === quote) quote = undefined;
+		} else if (ch === '/' && text[i + 1] === '*') {
+			// A JSDoc holds prose: an apostrophe or a bracket there is not code.
+			const end = text.indexOf('*/', i + 2);
+			i = end < 0 ? text.length : end + 1;
 		} else if (ch === "'" || ch === '"') quote = ch;
 		else if ('([{<'.includes(ch)) depth++;
 		else if (')]}>'.includes(ch)) depth--;

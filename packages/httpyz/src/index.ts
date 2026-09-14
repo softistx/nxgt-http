@@ -1,9 +1,12 @@
 export { createHttpClient } from './client/create-http-client';
 export type {
+	ArgsFor,
 	Call,
 	CallOptions,
+	EventsArgs,
 	HttpClient,
 	HttpClientOptions,
+	LinesArgs,
 	Method,
 	ReplyOptions,
 	RequestArgs,
@@ -30,6 +33,7 @@ export type {
 	HttpReply,
 	ReplyOf,
 	Responses,
+	SchemaData,
 	WithResponse,
 } from './reply/types';
 export { unwrap } from './reply/unwrap';
@@ -50,3 +54,14 @@ export type {
 	StandardResult,
 	StandardSchemaV1,
 } from './schema/standard-schema';
+export type { ServerEvent } from './stream/sse-parser';
+export type {
+	EventSchemas,
+	EventStream,
+	EventsOptions,
+	LinesOptions,
+	ReconnectOptions,
+	Stream,
+	StreamEvent,
+	StreamItem,
+} from './stream/types';

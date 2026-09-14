@@ -29,11 +29,16 @@ type Unchecked<Type extends string> = Type extends `text/${string}`
 			? unknown
 			: Blob;
 
-type Data<Schema, Decoded extends boolean> = Schema extends StandardSchemaV1
+/** What a checked value is: the schema's output, or its input with `decode: false`. */
+export type SchemaData<
+	Schema,
+	Decoded extends boolean,
+> = Schema extends StandardSchemaV1
 	? Decoded extends true
 		? InferOutput<Schema>
 		: InferInput<Schema>
 	: never;
+type Data<Schema, Decoded extends boolean> = SchemaData<Schema, Decoded>;
 
 /** The declared replies, as a union narrowed on `status`. */
 export type ReplyOf<R extends Responses, Decoded extends boolean = true> = {

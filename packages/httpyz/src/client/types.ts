@@ -4,6 +4,16 @@ import type { Middleware } from '../middleware/compose';
 import type { RetryOptions } from '../middleware/retry';
 import type { HttpReply, Responses } from '../reply/types';
 import type { PathParamNames, RequestInput } from '../request/types';
+import type { StandardSchemaV1 } from '../schema/standard-schema';
+import type {
+	EventSchemas,
+	EventStream,
+	EventsOptions,
+	LinesOptions,
+	Stream,
+	StreamEvent,
+	StreamItem,
+} from '../stream/types';
 
 /** HTTP's methods, as OpenAPI lists them, and `query`. */
 export type Method =
@@ -79,14 +89,30 @@ export type RequestOptions<
 	Decoded extends boolean = true,
 > = RequestInput<Path> & CallOptions & ReplyOptions<R, Decoded>;
 
-/** A call's options: required when its path has `{name}`s to fill. */
+/** Options for a call to `Path`: required when the path has `{name}`s to fill. */
+export type ArgsFor<Path extends string, Options> = [
+	PathParamNames<Path>,
+] extends [never]
+	? [options?: Options]
+	: [options: Options];
+
 export type RequestArgs<
 	Path extends string,
 	R extends Responses | undefined,
 	Decoded extends boolean,
-> = [PathParamNames<Path>] extends [never]
-	? [options?: RequestOptions<Path, R, Decoded>]
-	: [options: RequestOptions<Path, R, Decoded>];
+> = ArgsFor<Path, RequestOptions<Path, R, Decoded>>;
+
+export type EventsArgs<
+	Path extends string,
+	E extends EventSchemas | undefined,
+	Decoded extends boolean,
+> = ArgsFor<Path, RequestInput<Path> & EventsOptions<E, Decoded>>;
+
+export type LinesArgs<
+	Path extends string,
+	I extends StandardSchemaV1 | undefined,
+	Decoded extends boolean,
+> = ArgsFor<Path, RequestInput<Path> & LinesOptions<I, Decoded>>;
 
 /** `http.get(path, options)`, and the other methods. */
 export type Call = <
@@ -121,4 +147,30 @@ export type HttpClient = {
 	 * `Response` is returned as it is.
 	 */
 	send(request: Request, options?: SendOptions): Promise<Response>;
+	/**
+	 * Server-sent events, read with `for await`, each narrowed on its
+	 * `event`: `http.events('/feed', { events: { update: Item } })`. It
+	 * connects when read, and reconnects as `EventSource` does. `timeout`
+	 * bounds each connection until its headers arrive, not the stream.
+	 */
+	events<
+		Path extends string,
+		E extends EventSchemas | undefined = undefined,
+		Decoded extends boolean = true,
+	>(
+		path: Path,
+		...args: EventsArgs<Path, E, Decoded>
+	): EventStream<StreamEvent<E, Decoded>>;
+	/**
+	 * JSON Lines, NDJSON or JSON text sequences, a record at a time, each
+	 * checked by `item`: `http.lines('/export', { item: Row })`.
+	 */
+	lines<
+		Path extends string,
+		I extends StandardSchemaV1 | undefined = undefined,
+		Decoded extends boolean = true,
+	>(
+		path: Path,
+		...args: LinesArgs<Path, I, Decoded>
+	): Stream<StreamItem<I, Decoded>>;
 } & { readonly [M in Method]: Call };

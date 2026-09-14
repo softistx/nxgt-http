@@ -11,8 +11,7 @@ It needs no spec and no generated code: give it paths and any
 a client driven by an OpenAPI spec, bind the generated operations onto it
 with [`@nxgt/openapi-httpyz`](https://www.npmjs.com/package/@nxgt/openapi-httpyz).
 
-> **0.x.** The API is still settling. Typed server-sent events and TanStack
-> Query helpers are on the way.
+> **0.x.** The API is still settling. TanStack Query helpers are on the way.
 
 ## Install
 
@@ -319,6 +318,73 @@ not retried.
 Headers that only need a value, such as a `traceparent` from the current
 span, need no middleware: `headers` may be a function.
 
+## Streams
+
+### Server-sent events
+
+`events` reads a `text/event-stream` with `for await`. It connects when the
+loop starts, and each event is narrowed on its `event`:
+
+```ts
+const feed = http.events('/items/{id}/events', {
+	param: { id },
+	events: { updated: Item, removed: z.object({ id: z.int() }), ping: null },
+	onUnknownEvent: (event) => console.warn('unknown event', event.event),
+});
+for await (const event of feed) {
+	if (event.event === 'updated') render(event.data); // Item
+	if (event.event === 'removed') drop(event.data.id);
+}
+```
+
+| Declared | The event's `data` |
+| --- | --- |
+| a schema | parsed as JSON, checked, and decoded, as a reply is |
+| `null` | the text as it came |
+| no `events` at all | every event yielded as `{ event, data, id }`, its data as text |
+
+An event `events` does not declare is not yielded: `onUnknownEvent` gets it.
+Each event carries the stream's last `id`, and `feed.lastEventId` holds it.
+
+It reconnects as `EventSource` does: when the connection drops or the
+stream ends, it waits, then connects again with `Last-Event-ID`. The wait is
+3 seconds until the stream sends a `retry:`.
+
+- It never reconnects after an error status, which throws an
+  `UndeclaredStatusError`, nor after a 204, which ends the stream. A server
+  ends a stream for good with a 204.
+- It does not reconnect a POST or a PATCH, unless `reconnect` says so.
+- `reconnect: false` never reconnects. `{ attempts, delay }` gives up after
+  `attempts` reconnections in a row without an event, and waits `delay`
+  until a `retry:`.
+- `lastEventId` resumes a stream from an ID of your own.
+
+Each connection is a request of its own: its `headers` run again, and it
+goes through `retry`, `auth` and `use`, so a refreshed token is sent.
+
+### JSON Lines
+
+`lines` reads a stream of JSON texts a record at a time: JSON Lines, NDJSON
+or a JSON text sequence. `item` checks each one:
+
+```ts
+for await (const row of http.lines('/export', { item: Row })) save(row);
+```
+
+A blank line is skipped, and the last record needs no line end. `lines`
+never reconnects.
+
+### Ending a stream
+
+Both end on `close()`, on `break`, or on the call's `signal`, and the
+connection closes with them. `close()` and `break` end the loop quietly, and
+the `signal` throws its `AbortError`. `timeout` bounds the wait for the
+headers of each connection, not the stream: a stream has no end to wait for.
+
+`validate: false` and `decode: false` apply to each item as to a reply.
+JSON that does not parse, an item its schema refuses, and a reply of
+another media type throw a `ValidationError`.
+
 ## Subpaths
 
 | Import | For |
@@ -343,3 +409,6 @@ span, need no middleware: `headers` may be a function.
   `body` of it is sent with.
 - **Declare the statuses you handle.** With `responses`, any other status
   throws, a 500 included. Leave `responses` out to get every reply back.
+- **A finite event stream reconnects.** A GET stream that simply ends is
+  read again, as `EventSource` would. End it with a 204 from the server,
+  `close()` it, or pass `reconnect: false`.

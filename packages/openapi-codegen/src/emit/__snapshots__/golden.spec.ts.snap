@@ -1200,6 +1200,15 @@ export interface UploadInput {
 	labels?: string[] | undefined;
 }
 
+/** A card or a bank account, and no key either one does not declare. */
+export type Payment = {
+	object: 'card';
+	number: string;
+} | {
+	object: 'bank_account';
+	account: string;
+};
+
 export type Identifier = Strict;
 
 export interface GetPetParam {
@@ -1485,6 +1494,18 @@ export const zUpload = z.object({
 	labels: z.array(z.string()).optional(),
 });
 
+/** A card or a bank account, and no key either one does not declare. */
+export const zPayment = z.union([
+	z.strictObject({
+		object: z.literal('card'),
+		number: z.string(),
+	}),
+	z.strictObject({
+		object: z.literal('bank_account'),
+		account: z.string(),
+	}),
+]);
+
 export const zIdentifier = zStrict;
 "
 `;
@@ -1699,6 +1720,7 @@ import type {
 	Nested,
 	Numbers,
 	Owned,
+	Payment,
 	Pet,
 	Ping,
 	Pong,
@@ -1809,6 +1831,7 @@ export interface components {
 		Keys: Keys;
 		Documented: Documented;
 		Upload: Upload;
+		Payment: Payment;
 		Identifier: Strict;
 	};
 	responses: never;

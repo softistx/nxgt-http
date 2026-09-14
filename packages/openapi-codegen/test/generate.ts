@@ -22,6 +22,15 @@ import { PERF_SIZE, perfRoutes, perfSpec } from './perf';
 const TEST_DIR = fileURLToPath(new URL('./', import.meta.url));
 export const CASES = ['split', 'query', 'kitchen-sink', 'dates'] as const;
 
+/** Real, public specs under `fixtures/conformance/`: generated and type-checked, not snapshotted. */
+export const CONFORMANCE = [
+	'redocly-museum',
+	'oai-tictactoe',
+	'oai-webhook',
+	'oai-query-3.2',
+	'oai-tags-3.2',
+] as const;
+
 /** What a case is generated with, beside `hono`. */
 const OPTIONS: { [name: string]: { dates?: Dates } } = {
 	dates: { dates: 'date' },
@@ -149,7 +158,8 @@ async function agreement(
 if (import.meta.main) {
 	// From scratch, so a file the generator stopped writing does not linger.
 	await rm(`${TEST_DIR}generated`, { recursive: true, force: true });
-	const cases = await Promise.all(CASES.map((name) => fixtureFiles(name)));
+	const names = [...CASES, ...CONFORMANCE.map((name) => `conformance/${name}`)];
+	const cases = await Promise.all(names.map((name) => fixtureFiles(name)));
 	for (const generated of [...cases.flat(), ...(await perfFiles())]) {
 		await mkdir(dirname(generated.path), { recursive: true });
 		await writeFile(generated.path, generated.content);

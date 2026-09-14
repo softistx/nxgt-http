@@ -50,7 +50,6 @@ const UNSUPPORTED_KEYWORDS = [
 	'dependentRequired',
 	'patternProperties',
 	'propertyNames',
-	'unevaluatedProperties',
 	'unevaluatedItems',
 	'prefixItems',
 	'contains',
@@ -164,6 +163,8 @@ export class SchemaBuilder {
 	readonly #discriminators = new Map<UnionNode, Location>();
 	readonly #warnedFormats = new Set<string>();
 	readonly #legacyFiles = new Set<string>();
+	/** Records built from an object that declares nothing: `{}` once sealed. */
+	readonly #undeclared = new WeakSet<SchemaNode>();
 
 	constructor(
 		resolver: Resolver,
@@ -235,7 +236,67 @@ export class SchemaBuilder {
 				);
 			}
 		}
-		return this.#annotate(this.#structure(value, at), value, at);
+		const node = this.#annotate(this.#structure(value, at), value, at);
+		if ('unevaluatedProperties' in value) {
+			this.#seal(
+				node,
+				value.unevaluatedProperties,
+				child(at, 'unevaluatedProperties'),
+			);
+		}
+		return node;
+	}
+
+	/**
+	 * `unevaluatedProperties: false`: a key no part of the schema evaluates is
+	 * refused. An object in the default mode becomes strict, and one whose
+	 * extra keys are allowed or have a schema evaluates them all already. A
+	 * union or an intersection seals its inline members and is marked
+	 * `sealed`: its `$ref` members cannot be changed here, and the emitter
+	 * warns when one of them accepts keys it does not declare.
+	 */
+	#seal(node: SchemaNode, value: unknown, at: Location): void {
+		if (value === true) return;
+		if (value !== false) {
+			this.#diagnostics.error(
+				'unsupported_keyword',
+				'`unevaluatedProperties` other than `false` or `true` is not supported',
+				at,
+			);
+			return;
+		}
+		const seal = (target: SchemaNode): void => {
+			if (target.kind === 'object') {
+				if (target.additional === 'default') target.additional = 'strict';
+			} else if (target.kind === 'record' && this.#undeclared.has(target)) {
+				// It declares nothing, so sealed it accepts only `{}`.
+				replaceNode(target, {
+					kind: 'object',
+					properties: [],
+					additional: 'strict',
+					extends: [],
+				});
+			} else if (target.kind === 'ref') {
+				target.sealed = true;
+			} else if (target.kind === 'union') {
+				// A value may match several anyOf variants and use keys from each:
+				// strict variants would refuse what the spec accepts.
+				if (!target.exclusive) {
+					this.#diagnostics.error(
+						'unsupported_keyword',
+						'`unevaluatedProperties: false` over `anyOf` is not supported: a value that matches several variants may use keys from each. Use `oneOf`',
+						at,
+					);
+					return;
+				}
+				target.sealed = true;
+				target.variants.forEach(seal);
+			} else if (target.kind === 'intersection') {
+				target.sealed = true;
+				target.members.forEach(seal);
+			}
+		};
+		seal(node);
 	}
 
 	/** Follows `ref` nodes to the shape they name. */
@@ -362,17 +423,33 @@ export class SchemaBuilder {
 			'ref',
 		);
 		const ref: SchemaNode = { kind: 'ref', target };
-		const rest = without(s, (key) => key === '$ref' || key.startsWith('x-'));
-		if (Object.keys(rest).every((key) => ANNOTATION_KEYS.has(key))) {
-			return this.#annotate(ref, rest, at);
-		}
-		// In 3.1 a $ref next to other keywords applies both, as allOf would.
-		const own = without(rest, (key) => ANNOTATION_KEYS.has(key));
-		return this.#annotate(
-			this.#combine([ref, this.#structure(own, at)], [], at),
-			rest,
-			at,
+		const rest = without(
+			s,
+			(key) =>
+				key === '$ref' ||
+				key === 'unevaluatedProperties' ||
+				key.startsWith('x-'),
 		);
+		let node: SchemaNode;
+		if (Object.keys(rest).every((key) => ANNOTATION_KEYS.has(key))) {
+			node = this.#annotate(ref, rest, at);
+		} else {
+			// In 3.1 a $ref next to other keywords applies both, as allOf would.
+			const own = without(rest, (key) => ANNOTATION_KEYS.has(key));
+			node = this.#annotate(
+				this.#combine([ref, this.#structure(own, at)], [], at),
+				rest,
+				at,
+			);
+		}
+		if ('unevaluatedProperties' in s) {
+			this.#seal(
+				node,
+				s.unevaluatedProperties,
+				child(at, 'unevaluatedProperties'),
+			);
+		}
+		return node;
 	}
 
 	#annotate(
@@ -656,7 +733,12 @@ export class SchemaBuilder {
 			// An object that declares nothing accepts anything; stripping unknown
 			// keys would hand the handler an empty object.
 			if (additional !== 'strict') {
-				return { kind: 'record', values: { kind: 'unknown' } };
+				const record: SchemaNode = {
+					kind: 'record',
+					values: { kind: 'unknown' },
+				};
+				if (additional === 'default') this.#undeclared.add(record);
+				return record;
 			}
 		}
 		return { kind: 'object', properties, additional, extends: [] };

@@ -21,6 +21,7 @@ yet.
 | type agreement | `test/generated/<case>/agreement.ts` | `tsc` fails if a type and its validator disagree, form validators included |
 | index typing | `test/types/operations.ts` | `Operations` and its indexes resolve as a server reads them |
 | routes typing | `test/types/hono.ts` | what `routes` refuses: an undeclared status, a wrong body, a path without that method, an unknown `operationId`, a tag or a path outside the scope |
+| conformance | `src/conformance.spec.ts` | real, public specs: each generates with only the warnings it calls for, and every JSON example it gives passes the generated validator |
 | routes cost | `src/hono/perf.spec.ts` | `tsc --extendedDiagnostics` on 500 generated routes stays under an instantiation budget |
 | openapi-fetch typing | `test/types/paths.ts` | `createClient<paths>()` types requests and replies from `paths.ts` alone |
 | command line | `src/cli/run.spec.ts` | flags, config files, `--check` and exit codes through `run()`, and `src/cli.ts` as a process |
@@ -34,6 +35,7 @@ yet.
 | `split` | a Redocly-style spec across files, with `$ref`s into `@nxgt/shared-openapi`'s fragments, a recursive `Employee`, and `allOf` |
 | `query` | OpenAPI 3.2's `query` method, with an inline body and defaults |
 | `kitchen-sink` | one schema per mapping row, one parameter per way a value reaches a request, and a form with numbers, flags and lists |
+| `conformance/*` | real, public 3.1 and 3.2 specs, vendored unchanged; sources, licences and upstream commits are in its `README.md`. Generated and type-checked, not snapshotted |
 | `dates` | generated with `dates: 'date'`: a date-time in every place a value goes (named, nullable, defaulted, listed, recursive, a query, a form, a reply); `src/emit/dates.spec.ts` runs it |
 
 `test/generate.ts` writes each case's generated files to

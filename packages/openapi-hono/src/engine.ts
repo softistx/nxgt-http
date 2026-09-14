@@ -26,8 +26,12 @@ export interface Validator {
 }
 
 export interface RuntimeMedia {
-	readonly kind: 'json' | 'form' | 'text' | 'binary';
+	readonly kind: 'json' | 'form' | 'text' | 'binary' | 'sse' | 'jsonl';
 	readonly schema?: Validator;
+	/** `sse`: each event's data, by name: a validator for JSON, `null` for text. */
+	readonly events?: { readonly [event: string]: Validator | null };
+	/** `jsonl`: each item. */
+	readonly item?: Validator;
 }
 
 /** An entry of the `operations` table in `operations.ts`. */

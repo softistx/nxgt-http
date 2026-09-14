@@ -18,7 +18,13 @@ import { buildIR } from '../src/ir';
 import { loadDocument } from '../src/loader/document';
 
 const TEST_DIR = fileURLToPath(new URL('./', import.meta.url));
-export const CASES = ['split', 'query', 'kitchen-sink', 'dates'] as const;
+export const CASES = [
+	'split',
+	'query',
+	'kitchen-sink',
+	'dates',
+	'streams',
+] as const;
 
 /** Real, public specs under `fixtures/conformance/`: generated and type-checked, not snapshotted. */
 export const CONFORMANCE = [
@@ -32,6 +38,8 @@ export const CONFORMANCE = [
 /** What a case is generated with, beside `hono`. */
 const OPTIONS: { [name: string]: { dates?: Dates } } = {
 	dates: { dates: 'date' },
+	// Dated, so a stream's items are typed both decoded and as JSON carries them.
+	streams: { dates: 'date' },
 };
 
 /** A fixture's generated files, then its `agreement.ts`, with absolute paths. */

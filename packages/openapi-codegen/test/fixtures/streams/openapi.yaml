@@ -1,0 +1,153 @@
+openapi: 3.2.0
+info:
+  title: Streams
+  version: 1.0.0
+paths:
+  /feed:
+    get:
+      operationId: watchFeed
+      summary: The feed, as it changes.
+      parameters:
+        - name: topic
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: One event per change.
+          content:
+            text/event-stream:
+              itemSchema:
+                oneOf:
+                  - $ref: '#/components/schemas/UpdateEvent'
+                  - type: object
+                    required: [event, data]
+                    properties:
+                      event:
+                        const: removed
+                      data:
+                        type: string
+                        contentMediaType: application/json
+                        contentSchema:
+                          type: object
+                          required: [id]
+                          properties:
+                            id:
+                              type: string
+                  - type: object
+                    required: [event]
+                    properties:
+                      event:
+                        enum: [ping]
+                      data:
+                        type: string
+        '404':
+          description: No such topic.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /messages:
+    get:
+      operationId: listenMessages
+      responses:
+        '200':
+          description: Events sent without a name are messages.
+          content:
+            text/event-stream:
+              itemSchema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: string
+                    contentMediaType: application/json
+                    contentSchema:
+                      $ref: '#/components/schemas/Item'
+  /logs:
+    get:
+      operationId: tailLogs
+      responses:
+        '200':
+          description: Any event, its data as text.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+  /export:
+    post:
+      operationId: exportItems
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                since:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: One item a line.
+          content:
+            application/jsonl:
+              itemSchema:
+                $ref: '#/components/schemas/Item'
+            application/json-seq:
+              itemSchema:
+                $ref: '#/components/schemas/Item'
+  /import:
+    post:
+      operationId: importItems
+      requestBody:
+        required: true
+        content:
+          application/x-ndjson:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '200':
+          description: Each row as it is stored.
+          content:
+            application/x-ndjson:
+              itemSchema:
+                type: object
+                required: [row]
+                properties:
+                  row:
+                    type: integer
+                  error:
+                    type: string
+components:
+  schemas:
+    Item:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+    UpdateEvent:
+      type: object
+      required: [event, data]
+      properties:
+        event:
+          const: update
+        data:
+          type: string
+          contentMediaType: application/json
+          contentSchema:
+            $ref: '#/components/schemas/Item'
+        id:
+          type: string
+    Problem:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string

@@ -119,6 +119,13 @@ node, or one that reaches itself, is marked `recursive`.
   `application/*+json`), `form` (urlencoded, multipart), `text` (`text/*`) or `binary`.
   Only `json` and `form` schemas are named. Responses are exact status codes;
   `default` and `NXX` are ignored with a warning.
+- **Streams.** In a response only, `text/event-stream` is `sse` and the JSON
+  Lines types (`sequentialKind`) are `jsonl`, read from `itemSchema` rather
+  than `schema`. `#events` walks an `sse` item's `oneOf`/`anyOf` into
+  `EventIR`s, keyed by the constant of `event` (`message` without one), with
+  `data` from `contentSchema` under a JSON `contentMediaType`; a `jsonl` item
+  becomes `MediaIR.item`. Both are named like inline bodies. A request body
+  keeps the four whole-body kinds.
 - **`checkParameters`** runs after every schema is built, since a parameter's
   schema may be a `$ref`. Each must resolve to a scalar, an enum, a union of
   those, or a list of them, and a list is not allowed in the path.

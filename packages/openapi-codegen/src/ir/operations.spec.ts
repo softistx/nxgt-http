@@ -3,7 +3,7 @@ import { CodegenError } from '../errors';
 import { loadDocument } from '../loader/document';
 import { createMemoryFileSystem } from '../loader/fs';
 import { buildIR } from './index';
-import { mediaKind } from './operations';
+import { mediaKind, sequentialKind } from './operations';
 
 const ROOT = '/spec/openapi.json';
 const ok = { '200': { description: 'ok' } };
@@ -275,5 +275,117 @@ describe('buildIR — operations', () => {
 				'image/png',
 			].map(mediaKind),
 		).toEqual(['json', 'json', 'form', 'form', 'text', 'binary', 'binary']);
+	});
+
+	it('reads events and JSON lines as streams', () => {
+		expect(
+			[
+				'text/event-stream; charset=utf-8',
+				'application/jsonl',
+				'application/x-ndjson',
+				'application/json-seq',
+				'application/json',
+				'text/plain',
+			].map(sequentialKind),
+		).toEqual(['sse', 'jsonl', 'jsonl', 'jsonl', undefined, undefined]);
+	});
+
+	it('reads a reply of events or of JSON lines an item at a time, from `itemSchema`', async () => {
+		const json = (schema: unknown) => ({
+			type: 'string',
+			contentMediaType: 'application/json',
+			contentSchema: schema,
+		});
+		const reply = (content: unknown) => ({
+			'200': { description: 'ok', content },
+		});
+		const api = await build(
+			spec({
+				'/feed': {
+					get: {
+						operationId: 'feed',
+						responses: reply({
+							'text/event-stream': {
+								itemSchema: {
+									oneOf: [
+										{
+											type: 'object',
+											properties: {
+												event: { const: 'update' },
+												data: json({
+													type: 'object',
+													properties: { id: { type: 'string' } },
+												}),
+											},
+										},
+										{
+											type: 'object',
+											properties: {
+												event: { enum: ['ping'] },
+												data: { type: 'string' },
+											},
+										},
+										{
+											type: 'object',
+											properties: { event: { type: 'string' } },
+										},
+										{
+											type: 'object',
+											properties: { event: { const: 'ping' } },
+										},
+									],
+								},
+							},
+							'application/x-ndjson; charset=utf-8': {
+								itemSchema: { type: 'integer' },
+							},
+						}),
+					},
+				},
+				'/logs': {
+					get: {
+						operationId: 'logs',
+						responses: reply({
+							'text/event-stream': { schema: { type: 'string' } },
+						}),
+					},
+				},
+				'/import': {
+					post: {
+						operationId: 'import',
+						requestBody: { content: { 'application/jsonl': {} } },
+						responses: ok,
+					},
+				},
+			}),
+		);
+		const [feed, logs, upload] = api.operations;
+		const [events, lines] = feed?.responses[0]?.content ?? [];
+		expect(events?.kind).toBe('sse');
+		// JSON data gets a name, as a body written inline does.
+		expect(events?.events?.map((e) => [e.name, e.data?.kind])).toEqual([
+			['update', 'ref'],
+			['ping', undefined],
+		]);
+		expect(api.schemas.map((s) => s.name)).toContain(
+			'Feed200ResponseUpdateData',
+		);
+		expect(lines).toMatchObject({
+			kind: 'jsonl',
+			item: { kind: 'number', integer: true },
+		});
+		// Without `itemSchema`, any event, as text; `schema` describes the stream whole.
+		expect(logs?.responses[0]?.content[0]).toEqual({
+			mediaType: 'text/event-stream',
+			kind: 'sse',
+		});
+		// A body is sent whole.
+		expect(upload?.body?.content[0]?.kind).toBe('binary');
+		const oneOf =
+			'/paths/~1feed/get/responses/200/content/text~1event-stream/itemSchema/oneOf';
+		expect(api.warnings.map((w) => [w.code, w.pointer])).toEqual([
+			['not_enforced', `${oneOf}/2`],
+			['ignored', `${oneOf}/3`],
+		]);
 	});
 });

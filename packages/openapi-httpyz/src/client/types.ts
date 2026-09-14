@@ -37,8 +37,12 @@ export interface RuntimeParameter {
 }
 
 export interface RuntimeMedia {
-	readonly kind: 'json' | 'form' | 'text' | 'binary';
+	readonly kind: 'json' | 'form' | 'text' | 'binary' | 'sse' | 'jsonl';
 	readonly schema?: StandardSchemaV1;
+	/** `sse`: each event's data, by name: a schema for JSON, `null` for text. */
+	readonly events?: { readonly [event: string]: StandardSchemaV1 | null };
+	/** `jsonl`: each item. */
+	readonly item?: StandardSchemaV1;
 }
 
 /** What the binding reads of an entry of the generated `operations` table. */

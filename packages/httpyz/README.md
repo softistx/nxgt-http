@@ -10,9 +10,8 @@ parameters, the body, and each reply the operation declares. A reply is a
 union narrowed on its status, so nothing throws for a status the spec
 declares.
 
-> **0.x.** The API is still settling. Validating and decoding replies,
-> middleware and retries, typed server-sent events and TanStack Query helpers
-> are on the way.
+> **0.x.** The API is still settling. Middleware and retries, typed
+> server-sent events and TanStack Query helpers are on the way.
 
 ## Install
 
@@ -52,6 +51,8 @@ export const api = createClient<ClientOperations, OperationsByRoute>(
 | `headers` | none | an object, or a function run before each call |
 | `init` | none | fetch options for every call: `credentials`, `mode`… |
 | `timeout` | none | milliseconds before a call fails with `TimeoutError` |
+| `validate` | neither | `true`, or `{ request, response }`: check with the spec's schemas. See [Validating and decoding](#validating-and-decoding) |
+| `decode` | `false` | `true` returns each reply as its schema outputs it |
 
 ## Calls
 
@@ -96,6 +97,42 @@ reply.response; // the Response, for its headers: its body is read
 `unwrap(reply, 200)` returns the data of a 200 and throws a
 `ReplyStatusError` for any other reply.
 
+A form reply's `data` is its `FormData`, and a binary one's a `Blob`.
+
+## Validating and decoding
+
+The types hold a call to the spec, but not the values in it: a `page` of `0`
+where the spec says `minimum: 1`, or a reply from a server that drifted.
+`validate` checks both with the schemas in the generated `operations` table:
+
+- **The request**, before it is sent, by the validators the server runs, on
+  what the server will read: each parameter as the text it travels as, the
+  JSON as it parses, a form as its fields. A request the server would refuse
+  throws a `ValidationError` with the same issues, and is never sent.
+- **The reply**, before it is returned: a JSON or text reply against its
+  schema, as `@nxgt/openapi-codegen/hono` checks its own with
+  `validateResponses`.
+
+The schemas are read through [Standard Schema](https://standardschema.dev)'s
+`~standard`, so the client imports no validator: the generated table brings
+Zod.
+
+`decode` returns each reply as its schema outputs it, which differs from what
+JSON carries once the spec is generated with `dates: 'date'`: a date-time is a
+`Date`. That changes the replies' types, so a decoding client says so in its
+third type argument, which then requires `decode: true`:
+
+```ts
+const api = createClient<ClientOperations, OperationsByRoute, true>(
+	operations,
+	{ baseUrl, decode: true },
+);
+const employee = unwrap(await api.get('/employees/{id}', { param: { id } }), 200);
+employee.hiredAt; // Date
+```
+
+Decoding validates the reply, whatever `validate` says.
+
 ## Errors
 
 | Error | When |
@@ -103,14 +140,16 @@ reply.response; // the Response, for its headers: its body is read
 | `UndeclaredStatusError` | a status the operation does not declare: its `default` and `4XX` replies included. Its `response` is unread |
 | `NetworkError` | fetch failed: no connection, a CORS refusal. `cause` is fetch's error |
 | `TimeoutError` | no reply within `timeout` |
-| `ValidationError` | a reply the spec does not describe: an undeclared media type, JSON that does not parse. `failure` has the shape `@nxgt/openapi-codegen/hono` reports |
+| `ValidationError` | a reply the spec does not describe: an undeclared media type, JSON that does not parse, and with `validate`, a value its schema refuses; or, with `validate`, a request the server would refuse. `failure` has the shape `@nxgt/openapi-codegen/hono` reports |
 
 All four extend `ClientError`, which names the operation. An abort the caller
 asked for through `signal` comes through as its own `AbortError`.
 
 ## Traps
 
-- **Replies are not validated or decoded yet.** They are typed as JSON
-  carries them: with `dates: 'date'`, a date-time is a string.
+- **Without `decode`, a reply is typed as JSON carries it**: with
+  `dates: 'date'`, a date-time is a string. A request is written the same way
+  in both cases: its date-times are strings, or a `Date` in a query or a
+  header.
 - **Give each operation its exact statuses.** A `default` or `4XX` reply is
   not in the types, so it throws `UndeclaredStatusError`.

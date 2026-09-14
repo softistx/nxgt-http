@@ -4,7 +4,9 @@ import {
 	ReplyStatusError,
 	UndeclaredStatusError,
 	ValidationError,
+	type ValidationIssue,
 } from './errors';
+import { check } from './standard';
 import type { RuntimeMedia, RuntimeOperation } from './types';
 
 const mediaType = (header: string): string =>
@@ -37,10 +39,18 @@ function declaredType(
 	return types.find((key) => content[key]?.kind === kind);
 }
 
+export interface ReplySettings {
+	/** Checks a JSON or text reply with its schema. */
+	readonly validate: boolean;
+	/** Returns what the schema outputs, not what it was given. */
+	readonly decode: boolean;
+}
+
 export async function readReply(
 	context: CallContext,
 	operation: RuntimeOperation,
 	response: Response,
+	settings: ReplySettings = { validate: false, decode: false },
 ): Promise<unknown> {
 	const { status } = response;
 	const declared = operation.responses[status];
@@ -49,15 +59,17 @@ export async function readReply(
 	if (types.length === 0) {
 		return { status, type: undefined, data: undefined, response };
 	}
-	const failure = (code: string, message: string): ValidationError =>
+	const refused = (issues: ValidationIssue[]): ValidationError =>
 		new ValidationError(context, {
 			kind: 'response',
 			operationId: context.operationId,
 			method: context.method,
 			path: context.path,
 			status,
-			issues: [{ target: 'response', path: [], code, message }],
+			issues,
 		});
+	const failure = (code: string, message: string): ValidationError =>
+		refused([{ target: 'response', path: [], code, message }]);
 	const header = response.headers.get('content-type');
 	// Untyped, it can only be the one type the status declares.
 	const type =
@@ -73,22 +85,33 @@ export async function readReply(
 			`a ${status} reply is ${types.join(' or ')}, not ${header ?? 'untyped'}`,
 		);
 	}
+	const reply = (data: unknown) => ({ status, type, data, response });
+	/** As `/hono` checks a reply with `validateResponses`: JSON and text only. */
+	const settle = async (data: unknown) => {
+		if (!settings.validate || !media.schema) return reply(data);
+		const result = await check(media.schema, data, 'response');
+		if (!result.ok) throw refused(result.issues);
+		return reply(settings.decode ? result.value : data);
+	};
 	switch (media.kind) {
 		case 'json': {
 			const text = await response.text();
-			if (text === '') return { status, type, data: undefined, response };
+			// Empty is no JSON: a checked reply says so, as the server does.
+			if (text === '' && !settings.validate) return reply(undefined);
+			let data: unknown;
 			try {
-				return { status, type, data: JSON.parse(text), response };
+				data = JSON.parse(text);
 			} catch {
 				throw failure('invalid_json', `the ${status} reply is not valid JSON`);
 			}
+			return settle(data);
 		}
 		case 'text':
-			return { status, type, data: await response.text(), response };
+			return settle(await response.text());
 		case 'form':
-			return { status, type, data: await response.formData(), response };
+			return reply(await response.formData());
 		default:
-			return { status, type, data: await response.blob(), response };
+			return reply(await response.blob());
 	}
 }
 

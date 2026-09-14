@@ -3,6 +3,7 @@
  * generator wrote (`ClientOperations`, `OperationsByRoute`), so a call costs
  * TypeScript the same whether the spec has five operations or five hundred.
  */
+import type { StandardSchemaV1 } from './standard';
 
 /** OpenAPI's eight methods, and 3.2's `query`. */
 export type Method =
@@ -43,7 +44,7 @@ export interface RuntimeParameter {
 
 export interface RuntimeMedia {
 	readonly kind: 'json' | 'form' | 'text' | 'binary';
-	readonly schema?: unknown;
+	readonly schema?: StandardSchemaV1;
 }
 
 /** What the client reads of an entry of the generated `operations` table. */
@@ -52,6 +53,10 @@ export interface RuntimeOperation {
 	/** As the spec writes it: `/employees/{id}`. */
 	readonly path: string;
 	readonly parameters: readonly RuntimeParameter[];
+	/** The server's validators of each location, which read text: for `validate`. */
+	readonly param?: StandardSchemaV1;
+	readonly query?: StandardSchemaV1;
+	readonly header?: StandardSchemaV1;
 	readonly body?: {
 		readonly required: boolean;
 		readonly content: { readonly [mediaType: string]: RuntimeMedia };
@@ -81,7 +86,26 @@ export interface ClientOptions {
 	init?: Omit<RequestInit, 'method' | 'body' | 'headers' | 'signal'>;
 	/** Milliseconds before a call fails with a `TimeoutError`. Default: none. */
 	timeout?: number;
+	/**
+	 * Checks with the spec's schemas, throwing a `ValidationError`: the
+	 * request before it is sent, the reply before it is returned. `true` is
+	 * both. Default: neither, since the types already hold both to the spec.
+	 */
+	validate?:
+		| boolean
+		| { readonly request?: boolean; readonly response?: boolean };
 }
+
+/**
+ * The client's options, and `decode`, which returns each reply as its schema
+ * outputs it: with `dates: 'date'`, a date-time as a `Date`. It changes the
+ * replies' types, so a decoding client says so in its third type argument,
+ * `createClient<ClientOperations, OperationsByRoute, true>`, which in turn
+ * requires `decode: true`. Decoding validates the reply.
+ */
+export type ClientArgs<Decoded extends boolean> = Decoded extends true
+	? [options: ClientOptions & { readonly decode: true }]
+	: [options?: ClientOptions & { readonly decode?: false }];
 
 /** What a call takes after its input: fetch's own options, and a timeout. */
 export interface CallInit extends Omit<RequestInit, 'method' | 'body'> {
@@ -116,19 +140,27 @@ type IdOf<
 	P extends string,
 > = Routes[`${M} ${P}` & keyof Routes] & keyof Ops;
 
+/** An operation's replies: decoded, or as JSON carries them. */
+export type ReplyOf<
+	Ops extends OperationsShape<Ops>,
+	K extends keyof Ops,
+	Decoded extends boolean,
+> = Decoded extends true ? Ops[K]['reply'] : Ops[K]['wire'];
+
 export type Client<
 	Ops extends OperationsShape<Ops>,
 	Routes = Record<never, never>,
+	Decoded extends boolean = false,
 > = {
 	/** Calls an operation by its `operationId`. */
 	op<K extends keyof Ops & string>(
 		id: K,
 		...args: Args<Ops, K>
-	): Promise<Result<Ops[K]['wire']>>;
+	): Promise<Result<ReplyOf<Ops, K, Decoded>>>;
 } & {
 	/** Calls the operation at a path: `api.get('/employees/{id}', { param: { id } })`. */
 	readonly [M in Method]: <P extends PathsOf<Routes, M>>(
 		path: P,
 		...args: Args<Ops, IdOf<Ops, Routes, M, P>>
-	) => Promise<Result<Ops[IdOf<Ops, Routes, M, P>]['wire']>>;
+	) => Promise<Result<ReplyOf<Ops, IdOf<Ops, Routes, M, P>, Decoded>>>;
 };

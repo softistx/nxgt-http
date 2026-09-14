@@ -12,14 +12,21 @@ export {
 } from './errors';
 export { unwrap } from './reply';
 export type {
+	StandardIssue,
+	StandardResult,
+	StandardSchemaV1,
+} from './standard';
+export type {
 	Args,
 	CallInit,
 	Client,
+	ClientArgs,
 	ClientOperation,
 	ClientOptions,
 	Method,
 	OperationsShape,
 	OperationTable,
+	ReplyOf,
 	Result,
 	RuntimeMedia,
 	RuntimeOperation,

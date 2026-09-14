@@ -53,7 +53,9 @@ no relative import into one.
   `src`, not a build of it.
 - `@nxgt/openapi-codegen` depends on no sibling. Its fixtures' `hono.ts` is
   excluded from its typecheck, and `@nxgt/openapi-hono` type-checks and runs
-  the same files against itself.
+  the same files against itself. `typecheck:generated` checks them all, the
+  conformance ones included, against the runtime's built declarations; `hono`
+  is a devDependency of the generator for that.
 
 **There are no cycles and there must not be one**, devDependencies included.
 A published package cannot depend on a package that depends back on it: the
@@ -149,3 +151,13 @@ publishes to npm.
 openapi-codegen 154, openapi-hono 24, openapi-httpyz 27. It runs one process per package, and each
 package's `test` script writes the generated fixtures its specs import first.
 Treat any failure as yours.
+
+**The generated code compiles under the strictest settings.** It lands in an
+app's own source, so the app's `tsconfig` checks it, whatever that holds:
+`noUnusedLocals`, `exactOptionalPropertyTypes`,
+`noPropertyAccessFromIndexSignature` and the rest. `bun run typecheck` ends
+with `typecheck:generated`, which checks every fixture of every package
+against `tsconfig.generated.json`, with those options on, and against the
+built packages, as an app sees them. The specs call that same generated code,
+never a hand-written copy of it. A fixture that fails here is a generator
+bug, not a fixture to exclude.

@@ -35,7 +35,11 @@ add its other optional peer:
 bun add -d @redocly/openapi-core
 ```
 
-The generator runs on Bun; the code it generates runs anywhere.
+The generator runs on Bun; the code it generates runs anywhere, and compiles
+under the strictest `tsconfig` an app may have: `strict`,
+`noUnusedLocals`, `exactOptionalPropertyTypes`,
+`noPropertyAccessFromIndexSignature`, `noUncheckedIndexedAccess`,
+`verbatimModuleSyntax`. Every fixture is checked with them.
 
 ## Subpaths
 

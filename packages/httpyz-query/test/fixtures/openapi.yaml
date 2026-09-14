@@ -1,0 +1,86 @@
+# A spec's queries, infinite queries and mutations, for `./openapi`.
+openapi: 3.2.0
+info:
+  title: Queries fixture
+  version: 0.0.1
+paths:
+  /items:
+    get:
+      operationId: listItems
+      parameters:
+        - { name: first, in: query, schema: { type: integer, minimum: 1 } }
+        - { name: after, in: query, schema: { type: string } }
+        - { name: X-Locale, in: header, schema: { type: string } }
+      responses:
+        '200':
+          description: A page
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/Page' } }
+    post:
+      operationId: createItem
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/NewItem' } }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/Item' } }
+  /items/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    get:
+      operationId: getItem
+      responses:
+        '200':
+          description: Found
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/Item' } }
+        '404':
+          description: Missing
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+    delete:
+      operationId: deleteItem
+      responses:
+        '204': { description: Deleted }
+  /health:
+    get:
+      operationId: health
+      responses:
+        '200':
+          description: Up
+          content:
+            application/json:
+              schema: { type: object, required: [up], properties: { up: { type: boolean } } }
+  /hang:
+    get:
+      operationId: hang
+      responses:
+        '204': { description: Never }
+components:
+  schemas:
+    NewItem:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+    Item:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        createdAt: { type: string, format: date-time }
+    Page:
+      type: object
+      required: [items, next]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/Item' } }
+        next: { type: [string, 'null'] }
+    Problem:
+      type: object
+      required: [title]
+      properties:
+        title: { type: string }

@@ -16,7 +16,18 @@
 			"import": "./dist/index.js",
 			"default": "./dist/index.js"
 		},
+		"./openapi": {
+			"types": "./dist/openapi.d.ts",
+			"import": "./dist/openapi.js",
+			"default": "./dist/openapi.js"
+		},
 		"./package.json": "./package.json"
+	},
+	"nxgt": {
+		"entrypoints": [
+			"src/index.ts",
+			"src/openapi.ts"
+		]
 	},
 	"repository": {
 		"type": "git",
@@ -29,18 +40,27 @@
 	},
 	"scripts": {
 		"build": "bun run ../../build.ts",
-		"test": "bun test src",
-		"typecheck": "tsc --noEmit"
+		"fixtures": "bun run test/generate.ts",
+		"test": "bun run fixtures && bun test src",
+		"typecheck": "bun run fixtures && tsc --noEmit"
 	},
 	"devDependencies": {
 		"@nxgt/httpyz": "workspace:^",
+		"@nxgt/openapi-codegen": "workspace:^",
+		"@nxgt/openapi-httpyz": "workspace:^",
 		"@tanstack/query-core": "^5.102.8",
 		"@types/bun": "^1.4.0",
 		"zod": "^4.5.4"
 	},
 	"peerDependencies": {
 		"@nxgt/httpyz": "workspace:^",
+		"@nxgt/openapi-httpyz": "workspace:^",
 		"@tanstack/query-core": "^5.90.0",
 		"typescript": "^6.0.3"
+	},
+	"peerDependenciesMeta": {
+		"@nxgt/openapi-httpyz": {
+			"optional": true
+		}
 	}
 }

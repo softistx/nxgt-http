@@ -30,7 +30,7 @@ lands in `@nxgt/httpyz` first, and in the binding second.
 httpyz            openapi-codegen
   │                 └─ openapi-hono          (dev: generates its fixtures)
   ├─ openapi-httpyz ◄── openapi-codegen, openapi-hono   (dev: its fixtures)
-  └─ httpyz-query
+  └─ httpyz-query   ◄── openapi-httpyz (optional peer), openapi-codegen (dev: its fixtures)
 ```
 
 This is a Bun workspace, as nxgt-core is: **a package that uses a sibling
@@ -45,6 +45,8 @@ no relative import into one.
 - `@nxgt/httpyz-query` has `@nxgt/httpyz` and `@tanstack/query-core` as
   peers. It imports nothing of TanStack's at runtime, only its types, so any
   adapter takes what it returns; its specs run query-core's own `QueryClient`.
+  Its `./openapi` subpath imports `@nxgt/openapi-httpyz`'s types only, an
+  optional peer; the generator is a devDependency, for its fixtures.
 - `@nxgt/openapi-hono` has the generator as a devDependency, for its
   fixtures. The one `paths` entry left is its own name, so that the
   generated `hono.ts` in its fixtures runs the engine the specs import from
@@ -143,7 +145,7 @@ publishes to npm.
 
 ## Known state
 
-`bun run test` is **290 pass, 0 fail**: httpyz 79, httpyz-query 6,
+`bun run test` is **296 pass, 0 fail**: httpyz 79, httpyz-query 12,
 openapi-codegen 154, openapi-hono 24, openapi-httpyz 27. It runs one process per package, and each
 package's `test` script writes the generated fixtures its specs import first.
 Treat any failure as yours.

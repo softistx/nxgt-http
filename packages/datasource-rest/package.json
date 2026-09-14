@@ -1,0 +1,49 @@
+{
+	"name": "@nxgt/datasource-rest",
+	"version": "1.0.3",
+	"license": "UNLICENSED",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"files": [
+		"dist",
+		"README.md",
+		"package.json"
+	],
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"default": "./dist/index.js"
+		},
+		"./package.json": "./package.json"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/softistx/nxgt-http.git",
+		"directory": "packages/datasource-rest"
+	},
+	"publishConfig": {
+		"registry": "https://registry.npmjs.org",
+		"access": "public"
+	},
+	"scripts": {
+		"build": "bun run ../../build.ts",
+		"typecheck": "tsc --noEmit"
+	},
+	"nxgt": {
+		"entrypoints": [
+			"src/index.ts"
+		]
+	},
+	"dependencies": {
+		"@nxgt/shared-exceptions": "^1.0.3",
+		"openapi-fetch": "^0.17.0"
+	},
+	"devDependencies": {
+		"@types/bun": "^1.4.0"
+	},
+	"peerDependencies": {
+		"typescript": "^6.0.3"
+	}
+}

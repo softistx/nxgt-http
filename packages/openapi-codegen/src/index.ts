@@ -6,7 +6,7 @@ export {
 	loadConfig,
 } from './config';
 export type { GeneratedFile } from './emit';
-export type { Enums, UnknownKeys } from './emit/context';
+export type { Dates, Enums, UnknownKeys } from './emit/context';
 export {
 	CodegenError,
 	type Diagnostic,

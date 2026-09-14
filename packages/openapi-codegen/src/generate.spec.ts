@@ -216,4 +216,14 @@ describe('generate', () => {
 		expect(await refused('Replies')).toBeUndefined();
 		expect(await refused('Replies', true)).toEqual(['name_collision']);
 	});
+
+	it('refuses a dates option it does not know', async () => {
+		const fs = createMemoryFileSystem({ '/s/openapi.json': SPEC });
+		await expect(
+			generateFiles(
+				{ input: '/s/openapi.json', output: '/s/gen', dates: 'luxon' as never },
+				{ fs },
+			),
+		).rejects.toThrow('dates must be string or date, not luxon');
+	});
 });

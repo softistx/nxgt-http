@@ -26,12 +26,20 @@ import {
 } from './context';
 import { docComment, jsString, list, propertyKey } from './printer';
 import { type } from './types';
-import { bounds, defaultValue, expr, literal, type Scope } from './zod';
+import {
+	bounds,
+	expr,
+	ISO_DATE,
+	literal,
+	type Scope,
+	withDefault,
+} from './zod';
 
-type Helper = 'flag' | 'none' | 'numeric' | 'repeated';
+type Helper = 'flag' | 'isoDate' | 'none' | 'numeric' | 'repeated';
 
 /** Declared at the top of `operations.gen.ts` when a validator uses them. */
 const HELPERS: Record<Helper, string> = {
+	isoDate: ISO_DATE,
 	flag: [
 		'/** `true` or `false`, as JSON spells them. */',
 		"const flag = z.stringbool({ truthy: ['true'], falsy: ['false'] });",
@@ -283,12 +291,15 @@ export function emitOperations(ctx: EmitContext): {
 } {
 	const helpers = new Set<Helper>();
 	const uses = new Set<string>();
+	/** What `expr` needs declared: the date codec. */
+	const codecs = new Set<string>();
 	const declared = new Set(ctx.ir.schemas.map((schema) => schema.id));
 	const scope = (indent: string): Scope => ({
 		declared,
 		lazy: false,
 		indent,
 		uses,
+		helpers: codecs,
 	});
 
 	const validators: string[] = [];
@@ -309,6 +320,7 @@ export function emitOperations(ctx: EmitContext): {
 		}
 	}
 	const table = operationTable(ctx, helpers, scope);
+	if (codecs.has('isoDate')) helpers.add('isoDate');
 
 	const ext = ctx.options.importExtension;
 	const imports = ["import { z } from 'zod';"];
@@ -343,7 +355,7 @@ function paramObject(
 			value +=
 				fallback === undefined
 					? '.optional()'
-					: `.default(${defaultValue(fallback.value)})`;
+					: withDefault(ctx, param.schema, fallback.value);
 		}
 		return `\t${propertyKey(paramKey(param))}: ${value},`;
 	});
@@ -372,7 +384,7 @@ function formObject(
 			value +=
 				fallback === undefined
 					? '.optional()'
-					: `.default(${defaultValue(fallback.value)})`;
+					: withDefault(ctx, property.schema, fallback.value);
 		}
 		return `\t${propertyKey(property.name)}: ${value},`;
 	});

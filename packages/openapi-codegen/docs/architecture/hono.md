@@ -106,7 +106,13 @@ A `Scope` narrows what `routes` offers:
 - `Tagged<S, Tag>` offers one tag's `operationId`s and paths, read from
   `OperationsByTag` and `PathsByTag`.
 
-`ScopeOf` is the one conditional type. It is evaluated once per `routes()`
+With `dates: 'date'`, a reply body that holds a date is `Wire<T>`, from
+`types.gen.ts`. Hono types `c.json(x)` as `JSONParsed<typeof x>`, where a
+`Date` is a `string`, so a reply typed with `T` itself would match nothing.
+`Wire<T>` is the only conditional type in a reply, and appears only where a
+date does.
+
+`ScopeOf` is the one conditional type of `routes`. It is evaluated once per `routes()`
 call.
 
 `routes[method]` takes `...chain: [...MiddlewareHandler[], RouteHandler]`.

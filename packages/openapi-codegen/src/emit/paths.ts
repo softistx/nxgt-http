@@ -5,7 +5,9 @@
  * `paths` lists every method of every path, `?: never` where the spec has
  * none, and points at `operations`, keyed by `operationId`. Parameters and
  * request bodies are typed as a caller sends them, responses as the server
- * returns them, with the types of `types.gen.ts`.
+ * returns them, with the types of `types.gen.ts`. With `dates: 'date'`,
+ * responses and `components` go through `Wire<T>`: a client gets JSON, and
+ * its dates are strings.
  */
 import type { MediaIR, OperationIR, ParamIR, ParamLocation } from '../ir/types';
 import type { EmitContext } from './context';
@@ -121,17 +123,21 @@ function parametersType(
 	return `{\n${lines.join('\n')}\n${indent}}`;
 }
 
+/** A schema as JSON carries it, which is what openapi-fetch hands back. */
+const wireName = (ctx: EmitContext, id: string): string =>
+	ctx.wire({ kind: 'ref', target: id }, ctx.typeName(id, false));
+
 function componentsType(ctx: EmitContext): string {
 	const schemas = [
 		...ctx.ir.schemas
 			.filter((schema) => schema.source !== 'inline')
 			.map(
 				(schema) =>
-					`\t\t${propertyKey(schema.name)}: ${ctx.typeName(schema.id, false)};`,
+					`\t\t${propertyKey(schema.name)}: ${wireName(ctx, schema.id)};`,
 			),
 		...ctx.ir.aliases.map(
 			(alias) =>
-				`\t\t${propertyKey(alias.name)}: ${ctx.typeName(alias.target, false)};`,
+				`\t\t${propertyKey(alias.name)}: ${wireName(ctx, alias.target)};`,
 		),
 	];
 	return [
@@ -201,9 +207,13 @@ function contentType(
 ): string {
 	const inner = `${indent}\t`;
 	const lines = content.map((media) => {
-		const value = media.schema
-			? type(ctx, media.schema, input, inner)
-			: 'globalThis.Blob';
+		const { schema } = media;
+		// A response is typed as JSON carries it: openapi-fetch decodes no date.
+		const value = !schema
+			? 'globalThis.Blob'
+			: input
+				? type(ctx, schema, true, inner)
+				: ctx.wire(schema, type(ctx, schema, false, inner));
 		return `${inner}${jsString(media.mediaType)}: ${value};`;
 	});
 	return `{\n${lines.join('\n')}\n${indent}}`;

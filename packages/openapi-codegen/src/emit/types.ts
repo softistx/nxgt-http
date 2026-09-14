@@ -14,6 +14,16 @@ import type {
 import { appliesDefault, type EmitContext } from './context';
 import { docComment, docLines, group, jsString, propertyKey } from './printer';
 
+/** Declared in `types.gen.ts` with `dates: 'date'`, for what JSON carries. */
+export const WIRE_TYPE = `/** \`T\` as JSON carries it: a \`Date\` travels as its ISO string. */
+export type Wire<T> = T extends Date
+	? string
+	: T extends globalThis.Blob
+		? T
+		: T extends object
+			? { [K in keyof T]: Wire<T[K]> }
+			: T;`;
+
 export function schemaTypes(ctx: EmitContext): string[] {
 	const blocks: string[] = [];
 	for (const schema of ctx.ir.schemas) {
@@ -46,7 +56,9 @@ function declaration(
 	const name = input ? `${schema.name}Input` : schema.name;
 	const docs = input
 		? [
-				`/** \`${schema.name}\` as its validator accepts it, before defaults are filled in. */`,
+				ctx.datesIn(schema.node)
+					? `/** \`${schema.name}\` as its validator accepts it: dates as strings, defaults not filled in yet. */`
+					: `/** \`${schema.name}\` as its validator accepts it, before defaults are filled in. */`,
 			]
 		: docComment(docLines(schema.node), '');
 	const { node } = schema;
@@ -177,7 +189,7 @@ function bare(
 		case 'ref':
 			return ctx.typeName(node.target, input);
 		case 'string':
-			return 'string';
+			return !input && ctx.isDate(node) ? 'Date' : 'string';
 		case 'number':
 			return 'number';
 		case 'binary':

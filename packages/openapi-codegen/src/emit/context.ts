@@ -18,6 +18,9 @@ export type UnknownKeys = 'strip' | 'strict' | 'loose';
 /** A named enum as an `as const` object that `z.enum()` reuses, or as a plain union. */
 export type Enums = 'object' | 'union';
 
+/** A `date-time` as the string JSON carries, or decoded to a `Date`. */
+export type Dates = 'string' | 'date';
+
 /** What an object does with undeclared keys once the `unknownKeys` default is applied. */
 export type ObjectMode = UnknownKeys | { schema: SchemaNode };
 
@@ -32,6 +35,8 @@ export interface EmitOptions {
 	rootDir: string;
 	/** Also emit `hono.gen.ts`. */
 	hono?: boolean;
+	/** `date-time` as a string (the default), or decoded to a `Date` by a codec. */
+	dates?: Dates;
 }
 
 /** A property whose default the validator fills in: optional going in, present coming out. */
@@ -85,6 +90,8 @@ export class EmitContext {
 	readonly #byId: Map<string, NamedSchema>;
 	/** Schemas whose validator accepts something other than what it returns. */
 	readonly #inputs = new Set<string>();
+	/** With `dates: 'date'`, schemas whose values hold a `Date`. */
+	readonly #dated = new Set<string>();
 	/** What the generated code accepts but the spec would refuse. */
 	readonly warnings: Diagnostic[] = [];
 	/** While set, every name `typeName` gives out, for a file that imports them. */
@@ -94,7 +101,8 @@ export class EmitContext {
 		this.ir = ir;
 		this.options = options;
 		this.#byId = new Map(ir.schemas.map((schema) => [schema.id, schema]));
-		this.#findInputs();
+		this.#fixpoint(this.#dated, (node) => this.datesIn(node));
+		this.#fixpoint(this.#inputs, (node) => this.inputDiffers(node));
 		this.#findLoosened();
 		this.#checkNames();
 	}
@@ -230,9 +238,59 @@ export class EmitContext {
 		);
 	}
 
+	/** A `date-time` that the validator decodes to a `Date`: with `dates: 'date'` only. */
+	isDate(node: SchemaNode): boolean {
+		return (
+			this.options.dates === 'date' &&
+			node.kind === 'string' &&
+			node.format === 'date-time'
+		);
+	}
+
+	/** Whether a value of the node holds a decoded `Date`, anywhere inside. */
+	datesIn(node: SchemaNode): boolean {
+		switch (node.kind) {
+			case 'string':
+				return this.isDate(node);
+			case 'ref':
+				return this.#dated.has(node.target);
+			case 'array':
+				return this.datesIn(node.items);
+			case 'record':
+				return this.datesIn(node.values);
+			case 'union':
+				return node.variants.some((variant) => this.datesIn(variant));
+			case 'intersection':
+				return node.members.some((member) => this.datesIn(member));
+			case 'object':
+				return (
+					node.extends.some((id) => this.#dated.has(id)) ||
+					node.properties.some((p) => this.datesIn(p.schema)) ||
+					(typeof node.additional === 'object' &&
+						this.datesIn(node.additional.schema))
+				);
+			default:
+				return false;
+		}
+	}
+
+	/**
+	 * `text`, the type of `node`, as JSON carries it: `Wire<T>` when it holds a
+	 * `Date`, which travels as its ISO string. Replies and `paths.gen.ts`
+	 * responses are typed this way; only a decoded value holds a `Date`.
+	 */
+	wire(node: SchemaNode, text: string): string {
+		if (!this.datesIn(node)) return text;
+		this.#typeUses?.add('Wire');
+		return `Wire<${text}>`;
+	}
+
 	/** Whether the node's validator accepts something other than what it returns. */
 	inputDiffers(node: SchemaNode): boolean {
 		switch (node.kind) {
+			case 'string':
+				// A codec takes the string and returns the Date.
+				return this.isDate(node);
 			case 'ref':
 				return this.#inputs.has(node.target);
 			case 'array':
@@ -257,16 +315,14 @@ export class EmitContext {
 		}
 	}
 
-	/** To a fixpoint, since schemas can reach each other in cycles. */
-	#findInputs(): void {
+	/** The schemas whose node `holds`, to a fixpoint, since schemas can reach each other in cycles. */
+	#fixpoint(set: Set<string>, holds: (node: SchemaNode) => boolean): void {
 		let changed = true;
 		while (changed) {
 			changed = false;
 			for (const schema of this.ir.schemas) {
-				if (this.#inputs.has(schema.id) || !this.inputDiffers(schema.node)) {
-					continue;
-				}
-				this.#inputs.add(schema.id);
+				if (set.has(schema.id) || !holds(schema.node)) continue;
+				set.add(schema.id);
 				changed = true;
 			}
 		}
@@ -369,6 +425,7 @@ export class EmitContext {
 		};
 		const root = { file: this.options.rootDir, pointer: '' };
 		for (const name of OPERATION_INDEXES) claim(name, 'types.gen.ts', root);
+		if (this.options.dates === 'date') claim('Wire', 'types.gen.ts', root);
 		if (this.options.hono) {
 			// Declared or imported by hono.gen.ts, which also imports schemas by name.
 			for (const name of ['Replies', 'HonoSpec', 'Hono']) {

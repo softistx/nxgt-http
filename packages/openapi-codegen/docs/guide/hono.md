@@ -219,6 +219,10 @@ Registering a route throws when:
 
 ## Traps
 
+- **With `dates: 'date'`, a handler gets `Date`s and can reply with them.**
+  `c.req.valid()` holds decoded dates. `c.json()` sends a `Date` as its
+  ISO string, and `Replies` types replies as JSON carries them (`Wire<T>`),
+  so both a `Date` and its string compile.
 - **Give `c.json()` a status.** Without one, Hono types the reply with any
   contentful status, and it matches no declared reply.
 - **Reply with plain objects.** A Mongoose document is not the JSON it

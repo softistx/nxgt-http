@@ -5,7 +5,7 @@ import { emitHono } from './hono';
 import { emitOperations, operationTypes } from './operations';
 import { emitPaths } from './paths';
 import { file } from './printer';
-import { schemaTypes } from './types';
+import { schemaTypes, WIRE_TYPE } from './types';
 import { emitZod } from './zod';
 
 export interface GeneratedFile {
@@ -23,7 +23,12 @@ export function emitFiles(
 	const files = [
 		{
 			path: 'types.gen.ts',
-			content: file([ctx.header, ...schemaTypes(ctx), ...operationTypes(ctx)]),
+			content: file([
+				ctx.header,
+				...schemaTypes(ctx),
+				...operationTypes(ctx),
+				...(options.dates === 'date' ? [WIRE_TYPE] : []),
+			]),
 		},
 		{ path: 'zod.gen.ts', content: emitZod(ctx) },
 		{

@@ -10,6 +10,7 @@ await generate({
 	importExtension: '.js',
 	enums: 'object',
 	hono: false,
+	dates: 'string',
 	names: { 'components/schemas/Error.yaml': 'ApiError' },
 	legacyNullable: 'warn',
 	check: false,
@@ -24,6 +25,7 @@ await generate({
 | [`importExtension`](#importextension) | `'.js'` | how generated files import each other |
 | [`enums`](#enums) | `'object'` | a named enum as an `as const` object, or a plain union |
 | [`hono`](#hono) | `false` | also write `hono.gen.ts`: typed routes for a Hono app |
+| [`dates`](#dates) | `'string'` | a `date-time` as its string, or decoded to a `Date` |
 | [`names`](#names) | `{}` | renames schemas |
 | [`legacyNullable`](#legacynullable) | `'warn'` | tolerate or refuse 3.0's `nullable: true` |
 | `check` | `false` | write nothing, report in `drifted` what would change |
@@ -88,6 +90,36 @@ per enum, `Status.Active`, which `zod.gen.ts` imports.
 The file imports `hono` and `@nxgt/openapi-codegen/hono`, so both become
 runtime dependencies of the app. It is off by default, so a project without
 Hono gets no file it cannot compile. See [Typed Hono routes](hono.md).
+
+## `dates`
+
+A `format: date-time`:
+
+| Value | Type | Validator |
+| --- | --- | --- |
+| `'string'` | `string` | `z.iso.datetime({ offset: true })` |
+| `'date'` | `Date`; `string` in `XInput` | `z.codec(z.iso.datetime({ offset: true }), z.date(), isoDate)` |
+
+With `'date'`:
+- **A validator takes JSON and returns `Date`s.** `zEvent.parse(json)`
+  decodes, and `z.encode(zEvent, event)` gives the JSON back, each date as
+  `toISOString()` writes it, in UTC. A `Date` passed to `parse` is refused.
+- **Every schema that holds a date gets an `XInput`**, with its dates as
+  strings, because what the validator accepts now differs from what it
+  returns.
+- **A default is written in the spec as JSON**, so it goes through the codec
+  too: `.prefault('2024-01-01T09:00:00Z')`.
+- **What travels is typed as JSON:**
+  - `types.gen.ts` exports `Wire<T>`, which turns each `Date` into a
+    `string`;
+  - `paths.gen.ts` types responses and `components` with it, since
+    openapi-fetch decodes nothing;
+  - `Replies` types replies with it, since `c.json()` sends a `Date` as its
+    string.
+- **A schema named `Wire` is a `name_collision`.**
+
+`format: date` stays a string: a day is not an instant, and `new Date()`
+would pin it to a time zone.
 
 ## `names`
 

@@ -3,6 +3,7 @@
  * types a client from it with nothing in between. Type-checked, never run.
  */
 import createClient from 'openapi-fetch';
+import type { paths as datePaths } from '../generated/dates/paths.gen.js';
 import type { paths } from '../generated/kitchen-sink/paths.gen.js';
 import type { Pet } from '../generated/kitchen-sink/types.gen.js';
 
@@ -42,4 +43,15 @@ export async function examples(): Promise<Pet | undefined> {
 		},
 	});
 	return data;
+}
+
+/** With `dates: 'date'`, what a client gets back is JSON: its dates are strings. */
+export async function dated(): Promise<string | undefined> {
+	const client = createClient<datePaths>({ baseUrl: 'https://events.example' });
+	const { data } = await client.GET('/events', {
+		params: { query: { since: '2024-05-01T10:00:00Z' } },
+	});
+	// @ts-expect-error openapi-fetch decodes no date
+	data?.[0]?.createdAt satisfies Date | undefined;
+	return data?.[0]?.createdAt;
 }

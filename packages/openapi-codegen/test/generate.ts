@@ -11,7 +11,7 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { GeneratedFile } from '../src/emit';
-import { EmitContext, paramGroups } from '../src/emit/context';
+import { type Dates, EmitContext, paramGroups } from '../src/emit/context';
 import { file, jsString } from '../src/emit/printer';
 import { generateFiles } from '../src/generate';
 import { createMemoryFileSystem } from '../src/index';
@@ -20,16 +20,30 @@ import { loadDocument } from '../src/loader/document';
 import { PERF_SIZE, perfRoutes, perfSpec } from './perf';
 
 const TEST_DIR = fileURLToPath(new URL('./', import.meta.url));
-export const CASES = ['split', 'query', 'kitchen-sink'] as const;
+export const CASES = ['split', 'query', 'kitchen-sink', 'dates'] as const;
+
+/** What a case is generated with, beside `hono`. */
+const OPTIONS: { [name: string]: { dates?: Dates } } = {
+	dates: { dates: 'date' },
+};
 
 /** A fixture's generated files, then its `agreement.ts`, with absolute paths. */
 export async function fixtureFiles(name: string): Promise<GeneratedFile[]> {
 	const input = `${TEST_DIR}fixtures/${name}/openapi.yaml`;
 	const output = `${TEST_DIR}generated/${name}`;
-	const { files } = await generateFiles({ input, output, hono: true });
+	const options = OPTIONS[name] ?? {};
+	const { files } = await generateFiles({
+		input,
+		output,
+		hono: true,
+		...options,
+	});
 	return [
 		...files,
-		{ path: `${output}/agreement.ts`, content: await agreement(input) },
+		{
+			path: `${output}/agreement.ts`,
+			content: await agreement(input, options),
+		},
 	];
 }
 
@@ -66,7 +80,10 @@ function tsconfig(path: string, sources: object): GeneratedFile {
 	return { path, content: `${JSON.stringify(config, null, '\t')}\n` };
 }
 
-async function agreement(input: string): Promise<string> {
+async function agreement(
+	input: string,
+	options: { dates?: Dates },
+): Promise<string> {
 	const ir = buildIR(await loadDocument(input));
 	const ctx = new EmitContext(ir, {
 		unknownKeys: 'strip',
@@ -75,6 +92,7 @@ async function agreement(input: string): Promise<string> {
 		hono: true,
 		source: '',
 		rootDir: TEST_DIR,
+		...options,
 	});
 	const schemas = [
 		...ir.schemas.map((s) => ({ name: s.name, id: s.id })),

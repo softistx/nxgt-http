@@ -37,7 +37,18 @@ export interface Scope {
 	indent: string;
 	/** Collects the schemas referenced, for a file that imports them. */
 	uses?: Set<string>;
+	/** Collects the helpers used, for a file that declares them: `isoDate`. */
+	helpers: Set<string>;
 }
+
+/** Declared by a file whose validators decode a `date-time`. */
+export const ISO_DATE = [
+	'/** An RFC 3339 date-time, decoded to a Date and encoded back. */',
+	'const isoDate = {',
+	'\tdecode: (value: string): Date => new Date(value),',
+	'\tencode: (date: Date): string => date.toISOString(),',
+	'};',
+].join('\n');
 
 const STRING_FORMATS: Record<StringFormat, string> = {
 	// RFC 3339, as JSON Schema's date-time: the offset is mandatory.
@@ -59,6 +70,7 @@ export function emitZod(ctx: EmitContext): string {
 	/** The enum objects of `types.gen.ts`, imported as values for `z.enum()`. */
 	const values = new Set<string>();
 	const declared = new Set<string>();
+	const helpers = new Set<string>();
 	const blocks: string[] = [];
 	for (const schema of ctx.ir.schemas) {
 		let annotation = '';
@@ -67,7 +79,7 @@ export function emitZod(ctx: EmitContext): string {
 			types.add(schema.name).add(input);
 			annotation = `: z.ZodType<${schema.name}, ${input}>`;
 		}
-		const scope: Scope = { declared, lazy: false, indent: '' };
+		const scope: Scope = { declared, lazy: false, indent: '', helpers };
 		const members = ctx.enumOf(schema.id);
 		if (members) values.add(schema.name);
 		const value = members
@@ -97,7 +109,12 @@ export function emitZod(ctx: EmitContext): string {
 			`import type ${list('{ ', [...types].sort(), ' }', '')} from './types.gen${ctx.options.importExtension}';`,
 		);
 	}
-	return file([ctx.header, imports.join('\n'), ...blocks]);
+	return file([
+		ctx.header,
+		imports.join('\n'),
+		...(helpers.has('isoDate') ? [ISO_DATE] : []),
+		...blocks,
+	]);
 }
 
 export function expr(ctx: EmitContext, node: SchemaNode, scope: Scope): string {
@@ -110,7 +127,7 @@ function bare(ctx: EmitContext, node: SchemaNode, scope: Scope): string {
 		case 'ref':
 			return reference(ctx, node.target, scope);
 		case 'string':
-			return string(node);
+			return string(ctx, node, scope);
 		case 'number':
 			return number(node);
 		case 'boolean':
@@ -155,13 +172,15 @@ export const bounds = (min?: number, max?: number): string =>
 	(min === undefined ? '' : `.min(${min})`) +
 	(max === undefined ? '' : `.max(${max})`);
 
-function string(node: StringNode): string {
+function string(ctx: EmitContext, node: StringNode, scope: Scope): string {
 	let out = node.format ? STRING_FORMATS[node.format] : 'z.string()';
 	out += bounds(node.minLength, node.maxLength);
 	if (node.pattern !== undefined) {
 		out += `.regex(${regexLiteral(node.pattern)})`;
 	}
-	return out;
+	if (!ctx.isDate(node)) return out;
+	scope.helpers.add('isoDate');
+	return `z.codec(${out}, z.date(), isoDate)`;
 }
 
 function number(node: NumberNode): string {
@@ -319,10 +338,23 @@ function entry(
 	let value = expr(ctx, schema, inner);
 	if (presence === 'optional') value += '.optional()';
 	if (presence === 'default') {
-		value += `.default(${defaultValue(schema.default?.value)})`;
+		value += withDefault(ctx, schema, schema.default?.value);
 	}
 	if (!getter) return `${indent}${key}: ${value},`;
 	return `${indent}get ${key}() {\n${indent}\treturn ${value};\n${indent}},`;
+}
+
+/**
+ * `.default(value)`, or `.prefault(value)` when the value holds dates: the
+ * spec writes a default as JSON, so it is the input, which the codec decodes.
+ */
+export function withDefault(
+	ctx: EmitContext,
+	schema: SchemaNode,
+	value: unknown,
+): string {
+	const method = ctx.datesIn(schema) ? 'prefault' : 'default';
+	return `.${method}(${defaultValue(value)})`;
 }
 
 /** An object or array default is built afresh on each parse, so no caller shares it. */

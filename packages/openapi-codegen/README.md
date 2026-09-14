@@ -173,7 +173,8 @@ on the spec:
   `if`/`then`/`else`, `patternProperties`, tuples and cookie parameters fail
   the run, each at its pointer.
 - **`date-time` stays a string**, validated as RFC 3339 with its offset:
-  `2024-01-01T00:00:00` without `Z` is refused.
+  `2024-01-01T00:00:00` without `Z` is refused. `dates: 'date'` decodes it
+  to a `Date` instead; `format: date` stays a string either way.
 - **`readOnly` and `writeOnly` are not enforced.** A required `readOnly`
   property is required in a request body too. Give requests their own
   schema.

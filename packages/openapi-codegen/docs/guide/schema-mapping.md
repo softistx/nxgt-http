@@ -11,6 +11,7 @@ approximated silently.
 | `type: string` | `string` | `z.string()` |
 | `minLength`, `maxLength`, `pattern` | | `.min()`, `.max()`, `.regex()` |
 | `format: date-time` | `string` | `z.iso.datetime({ offset: true })` |
+| `format: date-time`, with [`dates: 'date'`](options.md#dates) | `Date`; `string` in `XInput` | `z.codec(z.iso.datetime({ offset: true }), z.date(), isoDate)` |
 | `format: date`, `time`, `duration` | `string` | `z.iso.date()`, `z.iso.time()`, `z.iso.duration()` |
 | `format: email`, `uri` | `string` | `z.email()`, `z.url()` |
 | `format: uuid` | `string` | `z.guid()` |
@@ -29,8 +30,10 @@ approximated silently.
 
 Some of these choices are deliberate:
 
-- **`date-time` is a string**, as it is on the wire, and RFC 3339 requires the
-  offset. `2024-01-01T00:00:00Z` passes; `2024-01-01T00:00:00` does not.
+- **`date-time` is a string** by default, as it is on the wire, and RFC 3339
+  requires the offset. `2024-01-01T00:00:00Z` passes; `2024-01-01T00:00:00`
+  does not. [`dates: 'date'`](options.md#dates) decodes it to a `Date` after
+  the same check. `format: date` stays a string: a day is not an instant.
 - **`uuid` is `z.guid()`.** JSON Schema's `uuid` is the 8-4-4-4-12 shape.
   `z.uuid()` would also refuse ids whose version and variant bits are not
   RFC 9562's.

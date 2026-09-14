@@ -1,0 +1,94 @@
+openapi: 3.1.0
+info:
+  title: Dates
+  version: '1'
+  description: "Generated with `dates: 'date'`. Every way a date-time reaches a value."
+paths:
+  /events:
+    get:
+      operationId: listEvents
+      parameters:
+        - name: since
+          in: query
+          schema: { type: string, format: date-time }
+        - name: day
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: The events.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Event' }
+    post:
+      operationId: createEvent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NewEvent' }
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Event' }
+  /events/{id}/reschedule:
+    post:
+      operationId: rescheduleEvent
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [at]
+              properties:
+                at: { type: string, format: date-time }
+                notify:
+                  type: array
+                  items: { type: string, format: date-time }
+      responses:
+        '204':
+          description: Rescheduled.
+components:
+  schemas:
+    Timestamp:
+      type: string
+      format: date-time
+    NewEvent:
+      type: object
+      required: [title, startsAt]
+      properties:
+        title: { type: string }
+        startsAt: { $ref: '#/components/schemas/Timestamp' }
+        endsAt:
+          type: [string, 'null']
+          format: date-time
+        remindAt:
+          type: string
+          format: date-time
+          default: '2024-01-01T09:00:00Z'
+        day:
+          description: A day is not an instant, so it stays a string.
+          type: string
+          format: date
+    Event:
+      allOf:
+        - $ref: '#/components/schemas/NewEvent'
+        - type: object
+          required: [id, createdAt]
+          properties:
+            id: { type: string }
+            createdAt: { type: string, format: date-time }
+            history:
+              type: array
+              items: { $ref: '#/components/schemas/Timestamp' }
+            parent: { $ref: '#/components/schemas/Event' }

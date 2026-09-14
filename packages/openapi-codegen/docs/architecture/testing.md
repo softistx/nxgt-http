@@ -34,6 +34,7 @@ yet.
 | `split` | a Redocly-style spec across files, with `$ref`s into `@nxgt/shared-openapi`'s fragments, a recursive `Employee`, and `allOf` |
 | `query` | OpenAPI 3.2's `query` method, with an inline body and defaults |
 | `kitchen-sink` | one schema per mapping row, one parameter per way a value reaches a request, and a form with numbers, flags and lists |
+| `dates` | generated with `dates: 'date'`: a date-time in every place a value goes (named, nullable, defaulted, listed, recursive, a query, a form, a reply); `src/emit/dates.spec.ts` runs it |
 
 `test/generate.ts` writes each case's generated files to
 `test/generated/<case>/`, with the `hono` option on, together with its

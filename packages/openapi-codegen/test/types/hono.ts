@@ -3,6 +3,7 @@
  * below must be an error, and every other line must compile.
  */
 import { Hono, type MiddlewareHandler } from 'hono';
+import { createRoutes as dateRoutes } from '../generated/dates/hono.gen.js';
 import { createRoutes as kitchenRoutes } from '../generated/kitchen-sink/hono.gen.js';
 import { createRoutes as searchRoutes } from '../generated/query/hono.gen.js';
 import { createApi, createRoutes } from '../generated/split/hono.gen.js';
@@ -59,6 +60,17 @@ export function examples(): void {
 	kitchenRoutes(app).post('/uploads', (c) => c.text('ok', 200));
 	// @ts-expect-error a 200 of upload is text, not JSON
 	kitchenRoutes(app).post('/uploads', (c) => c.json('ok', 200));
+
+	// dates: 'date': a handler gets Dates, and c.json() sends them as strings.
+	dateRoutes(app).post('/events', (c) => {
+		const body = c.req.valid('json');
+		body.startsAt satisfies Date;
+		return c.json({ ...body, id: '1', createdAt: new Date() }, 201);
+	});
+	// @ts-expect-error createdAt is a date-time, not a number
+	dateRoutes(app).post('/events', (c) =>
+		c.json({ ...c.req.valid('json'), id: '1', createdAt: 1 }, 201),
+	);
 
 	// A hook answers, throws, or returns nothing for the default answer.
 	createRoutes(app, {

@@ -35,8 +35,9 @@ What both printers must agree on, computed once:
   or `${Op}Header`.
 - **Every generated name, once.** `XInput`, `XQuery` or `XForm` landing on an
   existing schema's name is a `name_collision`. So is a schema named like
-  what the files declare themselves: `Operations` and its four indexes and,
-  with `hono`, `Replies`, `HonoSpec` and `Hono`. Two interfaces of one name
+  what the files declare themselves: `Operations` and its four indexes,
+  `Wire` with `dates: 'date'`, and, with `hono`, `Replies`, `HonoSpec` and
+  `Hono`. Two interfaces of one name
   would merge silently, not fail.
 
 ## Types (`types.ts`)
@@ -96,6 +97,15 @@ What both printers must agree on, computed once:
   schema: `numeric.pipe(zTier)` for numbers.
 - **Formats.** The table is in `STRING_FORMATS`, and each choice is explained
   in [How schemas map](../guide/schema-mapping.md#scalars).
+- **Dates.** With `dates: 'date'`, `ctx.isDate` marks each `date-time`.
+  - Its validator becomes `z.codec(<string>, z.date(), isoDate)`, and the
+    file declares `isoDate` once when one is used (`Scope.helpers`).
+  - `inputDiffers` counts it, so every schema that reaches it gets an
+    `XInput`.
+  - `ctx.datesIn` is a second fixpoint, over values holding a `Date`. It
+    decides `.prefault()` over `.default()` (`withDefault`), because a spec
+    writes a default as JSON. It also decides where `ctx.wire` wraps a type
+    in `Wire<T>`.
 - **Patterns.** A pattern is printed as a regex literal that matches what
   `new RegExp(pattern)` matches (`regexLiteral`). A `/` outside a character
   class and any line break are escaped.

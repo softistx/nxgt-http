@@ -141,8 +141,11 @@ function replyType(
 	status: string,
 	indent: string,
 ): string {
+	// As JSON carries it: `c.json()` types a Date it is given as a string.
 	const body = (fallback: string) =>
-		media.schema ? type(ctx, media.schema, false, indent) : fallback;
+		media.schema
+			? ctx.wire(media.schema, type(ctx, media.schema, false, indent))
+			: fallback;
 	switch (media.kind) {
 		case 'json':
 			return `Hono.TypedResponse<${body('unknown')}, ${status}, 'json'>`;

@@ -1,6 +1,6 @@
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { emitFiles, type GeneratedFile } from './emit';
-import type { Enums, UnknownKeys } from './emit/context';
+import type { Dates, Enums, UnknownKeys } from './emit/context';
 import { CodegenError, type Diagnostic } from './errors';
 import { buildIR, type IROptions } from './ir';
 import { loadDocument } from './loader/document';
@@ -33,6 +33,12 @@ export interface GenerateOptions extends IROptions {
 	 * and `@nxgt/openapi-codegen/hono`, so both become runtime dependencies.
 	 */
 	hono?: boolean;
+	/**
+	 * A `date-time`: validated and kept as its string (`string`, the default),
+	 * or decoded to a `Date` by a `z.codec` (`date`). `format: date` stays a
+	 * string either way: a day is not an instant.
+	 */
+	dates?: Dates;
 }
 
 export interface GenerateContext {
@@ -49,6 +55,7 @@ export interface GenerateResult extends WriteResult {
 const UNKNOWN_KEYS: readonly string[] = ['strip', 'strict', 'loose'];
 const EXTENSIONS: readonly string[] = ['', '.js', '.ts'];
 const ENUMS: readonly string[] = ['object', 'union'];
+const DATES: readonly string[] = ['string', 'date'];
 
 const invalid = (message: string): CodegenError =>
 	new CodegenError([{ severity: 'error', code: 'invalid_option', message }]);
@@ -82,6 +89,10 @@ export async function generateFiles(
 	if (typeof hono !== 'boolean') {
 		throw invalid(`hono must be true or false, not ${String(hono)}`);
 	}
+	const dates = options.dates ?? 'string';
+	if (!DATES.includes(dates)) {
+		throw invalid(`dates must be string or date, not ${dates}`);
+	}
 	const input = resolve(cwd, options.input);
 	const output = resolve(cwd, options.output);
 	const doc = await loadDocument(input, { fs, cwd });
@@ -91,6 +102,7 @@ export async function generateFiles(
 		enums,
 		importExtension,
 		hono,
+		dates,
 		source: relative(output, input).split(sep).join('/'),
 		rootDir: dirname(doc.entry.file),
 	});

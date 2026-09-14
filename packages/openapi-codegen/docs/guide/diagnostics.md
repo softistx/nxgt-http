@@ -41,7 +41,7 @@ prints one the same way.
 | `unknown_format` | warning | a `format` Zod has no validator for | none needed: it is checked as a plain string |
 | `not_enforced` | warning | a keyword the validator does not check: `uniqueItems`, `minProperties`, an `additionalProperties: false` that an `allOf` loosens…; with `hono`, a status Hono has no type for, whose replies are typed with any status | enforce it in code if it matters; for `allOf`, set `unknownKeys: 'strict'` or make every member strict, so unknown keys are refused (keys another member declares are still accepted) |
 | `discriminator_fallback` | warning | a discriminator some variant cannot answer | give every variant the property, required, as a distinct constant |
-| `name_collision` | error | two schemas, or a schema and an operation's parameters or form, would generate the same name; a schema named `Operations`, `OperationsByRoute`, `PathsByMethod`, `OperationsByTag` or `PathsByTag`; with `hono`, one named `Replies`, `HonoSpec` or `Hono` | rename one with [`names`](options.md#names) |
+| `name_collision` | error | two schemas, or a schema and an operation's parameters or form, would generate the same name; a schema named `Operations`, `OperationsByRoute`, `PathsByMethod`, `OperationsByTag` or `PathsByTag`; with `hono`, one named `Replies`, `HonoSpec` or `Hono`; with `dates: 'date'`, one named `Wire` | rename one with [`names`](options.md#names) |
 | `invalid_option` | error | an option with a value it cannot take | fix the option |
 | `invalid_config` | error | `nxgt-openapi` found no config file, or it exports no config with an `input` and an `output` | see [the command line](cli.md#config-file) |
 

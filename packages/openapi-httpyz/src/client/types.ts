@@ -6,8 +6,12 @@
  */
 import type {
 	CallOptions,
+	EventStream,
 	Method,
+	ReconnectOptions,
+	ServerEvent,
 	StandardSchemaV1,
+	Stream,
 	WithResponse,
 } from '@nxgt/httpyz';
 
@@ -20,6 +24,17 @@ export interface ClientOperation {
 	/** Every declared reply, `{ status; type; data }`, decoded. */
 	readonly reply: unknown;
 	/** The same replies as JSON carries them. */
+	readonly wire: unknown;
+	/** A reply read an item at a time, when the operation has one. */
+	readonly stream?: OperationStream;
+}
+
+/** An operation's stream: server-sent events, or JSON lines. */
+export interface OperationStream {
+	readonly kind: 'sse' | 'jsonl';
+	/** Each item, decoded: an event narrowed on `event`, or a line. */
+	readonly item: unknown;
+	/** Each item as JSON carries it. */
 	readonly wire: unknown;
 }
 
@@ -107,6 +122,50 @@ export type OperationReply<
 	Decoded extends boolean,
 > = Decoded extends true ? Ops[K]['reply'] : Ops[K]['wire'];
 
+/** The operations that reply with a stream. Worked out once per client type. */
+export type StreamIds<Ops> = {
+	[K in keyof Ops]: Ops[K] extends { readonly stream: OperationStream }
+		? K
+		: never;
+}[keyof Ops] &
+	string;
+
+/** What a stream takes after its input: the call options, and for events, how to resume. */
+export interface StreamInit extends OperationInit {
+	/**
+	 * Events only: connects again when the connection drops or the stream
+	 * ends, as `EventSource` does. Default: on, but for POST and PATCH.
+	 */
+	reconnect?: boolean | ReconnectOptions;
+	/** Events only: sent as `Last-Event-ID` on the first connection. */
+	lastEventId?: string;
+	/** Events only: an event the spec does not declare, which is not yielded. */
+	onUnknownEvent?: (event: ServerEvent) => void;
+}
+
+/** A stream's arguments after the `operationId`. */
+export type StreamArgs<
+	Ops extends OperationsShape<Ops>,
+	K extends keyof Ops,
+> = [...Ops[K]['args'], init?: StreamInit];
+
+/** What `stream()` returns: events narrowed on `event`, or lines; decoded, or as JSON carries them. */
+export type OperationStreamOf<
+	Ops extends OperationsShape<Ops>,
+	K extends keyof Ops,
+	Decoded extends boolean,
+> = Ops[K] extends {
+	readonly stream: {
+		readonly kind: infer Kind;
+		readonly item: infer Item;
+		readonly wire: infer Wire;
+	};
+}
+	? Kind extends 'sse'
+		? EventStream<Decoded extends true ? Item : Wire>
+		: Stream<Decoded extends true ? Item : Wire>
+	: never;
+
 /** The paths with an operation for method `M`: `'/items/{id}'` from `'get /items/{id}'`. */
 type PathsOf<Routes, M extends Method> = keyof Routes extends infer Route
 	? Route extends `${M} ${infer Path}`
@@ -131,6 +190,15 @@ export type OpenApiClient<
 		id: K,
 		...args: Args<Ops, K>
 	): Promise<WithResponse<OperationReply<Ops, K, Decoded>>>;
+	/**
+	 * Reads an operation's stream, an item at a time, by its `operationId`:
+	 * its events, each narrowed on `event`, or its JSON lines. It connects when
+	 * read: `for await (const event of api.stream('watchFeed', input))`.
+	 */
+	stream<K extends StreamIds<Ops>>(
+		id: K,
+		...args: StreamArgs<Ops, K>
+	): OperationStreamOf<Ops, K, Decoded>;
 } & {
 	/** Calls the operation at a path: `api.get('/employees/{id}', { param: { id } })`. */
 	readonly [M in Method]: <P extends PathsOf<Routes, M>>(

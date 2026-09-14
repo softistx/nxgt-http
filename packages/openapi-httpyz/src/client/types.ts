@@ -166,6 +166,21 @@ export type OperationStreamOf<
 		: Stream<Decoded extends true ? Item : Wire>
 	: never;
 
+/** A bound client whose calls end together. */
+export type OpenApiGroup<
+	Ops extends OperationsShape<Ops>,
+	Routes = Record<never, never>,
+	Decoded extends boolean = false,
+> = OpenApiClient<Ops, Routes, Decoded> & {
+	/**
+	 * Aborts every call and stream of the group still running, with `reason`,
+	 * or an `AbortError`. The group goes on: the calls made after it run.
+	 */
+	cancel(reason?: unknown): void;
+	/** Aborts on the next `cancel()`: for work of your own that ends with the group's calls. */
+	readonly signal: AbortSignal;
+};
+
 /** The paths with an operation for method `M`: `'/items/{id}'` from `'get /items/{id}'`. */
 type PathsOf<Routes, M extends Method> = keyof Routes extends infer Route
 	? Route extends `${M} ${infer Path}`
@@ -199,6 +214,11 @@ export type OpenApiClient<
 		id: K,
 		...args: StreamArgs<Ops, K>
 	): OperationStreamOf<Ops, K, Decoded>;
+	/**
+	 * The same client over the core client's `group()`: its calls and streams
+	 * also end on `cancel()`, a page's or a component's together.
+	 */
+	group(): OpenApiGroup<Ops, Routes, Decoded>;
 } & {
 	/** Calls the operation at a path: `api.get('/employees/{id}', { param: { id } })`. */
 	readonly [M in Method]: <P extends PathsOf<Routes, M>>(

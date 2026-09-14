@@ -103,7 +103,31 @@ export function createOpenApiClient<
 	operations: OperationTable<Ops>,
 	...[given]: OpenApiArgs<Decoded>
 ): OpenApiClient<Ops, Routes, Decoded> {
-	const options: OpenApiOptions & { readonly decode?: boolean } = given ?? {};
+	return bind(http, operations, given ?? {}, () => undefined);
+}
+
+/** Both signals: a call ends on either. */
+const joined = (
+	given: AbortSignal | null | undefined,
+	scope: AbortSignal | undefined,
+): AbortSignal | null | undefined =>
+	scope === undefined ? given : given ? AbortSignal.any([given, scope]) : scope;
+
+/**
+ * The client, whose calls also end on `scope()`'s signal, read as each call
+ * is made: a call checked before it is sent reaches the core client later,
+ * after a `cancel()` of its group may already have swapped the signal.
+ */
+function bind<
+	Ops extends OperationsShape<Ops>,
+	Routes extends { [Route in keyof Routes]: keyof Ops },
+	Decoded extends boolean,
+>(
+	http: HttpClient,
+	operations: OperationTable<Ops>,
+	options: OpenApiOptions & { readonly decode?: boolean },
+	scope: () => AbortSignal | undefined,
+): OpenApiClient<Ops, Routes, Decoded> {
 	const { validate = false } = options;
 	const decode = options.decode === true;
 	const checks = {
@@ -134,7 +158,9 @@ export function createOpenApiClient<
 			operation.parameters.length > 0 ||
 			Object.keys(operation.body?.content ?? {}).length > 0;
 		const input = (takes ? args[0] : undefined) as Input | undefined;
-		const init = ((takes ? args[1] : args[0]) ?? {}) as StreamInit;
+		const given = ((takes ? args[1] : args[0]) ?? {}) as StreamInit;
+		const signal = joined(given.signal, scope());
+		const init = signal ? { ...given, signal } : given;
 		return { operation, input, init };
 	};
 
@@ -238,6 +264,19 @@ export function createOpenApiClient<
 	const client: Record<string, unknown> = {
 		op: (id: string, ...args: unknown[]) => call(id, args),
 		stream: (id: string, ...args: unknown[]) => stream(id, args),
+		group: () => {
+			const group = http.group();
+			const bound = bind<Ops, Routes, Decoded>(
+				group,
+				operations,
+				options,
+				() => group.signal,
+			);
+			return Object.defineProperties(bound, {
+				cancel: { enumerable: true, value: group.cancel },
+				signal: { enumerable: true, get: () => group.signal },
+			});
+		},
 	};
 	for (const method of METHODS) {
 		client[method] = (path: string, ...args: unknown[]) => {

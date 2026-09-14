@@ -4,6 +4,7 @@ export type {
 	ClientOperation,
 	OpenApiArgs,
 	OpenApiClient,
+	OpenApiGroup,
 	OpenApiOptions,
 	OperationInit,
 	OperationReply,

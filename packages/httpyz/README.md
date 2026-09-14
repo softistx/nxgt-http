@@ -118,6 +118,7 @@ and:
 | `timeout` | this call's, instead of the client's |
 | `retry` | this call's, instead of the client's: `false` never retries |
 | `operationId` | names the call in its errors and to middleware |
+| `latest` | a key: this call aborts the one before it with the same key. See [Cancelling](#cancelling) |
 
 ### A `Request` of your own
 
@@ -229,7 +230,54 @@ The first four extend `ClientError`, whose message names the call,
 `operationId`. `ReplyStatusError` extends `Error`.
 
 An abort the caller asked for through `signal` is not wrapped: it comes
-through as the `AbortError` its signal gave.
+through as the `AbortError` its signal gave. `isAbortError(error)` tells it
+from a failure.
+
+## Cancelling
+
+A call ends early in three ways, and each rejects with an abort, never a
+`ClientError`:
+
+```ts
+import { isAbortError } from '@nxgt/httpyz';
+
+// Its own signal
+await http.get('/items', { signal: controller.signal });
+
+// A later call with the same `latest` key: typing ahead keeps one search in flight
+await http.get('/search', { query: { q }, latest: 'search' });
+
+// Its group's cancel(): every call of a page, a component, a job
+const page = http.group();
+await page.get('/items');
+page.cancel(); // on leaving the page
+
+try {
+	await page.get('/items');
+} catch (error) {
+	if (isAbortError(error)) return; // cancelled: nothing to report
+	throw error;
+}
+```
+
+- **`signal`** aborts with its reason: an `AbortError`, unless you gave it
+  another.
+- **`latest`** aborts the previous call with the same key, if it still
+  runs, with an `AbortError`. Keys are per client. `send` takes it too.
+- **`http.group()`** returns the same client, whose calls also end on
+  `group.cancel(reason?)`: every call, `send` and stream made through it
+  that still runs aborts, with `reason` or an `AbortError`. The group goes
+  on: a call made after `cancel()` runs. A group's `group()` is cancelled
+  with it, but not the reverse. `group.signal` aborts on the next
+  `cancel()`, for work of your own that ends with the group's calls.
+
+An abort is never retried, and ends a retry's wait, a stream's reconnection
+and, for that call alone, the wait for an [auth](#auth) refresh.
+
+`isAbortError(error)` is true for an `AbortError`, and for the
+`TimeoutError` of an `AbortSignal.timeout()` you passed as `signal`. The
+client's own `TimeoutError`, past `timeout`, is a failure: it is false for
+it.
 
 ## Auth
 
@@ -253,6 +301,8 @@ runs, and the request is sent again once, body included, with the token
   without another refresh.
 - When `refresh` throws, or leaves the same token, the 401 is the reply, for
   the app to sign out on.
+- A call aborted while it waits stops waiting, and rejects with its abort;
+  the refresh runs on for the others.
 
 `scheme` replaces `Bearer`. Without `refresh`, a 401 is simply the reply.
 
@@ -397,8 +447,11 @@ another media type throw a `ValidationError`.
 - **Outside a browser, set `baseUrl`.** A call builds a `Request`, which needs
   an absolute URL: without a `baseUrl`, Bun and Node throw a `TypeError`.
 - **An abort is not a timeout.** Past `timeout`, a call throws
-  `TimeoutError`. An abort through the call's own `signal` throws that
-  signal's `AbortError`, unwrapped, and is never retried.
+  `TimeoutError`. An abort through the call's own `signal`, `latest` or its
+  group throws an `AbortError`, unwrapped, and is never retried: check it
+  with `isAbortError()`, not `instanceof ClientError`.
+- **`latest` keys are per client.** Two clients, or a client and one of
+  its groups, share them: a group's call with a key replaces the client's.
 - **`decode: false` changes the types.** A reply is then typed as what the
   schema takes, `z.input`, not what it gives, `z.output`: a date-time is a
   string.

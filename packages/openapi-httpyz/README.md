@@ -94,6 +94,27 @@ The input may be left out when nothing in it is required, and an operation
 that takes nothing takes no input: `api.op('health')`, or
 `api.op('health', { signal })`.
 
+## Cancelling
+
+A call's init takes the client's own ways to end it early: its `signal`,
+and `latest`, a key that aborts the call before it with the same key.
+`api.group()` is the same client over the client's `http.group()`, whose
+calls and streams end together:
+
+```ts
+// Typing ahead: only the last search stays in flight
+await api.get('/employees', { query: { name } }, { latest: 'search' });
+
+const page = api.group();
+const employees = await page.op('listEmployees');
+page.cancel(); // on leaving the page: its calls and streams still running abort
+```
+
+A cancelled call rejects with an `AbortError`, never a `ClientError`: tell
+it from a failure with the client's `isAbortError()`. The group goes on
+after `cancel()`, and `page.signal` aborts on the next one. The details are
+in [the client's README](https://www.npmjs.com/package/@nxgt/httpyz#cancelling).
+
 ## Replies
 
 A call resolves to one of the replies the spec declares:

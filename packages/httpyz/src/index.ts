@@ -1,3 +1,4 @@
+export { isAbortError } from './cancel/abort';
 export { createHttpClient } from './client/create-http-client';
 export type {
 	ArgsFor,
@@ -6,6 +7,7 @@ export type {
 	EventsArgs,
 	HttpClient,
 	HttpClientOptions,
+	HttpGroup,
 	LinesArgs,
 	Method,
 	ReplyOptions,

@@ -1,87 +1,133 @@
 # @nxgt/datasource-rest
 
-An Apollo-style REST datasource over `openapi-fetch`: auth forwarding, caching
-and error translation, so a GraphQL resolver can call a REST service with the
-same typed client the REST apps use.
+A REST service, called from a GraphQL resolver or any server code, through
+the client [`@nxgt/openapi-httpyz`](https://www.npmjs.com/package/@nxgt/openapi-httpyz)
+binds to its spec. On top of that client it adds three things:
+
+- it forwards the caller's token;
+- it caches reads across the datasources of every request;
+- it throws one `DataSourceError`, with a code a GraphQL server reports,
+  whenever a call fails.
 
 ## Install
 
 ```bash
-bun add @nxgt/datasource-rest
+bun add @nxgt/datasource-rest @nxgt/httpyz @nxgt/openapi-httpyz zod
+bun add -d @nxgt/openapi-codegen
 ```
 
-Public on npmjs; no token needed to install. TypeScript is a peer, pinned to
-`^6.0.3` across every `@nxgt/*` package — the set is unsatisfiable if one of
-them widens it.
+`@nxgt/httpyz` and `@nxgt/openapi-httpyz` are peers. The generated
+`operations.ts` imports `zod`, so the app needs it too. TypeScript is a peer,
+`^6.0.3`, as in every `@nxgt/*` package.
 
 ## Usage
 
-```ts
-import { RESTDataSource, errorToException } from '@nxgt/datasource-rest';
-import createClient from '@nxgt/shared-hono/openapi-fetch';
-
-const client = createClient<paths>({ baseUrl: env.BOOKMARKS_API_URL });
-
-const bookmarks = new RESTDataSource({
-	client,
-	authOptions: { token: () => getAccessToken() },
-	cacheOptions: { ttl: 5_000 },
-});
-
-const { data } = await bookmarks.get('/bookmarks/{id}', {
-	params: { path: { id } },
-});
-```
-
-`get` / `post` / `put` / `patch` / `delete` / `head` / `options` / `trace` are
-the client's methods, rebound. Auth and cache are `openapi-fetch` middleware
-installed in the constructor, cache first, then auth.
-
-## Auth middleware
+Generate the service's spec with `nxgt-openapi generate`, then extend the
+datasource with the calls your resolvers make:
 
 ```ts
-authOptions: {
-	token: string | (() => Promise<string>),
-	shouldUseToken?: (request: Request) => boolean,
+import { RESTDataSource } from '@nxgt/datasource-rest';
+import { operations } from './generated/bookmarks/operations.js';
+import type { ClientOperations } from './generated/bookmarks/types.js';
+
+export class Bookmarks extends RESTDataSource<ClientOperations> {
+	bookmark(id: string) {
+		return this.data(this.api.get('/bookmarks/{id}', { param: { id } }));
+	}
+	search(q: string) {
+		return this.data(this.api.post('/bookmarks/search', { json: { q } }));
+	}
 }
+
+// Per request, in the GraphQL context:
+const bookmarks = new Bookmarks({
+	baseUrl: env.BOOKMARKS_API_URL,
+	operations,
+	token: () => request.token,
+});
 ```
 
-The thunk is called per request. `shouldUseToken` skips the header on the
-requests you name. No `token` means the middleware is a no-op.
+- **`this.api`** is the bound client, typed by the spec. It offers only the
+  paths each method has, and only the methods the spec has an operation for.
+  Each call resolves to one of the declared replies, narrowed on its status.
+- **`this.data(call)`** returns the data of a 2xx reply. Any other reply, or
+  none, throws a `DataSourceError`.
 
-## Cache middleware
+| Option | |
+| --- | --- |
+| `baseUrl` | the service's base URL |
+| `operations` | the generated `operations` table |
+| `token` | sent as `Authorization: Bearer`; a function is read, and awaited, before each request |
+| `cache` | default `defaultCache`, shared; your own `cache()` from `@nxgt/httpyz`; or `false` |
+| `http` | what else the core client takes: `headers`, `timeout`, `retry`, `use`, `fetch` |
+| `validate`, `decode` | as `createOpenApiClient` takes them |
 
-In-process `Map`, keyed by `method:url`. Default TTL is five minutes. GET
-(and any other non-POST) responses that are `ok` are stored. POST is cached
-only when `shouldCachePostRequest` says so — the default is "the URL contains
-`/search`".
+## Cache
 
-This is a process cache, not Redis. Two instances of the datasource do not
-share it.
+`defaultCache` is one store for every datasource, since a server makes them
+per request. It keeps `ok` replies for five minutes, for these requests:
+
+- `GET`, `HEAD` and `QUERY`;
+- a `POST` whose path holds `/search`.
+
+Its key is the method, the URL, the token and the body. So no caller is
+answered with another's reply, and a search is cached by what it searches
+for. It holds at most 500 replies, the least recently used going first.
+
+`defaultCache.clear()` empties it, after a write, say. `searches` is its rule
+for which requests it keeps, for a cache of your own:
+
+```ts
+import { cache } from '@nxgt/httpyz';
+import { searches } from '@nxgt/datasource-rest';
+
+const bookmarksCache = cache({ ttl: 30_000, cacheable: searches });
+new Bookmarks({ baseUrl, operations, cache: bookmarksCache });
+```
 
 ## Errors
 
-`errorToException(error, response)` maps HTTP status to `CustomException`:
+`DataSourceError` is the package's own. It carries:
 
-| Status | `ErrorCode` |
+- `code`, from the reply's status;
+- `status`, the reply's status, if one came back;
+- `data`, the reply's body;
+- `message`, the body's `message` when it has one;
+- `extensions`, `{ code, status }`, which graphql-js reports with the error;
+- `cause`, the client's own error.
+
+| What happened | `code` |
 | --- | --- |
-| 401 | `Unauthenticated` |
-| 403 | `Forbidden` |
-| 404 | `NotFound` |
-| 500 | `InternalServerError` |
-| other | `BadRequest` |
+| 401 | `UNAUTHENTICATED` |
+| 403 | `FORBIDDEN` |
+| 404 | `NOT_FOUND` |
+| any 5xx | `INTERNAL_SERVER_ERROR` |
+| any other status | `BAD_REQUEST` |
+| no reply: network, timeout | `SERVICE_UNAVAILABLE` |
+| a request `validate` refuses | `BAD_REQUEST` |
+| a reply `validate` refuses | `INTERNAL_SERVER_ERROR` |
 
-A downstream 404 is `NotFound`, not a transport failure. Catch
-`CustomException`, not an error named after the HTTP library.
+`toDataSourceError(error)` makes one out of whatever the client threw, for a
+call you make without `this.data`. To map it onto your app's exceptions,
+catch it where you throw yours.
 
-`relayPaginate(data)` turns a REST `{ data, metadata }` page into a Relay
-`{ edges, pageInfo }` connection, using `item.id` as the cursor.
+## Pagination
+
+`relayPaginate(page)` turns a service's `{ data, metadata }` page into a Relay
+`{ edges, pageInfo }` connection, using `item.id` as the cursor:
+
+```ts
+async bookmarks(first: number) {
+	return relayPaginate(
+		await this.data(this.api.get('/bookmarks', { query: { first } })),
+	);
+}
+```
 
 ## Things that bite
 
-- **The cache is per process and unbounded except by TTL.** Do not point it at
-  an endpoint that varies by caller unless `shouldUseToken` / the URL already
-  distinguish them.
-- **`authOptions.token` as a thunk is not awaited by the middleware today.**
-  Pass a string, or a thunk that returns a string synchronously, until that
-  is a real `async` `onRequest`.
+- **The cache is per process.** Two instances of a service do not share it.
+- **An aborted call throws its abort**, not a `DataSourceError`: it was not
+  the service failing.
+- **`this.data` reads the body of an undeclared status** to find its message.
+  A reply the spec declares is already read.

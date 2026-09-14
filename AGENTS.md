@@ -13,12 +13,16 @@ The `@nxgt/*` packages for HTTP APIs, published to the public npm registry:
 | `@nxgt/openapi-hono` | the runtime the generated `hono.ts` binds to its spec: typed Hono routes that validate, then call the handler |
 | `@nxgt/openapi-httpyz` | the binding of the generated operations onto `@nxgt/httpyz` |
 | `@nxgt/httpyz-query` | TanStack Query options for the calls of an `@nxgt/httpyz` client |
+| `@nxgt/datasource-rest` | a REST service called from a GraphQL resolver through the bound client: token forwarding, a shared cache, its own `DataSourceError` |
 
 They were extracted from `softistx/nxgt-core` on 2026-09-13 with their
 history (`git filter-repo`). Before that, the client was `@nxgt/openapi-client`
 and then `@nxgt/http-client`, and the Hono runtime was the
 `@nxgt/openapi-codegen/hono` subpath. Codegen 0.1.0, with that subpath, was
 published from nxgt-core; everything after it comes from here.
+`@nxgt/datasource-rest` followed on 2026-09-14, after its 1.0.3, with its
+history: it is an integration of the generated operations, so it lives with
+them.
 
 The client is **standalone first**: everything it does works without a spec
 or generated code. OpenAPI is one integration, in its own package. A feature
@@ -30,6 +34,7 @@ lands in `@nxgt/httpyz` first, and in the binding second.
 httpyz            openapi-codegen
   │                 └─ openapi-hono          (dev: generates its fixtures)
   ├─ openapi-httpyz ◄── openapi-codegen, openapi-hono   (dev: its fixtures)
+  │    └─ datasource-rest ◄── openapi-codegen (dev: its fixtures)
   └─ httpyz-query   ◄── openapi-httpyz (optional peer), openapi-codegen (dev: its fixtures)
 ```
 
@@ -47,6 +52,10 @@ no relative import into one.
   adapter takes what it returns; its specs run query-core's own `QueryClient`.
   Its `./openapi` subpath imports `@nxgt/openapi-httpyz`'s types only, an
   optional peer; the generator is a devDependency, for its fixtures.
+- `@nxgt/datasource-rest` has `@nxgt/httpyz` and `@nxgt/openapi-httpyz` as
+  peers, and as devDependencies to build against; the generator is a
+  devDependency, for its fixtures. It depends on no exception package: its
+  `DataSourceError` is its own, as each package here keeps its errors.
 - `@nxgt/openapi-hono` has the generator as a devDependency, for its
   fixtures. The one `paths` entry left is its own name, so that the
   generated `hono.ts` in its fixtures runs the engine the specs import from
@@ -147,7 +156,7 @@ publishes to npm.
 
 ## Known state
 
-`bun run test` is **302 pass, 0 fail**: httpyz 85, httpyz-query 12,
+`bun run test` is **326 pass, 0 fail**: datasource-rest 24, httpyz 85, httpyz-query 12,
 openapi-codegen 154, openapi-hono 24, openapi-httpyz 27. It runs one process per package, and each
 package's `test` script writes the generated fixtures its specs import first.
 Treat any failure as yours.

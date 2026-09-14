@@ -1,0 +1,104 @@
+# A bookmarks service, for the datasource's specs.
+openapi: 3.2.0
+info:
+  title: Bookmarks fixture
+  version: 0.0.1
+paths:
+  /bookmarks:
+    get:
+      operationId: listBookmarks
+      parameters:
+        - { name: first, in: query, schema: { type: integer, minimum: 1 } }
+        - { name: after, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: A page
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/Page' } }
+    post:
+      operationId: createBookmark
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/NewBookmark' } }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/Bookmark' } }
+  /bookmarks/search:
+    post:
+      operationId: searchBookmarks
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/Search' } }
+      responses:
+        '200':
+          description: The matches
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/Page' } }
+  /bookmarks/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: getBookmark
+      responses:
+        '200':
+          description: The bookmark
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/Bookmark' } }
+        '404':
+          description: No such bookmark
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/Problem' } }
+    put:
+      operationId: updateBookmark
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/NewBookmark' } }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/Bookmark' } }
+components:
+  schemas:
+    Bookmark:
+      type: object
+      required: [id, url]
+      properties:
+        id: { type: string }
+        url: { type: string }
+    NewBookmark:
+      type: object
+      required: [url]
+      properties:
+        url: { type: string }
+    Search:
+      type: object
+      required: [q]
+      properties:
+        q: { type: string }
+    PageInfo:
+      type: object
+      required: [hasNextPage, totalElements]
+      properties:
+        startCursor: { type: string }
+        endCursor: { type: string }
+        hasNextPage: { type: boolean }
+        totalElements: { type: integer }
+    Page:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/Bookmark' }
+        metadata: { $ref: '#/components/schemas/PageInfo' }
+    Problem:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string }
+        debugMessage: { type: string }

@@ -8,15 +8,7 @@ import {
 	QueryClient,
 } from '@tanstack/query-core';
 import { operations as dateOperations } from '../../test/generated/dates/operations';
-import type {
-	ClientOperations as DateOperations,
-	OperationsByRoute as DateRoutes,
-} from '../../test/generated/dates/types';
 import { operations } from '../../test/generated/operations';
-import type {
-	ClientOperations,
-	OperationsByRoute,
-} from '../../test/generated/types';
 import { createOpenApiQueries } from '../openapi';
 
 const AT = '2024-05-01T10:00:00.000Z';
@@ -70,10 +62,7 @@ function api() {
 				: Response.json({ id, name: 'item', createdAt: AT });
 		},
 	});
-	const bound = createOpenApiClient<ClientOperations, OperationsByRoute>(
-		http,
-		operations,
-	);
+	const bound = createOpenApiClient(http, operations);
 	const client = new QueryClient({
 		defaultOptions: { queries: { retry: false } },
 	});
@@ -187,11 +176,9 @@ describe('createOpenApiQueries', () => {
 
 	it("returns a decoding client's data as its schemas output it", async () => {
 		const { http, client } = api();
-		const decoding = createOpenApiClient<DateOperations, DateRoutes, true>(
-			http,
-			dateOperations,
-			{ decode: true },
-		);
+		const decoding = createOpenApiClient(http, dateOperations, {
+			decode: true,
+		});
 		const queries = createOpenApiQueries(decoding);
 		const item = await client.fetchQuery(
 			queries.queryOptions('get', '/items/{id}', { param: { id: 1 } }),
@@ -206,6 +193,8 @@ function types() {
 	const { queries } = api();
 	// @ts-expect-error: no operation at GET /nowhere
 	queries.queryOptions('get', '/nowhere');
+	// @ts-expect-error: the spec has no TRACE operation, so no such method
+	queries.queryOptions('trace', '/items');
 	// @ts-expect-error: the operation's {id} is required
 	queries.queryOptions('get', '/items/{id}');
 	queries.infiniteQueryOptions(

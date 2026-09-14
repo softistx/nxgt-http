@@ -83,7 +83,8 @@ export interface MediaSpec {
 	readonly item?: z.ZodType;
 }
 
-export interface OperationSpec {
+/** An operation of the table; \`Client\` is its entry of \`ClientOperations\`. */
+export interface OperationSpec<Client = unknown> {
 	readonly method: ${HTTP_METHODS.map(jsString).join(' | ')};
 	readonly path: string;
 	readonly honoPath: string;
@@ -102,6 +103,8 @@ export interface OperationSpec {
 	readonly responses: {
 		readonly [status: number]: { readonly [mediaType: string]: MediaSpec };
 	};
+	/** Never set: carries \`Client\`, so \`createOpenApiClient(http, operations)\` reads the spec's types off the table. */
+	readonly '~client'?: Client;
 }`;
 
 /** A parameter's schema as it is validated: documented as the parameter, never null. */
@@ -529,7 +532,9 @@ export function emitOperations(ctx: EmitContext): {
 		const names = [...uses].map((id) => `z${ctx.schema(id).name}`).sort();
 		imports.push(`import ${list('{ ', names, ' }', '')} from './zod${ext}';`);
 	}
-	imports.push(`import type { Operations } from './types${ext}';`);
+	imports.push(
+		`import type { ClientOperations, Operations } from './types${ext}';`,
+	);
 	return {
 		imports,
 		sections: [
@@ -711,7 +716,7 @@ function operationTable(
 		return lines.join('\n');
 	});
 	const body = entries.length === 0 ? '{}' : `{\n${entries.join('\n')}\n}`;
-	return `export const operations: {\n\treadonly [K in keyof Operations]: OperationSpec;\n} = ${body};`;
+	return `export const operations: {\n\treadonly [K in keyof Operations]: OperationSpec<ClientOperations[K]>;\n} = ${body};`;
 }
 
 function contentSpec(

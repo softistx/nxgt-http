@@ -315,7 +315,7 @@ exports[`generated code is unchanged for split: split/operations.ts 1`] = `
 
 import { z } from 'zod';
 import { zEmployee, zEmployeeStatus, zErrorResponse, zNewEmployee } from './zod.js';
-import type { Operations } from './types.js';
+import type { ClientOperations, Operations } from './types.js';
 
 /** How a server reads a parameter, and how a client writes it. */
 export interface ParameterSpec {
@@ -338,7 +338,8 @@ export interface MediaSpec {
 	readonly item?: z.ZodType;
 }
 
-export interface OperationSpec {
+/** An operation of the table; \`Client\` is its entry of \`ClientOperations\`. */
+export interface OperationSpec<Client = unknown> {
 	readonly method: 'get' | 'put' | 'post' | 'delete' | 'options' | 'head' | 'patch' | 'trace' | 'query';
 	readonly path: string;
 	readonly honoPath: string;
@@ -357,6 +358,8 @@ export interface OperationSpec {
 	readonly responses: {
 		readonly [status: number]: { readonly [mediaType: string]: MediaSpec };
 	};
+	/** Never set: carries \`Client\`, so \`createOpenApiClient(http, operations)\` reads the spec's types off the table. */
+	readonly '~client'?: Client;
 }
 
 /** A location with no parameters declared: whatever arrives there is dropped. */
@@ -387,7 +390,7 @@ export const zDeleteEmployeeParam = z.object({
 });
 
 export const operations: {
-	readonly [K in keyof Operations]: OperationSpec;
+	readonly [K in keyof Operations]: OperationSpec<ClientOperations[K]>;
 } = {
 	listEmployees: {
 		method: 'get',
@@ -900,7 +903,7 @@ exports[`generated code is unchanged for query: query/operations.ts 1`] = `
 
 import { z } from 'zod';
 import { zHit, zSearchEmployeesBody } from './zod.js';
-import type { Operations } from './types.js';
+import type { ClientOperations, Operations } from './types.js';
 
 /** How a server reads a parameter, and how a client writes it. */
 export interface ParameterSpec {
@@ -923,7 +926,8 @@ export interface MediaSpec {
 	readonly item?: z.ZodType;
 }
 
-export interface OperationSpec {
+/** An operation of the table; \`Client\` is its entry of \`ClientOperations\`. */
+export interface OperationSpec<Client = unknown> {
 	readonly method: 'get' | 'put' | 'post' | 'delete' | 'options' | 'head' | 'patch' | 'trace' | 'query';
 	readonly path: string;
 	readonly honoPath: string;
@@ -942,13 +946,15 @@ export interface OperationSpec {
 	readonly responses: {
 		readonly [status: number]: { readonly [mediaType: string]: MediaSpec };
 	};
+	/** Never set: carries \`Client\`, so \`createOpenApiClient(http, operations)\` reads the spec's types off the table. */
+	readonly '~client'?: Client;
 }
 
 /** A location with no parameters declared: whatever arrives there is dropped. */
 const none = z.object({});
 
 export const operations: {
-	readonly [K in keyof Operations]: OperationSpec;
+	readonly [K in keyof Operations]: OperationSpec<ClientOperations[K]>;
 } = {
 	searchEmployees: {
 		method: 'query',
@@ -1800,7 +1806,7 @@ exports[`generated code is unchanged for kitchen-sink: kitchen-sink/operations.t
 
 import { z } from 'zod';
 import { zPet, zTier } from './zod.js';
-import type { Operations } from './types.js';
+import type { ClientOperations, Operations } from './types.js';
 
 /** How a server reads a parameter, and how a client writes it. */
 export interface ParameterSpec {
@@ -1823,7 +1829,8 @@ export interface MediaSpec {
 	readonly item?: z.ZodType;
 }
 
-export interface OperationSpec {
+/** An operation of the table; \`Client\` is its entry of \`ClientOperations\`. */
+export interface OperationSpec<Client = unknown> {
 	readonly method: 'get' | 'put' | 'post' | 'delete' | 'options' | 'head' | 'patch' | 'trace' | 'query';
 	readonly path: string;
 	readonly honoPath: string;
@@ -1842,6 +1849,8 @@ export interface OperationSpec {
 	readonly responses: {
 		readonly [status: number]: { readonly [mediaType: string]: MediaSpec };
 	};
+	/** Never set: carries \`Client\`, so \`createOpenApiClient(http, operations)\` reads the spec's types off the table. */
+	readonly '~client'?: Client;
 }
 
 /** \`true\` or \`false\`, as JSON spells them. */
@@ -1893,7 +1902,7 @@ export const zUploadForm = z.object({
 });
 
 export const operations: {
-	readonly [K in keyof Operations]: OperationSpec;
+	readonly [K in keyof Operations]: OperationSpec<ClientOperations[K]>;
 } = {
 	getPet: {
 		method: 'get',
@@ -2569,7 +2578,7 @@ exports[`generated code is unchanged for dates: dates/operations.ts 1`] = `
 
 import { z } from 'zod';
 import { zEvent, zNewEvent } from './zod.js';
-import type { Operations } from './types.js';
+import type { ClientOperations, Operations } from './types.js';
 
 /** How a server reads a parameter, and how a client writes it. */
 export interface ParameterSpec {
@@ -2592,7 +2601,8 @@ export interface MediaSpec {
 	readonly item?: z.ZodType;
 }
 
-export interface OperationSpec {
+/** An operation of the table; \`Client\` is its entry of \`ClientOperations\`. */
+export interface OperationSpec<Client = unknown> {
 	readonly method: 'get' | 'put' | 'post' | 'delete' | 'options' | 'head' | 'patch' | 'trace' | 'query';
 	readonly path: string;
 	readonly honoPath: string;
@@ -2611,6 +2621,8 @@ export interface OperationSpec {
 	readonly responses: {
 		readonly [status: number]: { readonly [mediaType: string]: MediaSpec };
 	};
+	/** Never set: carries \`Client\`, so \`createOpenApiClient(http, operations)\` reads the spec's types off the table. */
+	readonly '~client'?: Client;
 }
 
 /** An RFC 3339 date-time, decoded to a Date and encoded back. */
@@ -2642,7 +2654,7 @@ export const zRescheduleEventForm = z.object({
 });
 
 export const operations: {
-	readonly [K in keyof Operations]: OperationSpec;
+	readonly [K in keyof Operations]: OperationSpec<ClientOperations[K]>;
 } = {
 	listEvents: {
 		method: 'get',
@@ -3233,7 +3245,7 @@ import {
 	zProblem,
 	zWatchFeed200ResponseRemovedData,
 } from './zod.js';
-import type { Operations } from './types.js';
+import type { ClientOperations, Operations } from './types.js';
 
 /** How a server reads a parameter, and how a client writes it. */
 export interface ParameterSpec {
@@ -3256,7 +3268,8 @@ export interface MediaSpec {
 	readonly item?: z.ZodType;
 }
 
-export interface OperationSpec {
+/** An operation of the table; \`Client\` is its entry of \`ClientOperations\`. */
+export interface OperationSpec<Client = unknown> {
 	readonly method: 'get' | 'put' | 'post' | 'delete' | 'options' | 'head' | 'patch' | 'trace' | 'query';
 	readonly path: string;
 	readonly honoPath: string;
@@ -3275,6 +3288,8 @@ export interface OperationSpec {
 	readonly responses: {
 		readonly [status: number]: { readonly [mediaType: string]: MediaSpec };
 	};
+	/** Never set: carries \`Client\`, so \`createOpenApiClient(http, operations)\` reads the spec's types off the table. */
+	readonly '~client'?: Client;
 }
 
 /** A location with no parameters declared: whatever arrives there is dropped. */
@@ -3285,7 +3300,7 @@ export const zWatchFeedQuery = z.object({
 });
 
 export const operations: {
-	readonly [K in keyof Operations]: OperationSpec;
+	readonly [K in keyof Operations]: OperationSpec<ClientOperations[K]>;
 } = {
 	watchFeed: {
 		method: 'get',

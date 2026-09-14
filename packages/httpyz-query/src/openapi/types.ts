@@ -3,6 +3,7 @@ import type { Method, Success } from '@nxgt/httpyz';
 import type {
 	Args,
 	IdOf,
+	MethodsOf,
 	OperationInit,
 	OperationReply,
 	OperationsShape,
@@ -56,14 +57,14 @@ export type OpenApiQueries<
 	 * takes. It resolves to the data of a 2xx reply, and throws a
 	 * `ReplyStatusError` for any other.
 	 */
-	queryOptions<M extends Method, P extends PathsOf<Routes, M>>(
+	queryOptions<M extends MethodsOf<Routes>, P extends PathsOf<Routes, M>>(
 		method: M,
 		path: P,
 		...args: Args<Ops, IdOf<Ops, Routes, M, P>>
 	): HttpQueryOptions<OperationData<Ops, IdOf<Ops, Routes, M, P>, Decoded>>;
 	/** An infinite query of an operation: each page sent with its `pageParam` as one of its query parameters. */
 	infiniteQueryOptions<
-		M extends Method,
+		M extends MethodsOf<Routes>,
 		P extends PathsOf<Routes, M>,
 		PageParam,
 	>(
@@ -87,7 +88,7 @@ export type OpenApiQueries<
 	 * A mutation of the operation at a path, whose `mutate()` takes its input.
 	 * `init` holds what every call shares.
 	 */
-	mutationOptions<M extends Method, P extends PathsOf<Routes, M>>(
+	mutationOptions<M extends MethodsOf<Routes>, P extends PathsOf<Routes, M>>(
 		method: M,
 		path: P,
 		init?: OperationInit,

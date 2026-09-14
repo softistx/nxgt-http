@@ -32,28 +32,29 @@ Generate the spec's files with `nxgt-openapi generate`, then bind them:
 import { createHttpClient } from '@nxgt/httpyz';
 import { createOpenApiClient } from '@nxgt/openapi-httpyz';
 import { operations } from './generated/openapi/operations.js';
-import type {
-	ClientOperations,
-	OperationsByRoute,
-} from './generated/openapi/types.js';
 
 const http = createHttpClient({
 	baseUrl: 'https://api.example.com',
 	timeout: 10_000,
 });
 
-export const api = createOpenApiClient<ClientOperations, OperationsByRoute>(
-	http,
-	operations,
-);
+export const api = createOpenApiClient(http, operations);
 ```
 
-It reads two generated files:
+`operations`, the runtime table of the generated `operations.ts`, holds each
+parameter's location and style, the body's media types, each reply's schema,
+and the server's validators. Its type also carries each operation's input and
+replies, `ClientOperations` of the generated `types.ts`, so the client is
+typed from the table alone:
 
-| File | What the binding takes |
-| --- | --- |
-| `types.ts` | `ClientOperations`, each operation's input and replies, and `OperationsByRoute`, which maps `'get /employees/{id}'` to its `operationId` |
-| `operations.ts` | `operations`, the runtime table: each parameter's location and style, the body's media types, each reply's schema, and the server's validators |
+- `api.get` offers the paths that have a GET operation, and takes what the
+  operation at the chosen path takes.
+- The client has only the methods the spec has an operation for: no `trace`
+  on a spec without a TRACE operation.
+
+The types may also be given, `createOpenApiClient<ClientOperations,
+OperationsByRoute>(http, operations)`, as a table generated before
+`@nxgt/openapi-codegen` carried them requires.
 
 The client keeps that table as `api.operations`, for a package built over it,
 such as [`@nxgt/httpyz-query/openapi`](https://www.npmjs.com/package/@nxgt/httpyz-query).
@@ -188,9 +189,7 @@ where the spec says `minimum: 1`, or a reply from a server that drifted.
   checks its own with `validateResponses`.
 
 ```ts
-createOpenApiClient<ClientOperations, OperationsByRoute>(http, operations, {
-	validate: { request: true },
-});
+createOpenApiClient(http, operations, { validate: { request: true } });
 ```
 
 Unlike a plain call of the client, which checks a declared reply by default,
@@ -199,22 +198,18 @@ the spec.
 
 `decode` returns each reply as its schema outputs it, which differs from what
 JSON carries once the spec is generated with `dates: 'date'`: a date-time is
-a `Date`. That changes the replies' types, so a decoding client says so in
-its third type argument, which then requires `decode: true`:
+a `Date`. The client's replies are typed so:
 
 ```ts
-const api = createOpenApiClient<ClientOperations, OperationsByRoute, true>(
-	http,
-	operations,
-	{ decode: true },
-);
+const api = createOpenApiClient(http, operations, { decode: true });
 const employee = unwrap(await api.get('/employees/{id}', { param: { id } }), 200);
 employee.hiredAt; // Date
 ```
 
-`decode: true` without the `true` type argument, or the `true` type argument
-without `decode: true`, does not compile. Decoding validates the reply,
-whatever `validate` says.
+With the types given, a third type argument says the client decodes:
+`createOpenApiClient<ClientOperations, OperationsByRoute, true>`, which does
+not compile without `decode: true`. Decoding validates the reply, whatever
+`validate` says.
 
 ## Traps
 

@@ -97,6 +97,8 @@ out:
 `types.ts` also holds `ClientOperations`, the map
 [`@nxgt/openapi-httpyz`](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-httpyz/README.md) reads to type a
 client over [`@nxgt/httpyz`](https://github.com/softistx/nxgt-http/blob/develop/packages/httpyz/README.md).
+The `operations` table carries it in its type, so
+`createOpenApiClient(http, operations)` is typed from the table alone.
 A reply of server-sent events or JSON Lines is described an item at a time,
 from OpenAPI 3.2's `itemSchema`: each event is typed and validated by its
 name ([Streams](docs/guide/generated-code.md#streams)).

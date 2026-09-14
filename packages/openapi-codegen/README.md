@@ -56,6 +56,10 @@ export default defineConfig({
 bunx nxgt-openapi generate
 ```
 
+A config file can also list several specs, with the options they share as
+a second argument: `defineConfig([{ input: 'a.yaml', output: 'gen/a' }, …],
+{ hono: true })`. See [the command line](docs/guide/cli.md#config-file).
+
 Or from code:
 
 ```ts

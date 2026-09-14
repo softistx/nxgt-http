@@ -4,6 +4,7 @@ export {
 	defineConfig,
 	type LoadedConfig,
 	loadConfig,
+	type SharedConfig,
 } from './config';
 export type { GeneratedFile } from './emit';
 export type { Dates, Enums, UnknownKeys } from './emit/context';

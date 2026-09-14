@@ -4,7 +4,8 @@ Generates TypeScript types, Zod 4 validators and a typed map of every
 operation from an OpenAPI 3.1 or 3.2 document, whether it is one file or
 split across many. Types and validators are printed from the same reading of
 the spec, so they cannot disagree. With the `hono` option, it also types a
-Hono app's routes from the spec and validates their requests.
+Hono app's routes from the spec, which
+[`@nxgt/openapi-hono`](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-hono/README.md) validates.
 
 ## Install
 
@@ -20,11 +21,11 @@ Both peers are required:
 - `typescript` 6, the version every `@nxgt` package pins. The generator does
   not call it.
 
-For typed Hono routes, the generated code imports this package at runtime,
-and `hono` is its optional peer:
+For typed Hono routes, the generated `hono.ts` imports the runtime
+`@nxgt/openapi-hono` and `hono`; the generator stays a dev dependency:
 
 ```sh
-bun add @nxgt/openapi-codegen hono zod
+bun add @nxgt/openapi-hono hono zod
 ```
 
 To lint the spec with Redocly before generating ([`lint`](docs/guide/options.md#lint)),
@@ -41,7 +42,9 @@ The generator runs on Bun; the code it generates runs anywhere.
 | Import | For |
 | --- | --- |
 | `@nxgt/openapi-codegen` | the generator: `generate()`, `defineConfig`, the pipeline stages |
-| `@nxgt/openapi-codegen/hono` | the runtime `hono.ts` binds to its spec; needs `hono` |
+
+The Hono runtime that was `@nxgt/openapi-codegen/hono` in 0.1.0 is now its
+own package, [`@nxgt/openapi-hono`](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-hono/README.md).
 
 ## Usage
 
@@ -87,6 +90,10 @@ out:
   openapi-typescript prints, so `createClient<paths>()` from openapi-fetch
   works with no other step.
 
+`types.ts` also holds `ClientOperations`, the map
+[`@nxgt/openapi-httpyz`](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-httpyz/README.md) reads to type a
+client over [`@nxgt/httpyz`](https://github.com/softistx/nxgt-http/blob/develop/packages/httpyz/README.md).
+
 With `hono: true`, it writes a fifth, `hono.ts`.
 
 `$ref`s are followed across files by relative path, including into
@@ -123,8 +130,8 @@ createRoutes(app).put('/employees/{id}', auth, async (c) => {
 
 `auth` runs first. A request the spec refuses then gets a 400 listing every
 issue. A reply the spec does not declare does not compile.
-[Typed Hono routes](docs/guide/hono.md) covers modules, error hooks and
-reply checks.
+[Typed Hono routes](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-hono/docs/guide.md) covers modules, error
+hooks and reply checks.
 
 ### Fail CI when the generated code is stale
 
@@ -195,8 +202,9 @@ on the spec:
   specifiers.
 - **Keep the output away from your formatter and linter.** It is printed
   tab-indented, not by your tools. Exclude the output directory.
-- **`hono.ts` imports this package at runtime.** Install it as a
-  dependency, not a dev dependency, once you generate that file.
+- **`hono.ts` imports `@nxgt/openapi-hono` at runtime.** Install it, and
+  `hono`, as dependencies once you generate that file; this package stays a
+  dev dependency.
 - **Give `c.json()` a status, and reply with plain objects.** Without a
   status, Hono types a reply with any status, and it matches no declared
   one. A Mongoose document does not type as its schema; return `.lean()`
@@ -207,8 +215,8 @@ on the spec:
 The package ships a `docs/` folder:
 
 - [the command line](docs/guide/cli.md): flags, config files, exit codes;
-- [typed Hono routes](docs/guide/hono.md): routes, validation errors,
-  modules, reply checks;
+- [typed Hono routes](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-hono/docs/guide.md), in
+  `@nxgt/openapi-hono`: routes, validation errors, modules, reply checks;
 - [the guide](docs/README.md): the generated code, every option, how each
   JSON Schema keyword maps, and every diagnostic code;
 - [the architecture](docs/architecture/overview.md), for working on the

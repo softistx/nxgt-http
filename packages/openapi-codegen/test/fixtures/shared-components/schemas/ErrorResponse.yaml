@@ -1,0 +1,11 @@
+type: object
+properties:
+  status:
+    type: integer
+    description: Error status code
+  message:
+    type: string
+    description: A human-readable error message.
+  debugMessage:
+    type: string
+    description: An optional debug message for troubleshooting.

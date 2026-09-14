@@ -5,9 +5,13 @@
 		"outDir": "dist",
 		// The generated goldens under test/ must type without falling back to any.
 		"noImplicitAny": true,
-		// hono.gen.ts imports the runtime by its published name: the source, here.
+		// hono.ts imports its runtime by its published name: the source beside
+		// this package, for tsc and for Bun alike. A path, not a dependency:
+		// `@nxgt/openapi-hono` generates its own fixtures with this package, and
+		// a dependency both ways would be a cycle. The build still roots at src.
+		"rootDir": "..",
 		"paths": {
-			"@nxgt/openapi-codegen/hono": ["./src/hono/index.ts"]
+			"@nxgt/openapi-hono": ["../openapi-hono/src/index.ts"]
 		}
 	}
 }

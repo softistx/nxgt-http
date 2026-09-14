@@ -1,0 +1,19 @@
+# export interface NumberFilter {
+# 	operator: NumberOperator;
+# 	value?: number | null;
+# 	values?: number[] | null;
+# }
+type: object
+properties:
+  operator:
+    $ref: ./NumberOperator.yaml
+  value:
+    type: number
+    nullable: true
+    description: Single number value for filtering (used with operators like EQ, NE, GT, GTE, LT, LTE)
+  values:
+    type: array
+    items:
+      type: number
+    nullable: true
+    description: Array of number values for filtering (used with operators like IN, NOT_IN)

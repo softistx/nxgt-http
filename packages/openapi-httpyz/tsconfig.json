@@ -1,0 +1,17 @@
+{
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"rootDirs": ["src"],
+		"outDir": "dist",
+		"noImplicitAny": true,
+		// The fixture's generated code, and its generator, by their published
+		// names: their sources beside this package, for tsc and for Bun alike.
+		// `@nxgt/httpyz` is not mapped: the binding imports it as an app does,
+		// and the build roots at src.
+		"rootDir": "..",
+		"paths": {
+			"@nxgt/openapi-codegen": ["../openapi-codegen/src/index.ts"],
+			"@nxgt/openapi-hono": ["../openapi-hono/src/index.ts"]
+		}
+	}
+}

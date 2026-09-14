@@ -1,0 +1,18 @@
+type: object
+properties:
+  operator:
+    $ref: ./StringOperator.yaml
+  value:
+    type: string
+    nullable: true
+    description: Single string value for filtering (used with operators like EQ, NE, CONTAINS, STARTS_WITH, ENDS_WITH)
+  values:
+    type: array
+    items:
+      type: string
+    nullable: true
+    description: Array of string values for filtering (used with operators like IN, NOT_IN)
+  caseSensitive:
+    type: boolean
+    nullable: true
+    description: Whether the string comparison should be case sensitive (default is false)

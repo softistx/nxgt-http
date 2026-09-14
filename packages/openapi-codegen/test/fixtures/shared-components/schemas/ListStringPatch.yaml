@@ -1,0 +1,17 @@
+type: object
+properties:
+  add:
+    type: array
+    items:
+      type: string
+    description: The items to add to the list
+  remove:
+    type: array
+    items:
+      type: string
+    description: The items to remove from the list
+  replace:
+    type: array
+    items:
+      type: string
+    description: The items to replace the list items with

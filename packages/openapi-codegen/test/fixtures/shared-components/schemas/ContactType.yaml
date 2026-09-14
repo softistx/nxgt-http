@@ -1,0 +1,9 @@
+type: string
+enum:
+  - phone
+  - email
+  - fax
+  - mobile
+  - website
+description: The type of contact information.
+example: phone

@@ -7,7 +7,7 @@ export interface CallContext {
 	readonly operationId?: string;
 }
 
-/** Where a value was found wrong, as `@nxgt/openapi-codegen/hono` reports it. */
+/** Where a value was found wrong, as `@nxgt/openapi-hono` reports it. */
 export interface ValidationIssue {
 	target: 'param' | 'query' | 'header' | 'json' | 'form' | 'body' | 'response';
 	/** Inside the target: `['items', 0, 'name']`, or `[]` for the whole of it. */

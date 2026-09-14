@@ -1,0 +1,6 @@
+type: string
+enum:
+  - IN_APP
+  - EMAIL
+  - PUSH
+  - SMS

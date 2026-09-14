@@ -181,7 +181,7 @@ export function operationTypes(ctx: EmitContext): string[] {
 }
 
 /**
- * What a client sends and gets back, per operation, as `@nxgt/openapi-client`
+ * What a client sends and gets back, per operation, as `@nxgt/openapi-httpyz`
  * reads it: `args`, what a call takes after the `operationId`, and `reply`,
  * every reply the spec declares, decoded; `wire` is the same as JSON carries
  * it. Each is written out here so that a call costs TypeScript one lookup.

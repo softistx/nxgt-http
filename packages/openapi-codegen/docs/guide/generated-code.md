@@ -188,7 +188,8 @@ type Updated = Operations[Id]['responses'][200]['application/json']; // Employee
 ## The `ClientOperations` map
 
 `types.ts` describes each operation a second time, as a client calls it.
-This is the map `@nxgt/openapi-client` reads:
+This is the map [`@nxgt/openapi-httpyz`](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-httpyz/README.md)
+reads, to type a client over `@nxgt/httpyz`:
 
 ```ts
 export interface ClientOperations {
@@ -336,7 +337,8 @@ Written with the [`hono` option](options.md#hono) only. It holds:
 - `HonoSpec`;
 - `createRoutes` and `createApi`, bound to the spec.
 
-[Typed Hono routes](hono.md) covers how to use them.
+They are bound to the runtime in `@nxgt/openapi-hono`. [Typed Hono routes](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-hono/docs/guide.md)
+covers how to use them.
 
 ```ts
 export interface Replies {

@@ -1,0 +1,20 @@
+type: object
+properties:
+  startCursor:
+    type: [string, "null"]
+    description: >-
+      The cursor of the first item in the result set, and `null` when the page
+      is empty. It is the `_id` of that item.
+  endCursor:
+    type: [string, "null"]
+    description: >-
+      The cursor of the last item in the result set, and `null` when the page
+      is empty. It is the `_id` of that item.
+  hasNextPage:
+    type: boolean
+    description: Indicates whether there are more items after the current page.
+  totalElements:
+    type: integer
+    description: The total number of elements across all pages.
+required: [ hasNextPage, totalElements ]
+description: Cursor-based pagination information.

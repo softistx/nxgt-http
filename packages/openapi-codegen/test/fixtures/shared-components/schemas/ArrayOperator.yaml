@@ -1,0 +1,8 @@
+type: string
+enum: [
+  'ALL',
+  'ANY',
+  'NONE',
+  'EXACT'
+]
+description: Logical operators for array filtering (ALL, ANY, NONE, EXACT)

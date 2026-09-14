@@ -1,5 +1,5 @@
 parameters:
-  - $ref: ../../../../../shared-openapi/openapi/components/parameters/id.yaml
+  - $ref: ../../shared-components/parameters/id.yaml
 get:
   operationId: getEmployee
   tags: [employees]
@@ -11,7 +11,7 @@ get:
           schema:
             $ref: ../components/schemas/Employee.yaml
     '404':
-      $ref: ../../../../../shared-openapi/openapi/components/responses/NotFound.yaml
+      $ref: ../../shared-components/responses/NotFound.yaml
 put:
   operationId: updateEmployee
   tags: [employees]
@@ -29,12 +29,12 @@ put:
           schema:
             $ref: ../components/schemas/Employee.yaml
     '404':
-      $ref: ../../../../../shared-openapi/openapi/components/responses/NotFound.yaml
+      $ref: ../../shared-components/responses/NotFound.yaml
 delete:
   operationId: deleteEmployee
   tags: [employees]
   responses:
     '204':
-      $ref: ../../../../../shared-openapi/openapi/components/responses/ResourceDeleted.yaml
+      $ref: ../../shared-components/responses/ResourceDeleted.yaml
     '404':
-      $ref: ../../../../../shared-openapi/openapi/components/responses/NotFound.yaml
+      $ref: ../../shared-components/responses/NotFound.yaml

@@ -22,7 +22,7 @@ exports[`buildIR on whole specs builds a spec split across files and shared frag
           "explode": true,
           "in": "query",
           "location": {
-            "file": "<packages>/shared-openapi/openapi/components/parameters/page.yaml",
+            "file": "<packages>/openapi-codegen/test/fixtures/shared-components/parameters/page.yaml",
             "pointer": "",
           },
           "name": "page",
@@ -38,7 +38,7 @@ exports[`buildIR on whole specs builds a spec split across files and shared frag
           "explode": true,
           "in": "query",
           "location": {
-            "file": "<packages>/shared-openapi/openapi/components/parameters/size.yaml",
+            "file": "<packages>/openapi-codegen/test/fixtures/shared-components/parameters/size.yaml",
             "pointer": "",
           },
           "name": "size",
@@ -94,13 +94,13 @@ exports[`buildIR on whole specs builds a spec split across files and shared frag
               "mediaType": "application/json",
               "schema": {
                 "kind": "ref",
-                "target": "<packages>/shared-openapi/openapi/components/schemas/ErrorResponse.yaml#",
+                "target": "<packages>/openapi-codegen/test/fixtures/shared-components/schemas/ErrorResponse.yaml#",
               },
             },
           ],
           "description": "The request was invalid.",
           "location": {
-            "file": "<packages>/shared-openapi/openapi/components/responses/BadRequest.yaml",
+            "file": "<packages>/openapi-codegen/test/fixtures/shared-components/responses/BadRequest.yaml",
             "pointer": "",
           },
           "status": 400,
@@ -161,13 +161,13 @@ exports[`buildIR on whole specs builds a spec split across files and shared frag
               "mediaType": "application/json",
               "schema": {
                 "kind": "ref",
-                "target": "<packages>/shared-openapi/openapi/components/schemas/ErrorResponse.yaml#",
+                "target": "<packages>/openapi-codegen/test/fixtures/shared-components/schemas/ErrorResponse.yaml#",
               },
             },
           ],
           "description": "The request was invalid.",
           "location": {
-            "file": "<packages>/shared-openapi/openapi/components/responses/BadRequest.yaml",
+            "file": "<packages>/openapi-codegen/test/fixtures/shared-components/responses/BadRequest.yaml",
             "pointer": "",
           },
           "status": 400,
@@ -193,7 +193,7 @@ exports[`buildIR on whole specs builds a spec split across files and shared frag
           "explode": false,
           "in": "path",
           "location": {
-            "file": "<packages>/shared-openapi/openapi/components/parameters/id.yaml",
+            "file": "<packages>/openapi-codegen/test/fixtures/shared-components/parameters/id.yaml",
             "pointer": "",
           },
           "name": "id",
@@ -230,13 +230,13 @@ exports[`buildIR on whole specs builds a spec split across files and shared frag
               "mediaType": "application/json",
               "schema": {
                 "kind": "ref",
-                "target": "<packages>/shared-openapi/openapi/components/schemas/ErrorResponse.yaml#",
+                "target": "<packages>/openapi-codegen/test/fixtures/shared-components/schemas/ErrorResponse.yaml#",
               },
             },
           ],
           "description": "The requested resource was not found.",
           "location": {
-            "file": "<packages>/shared-openapi/openapi/components/responses/NotFound.yaml",
+            "file": "<packages>/openapi-codegen/test/fixtures/shared-components/responses/NotFound.yaml",
             "pointer": "",
           },
           "status": 404,
@@ -275,7 +275,7 @@ exports[`buildIR on whole specs builds a spec split across files and shared frag
           "explode": false,
           "in": "path",
           "location": {
-            "file": "<packages>/shared-openapi/openapi/components/parameters/id.yaml",
+            "file": "<packages>/openapi-codegen/test/fixtures/shared-components/parameters/id.yaml",
             "pointer": "",
           },
           "name": "id",
@@ -312,13 +312,13 @@ exports[`buildIR on whole specs builds a spec split across files and shared frag
               "mediaType": "application/json",
               "schema": {
                 "kind": "ref",
-                "target": "<packages>/shared-openapi/openapi/components/schemas/ErrorResponse.yaml#",
+                "target": "<packages>/openapi-codegen/test/fixtures/shared-components/schemas/ErrorResponse.yaml#",
               },
             },
           ],
           "description": "The requested resource was not found.",
           "location": {
-            "file": "<packages>/shared-openapi/openapi/components/responses/NotFound.yaml",
+            "file": "<packages>/openapi-codegen/test/fixtures/shared-components/responses/NotFound.yaml",
             "pointer": "",
           },
           "status": 404,
@@ -344,7 +344,7 @@ exports[`buildIR on whole specs builds a spec split across files and shared frag
           "explode": false,
           "in": "path",
           "location": {
-            "file": "<packages>/shared-openapi/openapi/components/parameters/id.yaml",
+            "file": "<packages>/openapi-codegen/test/fixtures/shared-components/parameters/id.yaml",
             "pointer": "",
           },
           "name": "id",
@@ -360,7 +360,7 @@ exports[`buildIR on whole specs builds a spec split across files and shared frag
           "content": [],
           "description": "The resource was successfully deleted",
           "location": {
-            "file": "<packages>/shared-openapi/openapi/components/responses/ResourceDeleted.yaml",
+            "file": "<packages>/openapi-codegen/test/fixtures/shared-components/responses/ResourceDeleted.yaml",
             "pointer": "",
           },
           "status": 204,
@@ -372,13 +372,13 @@ exports[`buildIR on whole specs builds a spec split across files and shared frag
               "mediaType": "application/json",
               "schema": {
                 "kind": "ref",
-                "target": "<packages>/shared-openapi/openapi/components/schemas/ErrorResponse.yaml#",
+                "target": "<packages>/openapi-codegen/test/fixtures/shared-components/schemas/ErrorResponse.yaml#",
               },
             },
           ],
           "description": "The requested resource was not found.",
           "location": {
-            "file": "<packages>/shared-openapi/openapi/components/responses/NotFound.yaml",
+            "file": "<packages>/openapi-codegen/test/fixtures/shared-components/responses/NotFound.yaml",
             "pointer": "",
           },
           "status": 404,
@@ -506,9 +506,9 @@ exports[`buildIR on whole specs builds a spec split across files and shared frag
       "source": "component",
     },
     {
-      "id": "<packages>/shared-openapi/openapi/components/schemas/ErrorResponse.yaml#",
+      "id": "<packages>/openapi-codegen/test/fixtures/shared-components/schemas/ErrorResponse.yaml#",
       "location": {
-        "file": "<packages>/shared-openapi/openapi/components/schemas/ErrorResponse.yaml",
+        "file": "<packages>/openapi-codegen/test/fixtures/shared-components/schemas/ErrorResponse.yaml",
         "pointer": "",
       },
       "name": "ErrorResponse",

@@ -1,0 +1,12 @@
+type: string
+enum: [
+  'EQ',
+  'NE',
+  'GT',
+  'GTE',
+  'LT',
+  'LTE',
+  'IN',
+  'NOT_IN'
+]
+description: Comparison operators for number filtering (EQ, NE, GT, GTE, LT, LTE, IN, NOT_IN)

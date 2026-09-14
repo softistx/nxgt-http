@@ -1,13 +1,13 @@
 /**
- * The loader against real fragments on a real disk: `@nxgt/shared-openapi`'s
- * `openapi/components/`, which consumers `$ref` from `node_modules` exactly
- * the way these tests do. Read from the sibling directory by path — no
- * manifest edge, so the layering stays as it is.
+ * The loader against real fragments on a real disk: a copy, under
+ * `test/fixtures/shared-components/`, of the `openapi/components/` that
+ * nxgt-core's `@nxgt/shared-openapi` publishes, and that its consumers `$ref`
+ * from `node_modules` exactly the way these tests do.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { mkdir, mkdtemp, rm, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, join, relative } from 'node:path';
+import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadDocument } from './document';
 import { nodeFileSystem } from './fs';
@@ -15,9 +15,8 @@ import { child } from './location';
 import { Resolver } from './resolver';
 
 const COMPONENTS = fileURLToPath(
-	new URL('../../../shared-openapi/openapi/components', import.meta.url),
+	new URL('../../test/fixtures/shared-components', import.meta.url),
 );
-const SHARED_OPENAPI = dirname(dirname(COMPONENTS));
 
 describe('the @nxgt/shared-openapi fragments', () => {
 	it('resolve, every $ref in every file', async () => {
@@ -38,12 +37,9 @@ describe('the @nxgt/shared-openapi fragments', () => {
 
 		beforeAll(async () => {
 			dir = await mkdtemp(join(tmpdir(), 'openapi-codegen-'));
-			await mkdir(join(dir, 'node_modules', '@nxgt'), { recursive: true });
-			await symlink(
-				SHARED_OPENAPI,
-				join(dir, 'node_modules', '@nxgt', 'shared-openapi'),
-				'dir',
-			);
+			const openapi = join(dir, 'node_modules', '@nxgt', 'shared-openapi');
+			await mkdir(join(openapi, 'openapi'), { recursive: true });
+			await symlink(COMPONENTS, join(openapi, 'openapi', 'components'), 'dir');
 		});
 
 		afterAll(() => rm(dir, { recursive: true, force: true }));

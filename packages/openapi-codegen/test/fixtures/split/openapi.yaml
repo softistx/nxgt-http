@@ -16,4 +16,4 @@ components:
     EmployeeStatus:
       $ref: components/schemas/EmployeeStatus.yaml
     ErrorResponse:
-      $ref: ../../../../shared-openapi/openapi/components/schemas/ErrorResponse.yaml
+      $ref: ../shared-components/schemas/ErrorResponse.yaml

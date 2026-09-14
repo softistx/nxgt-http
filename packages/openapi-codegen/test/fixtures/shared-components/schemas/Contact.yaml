@@ -1,0 +1,16 @@
+type: object
+description: Contact information (can be used for places, persons, organizations, etc.)
+properties:
+  type:
+    $ref: ./ContactType.yaml
+  value:
+    type: string
+    description: Contact value (phone number, email, URL, etc.)
+    example: "+33 1 23 45 67 89"
+  label:
+    type: string
+    description: Optional label for the contact
+    example: "Accueil"
+required:
+  - type
+  - value

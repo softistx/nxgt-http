@@ -1,0 +1,8 @@
+type: string
+enum:
+  - NONE
+  - NEAREST
+  - UP
+  - DOWN
+description: Rounding rule for price calculations.
+example: NEAREST

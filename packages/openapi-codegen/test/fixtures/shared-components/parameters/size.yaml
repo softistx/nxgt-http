@@ -1,0 +1,6 @@
+in: query
+name: size
+description: The number of items to return per page.
+schema:
+  type: integer
+  minimum: 1

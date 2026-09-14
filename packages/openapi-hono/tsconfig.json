@@ -1,0 +1,18 @@
+{
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"rootDirs": ["src"],
+		"outDir": "dist",
+		// The generated fixtures under test/ must type without falling back to any.
+		"noImplicitAny": true,
+		// The fixtures' hono.ts imports this runtime by its published name, and
+		// test/generate.ts the generator: their sources, for tsc and for Bun
+		// alike. The generator sits beside this package; the build still roots
+		// at src.
+		"rootDir": "..",
+		"paths": {
+			"@nxgt/openapi-codegen": ["../openapi-codegen/src/index.ts"],
+			"@nxgt/openapi-hono": ["./src/index.ts"]
+		}
+	}
+}

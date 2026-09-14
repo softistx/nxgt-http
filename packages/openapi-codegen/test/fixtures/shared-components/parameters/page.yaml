@@ -1,0 +1,6 @@
+in: query
+name: page
+description: The page number to return.
+schema:
+  type: integer
+  minimum: 1

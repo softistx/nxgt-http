@@ -1,7 +1,8 @@
 /**
  * The IR of two whole specs on disk, pinned by snapshot. The split one
- * `$ref`s into `@nxgt/shared-openapi`'s fragments by relative path, the way a
- * consumer does through `node_modules`.
+ * `$ref`s into `test/fixtures/shared-components/`, a copy of
+ * `@nxgt/shared-openapi`'s fragments, by relative path, the way a consumer
+ * does through `node_modules`.
  */
 import { describe, expect, it } from 'bun:test';
 import { fileURLToPath } from 'node:url';

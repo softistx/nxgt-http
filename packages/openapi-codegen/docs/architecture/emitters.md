@@ -146,7 +146,10 @@ What both printers must agree on, computed once:
 
 ## Hono (`src/emit/hono.ts`)
 
-Written only with the `hono` option.
+Written only with the `hono` option. An operation Hono cannot route is
+left out with an `ignored` warning, decided by `src/emit/routable.ts`: a
+deliberate copy of `@nxgt/openapi-hono`'s `src/routable.ts`, so the
+generator does not depend on the runtime. Change both together.
 
 - **`Replies`** is keyed by `operationId`. Each entry is the union of what
   the operation may send, as Hono's `TypedResponse`:
@@ -164,7 +167,7 @@ Written only with the `hono` option.
 - **`HonoSpec`** gathers `Operations`, `Replies` and the four indexes. The
   runtime's types read nothing else.
 - **Imports are namespaced:** `import type * as Hono from 'hono'` and
-  `import * as runtime from '@nxgt/openapi-codegen/hono'`. Schema types are
+  `import * as runtime from '@nxgt/openapi-hono'`. Schema types are
   imported by name, so `Replies`, `HonoSpec` and `Hono` are claimed in
   `#checkNames`, as a schema's name would be.
 

@@ -1,0 +1,3 @@
+
+type: ["string", "number", "integer", "boolean", "array", "object", "null"]
+description: Can be any JSON type

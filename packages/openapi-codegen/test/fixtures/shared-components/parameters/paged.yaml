@@ -1,0 +1,5 @@
+in: query
+name: paged
+description: Whether to return the results as a paged response.
+schema:
+  type: boolean

@@ -19,6 +19,7 @@ import type {
 	OpenApiOptions,
 	OperationsShape,
 	OperationTable,
+	RoutesOf,
 	RuntimeMedia,
 	RuntimeOperation,
 	StreamInit,
@@ -84,24 +85,45 @@ function checkedFirst<T>(
 }
 
 /**
- * A client for a spec: `ClientOperations` and `OperationsByRoute` from the
- * generated `types.ts`, and the `operations` table of `operations.ts`.
+ * A client for a spec, bound to the `operations` table of the generated
+ * `operations.ts`, which carries the spec's types: nothing else to import.
  *
  * ```ts
  * const http = createHttpClient({ baseUrl: 'https://api.example.com' });
- * const api = createOpenApiClient<ClientOperations, OperationsByRoute>(http, operations);
+ * const api = createOpenApiClient(http, operations);
  * const reply = await api.get('/employees/{id}', { param: { id } });
  * if (reply.status === 200) reply.data.name;
  * ```
+ *
+ * With `decode: true`, each reply is returned as its schema outputs it, and
+ * typed so. The types may also be given: `createOpenApiClient<ClientOperations,
+ * OperationsByRoute, true>`, whose `true` then requires `decode: true`.
  */
 export function createOpenApiClient<
 	Ops extends OperationsShape<Ops>,
-	Routes extends { [Route in keyof Routes]: keyof Ops } = Record<never, never>,
+	Routes = RoutesOf<Ops>,
+>(
+	http: HttpClient,
+	operations: OperationTable<Ops>,
+	options: OpenApiOptions & { readonly decode: true },
+): OpenApiClient<Ops, Routes, true>;
+export function createOpenApiClient<
+	Ops extends OperationsShape<Ops>,
+	Routes = RoutesOf<Ops>,
 	Decoded extends boolean = false,
 >(
 	http: HttpClient,
 	operations: OperationTable<Ops>,
 	...[given]: OpenApiArgs<Decoded>
+): OpenApiClient<Ops, Routes, Decoded>;
+export function createOpenApiClient<
+	Ops extends OperationsShape<Ops>,
+	Routes,
+	Decoded extends boolean,
+>(
+	http: HttpClient,
+	operations: OperationTable<Ops>,
+	given?: OpenApiOptions & { readonly decode?: boolean },
 ): OpenApiClient<Ops, Routes, Decoded> {
 	return bind(http, operations, given ?? {}, () => undefined);
 }
@@ -120,7 +142,7 @@ const joined = (
  */
 function bind<
 	Ops extends OperationsShape<Ops>,
-	Routes extends { [Route in keyof Routes]: keyof Ops },
+	Routes,
 	Decoded extends boolean,
 >(
 	http: HttpClient,

@@ -124,9 +124,12 @@ What both printers must agree on, computed once:
   a tag. All are plain interfaces with no conditional types, so looking up
   one operation costs TypeScript O(1), whatever the size of the spec.
 - **The runtime table** is annotated
-  `{ readonly [K in keyof Operations]: OperationSpec }`, not inferred. An
-  inferred table would carry a literal type for every validator of every
-  operation. The precise types are in `Operations`.
+  `{ readonly [K in keyof Operations]: OperationSpec<ClientOperations[K]> }`,
+  not inferred. An inferred table would carry a literal type for every
+  validator of every operation. The precise types are in `Operations`; the
+  type argument, read back through `'~client'`, a property that is never
+  set, is what lets `createOpenApiClient(http, operations)` infer the client's
+  types from the table alone.
 - **Parameters arrive as text.** Their validators read numbers through a
   `numeric` helper (a strict number regex, then `Number`) and booleans
   through `flag`, a `z.stringbool` limited to `true` and `false`, in any

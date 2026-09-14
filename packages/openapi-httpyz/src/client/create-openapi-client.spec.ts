@@ -71,7 +71,7 @@ createRoutes(app)
 /** Every request the client sent, cloned before the app read it. */
 const sent: Request[] = [];
 const client = (options: HttpClientOptions = {}) =>
-	createOpenApiClient<ClientOperations, OperationsByRoute>(
+	createOpenApiClient(
 		createHttpClient({
 			baseUrl: 'http://api.test',
 			fetch: async (request) => {
@@ -227,6 +227,8 @@ describe('createOpenApiClient', () => {
 			);
 		// @ts-expect-error the spec has no such path
 		expect(await settled(() => api.get('/nope'))).toBe('rejected');
+		// @ts-expect-error nor any TRACE operation: the client offers only the spec's methods
+		expect(api.trace).toBeFunction();
 		// @ts-expect-error getItem needs its path parameter
 		expect(await settled(() => api.op('getItem'))).toBe('rejected');
 		// @ts-expect-error health takes no input: this is not a fetch option

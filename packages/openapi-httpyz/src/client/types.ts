@@ -79,9 +79,20 @@ export interface RuntimeOperation {
 	};
 }
 
-/** The generated `operations` table, keyed like `ClientOperations`. */
+/**
+ * The generated `operations` table, keyed like `ClientOperations`. Each entry
+ * carries its `ClientOperations` entry as `'~client'`, a type that is never
+ * set, which is how `createOpenApiClient(http, operations)` infers `Ops`.
+ */
 export type OperationTable<Ops> = {
-	readonly [K in keyof Ops]: RuntimeOperation;
+	readonly [K in keyof Ops]: RuntimeOperation & {
+		readonly '~client'?: Ops[K];
+	};
+};
+
+/** `OperationsByRoute`, worked out of `ClientOperations`: `'get /items/{id}'` to its `operationId`. */
+export type RoutesOf<Ops extends OperationsShape<Ops>> = {
+	[K in keyof Ops as `${Ops[K]['method']} ${Ops[K]['path']}`]: K;
 };
 
 export interface OpenApiOptions {
@@ -98,9 +109,9 @@ export interface OpenApiOptions {
 /**
  * The binding's options, and `decode`, which returns each reply as its schema
  * outputs it: with `dates: 'date'`, a date-time as a `Date`. It changes the
- * replies' types, so a decoding client says so in its third type argument,
- * `createOpenApiClient<ClientOperations, OperationsByRoute, true>`, which in
- * turn requires `decode: true`. Decoding validates the reply.
+ * replies' types: a client whose types are given says so in its third type
+ * argument, `createOpenApiClient<ClientOperations, OperationsByRoute, true>`,
+ * which in turn requires `decode: true`. Decoding validates the reply.
  */
 export type OpenApiArgs<Decoded extends boolean> = Decoded extends true
 	? [options: OpenApiOptions & { readonly decode: true }]
@@ -169,7 +180,7 @@ export type OperationStreamOf<
 /** A bound client whose calls end together. */
 export type OpenApiGroup<
 	Ops extends OperationsShape<Ops>,
-	Routes = Record<never, never>,
+	Routes = RoutesOf<Ops>,
 	Decoded extends boolean = false,
 > = OpenApiClient<Ops, Routes, Decoded> & {
 	/**
@@ -188,6 +199,13 @@ export type PathsOf<Routes, M extends Method> = keyof Routes extends infer Route
 		: never
 	: never;
 
+/** The methods the spec has an operation for: the only ones a client offers. */
+export type MethodsOf<Routes> = keyof Routes extends infer Route
+	? Route extends `${infer M extends Method} ${string}`
+		? M
+		: never
+	: never;
+
 /** The `operationId` of the operation at `M P`. */
 export type IdOf<
 	Ops,
@@ -198,7 +216,7 @@ export type IdOf<
 
 export type OpenApiClient<
 	Ops extends OperationsShape<Ops>,
-	Routes = Record<never, never>,
+	Routes = RoutesOf<Ops>,
 	Decoded extends boolean = false,
 > = {
 	/** Calls an operation by its `operationId`. */
@@ -227,8 +245,11 @@ export type OpenApiClient<
 	 */
 	readonly operations: OperationTable<Ops>;
 } & {
-	/** Calls the operation at a path: `api.get('/employees/{id}', { param: { id } })`. */
-	readonly [M in Method]: <P extends PathsOf<Routes, M>>(
+	/**
+	 * Calls the operation at a path: `api.get('/employees/{id}', { param: { id } })`.
+	 * Only the methods the spec has an operation for are there.
+	 */
+	readonly [M in MethodsOf<Routes>]: <P extends PathsOf<Routes, M>>(
 		path: P,
 		...args: Args<Ops, IdOf<Ops, Routes, M, P>>
 	) => Promise<

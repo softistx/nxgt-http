@@ -23,7 +23,11 @@ import type {
 	ClientOperations,
 	OperationsByRoute,
 } from '../../test/generated/types';
-import { createOpenApiClient, type OpenApiOptions } from '../index';
+import {
+	createOpenApiClient,
+	type OpenApiClient,
+	type OpenApiOptions,
+} from '../index';
 
 const BAD_ITEM = { id: 'x', name: 2 };
 
@@ -181,8 +185,12 @@ describe('decode', () => {
 
 	it('types the replies as decoded only for a client that decodes', () => {
 		const http = answering(ITEM);
-		// @ts-expect-error decoding changes the replies' types: say so with `true`
-		createOpenApiClient<DOps, DRoutes>(http, dated, { decode: true });
+		const decoding = (api: OpenApiClient<DOps, DRoutes, true>) => api;
+		// `decode: true` is what types the replies as decoded, inferred or given.
+		decoding(createOpenApiClient(http, dated, { decode: true }));
+		decoding(createOpenApiClient<DOps, DRoutes>(http, dated, { decode: true }));
+		// @ts-expect-error a client that does not decode is not typed as one
+		decoding(createOpenApiClient(http, dated));
 		// @ts-expect-error a client typed as decoding must decode
 		createOpenApiClient<DOps, DRoutes, true>(http, dated, {});
 		// @ts-expect-error nor may it leave its options out

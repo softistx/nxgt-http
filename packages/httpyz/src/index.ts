@@ -27,6 +27,7 @@ export {
 	type ValidationIssue,
 } from './errors/errors';
 export type { AuthOptions } from './middleware/auth';
+export { type Cache, type CacheOptions, cache } from './middleware/cache';
 export type { Middleware, Next } from './middleware/compose';
 export type { RetryOptions } from './middleware/retry';
 export type {

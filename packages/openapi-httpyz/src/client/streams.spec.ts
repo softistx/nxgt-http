@@ -103,11 +103,7 @@ describe('api.stream', () => {
 	});
 
 	it('decodes each event as its schema outputs it', async () => {
-		const api = createOpenApiClient<
-			DatedOperations,
-			Record<never, never>,
-			true
-		>(http, dated, { decode: true });
+		const api = createOpenApiClient(http, dated, { decode: true });
 		for await (const event of api.stream(
 			'watchFeed',
 			{ query: { topic: 'x' } },

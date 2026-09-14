@@ -298,9 +298,12 @@ operations.watchFeed.responses[200]?.['text/event-stream'];
 // { kind: 'sse', events: { update: zItem, ping: null } }
 ```
 
-The table is typed `{ readonly [K in keyof Operations]: OperationSpec }`:
+The table is typed
+`{ readonly [K in keyof Operations]: OperationSpec<ClientOperations[K]> }`:
 this keeps it cheap for TypeScript on large specs, and the precise types are
-in `Operations`.
+in `Operations`. The type argument carries each operation's client types, so
+`createOpenApiClient(http, operations)` from `@nxgt/openapi-httpyz` needs no
+other import.
 
 Parameters arrive as text, so their validators read them strictly:
 

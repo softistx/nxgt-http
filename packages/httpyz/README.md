@@ -184,6 +184,13 @@ const employee = unwrap(
 );
 ```
 
+`ok` returns the data of any 2xx reply, narrowed to the success statuses
+the call declares, and throws a `ReplyStatusError` for any other:
+
+```ts
+const employee = ok(await http.get('/employees/{id}', { param: { id }, responses }));
+```
+
 A reply of `application/json` stands for a declared JSON type such as
 `application/problem+json`, and a declared `text/*` or `*/*` for any type
 it covers.
@@ -222,7 +229,7 @@ has the code `custom`.
 | `TimeoutError` | no reply within `timeout`. `timeout` is the limit |
 | `UndeclaredStatusError` | a status the call's `responses` do not declare. `status`, and `response`, unread |
 | `ValidationError` | a reply its declaration does not describe; or, from a binding, a request refused before it was sent. `failure` has every issue |
-| `ReplyStatusError` | from `unwrap()`: a reply with none of the statuses asked for. `status`, `data` and `response` |
+| `ReplyStatusError` | from `unwrap()` or `ok()`: a reply with none of the statuses asked for. `status`, `data` and `response` |
 
 The first four extend `ClientError`, whose message names the call,
 `GET /employees/{id}: no reply came back`, or with its `operationId`,

@@ -97,7 +97,10 @@ export class ValidationError extends ClientError {
 	}
 }
 
-/** From `unwrap()`: a declared reply, but not one of the statuses asked for. */
+/**
+ * From `unwrap()` or `ok()`: a declared reply, but not one of the statuses
+ * asked for. No status asked for means any 2xx.
+ */
 export class ReplyStatusError extends Error {
 	override name = 'ReplyStatusError';
 	readonly status: number;
@@ -108,7 +111,8 @@ export class ReplyStatusError extends Error {
 		reply: { status: number; data: unknown; response?: Response },
 		expected: readonly number[],
 	) {
-		super(`Expected a ${expected.join(' or ')} reply, got ${reply.status}`);
+		const wanted = expected.length > 0 ? expected.join(' or ') : '2xx';
+		super(`Expected a ${wanted} reply, got ${reply.status}`);
 		this.status = reply.status;
 		this.data = reply.data;
 		this.response = reply.response;

@@ -1,0 +1,46 @@
+{
+	"name": "@nxgt/httpyz-query",
+	"version": "0.0.0",
+	"license": "UNLICENSED",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"files": [
+		"dist",
+		"README.md",
+		"package.json"
+	],
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"default": "./dist/index.js"
+		},
+		"./package.json": "./package.json"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/softistx/nxgt-http.git",
+		"directory": "packages/httpyz-query"
+	},
+	"publishConfig": {
+		"registry": "https://registry.npmjs.org",
+		"access": "public"
+	},
+	"scripts": {
+		"build": "bun run ../../build.ts",
+		"test": "bun test src",
+		"typecheck": "tsc --noEmit"
+	},
+	"devDependencies": {
+		"@nxgt/httpyz": "workspace:^",
+		"@tanstack/query-core": "^5.102.8",
+		"@types/bun": "^1.4.0",
+		"zod": "^4.5.4"
+	},
+	"peerDependencies": {
+		"@nxgt/httpyz": "workspace:^",
+		"@tanstack/query-core": "^5.90.0",
+		"typescript": "^6.0.3"
+	}
+}

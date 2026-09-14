@@ -13,6 +13,7 @@ import {
 	type ValidationTarget,
 	validationErrorHandler,
 } from './errors';
+import { unroutable } from './routable';
 import type { Api, ApiOptions, ApiSpec, Method, Routes } from './types';
 
 /** What the engine asks of a validator: Zod's `safeParse`. */
@@ -114,6 +115,8 @@ export function createApi<S extends ApiSpec>(
 		const operation = operations[id];
 		if (!operation) throw new Error(`${id} is not an operationId of the spec`);
 		const name = label(id, operation);
+		const why = unroutable(operation);
+		if (why !== undefined) throw new Error(`${name}: ${why}`);
 		if (done.has(id)) throw new Error(`${name} already has a route`);
 		if (settings.tag !== undefined && !operation.tags.includes(settings.tag)) {
 			throw new Error(`${name} is not tagged ${settings.tag}`);
@@ -181,11 +184,15 @@ export function createApi<S extends ApiSpec>(
 		return routes;
 	};
 
+	// An operation `routes` cannot register is never missing: the generator
+	// warned about it, and the app serves it some other way.
 	const missing = (tag?: string): string[] =>
 		Object.entries(operations)
 			.filter(
 				([id, operation]) =>
-					!done.has(id) && (tag === undefined || operation.tags.includes(tag)),
+					!done.has(id) &&
+					unroutable(operation) === undefined &&
+					(tag === undefined || operation.tags.includes(tag)),
 			)
 			.map(([id]) => id);
 
@@ -257,7 +264,7 @@ function validation(
 			}
 		};
 		check('param', operation.param, c.req.param());
-		check('query', operation.query, readQuery(c, operation));
+		check('query', operation.query, readQuery(c, operation, issues));
 		check('header', operation.header, readHeaders(c, operation));
 		if (operation.body) await readBody(c, operation.body, issues, check);
 		if (issues.length > 0) {
@@ -279,21 +286,37 @@ type Check = (
 	value: unknown,
 ) => void;
 
-/** Declared query parameters: a string each, or every value of a list. */
+/**
+ * Declared query parameters: a string each, or every value of a list. A key
+ * that takes one value and is sent twice is an issue: the handler would see
+ * the first value and `c.req.queries()` the other.
+ */
 function readQuery(
 	c: Context,
 	operation: RuntimeOperation,
+	issues: ValidationIssue[],
 ): Record<string, unknown> {
 	const query: Record<string, unknown> = {};
 	for (const param of operation.parameters) {
 		if (param.in !== 'query') continue;
-		const value =
-			param.list && param.explode
-				? c.req.queries(param.name)
-				: param.list
-					? c.req.query(param.name)?.split(',')
-					: c.req.query(param.name);
-		if (value !== undefined) query[param.name] = value;
+		if (param.list && param.explode) {
+			const values = c.req.queries(param.name);
+			if (values !== undefined) query[param.name] = values;
+			continue;
+		}
+		const sent = c.req.queries(param.name)?.length ?? 0;
+		if (sent > 1) {
+			issues.push({
+				target: 'query',
+				path: [param.name],
+				code: 'repeated_parameter',
+				message: `${param.name} is sent ${sent} times, and takes one value`,
+			});
+		}
+		const value = c.req.query(param.name);
+		if (value !== undefined) {
+			query[param.name] = param.list ? value.split(',') : value;
+		}
 	}
 	return query;
 }
@@ -354,7 +377,7 @@ async function readBody(
 	};
 	const header = c.req.header('content-type');
 	if (header === undefined) {
-		if ((await c.req.text()) === '') absent(target);
+		if ((await read(c, () => c.req.text())) === '') absent(target);
 		else {
 			issues.push({
 				target,
@@ -378,7 +401,7 @@ async function readBody(
 	}
 	switch (media.kind) {
 		case 'json': {
-			const text = await c.req.text();
+			const text = await read(c, () => c.req.text());
 			if (text === '') return absent('json');
 			let value: unknown;
 			try {
@@ -397,16 +420,48 @@ async function readBody(
 			return;
 		}
 		case 'form': {
-			const value = await c.req.parseBody({ all: true });
+			// Read once, so parseBody takes Hono's cached copy of it.
+			const bytes = await read(c, () => c.req.arrayBuffer());
+			if (bytes.byteLength === 0) return absent('form');
+			let value: Awaited<ReturnType<Context['req']['parseBody']>>;
+			try {
+				value = await c.req.parseBody({ all: true });
+			} catch {
+				issues.push({
+					target: 'form',
+					path: [],
+					code: 'invalid_form',
+					message: `The request body is not a valid ${type} form`,
+				});
+				return;
+			}
 			if (media.schema) check('form', media.schema, value);
 			else c.req.addValidatedData('form', value);
 			return;
 		}
-		case 'text':
-			if (media.schema) check('body', media.schema, await c.req.text());
+		case 'text': {
+			const text = await read(c, () => c.req.text());
+			if (text === '') return absent('body');
+			if (media.schema) check('body', media.schema, text);
 			return;
+		}
 		default:
+			// Left unread, for the handler to stream; a length of 0 is no body.
+			if (c.req.header('content-length') === '0') absent('body');
 			return;
+	}
+}
+
+/** Reads the body through Hono's cache, which a read of `c.req.raw` bypasses. */
+async function read<T>(c: Context, body: () => Promise<T>): Promise<T> {
+	try {
+		return await body();
+	} catch (error) {
+		if (!c.req.raw.bodyUsed) throw error;
+		throw new Error(
+			'A middleware read the request body through c.req.raw before validation. Read it with c.req.json(), c.req.text() or c.req.arrayBuffer(), which Hono caches for the next reader',
+			{ cause: error },
+		);
 	}
 }
 
@@ -445,6 +500,32 @@ function reply(
 	};
 }
 
+/** Bodies that may never end: reading one to check it would hang the reply. */
+const STREAMS = new Set([
+	'text/event-stream',
+	'application/x-ndjson',
+	'application/jsonl',
+	'application/json-seq',
+]);
+
+/**
+ * What `c.json()` and `c.text()` send, `application/json` and `text/plain`,
+ * stands for a declared media type of the same kind: `application/problem+json`,
+ * `text/csv`.
+ */
+function sentBy(
+	content: { readonly [mediaType: string]: RuntimeMedia },
+	type: string,
+): RuntimeMedia | undefined {
+	const kind =
+		type === 'application/json'
+			? 'json'
+			: type === 'text/plain'
+				? 'text'
+				: undefined;
+	return Object.values(content).find((media) => media.kind === kind);
+}
+
 async function checkReply(
 	id: string,
 	operation: RuntimeOperation,
@@ -463,15 +544,22 @@ async function checkReply(
 	const types = Object.keys(declared);
 	if (types.length === 0) return [];
 	const header = response.headers.get('content-type');
+	const type = header === null ? undefined : mediaType(header);
 	const media =
-		header === null ? undefined : match(declared, mediaType(header));
+		type === undefined
+			? undefined
+			: (match(declared, type) ?? sentBy(declared, type));
 	if (!media) {
 		return issue(
 			'invalid_content_type',
 			`A ${response.status} reply of ${id} is ${types.join(' or ')}, not ${header ?? 'untyped'}`,
 		);
 	}
-	if (!media.schema || (media.kind !== 'json' && media.kind !== 'text')) {
+	if (
+		!media.schema ||
+		(media.kind !== 'json' && media.kind !== 'text') ||
+		STREAMS.has(type ?? '')
+	) {
 		return [];
 	}
 	const text = await response.clone().text();

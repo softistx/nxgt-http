@@ -62,16 +62,16 @@ components:
 Only OpenAPI 3.1 and 3.2 are read. Convert a 3.0 or Swagger 2.0 document
 first.
 
-Four files land in `output`, and a fifth with the [`hono`](options.md#hono)
-option:
+Four files land in `output` (`generated/openapi` when it is left out), and a
+fifth with the [`hono`](options.md#hono) option:
 
 | File | Holds | Imports |
 | --- | --- | --- |
-| `types.gen.ts` | a type per schema, an `as const` object per named enum, and the `Operations` map with its indexes | nothing |
-| `zod.gen.ts` | a `z<Name>` validator per schema | `zod`; from `types.gen.ts`, the enum objects and, when a schema is recursive, its types |
-| `operations.gen.ts` | every operation as data, with its parameter and form validators | `zod`, `zod.gen.ts`, types from `types.gen.ts` |
-| `paths.gen.ts` | `paths`, `operations` and `components`, as openapi-typescript prints them | types from `types.gen.ts` |
-| `hono.gen.ts` | `Replies`, `createRoutes` and `createApi`, bound to the spec | `hono` types, `@nxgt/openapi-codegen/hono`, `operations.gen.ts`, types from `types.gen.ts` |
+| `types.ts` | a type per schema, an `as const` object per named enum, and the `Operations` map with its indexes | nothing |
+| `zod.ts` | a `z<Name>` validator per schema | `zod`; from `types.ts`, the enum objects and, when a schema is recursive, its types |
+| `operations.ts` | every operation as data, with its parameter and form validators | `zod`, `zod.ts`, types from `types.ts` |
+| `paths.ts` | `paths`, `operations` and `components`, as openapi-typescript prints them | types from `types.ts` |
+| `hono.ts` | `Replies`, `createRoutes` and `createApi`, bound to the spec | `hono` types, `@nxgt/openapi-codegen/hono`, `operations.ts`, types from `types.ts` |
 
 A file whose content would not change is not rewritten, so a file watcher
 does not fire on a run that changed nothing. Commit the files, or generate
@@ -80,8 +80,8 @@ them in a build step.
 ## Use
 
 ```ts
-import type { Employee } from './generated/types.gen.js';
-import { zNewEmployee } from './generated/zod.gen.js';
+import type { Employee } from './generated/types.js';
+import { zNewEmployee } from './generated/zod.js';
 
 const input = zNewEmployee.parse(await request.json()); // throws a ZodError on bad input
 ```

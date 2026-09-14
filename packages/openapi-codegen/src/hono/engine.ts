@@ -1,7 +1,7 @@
 /**
- * The runtime behind `hono.gen.ts`. Each route is registered on a Hono app as
+ * The runtime behind `hono.ts`. Each route is registered on a Hono app as
  * `[...middlewares, validator, handler]`: the validator reads the parameters
- * and the body with the validators of `operations.gen.ts`, hands the results
+ * and the body with the validators of `operations.ts`, hands the results
  * to `c.req.valid()`, and answers every issue at once when there is one.
  */
 import type { Context, Hono, MiddlewareHandler, Next } from 'hono';
@@ -29,7 +29,7 @@ export interface RuntimeMedia {
 	readonly schema?: Validator;
 }
 
-/** An entry of the `operations` table in `operations.gen.ts`. */
+/** An entry of the `operations` table in `operations.ts`. */
 export interface RuntimeOperation {
 	readonly method: Method;
 	readonly path: string;
@@ -91,7 +91,7 @@ const onApp = new WeakMap<
 
 /**
  * One registry for a spec: `routes(app)` for each app or module, then
- * `assertComplete()`. `hono.gen.ts` calls it with the spec's table.
+ * `assertComplete()`. `hono.ts` calls it with the spec's table.
  */
 export function createApi<S extends ApiSpec>(
 	operations: OperationTable,

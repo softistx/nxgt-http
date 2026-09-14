@@ -15,14 +15,14 @@ examples come from a second one, with a pet store's parameters and a form.
 | … as `getEmployee`'s 200 response | `GetEmployee200Response` | `zGetEmployee200Response` |
 | a body or response shared through `components` | named after itself: `NotFoundResponse` | `zNotFoundResponse` |
 | `getPet`'s path, query or header parameters | `GetPetParam`, `GetPetQuery`, `GetPetHeader` | `zGetPetParam`, … |
-| `upload`'s form body, read from text | the body's own type | `zUploadForm`, in `operations.gen.ts` |
+| `upload`'s form body, read from text | the body's own type | `zUploadForm`, in `operations.ts` |
 | a schema whose defaults make input differ from output | `Employee` and `EmployeeInput` | `zEmployee` |
 
 Scalars and lists written inline stay inline: only objects, unions,
 intersections and maps get a name. Two schemas that would get the same name
 are an error. Rename one with the [`names` option](options.md#names).
 
-## `types.gen.ts`
+## `types.ts`
 
 ```ts
 export interface NewEmployee {
@@ -76,12 +76,12 @@ export type EmployeeStatus = (typeof EmployeeStatus)[keyof typeof EmployeeStatus
 - **Nothing is imported.** The enum objects are the only runtime values, so a
   front end can use the types without shipping Zod.
 
-## `zod.gen.ts`
+## `zod.ts`
 
 ```ts
 import { z } from 'zod';
-import { EmployeeStatus } from './types.gen.js';
-import type { Employee } from './types.gen.js';
+import { EmployeeStatus } from './types.js';
+import type { Employee } from './types.js';
 
 export const zEmployeeStatus = z.enum(EmployeeStatus);
 
@@ -115,7 +115,7 @@ The package's own tests check, for every schema of every fixture, that
 
 ## The `Operations` map
 
-`types.gen.ts` also describes every operation, keyed by its `operationId`,
+`types.ts` also describes every operation, keyed by its `operationId`,
 as a server sees it:
 
 ```ts
@@ -145,7 +145,7 @@ export interface Operations {
 | `form` | a form or multipart body, likewise |
 | `responses` | status code → media type → body; `{}` for a response with no content |
 
-What a caller sends, before defaults, is in [`paths.gen.ts`](#pathsgents).
+What a caller sends, before defaults, is in [`paths.ts`](#pathsgents).
 
 Four indexes come with it:
 
@@ -179,18 +179,18 @@ They are plain interfaces, so a lookup costs TypeScript the same whatever
 the size of the spec:
 
 ```ts
-import type { Operations, OperationsByRoute } from './generated/types.gen.js';
+import type { Operations, OperationsByRoute } from './generated/types.js';
 
 type Id = OperationsByRoute['put /employees/{id}']; // 'updateEmployee'
 type Updated = Operations[Id]['responses'][200]['application/json']; // Employee
 ```
 
-## `operations.gen.ts`
+## `operations.ts`
 
 The same operations as data, for code that reads requests at runtime:
 
 ```ts
-import { operations } from './generated/operations.gen.js';
+import { operations } from './generated/operations.js';
 
 const op = operations.getPet;
 op.param.parse({ petId: '7' }); // { petId: 7 }
@@ -229,7 +229,7 @@ A form body carries text too. When its schema is a flat object, it gets a
 validator of its own, `z<Operation>Form`, that reads each field the same
 way. A list field sent once is taken as a list of one.
 
-## `paths.gen.ts`
+## `paths.ts`
 
 The same spec in the shape openapi-typescript prints, so tools built for
 openapi-typescript's output, openapi-fetch first, read it unchanged:
@@ -273,7 +273,7 @@ export interface operations {
 
 ```ts
 import createClient from 'openapi-fetch';
-import type { paths } from './generated/paths.gen.js';
+import type { paths } from './generated/paths.js';
 
 const api = createClient<paths>({ baseUrl: 'https://api.example.com' });
 const { data } = await api.GET('/employees/{id}', {
@@ -281,7 +281,7 @@ const { data } = await api.GET('/employees/{id}', {
 }); // data: Employee | undefined
 ```
 
-- **Same types.** Every schema is its type from `types.gen.ts`, and
+- **Same types.** Every schema is its type from `types.ts`, and
   `components['schemas']['Employee']` is `Employee`.
 - **What is sent vs what comes back.** Parameters and request bodies are
   typed as a caller sends them (`XInput`, where defaults make it differ).
@@ -295,7 +295,7 @@ const { data } = await api.GET('/employees/{id}', {
   `components`' `responses`, `parameters`, `requestBodies`, `headers` and
   `pathItems`: they are resolved into `operations`.
 
-## `hono.gen.ts`
+## `hono.ts`
 
 Written with the [`hono` option](options.md#hono) only. It holds:
 - `Replies`: what each operation may send, as Hono types a reply;

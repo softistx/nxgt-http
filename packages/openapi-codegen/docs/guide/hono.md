@@ -1,6 +1,6 @@
 # Typed Hono routes
 
-With the `hono` option, the generator also writes `hono.gen.ts`: the routes
+With the `hono` option, the generator also writes `hono.ts`: the routes
 of the spec, typed for a Hono app and validated with the generated
 validators.
 
@@ -10,7 +10,7 @@ validators.
 
 ## Setup
 
-`hono.gen.ts` imports `@nxgt/openapi-codegen/hono` at runtime, so the
+`hono.ts` imports `@nxgt/openapi-codegen/hono` at runtime, so the
 package becomes a dependency of your app, not a dev dependency:
 
 ```sh
@@ -32,7 +32,7 @@ export default defineConfig({
 
 ```ts
 import { Hono } from 'hono';
-import { createRoutes } from './generated/hono.gen.js';
+import { createRoutes } from './generated/hono.js';
 
 const app = new Hono();
 const routes = createRoutes(app);
@@ -179,7 +179,7 @@ exact statuses.
 its routes on its own sub-app:
 
 ```ts
-import { createApi } from './generated/hono.gen.js';
+import { createApi } from './generated/hono.js';
 
 export const api = createApi();
 

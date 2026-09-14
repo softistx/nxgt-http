@@ -1,6 +1,6 @@
 # Hono runtime
 
-`src/hono/` is the `@nxgt/openapi-codegen/hono` subpath: what `hono.gen.ts`
+`src/hono/` is the `@nxgt/openapi-codegen/hono` subpath: what `hono.ts`
 binds to its spec. It imports `hono` for types only, so the subpath loads
 whether or not `hono` is installed. `hono` is an optional peer because the
 types need it.
@@ -107,7 +107,7 @@ A `Scope` narrows what `routes` offers:
   `OperationsByTag` and `PathsByTag`.
 
 With `dates: 'date'`, a reply body that holds a date is `Wire<T>`, from
-`types.gen.ts`. Hono types `c.json(x)` as `JSONParsed<typeof x>`, where a
+`types.ts`. Hono types `c.json(x)` as `JSONParsed<typeof x>`, where a
 `Date` is a `string`, so a reply typed with `T` itself would match nothing.
 `Wire<T>` is the only conditional type in a reply, and appears only where a
 date does.

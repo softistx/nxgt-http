@@ -5,11 +5,11 @@
 import { describe, expect, it } from 'bun:test';
 import { Hono, type MiddlewareHandler } from 'hono';
 import { z } from 'zod';
-import * as kitchen from '../../test/generated/kitchen-sink/hono.gen';
-import type { Pet } from '../../test/generated/kitchen-sink/types.gen';
-import * as search from '../../test/generated/query/hono.gen';
-import { createApi, createRoutes } from '../../test/generated/split/hono.gen';
-import type { Employee } from '../../test/generated/split/types.gen';
+import * as kitchen from '../../test/generated/kitchen-sink/hono';
+import type { Pet } from '../../test/generated/kitchen-sink/types';
+import * as search from '../../test/generated/query/hono';
+import { createApi, createRoutes } from '../../test/generated/split/hono';
+import type { Employee } from '../../test/generated/split/types';
 import { createApi as engine, type OperationTable } from './engine';
 import type { ValidationIssue } from './errors';
 

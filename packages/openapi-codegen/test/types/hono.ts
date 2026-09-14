@@ -3,11 +3,11 @@
  * below must be an error, and every other line must compile.
  */
 import { Hono, type MiddlewareHandler } from 'hono';
-import { createRoutes as dateRoutes } from '../generated/dates/hono.gen.js';
-import { createRoutes as kitchenRoutes } from '../generated/kitchen-sink/hono.gen.js';
-import { createRoutes as searchRoutes } from '../generated/query/hono.gen.js';
-import { createApi, createRoutes } from '../generated/split/hono.gen.js';
-import type { Employee } from '../generated/split/types.gen.js';
+import { createRoutes as dateRoutes } from '../generated/dates/hono.js';
+import { createRoutes as kitchenRoutes } from '../generated/kitchen-sink/hono.js';
+import { createRoutes as searchRoutes } from '../generated/query/hono.js';
+import { createApi, createRoutes } from '../generated/split/hono.js';
+import type { Employee } from '../generated/split/types.js';
 
 declare const ada: Employee;
 declare const auth: MiddlewareHandler;

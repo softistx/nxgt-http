@@ -15,6 +15,7 @@ export {
 	type Severity,
 } from './errors';
 export {
+	DEFAULT_OUTPUT,
 	type GenerateContext,
 	type GenerateOptions,
 	type GenerateResult,

@@ -20,11 +20,11 @@ await generate({
 | Option | Default | |
 | --- | --- | --- |
 | `input` | required | the root document of the spec |
-| `output` | required | the directory the files are written to |
+| `output` | `'generated/openapi'` | the directory the files are written to |
 | [`unknownKeys`](#unknownkeys) | `'strip'` | what an object does with keys it does not declare |
 | [`importExtension`](#importextension) | `'.js'` | how generated files import each other |
 | [`enums`](#enums) | `'object'` | a named enum as an `as const` object, or a plain union |
-| [`hono`](#hono) | `false` | also write `hono.gen.ts`: typed routes for a Hono app |
+| [`hono`](#hono) | `false` | also write `hono.ts`: typed routes for a Hono app |
 | [`dates`](#dates) | `'string'` | a `date-time` as its string, or decoded to a `Date` |
 | [`names`](#names) | `{}` | renames schemas |
 | [`legacyNullable`](#legacynullable) | `'warn'` | tolerate or refuse 3.0's `nullable: true` |
@@ -60,30 +60,30 @@ nothing. Its extra keys are dropped, and a `not_enforced` warning says so.
 
 ## `importExtension`
 
-How the generated files import each other (`types.gen`, `zod.gen`,
-`operations.gen`):
+How the generated files import each other (`types`, `zod`,
+`operations`):
 
 | Value | Import | Works with |
 | --- | --- | --- |
-| `'.js'` | `'./types.gen.js'` | every `moduleResolution`, Node's included |
-| `''` | `'./types.gen'` | bundlers only |
-| `'.ts'` | `'./types.gen.ts'` | `allowImportingTsExtensions` |
+| `'.js'` | `'./types.js'` | every `moduleResolution`, Node's included |
+| `''` | `'./types'` | bundlers only |
+| `'.ts'` | `'./types.ts'` | `allowImportingTsExtensions` |
 
 ## `enums`
 
 A named `enum` of two or more strings or numbers:
 
-| Value | `types.gen.ts` | `zod.gen.ts` |
+| Value | `types.ts` | `zod.ts` |
 | --- | --- | --- |
 | `'object'` | `export const Status = { Active: 'active', … } as const` and `type Status = 'active' \| …` | `z.enum(Status)` |
 | `'union'` | `type Status = 'active' \| …` | `z.enum(['active', …])`, or `z.literal([1, 2])` for numbers |
 
 Either way the type accepts plain literals. `'object'` adds a runtime value
-per enum, `Status.Active`, which `zod.gen.ts` imports.
+per enum, `Status.Active`, which `zod.ts` imports.
 
 ## `hono`
 
-`true` also writes `hono.gen.ts`:
+`true` also writes `hono.ts`:
 - `Replies`, what each operation may send, as Hono types a reply;
 - `createRoutes` and `createApi`, bound to the spec.
 
@@ -110,9 +110,9 @@ With `'date'`:
 - **A default is written in the spec as JSON**, so it goes through the codec
   too: `.prefault('2024-01-01T09:00:00Z')`.
 - **What travels is typed as JSON:**
-  - `types.gen.ts` exports `Wire<T>`, which turns each `Date` into a
+  - `types.ts` exports `Wire<T>`, which turns each `Date` into a
     `string`;
-  - `paths.gen.ts` types responses and `components` with it, since
+  - `paths.ts` types responses and `components` with it, since
     openapi-fetch decodes nothing;
   - `Replies` types replies with it, since `c.json()` sends a `Date` as its
     string.

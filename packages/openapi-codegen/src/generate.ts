@@ -10,8 +10,8 @@ import { type WriteResult, writeFiles } from './writer/write';
 export interface GenerateOptions extends IROptions {
 	/** The spec's root document: `openapi.yaml`, or one that `$ref`s the rest. */
 	input: string;
-	/** The directory the generated files are written to. */
-	output: string;
+	/** The directory the generated files are written to. Default `generated/openapi`. */
+	output?: string;
 	/**
 	 * What an object does with keys it does not declare, where the spec does
 	 * not say with `additionalProperties`. Default `strip`.
@@ -29,7 +29,7 @@ export interface GenerateOptions extends IROptions {
 	 */
 	enums?: Enums;
 	/**
-	 * Also emit `hono.gen.ts`: typed routes for a Hono app. It imports `hono`
+	 * Also emit `hono.ts`: typed routes for a Hono app. It imports `hono`
 	 * and `@nxgt/openapi-codegen/hono`, so both become runtime dependencies.
 	 */
 	hono?: boolean;
@@ -51,6 +51,9 @@ export interface GenerateResult extends WriteResult {
 	/** What the spec uses that the generated code does not enforce, or ignores. */
 	warnings: Diagnostic[];
 }
+
+/** Where the files go when no `output` is given, relative to `cwd`. */
+export const DEFAULT_OUTPUT = 'generated/openapi';
 
 const UNKNOWN_KEYS: readonly string[] = ['strip', 'strict', 'loose'];
 const EXTENSIONS: readonly string[] = ['', '.js', '.ts'];
@@ -94,7 +97,7 @@ export async function generateFiles(
 		throw invalid(`dates must be string or date, not ${dates}`);
 	}
 	const input = resolve(cwd, options.input);
-	const output = resolve(cwd, options.output);
+	const output = resolve(cwd, options.output ?? DEFAULT_OUTPUT);
 	const doc = await loadDocument(input, { fs, cwd });
 	const ir = buildIR(doc, options);
 	const { files, warnings } = emitFiles(ir, {

@@ -1,11 +1,11 @@
 /**
  * The HTTP side of the spec.
  *
- * In `types.gen.ts`: `Operations`, keyed by `operationId`, whose entries
+ * In `types.ts`: `Operations`, keyed by `operationId`, whose entries
  * carry what a handler gets (parameters and bodies as validated) and the
  * replies, plus the indexes `OperationsByRoute`, `PathsByMethod`,
- * `OperationsByTag` and `PathsByTag`. What a caller sends is `paths.gen.ts`'s
- * business. In `operations.gen.ts`: the same operations as data, with the
+ * `OperationsByTag` and `PathsByTag`. What a caller sends is `paths.ts`'s
+ * business. In `operations.ts`: the same operations as data, with the
  * validators that read them off a request, which the Hono integration runs.
  */
 import {
@@ -37,7 +37,7 @@ import {
 
 type Helper = 'flag' | 'isoDate' | 'none' | 'numeric' | 'repeated';
 
-/** Declared at the top of `operations.gen.ts` when a validator uses them. */
+/** Declared at the top of `operations.ts` when a validator uses them. */
 const HELPERS: Record<Helper, string> = {
 	isoDate: ISO_DATE,
 	flag: [
@@ -136,7 +136,7 @@ export function operationDocs(operation: OperationIR): string[] {
 	return lines;
 }
 
-// ---------------------------------------------------------------- types.gen.ts
+// ---------------------------------------------------------------- types.ts
 
 export function operationTypes(ctx: EmitContext): string[] {
 	const blocks: string[] = [];
@@ -283,7 +283,7 @@ function contentType(
 	return `{\n${lines.join('\n')}\n${indent}}`;
 }
 
-// ----------------------------------------------------------- operations.gen.ts
+// ----------------------------------------------------------- operations.ts
 
 export function emitOperations(ctx: EmitContext): {
 	sections: string[];
@@ -326,11 +326,9 @@ export function emitOperations(ctx: EmitContext): {
 	const imports = ["import { z } from 'zod';"];
 	if (uses.size > 0) {
 		const names = [...uses].map((id) => `z${ctx.schema(id).name}`).sort();
-		imports.push(
-			`import ${list('{ ', names, ' }', '')} from './zod.gen${ext}';`,
-		);
+		imports.push(`import ${list('{ ', names, ' }', '')} from './zod${ext}';`);
 	}
-	imports.push(`import type { Operations } from './types.gen${ext}';`);
+	imports.push(`import type { Operations } from './types${ext}';`);
 	return {
 		imports,
 		sections: [

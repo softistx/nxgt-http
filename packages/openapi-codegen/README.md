@@ -34,7 +34,7 @@ The generator runs on Bun; the code it generates runs anywhere.
 | Import | For |
 | --- | --- |
 | `@nxgt/openapi-codegen` | the generator: `generate()`, `defineConfig`, the pipeline stages |
-| `@nxgt/openapi-codegen/hono` | the runtime `hono.gen.ts` binds to its spec; needs `hono` |
+| `@nxgt/openapi-codegen/hono` | the runtime `hono.ts` binds to its spec; needs `hono` |
 
 ## Usage
 
@@ -64,18 +64,19 @@ import { generate } from '@nxgt/openapi-codegen';
 await generate({ input: 'openapi/openapi.yaml', output: 'src/generated' });
 ```
 
-This writes four files:
+This writes four files to `output`, `generated/openapi` when it is left
+out:
 
-- `types.gen.ts`: a type per schema, an `as const` object per named enum,
+- `types.ts`: a type per schema, an `as const` object per named enum,
   and the `Operations` map with its indexes;
-- `zod.gen.ts`: a `z<Name>` validator per schema;
-- `operations.gen.ts`: every operation as data, with its parameter and form
+- `zod.ts`: a `z<Name>` validator per schema;
+- `operations.ts`: every operation as data, with its parameter and form
   validators;
-- `paths.gen.ts`: `paths`, `operations` and `components` in the shape
+- `paths.ts`: `paths`, `operations` and `components` in the shape
   openapi-typescript prints, so `createClient<paths>()` from openapi-fetch
   works with no other step.
 
-With `hono: true`, it writes a fifth, `hono.gen.ts`.
+With `hono: true`, it writes a fifth, `hono.ts`.
 
 `$ref`s are followed across files by relative path, including into
 `node_modules` (`../node_modules/@acme/fragments/Error.yaml`).
@@ -83,9 +84,9 @@ With `hono: true`, it writes a fifth, `hono.gen.ts`.
 ### Validate with the generated code
 
 ```ts
-import type { Employee } from './generated/types.gen.js';
-import { zNewEmployee } from './generated/zod.gen.js';
-import { operations } from './generated/operations.gen.js';
+import type { Employee } from './generated/types.js';
+import { zNewEmployee } from './generated/zod.js';
+import { operations } from './generated/operations.js';
 
 const body = zNewEmployee.parse(await request.json());
 const query = operations.listEmployees.query.parse({ page: '2' }); // { page: 2 }
@@ -97,7 +98,7 @@ With `hono: true` in the config:
 
 ```ts
 import { Hono } from 'hono';
-import { createRoutes } from './generated/hono.gen.js';
+import { createRoutes } from './generated/hono.js';
 
 const app = new Hono();
 
@@ -178,12 +179,12 @@ on the spec:
 - **`readOnly` and `writeOnly` are not enforced.** A required `readOnly`
   property is required in a request body too. Give requests their own
   schema.
-- **Imports end in `.js`** (`./types.gen.js`) so they resolve under every
+- **Imports end in `.js`** (`./types.js`) so they resolve under every
   `moduleResolution`. Set `importExtension: ''` if a tool needs bare
   specifiers.
 - **Keep the output away from your formatter and linter.** It is printed
   tab-indented, not by your tools. Exclude the output directory.
-- **`hono.gen.ts` imports this package at runtime.** Install it as a
+- **`hono.ts` imports this package at runtime.** Install it as a
   dependency, not a dev dependency, once you generate that file.
 - **Give `c.json()` a status, and reply with plain objects.** Without a
   status, Hono types a reply with any status, and it matches no declared

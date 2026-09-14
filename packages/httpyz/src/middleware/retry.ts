@@ -3,9 +3,9 @@
  * 408, 429, 502, 503 or 504. Only for methods that may be repeated, since a
  * POST that got no reply may still have been carried out.
  */
-import { NetworkError } from './errors';
-import type { Middleware } from './middleware';
-import type { Method } from './types';
+import type { Method } from '../client/types';
+import { NetworkError } from '../errors/errors';
+import type { Middleware } from './compose';
 
 export interface RetryOptions {
 	/** Tries after the first. Default: 2. */

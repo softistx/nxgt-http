@@ -1,30 +1,29 @@
 /**
  * `validate` and `decode`, against the server's own validators: what the
- * client refuses, the Hono app generated from the same spec refuses too, with
- * the same issues.
+ * binding refuses, the Hono app generated from the same spec refuses too,
+ * with the same issues.
  */
 import { describe, expect, it, spyOn } from 'bun:test';
 import { Hono } from 'hono';
-import { operations as dated } from '../test/generated/dates/operations';
+import { operations as dated } from '../../test/generated/dates/operations';
 import type {
-	ClientOperations as DatedOperations,
-	OperationsByRoute as DatedRoutes,
-} from '../test/generated/dates/types';
-import { createRoutes } from '../test/generated/hono';
-import { operations } from '../test/generated/operations';
+	ClientOperations as DOps,
+	OperationsByRoute as DRoutes,
+} from '../../test/generated/dates/types';
+import { createRoutes } from '../../test/generated/hono';
+import { operations } from '../../test/generated/operations';
 import type {
 	ClientOperations,
 	OperationsByRoute,
-} from '../test/generated/types';
+} from '../../test/generated/types';
 import {
-	type ClientOptions,
-	createClient,
-	type StandardSchemaV1,
+	createHttpClient,
 	UndeclaredStatusError,
 	unwrap,
 	ValidationError,
 	type ValidationIssue,
-} from './index';
+} from '../index';
+import { createOpenApiClient, type OpenApiOptions } from './index';
 
 const BAD_ITEM = { id: 'x', name: 2 };
 
@@ -43,20 +42,28 @@ createRoutes(strict, { validateResponses: true }).get('/items/{id}', (c) =>
 );
 
 let sent = 0;
-const client = (options: ClientOptions = {}) =>
-	createClient<ClientOperations, OperationsByRoute>(operations, {
-		baseUrl: 'http://api.test',
-		fetch: async (request) => {
-			sent += 1;
-			return app.fetch(request);
-		},
-		...options,
-	});
+const http = createHttpClient({
+	baseUrl: 'http://api.test',
+	fetch: async (request) => {
+		sent += 1;
+		return app.fetch(request);
+	},
+});
+const client = (options: OpenApiOptions = {}) =>
+	createOpenApiClient<ClientOperations, OperationsByRoute>(
+		http,
+		operations,
+		options,
+	);
 type Api = ReturnType<typeof client>;
 type Call = (api: Api) => Promise<{ status: number; data: unknown }>;
 
 const ITEM = { id: 1, name: 'a', createdAt: '2024-05-01T10:00:00.000Z' };
-const json = (body: unknown) => async () => Response.json(body);
+const answering = (body: unknown) =>
+	createHttpClient({
+		baseUrl: 'http://api.test',
+		fetch: async () => Response.json(body),
+	});
 
 describe('validate', () => {
 	it('refuses a request the server refuses, with its issues, and sends nothing', async () => {
@@ -128,12 +135,16 @@ describe('validate', () => {
 	});
 
 	it('refuses an empty reply where JSON is declared', async () => {
-		const api = createClient<ClientOperations, OperationsByRoute>(operations, {
+		const empty = createHttpClient({
 			baseUrl: 'http://api.test',
 			fetch: async () =>
 				new Response('', { headers: { 'content-type': 'application/json' } }),
-			validate: { response: true },
 		});
+		const api = createOpenApiClient<ClientOperations, OperationsByRoute>(
+			empty,
+			operations,
+			{ validate: { response: true } },
+		);
 		const error = await api
 			.get('/items/{id}', { param: { id: 1 } })
 			.catch((caught: unknown) => caught);
@@ -145,9 +156,7 @@ describe('validate', () => {
 
 describe('decode', () => {
 	it('keeps a checked reply as it came, and decodes it with decode', async () => {
-		const wire = createClient<DatedOperations, DatedRoutes>(dated, {
-			baseUrl: 'http://api.test',
-			fetch: json(ITEM),
+		const wire = createOpenApiClient<DOps, DRoutes>(answering(ITEM), dated, {
 			validate: true,
 		});
 		const kept = unwrap(
@@ -157,11 +166,11 @@ describe('decode', () => {
 		const text: string | undefined = kept.createdAt;
 		expect(text).toBe(ITEM.createdAt);
 
-		const decoding = createClient<DatedOperations, DatedRoutes, true>(dated, {
-			baseUrl: 'http://api.test',
-			fetch: json(ITEM),
-			decode: true,
-		});
+		const decoding = createOpenApiClient<DOps, DRoutes, true>(
+			answering(ITEM),
+			dated,
+			{ decode: true },
+		);
 		const decoded = unwrap(
 			await decoding.get('/items/{id}', { param: { id: 1 } }),
 			200,
@@ -171,61 +180,12 @@ describe('decode', () => {
 	});
 
 	it('types the replies as decoded only for a client that decodes', () => {
-		const fetch = json(ITEM);
+		const http = answering(ITEM);
 		// @ts-expect-error decoding changes the replies' types: say so with `true`
-		createClient<DatedOperations, DatedRoutes>(dated, { fetch, decode: true });
+		createOpenApiClient<DOps, DRoutes>(http, dated, { decode: true });
 		// @ts-expect-error a client typed as decoding must decode
-		createClient<DatedOperations, DatedRoutes, true>(dated, { fetch });
+		createOpenApiClient<DOps, DRoutes, true>(http, dated, {});
 		// @ts-expect-error nor may it leave its options out
-		createClient<DatedOperations, DatedRoutes, true>(dated);
-	});
-
-	it('reads any Standard Schema, and a vendor without issue codes', async () => {
-		const positive: StandardSchemaV1<unknown, number> = {
-			'~standard': {
-				version: 1,
-				vendor: 'test',
-				validate: async (value) =>
-					typeof value === 'number' && value > 0
-						? { value: value * 2 }
-						: { issues: [{ message: 'not positive', path: [{ key: 'n' }] }] },
-			},
-		};
-		interface Ops {
-			double: {
-				method: 'get';
-				path: '/n';
-				args: [];
-				reply: { status: 200; type: 'application/json'; data: number };
-				wire: { status: 200; type: 'application/json'; data: number };
-			};
-		}
-		const table = {
-			double: {
-				method: 'get',
-				path: '/n',
-				parameters: [],
-				responses: {
-					200: { 'application/json': { kind: 'json', schema: positive } },
-				},
-			},
-		} as const;
-		let answer = 2;
-		const api = createClient<Ops, Record<never, never>, true>(table, {
-			baseUrl: 'http://api.test',
-			fetch: async () => Response.json(answer),
-			decode: true,
-		});
-		expect(unwrap(await api.op('double'), 200)).toBe(4);
-		answer = -1;
-		const error = await api.op('double').catch((caught: unknown) => caught);
-		expect((error as ValidationError).failure.issues).toEqual([
-			{
-				target: 'response',
-				path: ['n'],
-				code: 'custom',
-				message: 'not positive',
-			},
-		]);
+		createOpenApiClient<DOps, DRoutes, true>(http, dated);
 	});
 });

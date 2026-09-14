@@ -1,5 +1,15 @@
-export type { AuthOptions } from './auth';
-export { createClient } from './client';
+export { createHttpClient } from './client/create-http-client';
+export type {
+	Call,
+	CallOptions,
+	HttpClient,
+	HttpClientOptions,
+	Method,
+	ReplyOptions,
+	RequestArgs,
+	RequestOptions,
+	SendOptions,
+} from './client/types';
 export {
 	type CallContext,
 	ClientError,
@@ -10,28 +20,33 @@ export {
 	ValidationError,
 	type ValidationFailure,
 	type ValidationIssue,
-} from './errors';
-export type { Middleware, Next } from './middleware';
-export { unwrap } from './reply';
-export type { RetryOptions } from './retry';
+} from './errors/errors';
+export type { AuthOptions } from './middleware/auth';
+export type { Middleware, Next } from './middleware/compose';
+export type { RetryOptions } from './middleware/retry';
 export type {
+	AnyReply,
+	Declared,
+	HttpReply,
+	ReplyOf,
+	Responses,
+	WithResponse,
+} from './reply/types';
+export { unwrap } from './reply/unwrap';
+export type {
+	BodyInput,
+	FormFields,
+	ParamValue,
+	PathInput,
+	PathParamNames,
+	QueryInput,
+	QueryValue,
+	RequestInput,
+} from './request/types';
+export type {
+	InferInput,
+	InferOutput,
 	StandardIssue,
 	StandardResult,
 	StandardSchemaV1,
-} from './standard';
-export type {
-	Args,
-	CallInit,
-	Client,
-	ClientArgs,
-	ClientOperation,
-	ClientOptions,
-	Method,
-	OperationsShape,
-	OperationTable,
-	ReplyOf,
-	Result,
-	RuntimeMedia,
-	RuntimeOperation,
-	RuntimeParameter,
-} from './types';
+} from './schema/standard-schema';

@@ -3,7 +3,7 @@
  * refused together wait on the same refresh, then are sent again once, with
  * the new token.
  */
-import type { Middleware } from './middleware';
+import type { Middleware } from './compose';
 
 type Token = string | null | undefined;
 

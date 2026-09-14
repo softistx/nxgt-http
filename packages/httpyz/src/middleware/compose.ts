@@ -9,12 +9,12 @@
  * 	try {
  * 		return await next(request);
  * 	} finally {
- * 		metrics.record(call.operationId, performance.now() - start);
+ * 		metrics.record(call.path, performance.now() - start);
  * 	}
  * };
  * ```
  */
-import type { CallContext } from './errors';
+import type { CallContext } from '../errors/errors';
 
 export type Next = (request: Request) => Promise<Response>;
 

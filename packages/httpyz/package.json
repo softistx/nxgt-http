@@ -1,5 +1,5 @@
 {
-	"name": "@nxgt/openapi-client",
+	"name": "@nxgt/http-client",
 	"version": "0.0.0",
 	"license": "UNLICENSED",
 	"type": "module",
@@ -16,12 +16,17 @@
 			"import": "./dist/index.js",
 			"default": "./dist/index.js"
 		},
+		"./openapi": {
+			"types": "./dist/openapi/index.d.ts",
+			"import": "./dist/openapi/index.js",
+			"default": "./dist/openapi/index.js"
+		},
 		"./package.json": "./package.json"
 	},
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/softistx/nxgt-core.git",
-		"directory": "packages/openapi-client"
+		"directory": "packages/http-client"
 	},
 	"publishConfig": {
 		"registry": "https://registry.npmjs.org",
@@ -35,7 +40,8 @@
 	},
 	"nxgt": {
 		"entrypoints": [
-			"src/index.ts"
+			"src/index.ts",
+			"src/openapi/index.ts"
 		]
 	},
 	"devDependencies": {

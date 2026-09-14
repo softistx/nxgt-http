@@ -5,9 +5,10 @@
  * server would refuse is refused here with the same issues, and nothing is
  * sent.
  */
-import { absent, fields, type Input, text } from './encode';
-import type { ValidationIssue } from './errors';
-import { check, type StandardSchemaV1 } from './standard';
+import type { ValidationIssue } from '../errors/errors';
+import { absent, fields, text } from '../request/encode';
+import { check, type StandardSchemaV1 } from '../schema/standard-schema';
+import type { Input } from './to-request';
 import type { RuntimeMedia, RuntimeOperation } from './types';
 
 export async function checkRequest(

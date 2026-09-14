@@ -1,9 +1,10 @@
 /** Which call failed: every error a call throws carries it. */
 export interface CallContext {
-	readonly operationId: string;
 	readonly method: string;
-	/** As the spec writes it: `/employees/{id}`. */
+	/** As the caller wrote it: `/employees/{id}`. */
 	readonly path: string;
+	/** The call's name, when it was given one: an OpenAPI `operationId`. */
+	readonly operationId?: string;
 }
 
 /** Where a value was found wrong, as `@nxgt/openapi-codegen/hono` reports it. */
@@ -18,7 +19,7 @@ export interface ValidationIssue {
 /** The same shape as the server's: one failure, every issue in it. */
 export interface ValidationFailure {
 	kind: 'request' | 'response';
-	operationId: string;
+	operationId?: string;
 	method: string;
 	path: string;
 	status?: number;
@@ -31,15 +32,17 @@ export interface ValidationFailure {
  */
 export class ClientError extends Error {
 	override name = 'ClientError';
-	readonly operationId: string;
+	readonly operationId: string | undefined;
 	readonly method: string;
 	readonly path: string;
 
 	constructor(context: CallContext, message: string, options?: ErrorOptions) {
-		super(
-			`${context.operationId} (${context.method.toUpperCase()} ${context.path}): ${message}`,
-			options,
-		);
+		const route = `${context.method.toUpperCase()} ${context.path}`;
+		const call =
+			context.operationId === undefined
+				? route
+				: `${context.operationId} (${route})`;
+		super(`${call}: ${message}`, options);
 		this.operationId = context.operationId;
 		this.method = context.method;
 		this.path = context.path;
@@ -65,7 +68,7 @@ export class TimeoutError extends ClientError {
 	}
 }
 
-/** A status the spec does not declare for the operation: its `default` and `4XX` replies included. */
+/** A status the call's `responses` do not declare. */
 export class UndeclaredStatusError extends ClientError {
 	override name = 'UndeclaredStatusError';
 	readonly status: number;
@@ -73,13 +76,17 @@ export class UndeclaredStatusError extends ClientError {
 	readonly response: Response;
 
 	constructor(context: CallContext, response: Response) {
-		super(context, `the spec declares no ${response.status} reply`);
+		super(context, `no ${response.status} reply is declared`);
 		this.status = response.status;
 		this.response = response;
 	}
 }
 
-/** A reply the spec does not describe: a media type it does not declare, JSON that does not parse. */
+/**
+ * A reply its declaration does not describe: an undeclared media type, JSON
+ * that does not parse, a value its schema refuses; or a request refused
+ * before it was sent.
+ */
 export class ValidationError extends ClientError {
 	override name = 'ValidationError';
 	readonly failure: ValidationFailure;

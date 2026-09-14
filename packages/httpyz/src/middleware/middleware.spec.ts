@@ -1,18 +1,16 @@
 /** `use`, `auth` and `retry`, against a scripted `fetch`. */
 import { describe, expect, it } from 'bun:test';
-import { operations } from '../test/generated/operations';
-import type {
-	ClientOperations,
-	OperationsByRoute,
-} from '../test/generated/types';
+import { z } from 'zod';
 import {
-	type ClientOptions,
-	createClient,
+	type CallOptions,
+	createHttpClient,
+	type HttpClient,
+	type HttpClientOptions,
 	type Middleware,
 	NetworkError,
 	TimeoutError,
 	UndeclaredStatusError,
-} from './index';
+} from '../index';
 import { retryDelay, retrySettings } from './retry';
 
 type Answer = Response | Error | ((request: Request) => Promise<Response>);
@@ -31,17 +29,16 @@ const script = (...answers: Answer[]) => {
 };
 const api = (
 	fetch: (request: Request) => Promise<Response>,
-	options: ClientOptions = {},
-) =>
-	createClient<ClientOperations, OperationsByRoute>(operations, {
-		baseUrl: 'http://api.test',
-		fetch,
-		...options,
-	});
+	options: HttpClientOptions = {},
+) => createHttpClient({ baseUrl: 'http://api.test', fetch, ...options });
+
+const Item = z.object({ id: z.int(), name: z.string() });
+const responses = { 200: Item };
+const getItem = (client: HttpClient, init: CallOptions = {}) =>
+	client.get('/items/{id}', { param: { id: 1 }, responses, ...init });
 const item = () => Response.json({ id: 1, name: 'a' });
 const status = (code: number, headers?: HeadersInit) =>
 	new Response(null, { status: code, headers });
-const getItem = { param: { id: 1 } };
 const failure = (call: Promise<unknown>) =>
 	call.then(
 		() => undefined,
@@ -54,19 +51,21 @@ describe('use', () => {
 		const tag =
 			(name: string): Middleware =>
 			async (request, next, call) => {
-				order.push(`${name} ${call.operationId}`);
+				order.push(`${name} ${call.path}`);
 				request.headers.set(`x-${name}`, '1');
 				const response = await next(request);
 				order.push(`${name} done`);
 				return response;
 			};
 		const { fetch, seen } = script(item());
-		const reply = await api(fetch, { use: [tag('a'), tag('b')] }).get(
-			'/items/{id}',
-			getItem,
-		);
+		const reply = await getItem(api(fetch, { use: [tag('a'), tag('b')] }));
 		expect(reply.status).toBe(200);
-		expect(order).toEqual(['a getItem', 'b getItem', 'b done', 'a done']);
+		expect(order).toEqual([
+			'a /items/{id}',
+			'b /items/{id}',
+			'b done',
+			'a done',
+		]);
 		expect(seen[0]?.headers.get('x-b')).toBe('1');
 	});
 
@@ -74,10 +73,7 @@ describe('use', () => {
 		const { fetch, seen } = script();
 		const cached: Middleware = async () =>
 			Response.json({ id: 2, name: 'cached' });
-		const reply = await api(fetch, { use: [cached] }).get(
-			'/items/{id}',
-			getItem,
-		);
+		const reply = await getItem(api(fetch, { use: [cached] }));
 		expect(reply.data).toEqual({ id: 2, name: 'cached' });
 		expect(seen).toHaveLength(0);
 	});
@@ -88,7 +84,7 @@ describe('use', () => {
 			throw new RangeError('refused');
 		};
 		const error = await failure(
-			api(fetch, { use: [refuse], retry: 2 }).get('/items/{id}', getItem),
+			getItem(api(fetch, { use: [refuse], retry: 2 })),
 		);
 		expect(error).toBeInstanceOf(RangeError);
 		expect(seen).toHaveLength(0);
@@ -100,9 +96,9 @@ describe('auth', () => {
 		const { fetch, seen } = script(item(), item());
 		let token: string | undefined = 't1';
 		const client = api(fetch, { auth: { token: async () => token } });
-		await client.get('/items/{id}', getItem);
+		await getItem(client);
 		token = undefined;
-		await client.get('/items/{id}', getItem);
+		await getItem(client);
 		expect(seen.map((request) => request.headers.get('authorization'))).toEqual(
 			['Bearer t1', null],
 		);
@@ -126,7 +122,9 @@ describe('auth', () => {
 			},
 		});
 		const replies = await Promise.all(
-			[1, 2, 3].map((id) => client.get('/items/{id}', { param: { id } })),
+			[1, 2, 3].map((id) =>
+				client.get('/items/{id}', { param: { id }, responses }),
+			),
 		);
 		expect(replies.map((reply) => reply.status)).toEqual([200, 200, 200]);
 		expect(refreshes).toBe(1);
@@ -152,6 +150,7 @@ describe('auth', () => {
 		const reply = await client.put('/items/{id}', {
 			param: { id: 1 },
 			body: new TextEncoder().encode('hi'),
+			responses: { 204: null },
 		});
 		expect(reply.status).toBe(204);
 		expect(bodies).toEqual(['hi', 'hi']);
@@ -167,7 +166,7 @@ describe('auth', () => {
 				},
 			},
 		});
-		const error = await failure(client.get('/items/{id}', getItem));
+		const error = await failure(getItem(client));
 		expect(error).toBeInstanceOf(UndeclaredStatusError);
 		expect((error as UndeclaredStatusError).status).toBe(401);
 		expect(seen).toHaveLength(1);
@@ -183,10 +182,7 @@ describe('retry', () => {
 			new TypeError('fetch failed'),
 			item(),
 		);
-		const reply = await api(fetch, { retry: { attempts: 2, ...now } }).get(
-			'/items/{id}',
-			getItem,
-		);
+		const reply = await getItem(api(fetch, { retry: { attempts: 2, ...now } }));
 		expect(reply.status).toBe(200);
 		expect(seen).toHaveLength(3);
 	});
@@ -194,20 +190,14 @@ describe('retry', () => {
 	it('stops after its attempts, with the last reply or failure', async () => {
 		const replied = script(status(503), status(503));
 		const error = await failure(
-			api(replied.fetch, { retry: { attempts: 1, ...now } }).get(
-				'/items/{id}',
-				getItem,
-			),
+			getItem(api(replied.fetch, { retry: { attempts: 1, ...now } })),
 		);
 		expect((error as UndeclaredStatusError).status).toBe(503);
 		expect(replied.seen).toHaveLength(2);
 
 		const down = script(new TypeError('a'), new TypeError('b'));
 		const failed = await failure(
-			api(down.fetch, { retry: { attempts: 1, ...now } }).get(
-				'/items/{id}',
-				getItem,
-			),
+			getItem(api(down.fetch, { retry: { attempts: 1, ...now } })),
 		);
 		expect(failed).toBeInstanceOf(NetworkError);
 		expect(((failed as Error).cause as Error).message).toBe('b');
@@ -218,18 +208,14 @@ describe('retry', () => {
 		await failure(
 			api(post.fetch, { retry: { attempts: 2, ...now } }).post('/items', {
 				json: { name: 'a' },
+				responses,
 			}),
 		);
 		expect(post.seen).toHaveLength(1);
 
 		const get = script(status(503));
-		await failure(
-			api(get.fetch, { retry: { attempts: 2, ...now } }).get(
-				'/items/{id}',
-				getItem,
-				{ retry: false },
-			),
-		);
+		const client = api(get.fetch, { retry: { attempts: 2, ...now } });
+		await failure(getItem(client, { retry: false }));
 		expect(get.seen).toHaveLength(1);
 	});
 
@@ -271,17 +257,14 @@ describe('retry', () => {
 		const long = { attempts: 1, delay: () => 10_000, maxDelay: 20_000 };
 		const timed = script(status(503), item());
 		const late = await failure(
-			api(timed.fetch, { retry: long, timeout: 20 }).get(
-				'/items/{id}',
-				getItem,
-			),
+			getItem(api(timed.fetch, { retry: long, timeout: 20 })),
 		);
 		expect(late).toBeInstanceOf(TimeoutError);
 
 		const aborted = script(status(503), item());
 		const controller = new AbortController();
 		const pending = failure(
-			api(aborted.fetch, { retry: long }).get('/items/{id}', getItem, {
+			getItem(api(aborted.fetch, { retry: long }), {
 				signal: controller.signal,
 			}),
 		);

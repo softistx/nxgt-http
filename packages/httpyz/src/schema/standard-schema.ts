@@ -1,9 +1,9 @@
 /**
  * [Standard Schema](https://standardschema.dev), the part the client calls.
- * Zod 4, Valibot and ArkType schemas all carry it, so validating needs none of
- * them: the generated table's Zod schemas are read through `~standard`.
+ * Zod 4, Valibot and ArkType schemas all carry it, so the client imports
+ * none of them: it reads their `~standard`.
  */
-import type { ValidationIssue } from './errors';
+import type { ValidationIssue } from '../errors/errors';
 
 export interface StandardSchemaV1<Input = unknown, Output = Input> {
 	readonly '~standard': {
@@ -28,6 +28,16 @@ export interface StandardIssue {
 		| readonly (PropertyKey | { readonly key: PropertyKey })[]
 		| undefined;
 }
+
+/** What a schema accepts. */
+export type InferInput<Schema extends StandardSchemaV1> = NonNullable<
+	Schema['~standard']['types']
+>['input'];
+
+/** What a schema gives back. */
+export type InferOutput<Schema extends StandardSchemaV1> = NonNullable<
+	Schema['~standard']['types']
+>['output'];
 
 export type Checked =
 	| { readonly ok: true; readonly value: unknown }

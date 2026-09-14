@@ -1,25 +1,24 @@
 /**
- * The client end to end, against a Hono app generated from the same spec,
+ * The binding end to end, against a Hono app generated from the same spec,
  * served in-process as the client's `fetch`.
  */
 import { describe, expect, it } from 'bun:test';
 import { Hono } from 'hono';
-import { createRoutes } from '../test/generated/hono';
-import { operations } from '../test/generated/operations';
+import { createRoutes } from '../../test/generated/hono';
+import { operations } from '../../test/generated/operations';
 import type {
 	ClientOperations,
 	OperationsByRoute,
-} from '../test/generated/types';
+} from '../../test/generated/types';
 import {
-	type ClientOptions,
-	createClient,
-	NetworkError,
+	createHttpClient,
+	type HttpClientOptions,
 	ReplyStatusError,
-	TimeoutError,
 	UndeclaredStatusError,
 	unwrap,
 	ValidationError,
-} from './index';
+} from '../index';
+import { createOpenApiClient } from './index';
 
 let stored = '';
 const app = new Hono();
@@ -71,17 +70,20 @@ createRoutes(app)
 
 /** Every request the client sent, cloned before the app read it. */
 const sent: Request[] = [];
-const client = (options: ClientOptions = {}) =>
-	createClient<ClientOperations, OperationsByRoute>(operations, {
-		baseUrl: 'http://api.test',
-		fetch: async (request) => {
-			sent.push(request.clone());
-			return app.fetch(request);
-		},
-		...options,
-	});
+const client = (options: HttpClientOptions = {}) =>
+	createOpenApiClient<ClientOperations, OperationsByRoute>(
+		createHttpClient({
+			baseUrl: 'http://api.test',
+			fetch: async (request) => {
+				sent.push(request.clone());
+				return app.fetch(request);
+			},
+			...options,
+		}),
+		operations,
+	);
 
-describe('createClient', () => {
+describe('createOpenApiClient', () => {
 	it('writes the query and the headers as the server reads them', async () => {
 		const query = {
 			page: 2,
@@ -201,13 +203,17 @@ describe('createClient', () => {
 
 	it('joins a baseUrl that has a path prefix', async () => {
 		const urls: string[] = [];
-		const api = createClient<ClientOperations, OperationsByRoute>(operations, {
+		const http = createHttpClient({
 			baseUrl: 'http://api.test/v1/',
 			fetch: async (request) => {
 				urls.push(request.url);
 				return new Response(null, { status: 204 });
 			},
 		});
+		const api = createOpenApiClient<ClientOperations, OperationsByRoute>(
+			http,
+			operations,
+		);
 		await api.delete('/items/{id}', { param: { id: 5 } });
 		expect(urls).toEqual(['http://api.test/v1/items/5']);
 	});
@@ -231,52 +237,20 @@ describe('createClient', () => {
 });
 
 describe('errors', () => {
-	const stub = (fetch: ClientOptions['fetch'], options: ClientOptions = {}) =>
-		createClient<ClientOperations, OperationsByRoute>(operations, {
-			baseUrl: 'http://api.test',
-			fetch,
-			...options,
-		});
-	/** Never replies: fails only when the request's signal aborts. */
-	const hang = (request: Request) =>
-		new Promise<Response>((_, reject) => {
-			request.signal.addEventListener(
-				'abort',
-				() => reject(request.signal.reason),
-				{ once: true },
-			);
-		});
+	const stub = (fetch: HttpClientOptions['fetch']) =>
+		createOpenApiClient<ClientOperations, OperationsByRoute>(
+			createHttpClient({ baseUrl: 'http://api.test', fetch }),
+			operations,
+		);
 
-	it('throws on a status the spec does not declare', async () => {
+	it('throws on a status the spec does not declare, naming the operation', async () => {
 		const api = stub(async () => new Response('boom', { status: 500 }));
 		const error = await api.op('health').catch((caught: unknown) => caught);
 		expect(error).toBeInstanceOf(UndeclaredStatusError);
 		expect((error as UndeclaredStatusError).status).toBe(500);
 		expect((error as Error).message).toBe(
-			'health (GET /health): the spec declares no 500 reply',
+			'health (GET /health): no 500 reply is declared',
 		);
-	});
-
-	it('throws a NetworkError when fetch fails, and a TimeoutError past the timeout', async () => {
-		const down = stub(async () => {
-			throw new TypeError('fetch failed');
-		});
-		const failed = await down.op('health').catch((caught: unknown) => caught);
-		expect(failed).toBeInstanceOf(NetworkError);
-		expect((failed as Error).cause).toBeInstanceOf(TypeError);
-
-		const slow = stub(hang, { timeout: 10 });
-		const late = await slow.op('health').catch((caught: unknown) => caught);
-		expect(late).toBeInstanceOf(TimeoutError);
-	});
-
-	it('lets an abort the caller asked for through as it is', async () => {
-		const api = stub(hang);
-		const controller = new AbortController();
-		const pending = api.op('health', { signal: controller.signal });
-		controller.abort();
-		const error = await pending.catch((caught: unknown) => caught);
-		expect((error as Error).name).toBe('AbortError');
 	});
 
 	it('refuses a reply of a media type the spec does not declare', async () => {

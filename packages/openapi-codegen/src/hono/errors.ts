@@ -18,7 +18,8 @@ export interface ValidationIssue {
 	path: (string | number)[];
 	/**
 	 * Zod's issue code, or one of the engine's own: `invalid_json`,
-	 * `invalid_content_type`, `missing_body`, `undeclared_status`.
+	 * `invalid_form`, `invalid_content_type`, `missing_body`,
+	 * `repeated_parameter`, `undeclared_status`.
 	 */
 	code: string;
 	message: string;
@@ -47,25 +48,34 @@ export type ValidationErrorHook = (
 ) => Response | undefined | Promise<Response | undefined>;
 
 /**
- * The default answer: 400 for a request, 500 for a reply, shaped like
- * `ErrorResponse` with the issues added.
+ * The default answer: 400 for a request, shaped like `ErrorResponse` with the
+ * issues added. A reply that fails is a 500 without them, since they name
+ * what the reply held (an unrecognized `passwordHash`…): they go to
+ * `console.error` instead.
  */
 export const validationErrorHandler = (
 	failure: ValidationFailure,
 	c: Context,
 ): Response => {
-	const request = failure.kind === 'request';
-	const status = request ? 400 : 500;
+	const timestamp = new Date().toISOString();
+	if (failure.kind === 'response') {
+		console.error(
+			`${failure.operationId} (${failure.method.toUpperCase()} ${failure.path}) replied ${failure.status} as the spec does not declare:`,
+			failure.issues,
+		);
+		return c.json(
+			{ status: 500, message: 'errors.response-validation-failed', timestamp },
+			500,
+		);
+	}
 	return c.json(
 		{
-			status,
-			message: request
-				? 'errors.validation-failed'
-				: 'errors.response-validation-failed',
-			timestamp: new Date().toISOString(),
+			status: 400,
+			message: 'errors.validation-failed',
+			timestamp,
 			issues: failure.issues,
 		},
-		status,
+		400,
 	);
 };
 

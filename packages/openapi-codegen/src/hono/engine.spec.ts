@@ -2,16 +2,21 @@
  * The Hono engine end to end: the fixtures' generated routes on a real Hono
  * app, driven with `app.request()`.
  */
-import { describe, expect, it } from 'bun:test';
-import { Hono, type MiddlewareHandler } from 'hono';
+import { describe, expect, it, spyOn } from 'bun:test';
+import { type Context, Hono, type MiddlewareHandler, type Next } from 'hono';
 import { z } from 'zod';
 import * as kitchen from '../../test/generated/kitchen-sink/hono';
 import type { Pet } from '../../test/generated/kitchen-sink/types';
 import * as search from '../../test/generated/query/hono';
 import { createApi, createRoutes } from '../../test/generated/split/hono';
 import type { Employee } from '../../test/generated/split/types';
-import { createApi as engine, type OperationTable } from './engine';
+import {
+	createApi as engine,
+	type OperationTable,
+	type RuntimeOperation,
+} from './engine';
 import type { ValidationIssue } from './errors';
+import type { Method } from './types';
 
 const ID = '3f1c2a4e-8b7d-4c1e-9a2b-1c2d3e4f5a6b';
 const ada: Employee = {
@@ -225,8 +230,9 @@ describe('hono routes', () => {
 		expect(await issues(bad)).toEqual([['form', 'copies']]);
 	});
 
-	it('checks replies against the spec when asked', async () => {
+	it('checks replies against the spec when asked, and logs their issues rather than sending them', async () => {
 		const app = new Hono();
+		const logged = spyOn(console, 'error').mockImplementation(() => {});
 		createRoutes(app, { validateResponses: true })
 			.get('/employees', (c) => c.json([ada], 200))
 			.get('/employees/{id}', (c) =>
@@ -237,18 +243,22 @@ describe('hono routes', () => {
 		expect((await app.request('/employees')).status).toBe(200);
 		const invalid = await app.request(`/employees/${ID}`);
 		expect(invalid.status).toBe(500);
-		expect(await issues(invalid.clone())).toEqual([['response', 'email']]);
-		expect(await invalid.json()).toMatchObject({
+		const body = await invalid.json();
+		expect(body).toMatchObject({
 			message: 'errors.response-validation-failed',
 		});
+		expect(body).not.toHaveProperty('issues');
+		expect(logged.mock.calls[0]?.[1]).toMatchObject([
+			{ target: 'response', path: ['email'] },
+		]);
 		const undeclared = await app.request(`/employees/${ID}`, {
 			method: 'DELETE',
 		});
 		expect(undeclared.status).toBe(500);
-		expect(
-			((await undeclared.json()) as { issues: ValidationIssue[] }).issues[0]
-				?.code,
-		).toBe('undeclared_status');
+		expect(logged.mock.calls[1]?.[1]).toMatchObject([
+			{ code: 'undeclared_status' },
+		]);
+		logged.mockRestore();
 	});
 
 	it('mounts a module under a prefix and a tag, and reports what is left', async () => {
@@ -330,5 +340,206 @@ describe('hono registration', () => {
 		expect(() =>
 			marked.get?.('/users/me', marked.validate, marked.validate, handler),
 		).toThrow('routes.validate appears twice');
+	});
+});
+
+describe('hono edge cases', () => {
+	const op = (
+		method: Method,
+		path: string,
+		extra: Partial<RuntimeOperation> = {},
+	): RuntimeOperation => ({
+		method,
+		path,
+		honoPath: path.replace(/\{([^}]+)\}/g, ':$1'),
+		tags: [],
+		parameters: [],
+		param: z.object({}),
+		query: z.object({}),
+		header: z.object({}),
+		responses: { 200: {} },
+		...extra,
+	});
+	type Loose = Record<string, (...args: unknown[]) => unknown>;
+	const on = (table: OperationTable, app: Hono, options: object = {}) =>
+		engine(table, options).routes(app) as unknown as Loose;
+	const ran = () => new Response('ran');
+	const codes = async (res: Response) =>
+		((await res.json()) as { issues: ValidationIssue[] }).issues.map(
+			(issue) => issue.code,
+		);
+
+	it('refuses HEAD, and a parameter sharing its segment, and never lists them as missing', () => {
+		const api = engine({
+			getX: op('get', '/x'),
+			headX: op('head', '/x'),
+			file: op('get', '/files/{name}.json'),
+		});
+		const routes = api.routes(new Hono()) as unknown as Loose;
+		expect(() => routes.head?.('/x', ran)).toThrow(
+			'headX (HEAD /x): Hono answers HEAD with the GET route of /x',
+		);
+		expect(() => routes.get?.('/files/{name}.json', ran)).toThrow(
+			'a path parameter must fill its whole segment, and {name}.json does not',
+		);
+		expect(api.missing()).toEqual(['getX']);
+	});
+
+	it('answers a malformed form, and a required body sent empty, with a 400', async () => {
+		const body = (
+			type: string,
+			media: RuntimeOperation['responses'][0][0],
+		) => ({
+			body: { required: true, content: { [type]: media } },
+		});
+		const app = new Hono();
+		const routes = on(
+			{
+				form: op(
+					'post',
+					'/form',
+					body('multipart/form-data', { kind: 'form', schema: z.object({}) }),
+				),
+				text: op(
+					'post',
+					'/text',
+					body('text/plain', { kind: 'text', schema: z.string() }),
+				),
+				bin: op(
+					'post',
+					'/bin',
+					body('application/octet-stream', { kind: 'binary' }),
+				),
+			},
+			app,
+		);
+		for (const path of ['/form', '/text', '/bin']) routes.post?.(path, ran);
+		// With the length a client sends, which a Request built here leaves out.
+		const post = (path: string, sent: string, type: string) =>
+			app.request(path, {
+				method: 'POST',
+				body: sent,
+				headers: {
+					'content-type': type,
+					'content-length': String(sent.length),
+				},
+			});
+		const multipart = 'multipart/form-data; boundary=xx';
+
+		const garbled = await post('/form', 'garbage', multipart);
+		expect([garbled.status, await codes(garbled)]).toEqual([
+			400,
+			['invalid_form'],
+		]);
+		for (const [path, type] of [
+			['/form', multipart],
+			['/text', 'text/plain'],
+			['/bin', 'application/octet-stream'],
+		] as const) {
+			const empty = await post(path, '', type);
+			expect([path, empty.status, await codes(empty)]).toEqual([
+				path,
+				400,
+				['missing_body'],
+			]);
+		}
+		expect((await post('/text', 'hi', 'text/plain')).status).toBe(200);
+		expect((await post('/bin', 'hi', 'application/octet-stream')).status).toBe(
+			200,
+		);
+	});
+
+	it('refuses a query key that takes one value when it is sent twice', async () => {
+		const app = new Hono();
+		on(
+			{
+				list: op('get', '/list', {
+					parameters: [
+						{ name: 'page', in: 'query', list: false, explode: true },
+					],
+					query: z.object({ page: z.string().optional() }),
+				}),
+			},
+			app,
+		).get?.('/list', ran);
+		const twice = await app.request('/list?page=1&page=abc');
+		expect([twice.status, await codes(twice)]).toEqual([
+			400,
+			['repeated_parameter'],
+		]);
+		expect((await app.request('/list?page=1')).status).toBe(200);
+	});
+
+	it('explains a body that a middleware read through c.req.raw', async () => {
+		const app = new Hono();
+		app.onError((error, c) => c.text(error.message, 500));
+		const drain = async (c: Context, next: Next) => {
+			await c.req.raw.text();
+			await next();
+		};
+		on(
+			{
+				make: op('post', '/make', {
+					body: {
+						required: true,
+						content: { 'application/json': { kind: 'json' } },
+					},
+				}),
+			},
+			app,
+		).post?.('/make', drain, ran);
+		const res = await app.request('/make', json('POST', {}));
+		expect(await res.text()).toStartWith(
+			'A middleware read the request body through c.req.raw',
+		);
+	});
+
+	it('checks what c.json() and c.text() send against +json and text types, and leaves streams unread', async () => {
+		const reply = (
+			type: string,
+			kind: 'json' | 'text',
+			schema: z.ZodType,
+		): RuntimeOperation['responses'] => ({ 200: { [type]: { kind, schema } } });
+		const app = new Hono();
+		const logged = spyOn(console, 'error').mockImplementation(() => {});
+		const routes = on(
+			{
+				problem: op('get', '/problem', {
+					responses: reply(
+						'application/problem+json',
+						'json',
+						z.object({ a: z.number() }),
+					),
+				}),
+				csv: op('get', '/csv', {
+					responses: reply('text/csv', 'text', z.string().min(3)),
+				}),
+				events: op('get', '/events', {
+					responses: reply('text/event-stream', 'text', z.string()),
+				}),
+			},
+			app,
+			{ validateResponses: true },
+		);
+		routes.get?.('/problem', (c: Context) => c.json({ a: 1 }, 200));
+		routes.get?.('/csv', (c: Context) => c.text('a', 200));
+		routes.get?.(
+			'/events',
+			() =>
+				new Response(
+					new ReadableStream({
+						start(controller) {
+							// Never closed, as an event stream is not.
+							controller.enqueue(new TextEncoder().encode('data: 1\n\n'));
+						},
+					}),
+					{ headers: { 'content-type': 'text/event-stream' } },
+				),
+		);
+		expect((await app.request('/problem')).status).toBe(200);
+		// Matched to text/csv, so its body is checked: too short.
+		expect((await app.request('/csv')).status).toBe(500);
+		expect((await app.request('/events')).status).toBe(200);
+		logged.mockRestore();
 	});
 });

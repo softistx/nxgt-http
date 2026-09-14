@@ -4,6 +4,7 @@
  * generated file that imports more than `zod`: `hono`, and this package's
  * `/hono` runtime.
  */
+import { unroutable } from '../hono/routable';
 import type { MediaIR, OperationIR, ResponseIR } from '../ir/types';
 import type { EmitContext } from './context';
 import { operationDocs } from './operations';
@@ -34,6 +35,17 @@ const INDEXES = [
 ];
 
 export function emitHono(ctx: EmitContext): string {
+	for (const operation of ctx.ir.operations) {
+		const why = unroutable(operation);
+		if (why === undefined) continue;
+		ctx.warnings.push({
+			severity: 'warning',
+			code: 'ignored',
+			message: `${operation.operationId}: routes cannot register it. ${why}`,
+			file: operation.location.file,
+			pointer: operation.location.pointer,
+		});
+	}
 	const { value: entries, names } = ctx.collectTypes(() =>
 		ctx.ir.operations.map((operation) => repliesEntry(ctx, operation)),
 	);

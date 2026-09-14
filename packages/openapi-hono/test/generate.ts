@@ -20,11 +20,12 @@ const TEST_DIR = fileURLToPath(new URL('./', import.meta.url));
 const FIXTURES = fileURLToPath(
 	new URL('../../openapi-codegen/test/fixtures/', import.meta.url),
 );
-const CASES = ['split', 'query', 'kitchen-sink', 'dates'] as const;
+const CASES = ['split', 'query', 'kitchen-sink', 'dates', 'streams'] as const;
 
 /** What a case is generated with, beside `hono`. */
 const OPTIONS: { [name: string]: { dates?: Dates } } = {
 	dates: { dates: 'date' },
+	streams: { dates: 'date' },
 };
 
 async function fixtureFiles(name: string): Promise<GeneratedFile[]> {

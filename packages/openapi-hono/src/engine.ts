@@ -26,8 +26,12 @@ export interface Validator {
 }
 
 export interface RuntimeMedia {
-	readonly kind: 'json' | 'form' | 'text' | 'binary';
+	readonly kind: 'json' | 'form' | 'text' | 'binary' | 'sse' | 'jsonl';
 	readonly schema?: Validator;
+	/** `sse`: each event's data, by name: a validator for JSON, `null` for text. */
+	readonly events?: { readonly [event: string]: Validator | null };
+	/** `jsonl`: each item. */
+	readonly item?: Validator;
 }
 
 /** An entry of the `operations` table in `operations.ts`. */
@@ -83,6 +87,19 @@ type Handler = (c: Context, next: Next) => unknown;
 type App = Hono<any, any, any>;
 /** What `addValidatedData` takes: whatever the validator returned. */
 type Validated = Parameters<Context['req']['addValidatedData']>[1];
+
+/** The route a request runs: what `streamEvents()` and `streamLines()` read in its handler. */
+export interface RunningRoute {
+	readonly id: string;
+	readonly operation: RuntimeOperation;
+	readonly settings: ApiOptions;
+}
+
+/** Set before each handler runs; a request's `Context` is the same object throughout its chain. */
+const running = new WeakMap<Context, RunningRoute>();
+
+export const runningRoute = (c: Context): RunningRoute | undefined =>
+	running.get(c);
 
 /** Every route the engine put on an app, in order, for the shadowing check. */
 const onApp = new WeakMap<
@@ -483,6 +500,7 @@ function reply(
 	settings: Settings,
 ): MiddlewareHandler {
 	return async (c, next) => {
+		running.set(c, { id, operation, settings });
 		const response = await handler(c, next);
 		if (!settings.validateResponses || !(response instanceof Response)) {
 			return response as Response | undefined;

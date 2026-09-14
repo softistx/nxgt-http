@@ -201,3 +201,22 @@ Any other form schema is validated as written, by its own `z<Name>`.
 | an exact status code: `200`, `404` | generated |
 | `default`, `4XX` responses | ignored, with a warning: replies are typed by exact status |
 | `callbacks`, `webhooks` | ignored, with a warning |
+
+## Streams
+
+A reply of these media types is read an item at a time
+([details](generated-code.md#streams)):
+
+| Construct | Result |
+| --- | --- |
+| `text/event-stream` with an `itemSchema` | an event union, narrowed on `event` |
+| an event's `event: { const: name }`, or `enum: [name]` | its name |
+| an event with no `event` | `message` |
+| an event whose `event` is not a constant | left out, with a warning |
+| the same event name twice | the first kept, with a warning |
+| `data` with `contentMediaType: application/json` | JSON, checked by `contentSchema` (`unknown` without one) |
+| any other `data` | text |
+| `text/event-stream` without an `itemSchema` | any event, its data as text |
+| `application/jsonl`, `application/x-ndjson`, `application/json-seq` with an `itemSchema` | each line checked by it |
+| the same without an `itemSchema` | each line as `unknown` |
+| any of these as a request body | sent whole, as `text` or binary |

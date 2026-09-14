@@ -209,8 +209,11 @@ function contentType(
 	const lines = content.map((media) => {
 		const { schema } = media;
 		// A response is typed as JSON carries it: openapi-fetch decodes no date.
+		// openapi-fetch reads a stream whole: events as text, JSON lines as bytes.
 		const value = !schema
-			? 'globalThis.Blob'
+			? media.kind === 'sse'
+				? 'string'
+				: 'globalThis.Blob'
 			: input
 				? type(ctx, schema, true, inner)
 				: ctx.wire(schema, type(ctx, schema, false, inner));

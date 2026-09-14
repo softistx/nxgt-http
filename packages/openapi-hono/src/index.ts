@@ -17,6 +17,12 @@ export {
 	type ValidationTarget,
 	validationErrorHandler,
 } from './errors';
+export {
+	type EventWriter,
+	type LineWriter,
+	streamEvents,
+	streamLines,
+} from './streams';
 export type {
 	Api,
 	ApiOptions,

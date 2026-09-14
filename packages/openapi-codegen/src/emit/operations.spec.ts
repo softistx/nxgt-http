@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'bun:test';
 import { operations as pets } from '../../test/generated/kitchen-sink/operations';
 import { operations } from '../../test/generated/split/operations';
+import { operations as streams } from '../../test/generated/streams/operations';
 
 const getPet = pets.getPet;
 
@@ -88,5 +89,40 @@ describe('generated operations', () => {
 		expect(operations.createEmployee.query.parse({ anything: '1' })).toEqual(
 			{},
 		);
+	});
+
+	it('checks each event and each line of a stream with its own validator', () => {
+		const feed = streams.watchFeed.responses[200]?.['text/event-stream'];
+		expect(feed?.kind).toBe('sse');
+		expect(Object.keys(feed?.events ?? {})).toEqual([
+			'update',
+			'removed',
+			'ping',
+		]);
+		// Text data has no validator: it is yielded as it came.
+		expect(feed?.events?.ping).toBeNull();
+		expect(
+			feed?.events?.update?.parse({
+				id: 'a',
+				name: 'b',
+				updatedAt: '2026-09-14T10:00:00Z',
+			}),
+		).toEqual({
+			id: 'a',
+			name: 'b',
+			updatedAt: new Date('2026-09-14T10:00:00Z'),
+		});
+		expect(
+			Object.keys(
+				streams.listenMessages.responses[200]?.['text/event-stream']?.events ??
+					{},
+			),
+		).toEqual(['message']);
+		expect(streams.tailLogs.responses[200]?.['text/event-stream']).toEqual({
+			kind: 'sse',
+		});
+		const lines = streams.exportItems.responses[200]?.['application/jsonl'];
+		expect(lines?.kind).toBe('jsonl');
+		expect(lines?.item?.safeParse({ id: 'a' }).success).toBe(false);
 	});
 });

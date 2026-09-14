@@ -14,6 +14,12 @@ import { readReply, toSpec } from '../reply/read-reply';
 import type { Responses } from '../reply/types';
 import { fillPath, joinUrl, writeBody, writeQuery } from '../request/encode';
 import type { BodyInput, QueryInput } from '../request/types';
+import type { StandardSchemaV1 } from '../schema/standard-schema';
+import type { Open } from '../stream/connection';
+import { eventStream } from '../stream/event-stream';
+import { LINE_TYPES, lineStream } from '../stream/line-stream';
+import type { ServerEvent } from '../stream/sse-parser';
+import type { EventSchemas, ReconnectOptions } from '../stream/types';
 import type {
 	CallOptions,
 	HttpClient,
@@ -34,15 +40,43 @@ export const METHODS: readonly Method[] = [
 	'query',
 ];
 
-/** Every option a call may take, as the client reads them. */
+/** What a request is built from, as the client reads a call's options. */
 type Given = BodyInput &
 	CallOptions & {
 		readonly param?: Readonly<Record<string, unknown>>;
 		readonly query?: QueryInput;
-		readonly responses?: Responses;
-		readonly validate?: boolean;
-		readonly decode?: boolean;
 	};
+
+type ReplyGiven = Given & {
+	readonly responses?: Responses;
+	readonly validate?: boolean;
+	readonly decode?: boolean;
+};
+
+type StreamGiven = Given & {
+	readonly method?: Method;
+	readonly validate?: boolean;
+	readonly decode?: boolean;
+};
+
+type EventsGiven = StreamGiven & {
+	readonly events?: EventSchemas;
+	readonly onUnknownEvent?: (event: ServerEvent) => void;
+	readonly reconnect?: boolean | ReconnectOptions;
+	readonly lastEventId?: string;
+};
+
+type LinesGiven = StreamGiven & { readonly item?: StandardSchemaV1 };
+
+/** A stream reconnects by default, but for the methods a retry would not repeat. */
+const RECONNECT_DELAY = 3000;
+
+const contextOf = (
+	method: string,
+	path: string,
+	operationId: string | undefined,
+): CallContext =>
+	operationId === undefined ? { method, path } : { method, path, operationId };
 
 /**
  * ```ts
@@ -115,11 +149,16 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
 		}
 	};
 
-	const request = async (
+	/**
+	 * A request's parts, from a call's options: its URL, and its init but for
+	 * the signal. `adjust` has the last word on the headers.
+	 */
+	const build = async (
 		method: Method,
 		path: string,
-		given: Given = {},
-	): Promise<unknown> => {
+		given: Given,
+		adjust?: (headers: Headers) => void,
+	) => {
 		const {
 			param,
 			query,
@@ -127,9 +166,6 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
 			form,
 			text,
 			body,
-			responses,
-			validate = true,
-			decode = true,
 			operationId,
 			timeout = options.timeout,
 			retry = options.retry,
@@ -137,15 +173,13 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
 			signal,
 			...rest
 		} = given;
-		const context: CallContext =
-			operationId === undefined
-				? { method, path }
-				: { method, path, operationId };
+		const context = contextOf(method, path, operationId);
 		const headers = await sharedHeaders();
 		const callHeaders = new Headers(own);
 		callHeaders.forEach((value, name) => {
 			headers.set(name, value);
 		});
+		adjust?.(headers);
 		const url = joinUrl(
 			options.baseUrl,
 			fillPath(context, param),
@@ -156,24 +190,132 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
 			headers,
 			callHeaders.get('content-type'),
 		);
-		const { deadline, signal: combined } = withDeadline(timeout, signal);
-		const sent = new Request(url, {
+		const init = {
 			...options.init,
 			...rest,
 			method: method.toUpperCase(),
 			headers,
 			body: payload,
-			signal: combined,
 			// A stream is sent as it is read, which fetch has to be told.
 			...(payload instanceof ReadableStream ? { duplex: 'half' } : {}),
-		} as RequestInit);
-		const response = await dispatch(sent, context, timeout, deadline, retry);
+		} as RequestInit;
+		return { context, url, init, timeout, retry, signal: signal ?? undefined };
+	};
+
+	const request = async (
+		method: Method,
+		path: string,
+		given: ReplyGiven = {},
+	): Promise<unknown> => {
+		const { responses, validate = true, decode = true, ...call } = given;
+		const built = await build(method, path, call);
+		const { deadline, signal } = withDeadline(built.timeout, built.signal);
+		const response = await dispatch(
+			new Request(built.url, { ...built.init, signal }),
+			built.context,
+			built.timeout,
+			deadline,
+			built.retry,
+		);
 		return readReply(
-			context,
+			built.context,
 			responses === undefined ? undefined : toSpec(responses),
 			response,
 			{ validate, decode },
 		);
+	};
+
+	/**
+	 * A stream's connections, each built afresh: its headers are run again and
+	 * `Last-Event-ID` is added. `timeout` bounds one until its headers arrive,
+	 * and no longer, since a stream has no end to wait for.
+	 */
+	const opener =
+		(method: Method, path: string, call: Given, accept: string): Open =>
+		async (stream, lastEventId) => {
+			const built = await build(method, path, call, (headers) => {
+				if (!headers.has('accept')) headers.set('accept', accept);
+				if (lastEventId !== undefined) {
+					headers.set('last-event-id', lastEventId);
+				}
+			});
+			const deadline = new AbortController();
+			const clock =
+				built.timeout === undefined
+					? undefined
+					: setTimeout(
+							() =>
+								deadline.abort(
+									new DOMException('The stream did not open', 'TimeoutError'),
+								),
+							built.timeout,
+						);
+			const signals = [stream, deadline.signal];
+			if (built.signal) signals.push(built.signal);
+			try {
+				return await dispatch(
+					new Request(built.url, {
+						...built.init,
+						signal: AbortSignal.any(signals),
+					}),
+					built.context,
+					built.timeout,
+					deadline.signal,
+					built.retry,
+				);
+			} finally {
+				clearTimeout(clock);
+			}
+		};
+
+	const events = (path: string, given: EventsGiven = {}) => {
+		const {
+			events,
+			onUnknownEvent,
+			reconnect,
+			lastEventId,
+			validate = true,
+			decode = true,
+			method = 'get',
+			...call
+		} = given;
+		const reconnects =
+			reconnect === undefined
+				? method !== 'post' && method !== 'patch'
+				: reconnect !== false;
+		const settings = typeof reconnect === 'object' ? reconnect : {};
+		return eventStream({
+			context: contextOf(method, path, call.operationId),
+			open: opener(method, path, call, 'text/event-stream'),
+			signal: call.signal ?? undefined,
+			validate,
+			decode,
+			events,
+			onUnknownEvent,
+			reconnect: reconnects && {
+				attempts: settings.attempts ?? Number.POSITIVE_INFINITY,
+				delay: settings.delay ?? RECONNECT_DELAY,
+			},
+			lastEventId,
+		});
+	};
+
+	const lines = (path: string, given: LinesGiven = {}) => {
+		const {
+			item,
+			validate = true,
+			decode = true,
+			method = 'get',
+			...call
+		} = given;
+		return lineStream({
+			context: contextOf(method, path, call.operationId),
+			open: opener(method, path, call, LINE_TYPES.slice(0, 2).join(', ')),
+			signal: call.signal ?? undefined,
+			validate,
+			decode,
+			item,
+		});
 	};
 
 	const send = async (
@@ -185,11 +327,11 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
 		}: SendOptions = {},
 	): Promise<Response> => {
 		const method = request.method.toLowerCase();
-		const path = new URL(request.url).pathname;
-		const context: CallContext =
-			operationId === undefined
-				? { method, path }
-				: { method, path, operationId };
+		const context = contextOf(
+			method,
+			new URL(request.url).pathname,
+			operationId,
+		);
 		const headers = await sharedHeaders();
 		request.headers.forEach((value, name) => {
 			headers.set(name, value);
@@ -200,12 +342,14 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
 	};
 
 	const client: Record<string, unknown> = {
-		request: (method: Method, path: string, given?: Given) =>
+		request: (method: Method, path: string, given?: ReplyGiven) =>
 			request(method, path, given),
 		send,
+		events,
+		lines,
 	};
 	for (const method of METHODS) {
-		client[method] = (path: string, given?: Given) =>
+		client[method] = (path: string, given?: ReplyGiven) =>
 			request(method, path, given);
 	}
 	return client as HttpClient;

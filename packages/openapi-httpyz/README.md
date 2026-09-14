@@ -115,6 +115,40 @@ status the spec does not declare for the operation throws the client's
 `UndeclaredStatusError`; errors are the client's own, listed in
 [its README](https://www.npmjs.com/package/@nxgt/httpyz#errors).
 
+## Streams
+
+An operation whose reply the spec describes an item at a time, with OpenAPI
+3.2's `itemSchema`, is read with `stream()`, by its `operationId`. Server-sent
+events come through the client's `events()`, each narrowed on its name, and
+JSON Lines through its `lines()`:
+
+```ts
+const feed = api.stream('watchFeed', { query: { topic: 'news' } });
+for await (const event of feed) {
+	if (event.event === 'added') event.data.name; // Item
+	else event.data; // 'note': text
+}
+
+for await (const item of api.stream('exportItems', { json: { limit: 100 } })) {
+	item.id;
+}
+```
+
+- It connects when read, and `close()` or a `break` ends it. Events
+  reconnect as `EventSource` does, but for POST and PATCH; the init after the
+  input takes `reconnect`, `lastEventId` and `onUnknownEvent`, beside the call
+  options.
+- It sends the stream's declared media type as `Accept`, and writes the input
+  as a call does.
+- `validate` checks the request on the first read, before anything is sent,
+  and each item against its schema; `decode` yields what each schema
+  outputs.
+- Only an operation with a stream is accepted; the others do not compile.
+
+An event the spec does not declare is not yielded: it goes to
+`onUnknownEvent`. The stream API is the client's, described in
+[its README](https://www.npmjs.com/package/@nxgt/httpyz#streams).
+
 ## Validating and decoding
 
 The types hold a call to the spec, but not the values in it: a `page` of `0`

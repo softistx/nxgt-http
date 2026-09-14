@@ -5,11 +5,11 @@
 
 | File | Printed by |
 | --- | --- |
-| `types.gen.ts` | `schemaTypes` (`types.ts`), then `operationTypes` (`operations.ts`) |
-| `zod.gen.ts` | `emitZod` (`zod.ts`) |
-| `operations.gen.ts` | `emitOperations` (`operations.ts`) |
-| `paths.gen.ts` | `emitPaths` (`paths.ts`) |
-| `hono.gen.ts` | `emitHono` (`hono.ts`), with `hono` only |
+| `types.ts` | `schemaTypes` (`src/emit/types.ts`), then `operationTypes` (`src/emit/operations.ts`) |
+| `zod.ts` | `emitZod` (`src/emit/zod.ts`) |
+| `operations.ts` | `emitOperations` (`src/emit/operations.ts`) |
+| `paths.ts` | `emitPaths` (`src/emit/paths.ts`) |
+| `hono.ts` | `emitHono` (`src/emit/hono.ts`), with `hono` only |
 
 Code is printed as text, with no TypeScript compiler API. That keeps the
 generator independent of the compiler version its consumers run.
@@ -40,7 +40,7 @@ What both printers must agree on, computed once:
   `Hono`. Two interfaces of one name
   would merge silently, not fail.
 
-## Types (`types.ts`)
+## Types (`src/emit/types.ts`)
 
 - An `interface` when the node is a non-nullable object whose extra keys are
   not a schema. Otherwise a `type` alias.
@@ -60,12 +60,12 @@ What both printers must agree on, computed once:
   - There is no TypeScript `enum`: it is nominal, and `erasableSyntaxOnly`
     refuses it.
 
-## Zod (`zod.ts`)
+## Zod (`src/emit/zod.ts`)
 
 - **Order.** Schemas come in the IR's dependency order, so a
   non-recursive schema only ever refers to one already declared.
 - **Recursion.** A schema marked `recursive` is annotated
-  `z.ZodType<X, XInput>`, imported from `types.gen.ts`. Without that
+  `z.ZodType<X, XInput>`, imported from `types.ts`. Without that
   annotation TypeScript cannot type the cycle and falls back to `any`.
   - A property that reaches a schema not yet initialized becomes a getter,
     which Zod reads only when it needs the shape.
@@ -92,7 +92,7 @@ What both printers must agree on, computed once:
 - **Defaults.** An object or array default is printed as a closure,
   `.default(() => ({}))`, so no two parses share one mutable value.
 - **Enums.** An enum object prints as `z.enum(X)` over the object it imports,
-  as a value, from `types.gen.ts`. It gets `.nullable()` when the enum lists
+  as a value, from `types.ts`. It gets `.nullable()` when the enum lists
   `null`. Parameter validators reach it through `zX` like any other named
   schema: `numeric.pipe(zTier)` for numbers.
 - **Formats.** The table is in `STRING_FORMATS`, and each choice is explained
@@ -112,13 +112,13 @@ What both printers must agree on, computed once:
 - **Keys.** `__proto__` is printed as the computed key `['__proto__']`.
   Written plainly in an object literal, it would set the prototype.
 - **Imports.** `Scope.uses` records every schema a printed expression names,
-  which is how `operations.gen.ts` imports exactly what it uses.
+  which is how `operations.ts` imports exactly what it uses.
 
-## Operations (`operations.ts`)
+## Operations (`src/emit/operations.ts`)
 
 - **`Operations`** is keyed by `operationId` and holds what a handler gets:
   parameters and bodies as validated, and the replies. What a caller sends
-  is in `paths.gen.ts`, so the map carries no second, input-side copy.
+  is in `paths.ts`, so the map carries no second, input-side copy.
 - **`OperationsByRoute`, `PathsByMethod`, `OperationsByTag` and
   `PathsByTag`** index it: from `'put /employees/{id}'`, from a method, from
   a tag. All are plain interfaces with no conditional types, so looking up
@@ -144,7 +144,7 @@ What both printers must agree on, computed once:
   - Only a flat object qualifies (`ctx.formOf`): no `allOf` parent, and no
     schema for extra keys. Any other form schema is validated as written.
 
-## Hono (`hono.ts`)
+## Hono (`src/emit/hono.ts`)
 
 Written only with the `hono` option.
 
@@ -168,7 +168,7 @@ Written only with the `hono` option.
   imported by name, so `Replies`, `HonoSpec` and `Hono` are claimed in
   `#checkNames`, as a schema's name would be.
 
-## openapi-typescript's shape (`paths.ts`)
+## openapi-typescript's shape (`src/emit/paths.ts`)
 
 - **The contract is openapi-typescript's output**, not its source:
   - `paths[path]` holds the path's `parameters` and the eight classic
@@ -178,12 +178,12 @@ Written only with the `hono` option.
   - every `operations` entry holds `parameters` (`query`, `header`, `path`,
     `cookie`), `requestBody` and `responses[status]` (`headers`, `content`).
 - **Header names keep the spec's case** here, as a client writes them,
-  unlike the lowercased keys of `operations.gen.ts`.
+  unlike the lowercased keys of `operations.ts`.
   `test/types/paths.ts` holds it to that contract through openapi-fetch.
 - **Optional wrappers.** A parameter location is optional when nothing in
   it is required. openapi-fetch reads that to decide whether `params` must
   be passed.
-- **One type per schema.** Schema types come from `types.gen.ts`, not
+- **One type per schema.** Schema types come from `types.ts`, not
   reprinted. `ctx.collectTypes` records every name `typeName` gives out while
   the file prints, so the file imports exactly those and stays clean under
   `noUnusedLocals`.

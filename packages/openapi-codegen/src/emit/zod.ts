@@ -1,9 +1,9 @@
 /**
- * `zod.gen.ts`: one Zod 4 schema per named schema, `z<Name>`, in dependency
+ * `zod.ts`: one Zod 4 schema per named schema, `z<Name>`, in dependency
  * order.
  *
  * A schema in a reference cycle is annotated `z.ZodType<X, XInput>` (from
- * `types.gen.ts`), which is what lets TypeScript type it at all; inside it, a
+ * `types.ts`), which is what lets TypeScript type it at all; inside it, a
  * property that reaches a schema not initialized yet is a getter, and any
  * other such reference is `z.lazy()`.
  */
@@ -67,7 +67,7 @@ const STRING_FORMATS: Record<StringFormat, string> = {
 
 export function emitZod(ctx: EmitContext): string {
 	const types = new Set<string>();
-	/** The enum objects of `types.gen.ts`, imported as values for `z.enum()`. */
+	/** The enum objects of `types.ts`, imported as values for `z.enum()`. */
 	const values = new Set<string>();
 	const declared = new Set<string>();
 	const helpers = new Set<string>();
@@ -101,12 +101,12 @@ export function emitZod(ctx: EmitContext): string {
 	const imports = [`import { z } from 'zod';`];
 	if (values.size > 0) {
 		imports.push(
-			`import ${list('{ ', [...values].sort(), ' }', '')} from './types.gen${ctx.options.importExtension}';`,
+			`import ${list('{ ', [...values].sort(), ' }', '')} from './types${ctx.options.importExtension}';`,
 		);
 	}
 	if (types.size > 0) {
 		imports.push(
-			`import type ${list('{ ', [...types].sort(), ' }', '')} from './types.gen${ctx.options.importExtension}';`,
+			`import type ${list('{ ', [...types].sort(), ' }', '')} from './types${ctx.options.importExtension}';`,
 		);
 	}
 	return file([

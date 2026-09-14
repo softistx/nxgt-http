@@ -65,7 +65,7 @@ describe('nxgt-openapi', () => {
 			code: 0,
 			out: 'openapi.json → gen: 4 written, 0 unchanged',
 		});
-		expect(await exists(join(cwd, 'gen/zod.gen.ts'))).toBe(true);
+		expect(await exists(join(cwd, 'gen/zod.ts'))).toBe(true);
 	});
 
 	it('reads a list of configs, relative to the config file', async () => {
@@ -84,7 +84,7 @@ describe('nxgt-openapi', () => {
 		expect(out).toBe(
 			'api/openapi.json → api/a: 4 written, 0 unchanged\nopenapi.json → api/b: 4 written, 0 unchanged',
 		);
-		expect(await exists(join(cwd, 'api/b/types.gen.ts'))).toBe(true);
+		expect(await exists(join(cwd, 'api/b/types.ts'))).toBe(true);
 	});
 
 	it('exits 1 on drift with --check, writing nothing, and 0 once up to date', async () => {
@@ -92,13 +92,30 @@ describe('nxgt-openapi', () => {
 		const args = ['generate', '-i', 'openapi.json', '-o', 'gen'];
 		const missing = await cli([...args, '--check'], cwd);
 		expect(missing.code).toBe(1);
-		expect(missing.out).toContain('  gen/types.gen.ts');
-		expect(await exists(join(cwd, 'gen/types.gen.ts'))).toBe(false);
+		expect(missing.out).toContain('  gen/types.ts');
+		expect(await exists(join(cwd, 'gen/types.ts'))).toBe(false);
 		expect((await cli(args, cwd)).code).toBe(0);
 		expect(await cli([...args, '--check'], cwd)).toMatchObject({
 			code: 0,
 			out: 'openapi.json → gen: up to date',
 		});
+	});
+
+	it('writes to generated/openapi when no output is given', async () => {
+		const cwd = await project({
+			'openapi-codegen.config.ts':
+				"export default { input: 'openapi.json' };\n",
+		});
+		expect(await cli(['generate'], cwd)).toMatchObject({
+			code: 0,
+			out: 'openapi.json → generated/openapi: 4 written, 0 unchanged',
+		});
+		expect(await cli(['generate', '-i', 'openapi.json'], cwd)).toMatchObject({
+			code: 0,
+			out: 'openapi.json → generated/openapi: 0 written, 4 unchanged',
+		});
+		expect(await exists(join(cwd, 'generated/openapi/types.ts'))).toBe(true);
+		expect((await cli(['generate', '-o', 'gen'], cwd)).code).toBe(2);
 	});
 
 	it('exits 1 with every error when the spec cannot be generated', async () => {
@@ -137,7 +154,7 @@ describe('nxgt-openapi', () => {
 			[],
 			['build'],
 			['generate', '--nope'],
-			['generate', '-i', 'openapi.json'],
+			['generate', '-o', 'gen'],
 			['generate', '-c', 'x.ts', '-i', 'a', '-o', 'b'],
 		]) {
 			const { code, err } = await cli(args, cwd);

@@ -7,12 +7,12 @@ import { access } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { CodegenError } from './errors';
-import type { GenerateOptions } from './generate';
+import { DEFAULT_OUTPUT, type GenerateOptions } from './generate';
 
 /** One spec to generate: the options of `generate()`. `--check` decides the rest. */
 export type CodegenConfig = GenerateOptions;
 
-/** Types a config file: `export default defineConfig({ input, output })`, or a list of them. */
+/** Types a config file: `export default defineConfig({ input })`, or a list of them. */
 export function defineConfig<
 	const T extends CodegenConfig | readonly CodegenConfig[],
 >(config: T): T {
@@ -45,11 +45,14 @@ async function exists(path: string): Promise<boolean> {
 	}
 }
 
-const isConfig = (value: unknown): value is CodegenConfig =>
-	typeof value === 'object' &&
-	value !== null &&
-	typeof (value as Partial<CodegenConfig>).input === 'string' &&
-	typeof (value as Partial<CodegenConfig>).output === 'string';
+const isConfig = (value: unknown): value is CodegenConfig => {
+	if (typeof value !== 'object' || value === null) return false;
+	const { input, output } = value as Partial<CodegenConfig>;
+	return (
+		typeof input === 'string' &&
+		(output === undefined || typeof output === 'string')
+	);
+};
 
 /**
  * Finds, imports and checks a config file: `path` when given, else the first
@@ -74,7 +77,7 @@ export async function loadConfig(
 		throw invalid(
 			path
 				? `config file ${path} not found`
-				: `no config file: create ${CONFIG_FILES[0]}, or pass --input and --output`,
+				: `no config file: create ${CONFIG_FILES[0]}, or pass --input`,
 		);
 	}
 	const module: { default?: unknown } = await import(pathToFileURL(file).href);
@@ -83,7 +86,7 @@ export async function loadConfig(
 		: [module.default];
 	if (configs.length === 0 || !configs.every(isConfig)) {
 		throw invalid(
-			`${path ?? file}: export default a config, or a list of them, each with an input and an output`,
+			`${path ?? file}: export default a config, or a list of them, each with an input, and an output if not ${DEFAULT_OUTPUT}`,
 		);
 	}
 	return { file, configs };

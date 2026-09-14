@@ -1,6 +1,6 @@
 /**
- * `@nxgt/openapi-codegen/hono`: the runtime `hono.gen.ts` binds to its spec.
- * Import `createApi` and `createRoutes` from `hono.gen.ts`, not from here.
+ * `@nxgt/openapi-codegen/hono`: the runtime `hono.ts` binds to its spec.
+ * Import `createApi` and `createRoutes` from `hono.ts`, not from here.
  */
 export {
 	createApi,

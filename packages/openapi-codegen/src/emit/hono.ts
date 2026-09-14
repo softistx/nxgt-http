@@ -1,5 +1,5 @@
 /**
- * `hono.gen.ts`, with the `hono` option: every operation's replies as Hono
+ * `hono.ts`, with the `hono` option: every operation's replies as Hono
  * types them, and `createApi` / `createRoutes` bound to the spec. The one
  * generated file that imports more than `zod`: `hono`, and this package's
  * `/hono` runtime.
@@ -24,7 +24,7 @@ const REDIRECTS = new Set([300, 301, 302, 303, 305, 306, 307, 308]);
 
 const RUNTIME = '@nxgt/openapi-codegen/hono';
 
-/** The indexes of `types.gen.ts` that `HonoSpec` gathers. */
+/** The indexes of `types.ts` that `HonoSpec` gathers. */
 const INDEXES = [
 	'Operations',
 	'OperationsByRoute',
@@ -42,8 +42,8 @@ export function emitHono(ctx: EmitContext): string {
 	const imports = [
 		"import type * as Hono from 'hono';",
 		`import * as runtime from '${RUNTIME}';`,
-		`import { operations } from './operations.gen${ext}';`,
-		`import type ${list('{ ', types, ' }', '')} from './types.gen${ext}';`,
+		`import { operations } from './operations${ext}';`,
+		`import type ${list('{ ', types, ' }', '')} from './types${ext}';`,
 	].join('\n');
 	const replies = [
 		'/** What each operation may reply: a handler returning anything else does not compile. */',

@@ -15,14 +15,14 @@ yet.
 | --- | --- | --- |
 | unit specs | `src/**/*.spec.ts` | one behaviour each: a pointer escape, a mapping row, a refusal |
 | IR snapshots | `src/ir/fixtures.spec.ts` | the whole IR of the `split` and `query` fixtures |
-| code snapshots | `src/emit/golden.spec.ts` | every generated file of every fixture, `hono.gen.ts` included |
+| code snapshots | `src/emit/golden.spec.ts` | every generated file of every fixture, `hono.ts` included |
 | runtime | `src/emit/zod.spec.ts`, `operations.spec.ts` | the generated validators, run on real values |
 | Hono routes | `src/hono/engine.spec.ts` | the fixtures' routes on a real Hono app, through `app.request()`: validation, errors and hooks, QUERY, forms, reply checks, modules, registration mistakes |
 | type agreement | `test/generated/<case>/agreement.ts` | `tsc` fails if a type and its validator disagree, form validators included |
 | index typing | `test/types/operations.ts` | `Operations` and its indexes resolve as a server reads them |
 | routes typing | `test/types/hono.ts` | what `routes` refuses: an undeclared status, a wrong body, a path without that method, an unknown `operationId`, a tag or a path outside the scope |
 | routes cost | `src/hono/perf.spec.ts` | `tsc --extendedDiagnostics` on 500 generated routes stays under an instantiation budget |
-| openapi-fetch typing | `test/types/paths.ts` | `createClient<paths>()` types requests and replies from `paths.gen.ts` alone |
+| openapi-fetch typing | `test/types/paths.ts` | `createClient<paths>()` types requests and replies from `paths.ts` alone |
 | command line | `src/cli/run.spec.ts` | flags, config files, `--check` and exit codes through `run()`, and `src/cli.ts` as a process |
 
 ## Fixtures

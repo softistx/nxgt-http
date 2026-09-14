@@ -1,8 +1,8 @@
 /**
- * The schema half of `types.gen.ts`: one TypeScript type per named schema,
+ * The schema half of `types.ts`: one TypeScript type per named schema,
  * and an `XInput` type beside it when its validator accepts something other
  * than what it returns. Nothing is imported; its only runtime values are the
- * `as const` objects of named enums, which `zod.gen.ts` reuses.
+ * `as const` objects of named enums, which `zod.ts` reuses.
  */
 import type {
 	LiteralNode,
@@ -14,7 +14,7 @@ import type {
 import { appliesDefault, type EmitContext } from './context';
 import { docComment, docLines, group, jsString, propertyKey } from './printer';
 
-/** Declared in `types.gen.ts` with `dates: 'date'`, for what JSON carries. */
+/** Declared in `types.ts` with `dates: 'date'`, for what JSON carries. */
 export const WIRE_TYPE = `/** \`T\` as JSON carries it: a \`Date\` travels as its ISO string. */
 export type Wire<T> = T extends Date
 	? string

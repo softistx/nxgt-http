@@ -1,11 +1,11 @@
 /**
- * `paths.gen.ts`: the spec in the shape openapi-typescript prints, so
+ * `paths.ts`: the spec in the shape openapi-typescript prints, so
  * openapi-fetch, and anything else built on that shape, reads it unchanged.
  *
  * `paths` lists every method of every path, `?: never` where the spec has
  * none, and points at `operations`, keyed by `operationId`. Parameters and
  * request bodies are typed as a caller sends them, responses as the server
- * returns them, with the types of `types.gen.ts`. With `dates: 'date'`,
+ * returns them, with the types of `types.ts`. With `dates: 'date'`,
  * responses and `components` go through `Wire<T>`: a client gets JSON, and
  * its dates are strings.
  */
@@ -48,7 +48,7 @@ export function emitPaths(ctx: EmitContext): string {
 		names.size === 0
 			? []
 			: [
-					`import type ${list('{ ', [...names].sort(), ' }', '')} from './types.gen${ctx.options.importExtension}';`,
+					`import type ${list('{ ', [...names].sort(), ' }', '')} from './types${ctx.options.importExtension}';`,
 				];
 	return file([ctx.header, ...imports, ...sections]);
 }

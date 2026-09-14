@@ -6,13 +6,13 @@ flowchart LR
 	load --> ir[ir<br/>buildIR]
 	ir --> emit[emit<br/>emitFiles]
 	emit --> write[writer<br/>writeFiles]
-	write --> out[(types.gen.ts<br/>zod.gen.ts<br/>operations.gen.ts<br/>paths.gen.ts<br/>hono.gen.ts, with hono)]
-	out -. hono.gen.ts .-> runtime[hono runtime<br/>createApi]
+	write --> out[(types.ts<br/>zod.ts<br/>operations.ts<br/>paths.ts<br/>hono.ts, with hono)]
+	out -. hono.ts .-> runtime[hono runtime<br/>createApi]
 ```
 
 `generate()` (`src/generate.ts`) runs the four stages. `generateFiles()` stops
 before the writer. The Hono runtime is not a stage: it is the subpath
-`hono.gen.ts` imports, run by the consumer's app.
+`hono.ts` imports, run by the consumer's app.
 
 | Stage | Directory | In | Out |
 | --- | --- | --- | --- |
@@ -48,7 +48,7 @@ before the writer. The Hono runtime is not a stage: it is the subpath
    The `check` option and the snapshots depend on it.
 6. **Generated code imports `zod` and its sibling files, nothing else.** A
    consumer's runtime never depends on this package for the schema code. The
-   one exception is `hono.gen.ts`, written only with the `hono` option: it
+   one exception is `hono.ts`, written only with the `hono` option: it
    imports `hono` and `@nxgt/openapi-codegen/hono`.
 
 ## Where to start reading

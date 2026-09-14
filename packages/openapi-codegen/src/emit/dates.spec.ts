@@ -6,12 +6,12 @@
 import { describe, expect, it } from 'bun:test';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { createRoutes } from '../../test/generated/dates/hono.gen';
+import { createRoutes } from '../../test/generated/dates/hono';
 import {
 	operations,
 	zRescheduleEventForm,
-} from '../../test/generated/dates/operations.gen';
-import * as D from '../../test/generated/dates/zod.gen';
+} from '../../test/generated/dates/operations';
+import * as D from '../../test/generated/dates/zod';
 
 const at = (iso: string) => new Date(iso);
 

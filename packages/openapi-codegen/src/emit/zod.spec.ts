@@ -1,9 +1,9 @@
 /** What the generated validators do at runtime, against the golden files. */
 import { describe, expect, it } from 'bun:test';
-import { operations } from '../../test/generated/kitchen-sink/operations.gen';
-import * as T from '../../test/generated/kitchen-sink/types.gen';
-import * as K from '../../test/generated/kitchen-sink/zod.gen';
-import * as S from '../../test/generated/split/zod.gen';
+import { operations } from '../../test/generated/kitchen-sink/operations';
+import * as T from '../../test/generated/kitchen-sink/types';
+import * as K from '../../test/generated/kitchen-sink/zod';
+import * as S from '../../test/generated/split/zod';
 
 const ok = (
 	schema: { safeParse(v: unknown): { success: boolean } },
@@ -11,7 +11,7 @@ const ok = (
 ) => schema.safeParse(value).success;
 
 describe('generated validators', () => {
-	it('validates named enums against the objects of types.gen.ts', () => {
+	it('validates named enums against the objects of types.ts', () => {
 		expect(T.Status.OnLeave).toBe('on_leave');
 		expect(K.zStatus.parse('on_leave')).toBe(T.Status.OnLeave);
 		expect(ok(K.zStatus, 'gone')).toBe(false);

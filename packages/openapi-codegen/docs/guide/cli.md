@@ -28,6 +28,8 @@ export default defineConfig({
   current directory.
 - **What it takes.** Every [option](options.md) of `generate()`. `check` is
   the `--check` flag.
+- **Output.** `output` may be left out: the files then go to
+  `generated/openapi`.
 - **Paths.** `input` and `output` resolve against the config file's
   directory, wherever the command runs.
 - **`defineConfig`** only types the object. A plain `export default {…}`
@@ -47,7 +49,7 @@ export default defineConfig([
 | Flag | |
 | --- | --- |
 | `-c, --config <file>` | the config file |
-| `-i, --input <file>`, `-o, --output <dir>` | one spec instead of a config file, relative to the current directory |
+| `-i, --input <file>`, `-o, --output <dir>` | one spec instead of a config file, relative to the current directory; `--output` defaults to `generated/openapi` |
 | `--check` | write nothing; list what is missing or stale, and exit 1 |
 | `-h, --help` | the usage |
 | `-v, --version` | the package's version |
@@ -70,7 +72,7 @@ openapi/openapi.yaml → src/generated: 2 written, 2 unchanged
 | --- | --- |
 | 0 | generated, or `--check` found everything up to date |
 | 1 | the spec cannot be generated (every error of the failing stage is printed), the config file is missing or exports no config (`invalid_config`), or `--check` found drift |
-| 2 | the command line is wrong: no command, an unknown flag, `--input` without `--output`, or `--config` with `--input` |
+| 2 | the command line is wrong: no command, an unknown flag, `--output` without `--input`, or `--config` with `--input` |
 
 ## In package.json
 

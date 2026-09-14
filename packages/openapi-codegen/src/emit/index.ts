@@ -22,7 +22,7 @@ export function emitFiles(
 	const operations = emitOperations(ctx);
 	const files = [
 		{
-			path: 'types.gen.ts',
+			path: 'types.ts',
 			content: file([
 				ctx.header,
 				...schemaTypes(ctx),
@@ -30,17 +30,17 @@ export function emitFiles(
 				...(options.dates === 'date' ? [WIRE_TYPE] : []),
 			]),
 		},
-		{ path: 'zod.gen.ts', content: emitZod(ctx) },
+		{ path: 'zod.ts', content: emitZod(ctx) },
 		{
-			path: 'operations.gen.ts',
+			path: 'operations.ts',
 			content: file([
 				ctx.header,
 				operations.imports.join('\n'),
 				...operations.sections,
 			]),
 		},
-		{ path: 'paths.gen.ts', content: emitPaths(ctx) },
-		...(options.hono ? [{ path: 'hono.gen.ts', content: emitHono(ctx) }] : []),
+		{ path: 'paths.ts', content: emitPaths(ctx) },
+		...(options.hono ? [{ path: 'hono.ts', content: emitHono(ctx) }] : []),
 	];
 	return { files, warnings: ctx.warnings };
 }

@@ -67,7 +67,7 @@ export async function perfFiles(): Promise<GeneratedFile[]> {
 		{ path: `${output}/routes.ts`, content: perfRoutes(PERF_SIZE) },
 		// With the routes, and without: the difference is what the routes cost.
 		tsconfig(`${output}/tsconfig.json`, { include: ['./*.ts'] }),
-		tsconfig(`${output}/tsconfig.base.json`, { files: ['./hono.gen.ts'] }),
+		tsconfig(`${output}/tsconfig.base.json`, { files: ['./hono.ts'] }),
 	];
 }
 
@@ -119,10 +119,10 @@ async function agreement(
 	const imports = [
 		"import type { z } from 'zod';",
 		...(parameters.length > 0
-			? ["import type * as O from './operations.gen.js';"]
+			? ["import type * as O from './operations.js';"]
 			: []),
-		"import type * as T from './types.gen.js';",
-		"import type * as Z from './zod.gen.js';",
+		"import type * as T from './types.js';",
+		"import type * as Z from './zod.js';",
 	];
 	const checks = [...schemas, ...parameters];
 	return file([

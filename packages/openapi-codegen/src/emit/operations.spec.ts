@@ -1,7 +1,7 @@
 /** The generated operation table and parameter validators, against the golden files. */
 import { describe, expect, it } from 'bun:test';
-import { operations as pets } from '../../test/generated/kitchen-sink/operations.gen';
-import { operations } from '../../test/generated/split/operations.gen';
+import { operations as pets } from '../../test/generated/kitchen-sink/operations';
+import { operations } from '../../test/generated/split/operations';
 
 const getPet = pets.getPet;
 

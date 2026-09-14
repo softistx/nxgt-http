@@ -1,7 +1,7 @@
 /**
- * The indexes of `types.gen.ts`, as a server reads them: from a route or a
+ * The indexes of `types.ts`, as a server reads them: from a route or a
  * tag to its operations, and from an operation to what its handler gets and
- * may reply. What a caller sends is `paths.gen.ts`, checked in `paths.ts`.
+ * may reply. What a caller sends is `paths.ts`, checked in `paths.ts`.
  */
 import type {
 	Operations,
@@ -10,7 +10,7 @@ import type {
 	PathsByMethod,
 	PathsByTag,
 	UpdateEmployeeParam,
-} from '../generated/split/types.gen.js';
+} from '../generated/split/types.js';
 
 type Equal<X, Y> = [X] extends [Y] ? ([Y] extends [X] ? true : false) : false;
 type Assert<T extends true> = T;

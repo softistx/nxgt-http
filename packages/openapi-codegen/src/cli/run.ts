@@ -7,7 +7,7 @@ import { dirname, relative, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { type CodegenConfig, loadConfig } from '../config';
 import { CodegenError, formatDiagnostic } from '../errors';
-import { generate } from '../generate';
+import { DEFAULT_OUTPUT, generate } from '../generate';
 
 export const USAGE = `Usage: nxgt-openapi generate [options]
 
@@ -19,6 +19,7 @@ Options:
                        .mts, .js or .mjs in the current directory)
   -i, --input <file>   the spec's root document, instead of a config file
   -o, --output <dir>   where the files go, with --input
+                       (default: generated/openapi)
       --check          write nothing; exit 1 when a file is missing or stale
   -h, --help           show this help
   -v, --version        print the version
@@ -88,16 +89,19 @@ export async function run(
 	}
 	const { config, input, output } = values;
 	if (config !== undefined && (input !== undefined || output !== undefined)) {
-		return usage('pass either --config, or --input and --output');
+		return usage('pass either --config, or --input');
 	}
-	if ((input === undefined) !== (output === undefined)) {
-		return usage('--input and --output go together');
+	if (output !== undefined && input === undefined) {
+		return usage('--output goes with --input');
 	}
 
 	try {
 		const { configs, base } =
-			input !== undefined && output !== undefined
-				? { configs: [{ input, output }], base: cwd }
+			input !== undefined
+				? {
+						configs: [{ input, ...(output === undefined ? {} : { output }) }],
+						base: cwd,
+					}
 				: await fromFile(config, cwd);
 		let stale = 0;
 		for (const one of configs) {
@@ -147,7 +151,7 @@ async function generateOne(
 	const result = await generate({ ...config, check }, { cwd: base });
 	for (const warning of result.warnings) err(formatDiagnostic(warning, cwd));
 	const shown = (path: string) => relative(cwd, resolve(base, path)) || '.';
-	const where = `${shown(config.input)} → ${shown(config.output)}`;
+	const where = `${shown(config.input)} → ${shown(config.output ?? DEFAULT_OUTPUT)}`;
 	if (!check) {
 		out(
 			`${where}: ${result.written.length} written, ${result.unchanged.length} unchanged`,

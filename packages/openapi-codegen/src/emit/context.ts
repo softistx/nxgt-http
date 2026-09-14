@@ -33,7 +33,7 @@ export interface EmitOptions {
 	source: string;
 	/** Where diagnostics are reported relative to. */
 	rootDir: string;
-	/** Also emit `hono.gen.ts`. */
+	/** Also emit `hono.ts`. */
 	hono?: boolean;
 	/** `date-time` as a string (the default), or decoded to a `Date` by a codec. */
 	dates?: Dates;
@@ -43,7 +43,7 @@ export interface EmitOptions {
 export const appliesDefault = (property: Property): boolean =>
 	!property.required && property.schema.default !== undefined;
 
-/** What `types.gen.ts` declares beside the schemas, printed by `operationTypes`. */
+/** What `types.ts` declares beside the schemas, printed by `operationTypes`. */
 export const OPERATION_INDEXES = [
 	'Operations',
 	'OperationsByRoute',
@@ -276,7 +276,7 @@ export class EmitContext {
 
 	/**
 	 * `text`, the type of `node`, as JSON carries it: `Wire<T>` when it holds a
-	 * `Date`, which travels as its ISO string. Replies and `paths.gen.ts`
+	 * `Date`, which travels as its ISO string. Replies and `paths.ts`
 	 * responses are typed this way; only a decoded value holds a `Date`.
 	 */
 	wire(node: SchemaNode, text: string): string {
@@ -402,7 +402,7 @@ export class EmitContext {
 
 	/**
 	 * Every generated name, once. A schema's `XInput`, an operation's `XQuery`,
-	 * or a name `types.gen.ts` and `hono.gen.ts` declare themselves, can land
+	 * or a name `types.ts` and `hono.ts` declare themselves, can land
 	 * on a name a schema already has. Interfaces of one name would merge, not
 	 * fail, so this is the only place the clash is caught.
 	 */
@@ -424,12 +424,12 @@ export class EmitContext {
 			});
 		};
 		const root = { file: this.options.rootDir, pointer: '' };
-		for (const name of OPERATION_INDEXES) claim(name, 'types.gen.ts', root);
-		if (this.options.dates === 'date') claim('Wire', 'types.gen.ts', root);
+		for (const name of OPERATION_INDEXES) claim(name, 'types.ts', root);
+		if (this.options.dates === 'date') claim('Wire', 'types.ts', root);
 		if (this.options.hono) {
-			// Declared or imported by hono.gen.ts, which also imports schemas by name.
+			// Declared or imported by hono.ts, which also imports schemas by name.
 			for (const name of ['Replies', 'HonoSpec', 'Hono']) {
-				claim(name, 'hono.gen.ts', root);
+				claim(name, 'hono.ts', root);
 			}
 		}
 		for (const schema of this.ir.schemas) {

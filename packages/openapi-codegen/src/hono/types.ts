@@ -19,11 +19,11 @@ export type Method =
 
 type ByMethod = { [M in Method]: string };
 
-/** What `HonoSpec` in `hono.gen.ts` gathers. */
+/** What `HonoSpec` in `hono.ts` gathers. */
 export interface ApiSpec {
-	/** `Operations`, from `types.gen.ts`, keyed by `operationId`. */
+	/** `Operations`, from `types.ts`, keyed by `operationId`. */
 	operations: object;
-	/** `Replies`, from `hono.gen.ts`, keyed by `operationId`. */
+	/** `Replies`, from `hono.ts`, keyed by `operationId`. */
 	replies: object;
 	/** `OperationsByRoute`: `'put /employees/{id}'` to its `operationId`. */
 	routes: object;

@@ -185,6 +185,40 @@ type Id = OperationsByRoute['put /employees/{id}']; // 'updateEmployee'
 type Updated = Operations[Id]['responses'][200]['application/json']; // Employee
 ```
 
+## The `ClientOperations` map
+
+`types.ts` describes each operation a second time, as a client calls it.
+This is the map `@nxgt/openapi-client` reads:
+
+```ts
+export interface ClientOperations {
+	updateEmployee: {
+		method: 'put';
+		path: '/employees/{id}';
+		args: [input: {
+			param: { id: string };
+			json: NewEmployee;
+		}];
+		reply:
+			| { status: 200; type: 'application/json'; data: Employee }
+			| { status: 404; type: 'application/json'; data: ErrorResponse };
+		wire: …; // the same, as JSON carries it
+	};
+	// …
+}
+```
+
+| Key | Holds |
+| --- | --- |
+| `args` | what a call takes after the `operationId`: `[input]`, `[input?]` when nothing in it is required, `[]` when the operation takes nothing |
+| `param`, `query`, `header` in the input | parameters as the caller writes them, before defaults |
+| `json`, `form`, `text`, `body` in the input | the request body, keyed by kind; `body` is binary. A spec that accepts several kinds gives a union of inputs, one kind each |
+| `reply` | every declared reply as `{ status, type, data }`, the body decoded; `type` and `data` are `undefined` for a reply with no content |
+| `wire` | the same replies as JSON carries them: with [`dates: 'date'`](options.md#dates), their dates are strings |
+
+As in `Operations`, only exact statuses appear: an operation that declares
+none has `reply: never`.
+
 ## `operations.ts`
 
 The same operations as data, for code that reads requests at runtime:

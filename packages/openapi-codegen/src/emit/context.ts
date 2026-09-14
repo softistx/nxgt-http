@@ -46,6 +46,7 @@ export const appliesDefault = (property: Property): boolean =>
 /** What `types.ts` declares beside the schemas, printed by `operationTypes`. */
 export const OPERATION_INDEXES = [
 	'Operations',
+	'ClientOperations',
 	'OperationsByRoute',
 	'PathsByMethod',
 	'OperationsByTag',

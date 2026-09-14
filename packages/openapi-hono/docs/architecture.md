@@ -124,8 +124,10 @@ from context, so there are no overloads per middleware count.
 `test/generate.ts` generates `@nxgt/openapi-codegen`'s fixture specs
 (`split`, `query`, `kitchen-sink`, `dates`) with `hono: true` into
 `test/generated/`, which git ignores; the `test` and `typecheck` scripts run
-it first. The generator is reached through a tsconfig `paths` entry to its
-source, not a dependency.
+it first. The generator is a `workspace:^` devDependency, read from its
+build. The fixtures' `hono.ts` imports this package by name, which a
+tsconfig `paths` entry points at `src/`, so the specs run the engine they
+import rather than a build of it.
 
 | What | Where | Checks |
 | --- | --- | --- |

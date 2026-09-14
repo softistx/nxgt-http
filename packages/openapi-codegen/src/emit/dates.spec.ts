@@ -1,12 +1,10 @@
 /**
  * `dates: 'date'`, run: the `dates` fixture's validators decode date-times to
- * `Date`s, and its Hono routes hand them to handlers and send them back as
- * strings.
+ * `Date`s, and encode them back. Its Hono routes are `@nxgt/openapi-hono`'s
+ * to run, in its `src/dates.spec.ts`.
  */
 import { describe, expect, it } from 'bun:test';
-import { Hono } from 'hono';
 import { z } from 'zod';
-import { createRoutes } from '../../test/generated/dates/hono';
 import {
 	operations,
 	zRescheduleEventForm,
@@ -68,31 +66,5 @@ describe("dates: 'date'", () => {
 			at: at('2024-05-01T10:00:00Z'),
 			notify: [at('2024-04-30T10:00:00Z')],
 		});
-	});
-
-	it('hands a handler Dates, and sends its reply with strings', async () => {
-		const app = new Hono();
-		createRoutes(app, { validateResponses: true }).post('/events', (c) => {
-			const body = c.req.valid('json');
-			expect(body.startsAt).toBeInstanceOf(Date);
-			return c.json(
-				{ ...body, id: '1', createdAt: at('2024-04-01T10:00:00Z') },
-				201,
-			);
-		});
-		const send = (startsAt: string) =>
-			app.request('/events', {
-				method: 'POST',
-				body: JSON.stringify({ title: 'Launch', startsAt }),
-				headers: { 'content-type': 'application/json' },
-			});
-		const created = await send('2024-05-01T10:00:00Z');
-		expect(created.status).toBe(201);
-		expect(await created.json()).toMatchObject({
-			startsAt: '2024-05-01T10:00:00.000Z',
-			createdAt: '2024-04-01T10:00:00.000Z',
-		});
-		const refused = await send('tomorrow');
-		expect(refused.status).toBe(400);
 	});
 });

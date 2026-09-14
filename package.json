@@ -7,8 +7,9 @@
 	],
 	"scripts": {
 		"build": "bun run --filter './packages/*' build",
-		"typecheck": "bun run typecheck:scripts && bun run --filter './packages/*' typecheck",
+		"typecheck": "bun run typecheck:scripts && bun run --filter './packages/*' typecheck && bun run typecheck:generated",
 		"typecheck:scripts": "tsc --noEmit -p scripts/tsconfig.json",
+		"typecheck:generated": "tsc -p tsconfig.generated.json",
 		"test": "bun run --filter '*' test",
 		"check": "biome check",
 		"format": "biome format",

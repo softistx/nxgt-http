@@ -100,6 +100,9 @@ export function emitZod(ctx: EmitContext): string {
 			`export const z${alias.name} = z${ctx.schema(alias.target).name};`,
 		);
 	}
+	// A spec with no schema: no `z` to import, which an app's `noUnusedLocals`
+	// refuses, but still a module, which `operations.ts` imports.
+	if (blocks.length === 0) return file([ctx.header, 'export {};']);
 	const imports = [`import { z } from 'zod';`];
 	if (values.size > 0) {
 		imports.push(

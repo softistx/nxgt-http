@@ -20,7 +20,7 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/softistx/nxgt-core.git",
+		"url": "git+https://github.com/softistx/nxgt-http.git",
 		"directory": "packages/datasource-rest"
 	},
 	"publishConfig": {
@@ -37,14 +37,11 @@
 		]
 	},
 	"dependencies": {
-		"lodash": "^4.18.1",
-		"@nxgt/shared": "workspace:^",
-		"@nxgt/shared-exceptions": "workspace:^",
+		"@nxgt/shared-exceptions": "^1.0.3",
 		"openapi-fetch": "^0.17.0"
 	},
 	"devDependencies": {
-		"@types/bun": "^1.4.0",
-		"@types/lodash": "^4.17.24"
+		"@types/bun": "^1.4.0"
 	},
 	"peerDependencies": {
 		"typescript": "^6.0.3"

@@ -9,6 +9,7 @@ generator whose output serves a spec with Hono and calls it with that client.
 | [`@nxgt/openapi-codegen`](packages/openapi-codegen) | an OpenAPI 3.1/3.2 spec in, TypeScript types and Zod 4 schemas out, from one intermediate representation, so the two never disagree | [npm](https://www.npmjs.com/package/@nxgt/openapi-codegen) |
 | [`@nxgt/openapi-hono`](packages/openapi-hono) | typed Hono routes for the generated operations, which validate the request, then call the handler | [npm](https://www.npmjs.com/package/@nxgt/openapi-hono) |
 | [`@nxgt/openapi-httpyz`](packages/openapi-httpyz) | the generated operations, called through an `@nxgt/httpyz` client | [npm](https://www.npmjs.com/package/@nxgt/openapi-httpyz) |
+| [`@nxgt/httpyz-query`](packages/httpyz-query) | TanStack Query options for an `@nxgt/httpyz` client's calls, which a cancelled query aborts | [npm](https://www.npmjs.com/package/@nxgt/httpyz-query) |
 
 ## How they fit
 
@@ -19,8 +20,8 @@ generator whose output serves a spec with Hono and calls it with that client.
           ┌──────────┴──────────┐
      hono.ts               operations.ts, types.ts
           │                     │
- @nxgt/openapi-hono    @nxgt/openapi-httpyz ── @nxgt/httpyz
-     (server)                (client)
+ @nxgt/openapi-hono    @nxgt/openapi-httpyz ── @nxgt/httpyz ── @nxgt/httpyz-query
+     (server)                (client)                (TanStack Query)
 ```
 
 The server and the client read the same generated schemas, so a request the

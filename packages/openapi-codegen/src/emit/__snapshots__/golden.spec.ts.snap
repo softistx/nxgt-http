@@ -149,6 +149,91 @@ export interface Operations {
 	};
 }
 
+/** What a client sends and gets back: \`args\` after the operationId, and each declared \`reply\`. */
+export interface ClientOperations {
+	listEmployees: {
+		method: 'get';
+		path: '/employees';
+		args: [input?: {
+			query?: {
+				/** The page number to return. */
+				page?: number | undefined;
+				/** The number of items to return per page. */
+				size?: number | undefined;
+				status?: EmployeeStatus | undefined;
+			};
+		}];
+		reply:
+			| { status: 200; type: 'application/json'; data: Employee[] }
+			| { status: 400; type: 'application/json'; data: ErrorResponse };
+		wire:
+			| { status: 200; type: 'application/json'; data: Employee[] }
+			| { status: 400; type: 'application/json'; data: ErrorResponse };
+	};
+	createEmployee: {
+		method: 'post';
+		path: '/employees';
+		args: [input: {
+			json: NewEmployee;
+		}];
+		reply:
+			| { status: 201; type: 'application/json'; data: Employee }
+			| { status: 400; type: 'application/json'; data: ErrorResponse };
+		wire:
+			| { status: 201; type: 'application/json'; data: Employee }
+			| { status: 400; type: 'application/json'; data: ErrorResponse };
+	};
+	getEmployee: {
+		method: 'get';
+		path: '/employees/{id}';
+		args: [input: {
+			param: {
+				/** The unique identifier of the entity. */
+				id: string;
+			};
+		}];
+		reply:
+			| { status: 200; type: 'application/json'; data: Employee }
+			| { status: 404; type: 'application/json'; data: ErrorResponse };
+		wire:
+			| { status: 200; type: 'application/json'; data: Employee }
+			| { status: 404; type: 'application/json'; data: ErrorResponse };
+	};
+	updateEmployee: {
+		method: 'put';
+		path: '/employees/{id}';
+		args: [input: {
+			param: {
+				/** The unique identifier of the entity. */
+				id: string;
+			};
+			json: NewEmployee;
+		}];
+		reply:
+			| { status: 200; type: 'application/json'; data: Employee }
+			| { status: 404; type: 'application/json'; data: ErrorResponse };
+		wire:
+			| { status: 200; type: 'application/json'; data: Employee }
+			| { status: 404; type: 'application/json'; data: ErrorResponse };
+	};
+	deleteEmployee: {
+		method: 'delete';
+		path: '/employees/{id}';
+		args: [input: {
+			param: {
+				/** The unique identifier of the entity. */
+				id: string;
+			};
+		}];
+		reply:
+			| { status: 204; type: undefined; data: undefined }
+			| { status: 404; type: 'application/json'; data: ErrorResponse };
+		wire:
+			| { status: 204; type: undefined; data: undefined }
+			| { status: 404; type: 'application/json'; data: ErrorResponse };
+	};
+}
+
 /** The operation behind each route: \`routes.put(path)\` finds it here. */
 export interface OperationsByRoute {
 	'get /employees': 'listEmployees';
@@ -747,6 +832,19 @@ export interface Operations {
 				'application/json': Hit[];
 			};
 		};
+	};
+}
+
+/** What a client sends and gets back: \`args\` after the operationId, and each declared \`reply\`. */
+export interface ClientOperations {
+	searchEmployees: {
+		method: 'query';
+		path: '/employees';
+		args: [input: {
+			json: SearchEmployeesBodyInput;
+		}];
+		reply: { status: 200; type: 'application/json'; data: Hit[] };
+		wire: { status: 200; type: 'application/json'; data: Hit[] };
 	};
 }
 
@@ -1368,6 +1466,82 @@ export interface Operations {
 				'application/pdf': globalThis.Blob;
 			};
 		};
+	};
+}
+
+/** What a client sends and gets back: \`args\` after the operationId, and each declared \`reply\`. */
+export interface ClientOperations {
+	/** Fetch a pet. */
+	getPet: {
+		method: 'get';
+		path: '/pets/{petId}';
+		args: [input: {
+			param: {
+				petId: number;
+			};
+			query?: {
+				/** Which fields to return. */
+				fields?: string[] | undefined;
+				ids?: number[] | undefined;
+				/** @default false */
+				verbose?: boolean | undefined;
+				level?: 1 | 2 | 'max' | undefined;
+				tier?: Tier | undefined;
+			};
+			header: {
+				'x-request-id': string;
+			};
+		}];
+		reply:
+			| { status: 200; type: 'application/json'; data: Pet }
+			| { status: 304; type: undefined; data: undefined };
+		wire:
+			| { status: 200; type: 'application/json'; data: Pet }
+			| { status: 304; type: undefined; data: undefined };
+	};
+	/**
+	 * Delete a pet.
+	 *
+	 * Pets are archived instead.
+	 * @deprecated
+	 */
+	deletePet: {
+		method: 'delete';
+		path: '/pets/{petId}';
+		args: [input: {
+			param: {
+				petId: number;
+			};
+		}];
+		reply: { status: 204; type: undefined; data: undefined };
+		wire: { status: 204; type: undefined; data: undefined };
+	};
+	putTags: {
+		method: 'put';
+		path: '/pets/{petId}/tags';
+		args: [input: {
+			param: {
+				petId: number;
+			};
+			json: string[];
+		}];
+		reply: { status: 200; type: 'application/json'; data: string[] };
+		wire: { status: 200; type: 'application/json'; data: string[] };
+	};
+	upload: {
+		method: 'post';
+		path: '/uploads';
+		args: [input?: {
+			form?: UploadInput;
+		} | {
+			body?: globalThis.Blob | ArrayBuffer | Uint8Array;
+		}];
+		reply:
+			| { status: 200; type: 'text/plain'; data: string }
+			| { status: 201; type: 'application/pdf'; data: globalThis.Blob };
+		wire:
+			| { status: 200; type: 'text/plain'; data: string }
+			| { status: 201; type: 'application/pdf'; data: globalThis.Blob };
 	};
 }
 
@@ -2263,6 +2437,43 @@ export interface Operations {
 			/** Rescheduled. */
 			204: {};
 		};
+	};
+}
+
+/** What a client sends and gets back: \`args\` after the operationId, and each declared \`reply\`. */
+export interface ClientOperations {
+	listEvents: {
+		method: 'get';
+		path: '/events';
+		args: [input?: {
+			query?: {
+				since?: string | undefined;
+				day?: string | undefined;
+			};
+		}];
+		reply: { status: 200; type: 'application/json'; data: Event[] };
+		wire: { status: 200; type: 'application/json'; data: Wire<Event[]> };
+	};
+	createEvent: {
+		method: 'post';
+		path: '/events';
+		args: [input: {
+			json: NewEventInput;
+		}];
+		reply: { status: 201; type: 'application/json'; data: Event };
+		wire: { status: 201; type: 'application/json'; data: Wire<Event> };
+	};
+	rescheduleEvent: {
+		method: 'post';
+		path: '/events/{id}/reschedule';
+		args: [input: {
+			param: {
+				id: string;
+			};
+			form: RescheduleEventBodyInput;
+		}];
+		reply: { status: 204; type: undefined; data: undefined };
+		wire: { status: 204; type: undefined; data: undefined };
 	};
 }
 

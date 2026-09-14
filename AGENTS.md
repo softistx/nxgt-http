@@ -53,7 +53,9 @@ no relative import into one.
   `src`, not a build of it.
 - `@nxgt/openapi-codegen` depends on no sibling. Its fixtures' `hono.ts` is
   excluded from its typecheck, and `@nxgt/openapi-hono` type-checks and runs
-  the same files against itself.
+  the same files against itself. `typecheck:generated` checks them all, the
+  conformance ones included, against the runtime's built declarations; `hono`
+  is a devDependency of the generator for that.
 
 **There are no cycles and there must not be one**, devDependencies included.
 A published package cannot depend on a package that depends back on it: the

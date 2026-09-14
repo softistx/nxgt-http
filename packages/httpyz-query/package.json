@@ -1,0 +1,66 @@
+{
+	"name": "@nxgt/httpyz-query",
+	"version": "0.0.0",
+	"license": "UNLICENSED",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"files": [
+		"dist",
+		"README.md",
+		"package.json"
+	],
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"default": "./dist/index.js"
+		},
+		"./openapi": {
+			"types": "./dist/openapi.d.ts",
+			"import": "./dist/openapi.js",
+			"default": "./dist/openapi.js"
+		},
+		"./package.json": "./package.json"
+	},
+	"nxgt": {
+		"entrypoints": [
+			"src/index.ts",
+			"src/openapi.ts"
+		]
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/softistx/nxgt-http.git",
+		"directory": "packages/httpyz-query"
+	},
+	"publishConfig": {
+		"registry": "https://registry.npmjs.org",
+		"access": "public"
+	},
+	"scripts": {
+		"build": "bun run ../../build.ts",
+		"fixtures": "bun run test/generate.ts",
+		"test": "bun run fixtures && bun test src",
+		"typecheck": "bun run fixtures && tsc --noEmit"
+	},
+	"devDependencies": {
+		"@nxgt/httpyz": "workspace:^",
+		"@nxgt/openapi-codegen": "workspace:^",
+		"@nxgt/openapi-httpyz": "workspace:^",
+		"@tanstack/query-core": "^5.102.8",
+		"@types/bun": "^1.4.0",
+		"zod": "^4.5.4"
+	},
+	"peerDependencies": {
+		"@nxgt/httpyz": "workspace:^",
+		"@nxgt/openapi-httpyz": "workspace:^",
+		"@tanstack/query-core": "^5.90.0",
+		"typescript": "^6.0.3"
+	},
+	"peerDependenciesMeta": {
+		"@nxgt/openapi-httpyz": {
+			"optional": true
+		}
+	}
+}

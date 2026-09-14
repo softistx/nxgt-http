@@ -182,13 +182,14 @@ export type OpenApiGroup<
 };
 
 /** The paths with an operation for method `M`: `'/items/{id}'` from `'get /items/{id}'`. */
-type PathsOf<Routes, M extends Method> = keyof Routes extends infer Route
+export type PathsOf<Routes, M extends Method> = keyof Routes extends infer Route
 	? Route extends `${M} ${infer Path}`
 		? Path
 		: never
 	: never;
 
-type IdOf<
+/** The `operationId` of the operation at `M P`. */
+export type IdOf<
 	Ops,
 	Routes,
 	M extends Method,

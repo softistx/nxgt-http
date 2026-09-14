@@ -12,6 +12,7 @@ The `@nxgt/*` packages for HTTP APIs, published to the public npm registry:
 | `@nxgt/openapi-codegen` | the generator: an OpenAPI 3.1/3.2 spec in, TypeScript types and Zod 4 schemas out, from one intermediate representation |
 | `@nxgt/openapi-hono` | the runtime the generated `hono.ts` binds to its spec: typed Hono routes that validate, then call the handler |
 | `@nxgt/openapi-httpyz` | the binding of the generated operations onto `@nxgt/httpyz` |
+| `@nxgt/httpyz-query` | TanStack Query options for the calls of an `@nxgt/httpyz` client |
 
 They were extracted from `softistx/nxgt-core` on 2026-09-13 with their
 history (`git filter-repo`). Before that, the client was `@nxgt/openapi-client`
@@ -28,7 +29,8 @@ lands in `@nxgt/httpyz` first, and in the binding second.
 ```
 httpyz            openapi-codegen
   │                 └─ openapi-hono          (dev: generates its fixtures)
-  └─ openapi-httpyz ◄── openapi-codegen, openapi-hono   (dev: its fixtures)
+  ├─ openapi-httpyz ◄── openapi-codegen, openapi-hono   (dev: its fixtures)
+  └─ httpyz-query   ◄── openapi-httpyz (optional peer), openapi-codegen (dev: its fixtures)
 ```
 
 This is a Bun workspace, as nxgt-core is: **a package that uses a sibling
@@ -40,6 +42,11 @@ no relative import into one.
 - `@nxgt/openapi-httpyz` has `@nxgt/httpyz` as a peer, and as a
   devDependency to build against. The generator and the Hono runtime are
   devDependencies: its specs serve the fixture they generate.
+- `@nxgt/httpyz-query` has `@nxgt/httpyz` and `@tanstack/query-core` as
+  peers. It imports nothing of TanStack's at runtime, only its types, so any
+  adapter takes what it returns; its specs run query-core's own `QueryClient`.
+  Its `./openapi` subpath imports `@nxgt/openapi-httpyz`'s types only, an
+  optional peer; the generator is a devDependency, for its fixtures.
 - `@nxgt/openapi-hono` has the generator as a devDependency, for its
   fixtures. The one `paths` entry left is its own name, so that the
   generated `hono.ts` in its fixtures runs the engine the specs import from
@@ -138,7 +145,7 @@ publishes to npm.
 
 ## Known state
 
-`bun run test` is **280 pass, 0 fail**: httpyz 75, openapi-codegen 154,
-openapi-hono 24, openapi-httpyz 27. It runs one process per package, and each
+`bun run test` is **296 pass, 0 fail**: httpyz 79, httpyz-query 12,
+openapi-codegen 154, openapi-hono 24, openapi-httpyz 27. It runs one process per package, and each
 package's `test` script writes the generated fixtures its specs import first.
 Treat any failure as yours.

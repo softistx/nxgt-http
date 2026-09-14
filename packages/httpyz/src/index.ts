@@ -38,7 +38,7 @@ export type {
 	SchemaData,
 	WithResponse,
 } from './reply/types';
-export { unwrap } from './reply/unwrap';
+export { ok, type Success, unwrap } from './reply/unwrap';
 export type {
 	BodyInput,
 	FormFields,

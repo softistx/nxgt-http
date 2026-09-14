@@ -3,6 +3,7 @@ import { emitFiles, type GeneratedFile } from './emit';
 import type { Dates, Enums, UnknownKeys } from './emit/context';
 import { CodegenError, type Diagnostic } from './errors';
 import { buildIR, type IROptions } from './ir';
+import { type Lint, lintSpec } from './lint';
 import { loadDocument } from './loader/document';
 import type { FileSystem } from './loader/fs';
 import { type WriteResult, writeFiles } from './writer/write';
@@ -39,6 +40,13 @@ export interface GenerateOptions extends IROptions {
 	 * string either way: a day is not an instant.
 	 */
 	dates?: Dates;
+	/**
+	 * Lint the spec with Redocly before generating: `true` uses the
+	 * `redocly.yaml` beside `input`, or Redocly's defaults; a string names the
+	 * config file. Needs the optional peer `@redocly/openapi-core`. A lint
+	 * error stops the run; a lint warning comes back with the others.
+	 */
+	lint?: Lint;
 }
 
 export interface GenerateContext {
@@ -96,9 +104,22 @@ export async function generateFiles(
 	if (!DATES.includes(dates)) {
 		throw invalid(`dates must be string or date, not ${dates}`);
 	}
+	const lint = options.lint ?? false;
+	if (typeof lint !== 'boolean' && (typeof lint !== 'string' || lint === '')) {
+		throw invalid(
+			`lint must be true, false or a Redocly config file, not ${String(lint)}`,
+		);
+	}
+	if (lint !== false && fs !== undefined) {
+		throw invalid('lint reads the spec from disk: it cannot be used with fs');
+	}
 	const input = resolve(cwd, options.input);
 	const output = resolve(cwd, options.output ?? DEFAULT_OUTPUT);
 	const doc = await loadDocument(input, { fs, cwd });
+	const linted = lint === false ? [] : await lintSpec(input, lint, cwd);
+	if (linted.some((d) => d.severity === 'error')) {
+		throw new CodegenError(linted, dirname(input));
+	}
 	const ir = buildIR(doc, options);
 	const { files, warnings } = emitFiles(ir, {
 		unknownKeys,
@@ -111,7 +132,7 @@ export async function generateFiles(
 	});
 	return {
 		files: files.map((file) => ({ ...file, path: join(output, file.path) })),
-		warnings: [...ir.warnings, ...warnings],
+		warnings: [...linted, ...ir.warnings, ...warnings],
 	};
 }
 

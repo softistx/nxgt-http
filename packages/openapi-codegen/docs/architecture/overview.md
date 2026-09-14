@@ -3,6 +3,8 @@
 ```mermaid
 flowchart LR
 	spec[(spec files)] --> load[loader<br/>loadDocument]
+	load -. lint .-> lint[lint<br/>lintSpec]
+	lint -.-> ir
 	load --> ir[ir<br/>buildIR]
 	ir --> emit[emit<br/>emitFiles]
 	emit --> write[writer<br/>writeFiles]
@@ -10,13 +12,15 @@ flowchart LR
 	out -. hono.ts .-> runtime[hono runtime<br/>createApi]
 ```
 
-`generate()` (`src/generate.ts`) runs the four stages. `generateFiles()` stops
-before the writer. The Hono runtime is not a stage: it is the subpath
+`generate()` (`src/generate.ts`) runs the four stages, and with the `lint`
+option runs Redocly's linter between the loader and the IR. `generateFiles()`
+stops before the writer. The Hono runtime is not a stage: it is the subpath
 `hono.ts` imports, run by the consumer's app.
 
 | Stage | Directory | In | Out |
 | --- | --- | --- | --- |
 | [Loader](loader.md) | `src/loader/` | a path | `LoadedDocument`: every reachable file parsed, every `$ref` checked |
+| Lint, with `lint` | `src/lint.ts` | the root document's path | Redocly's problems as `lint_error` and `lint_warning`; it resolves and renames nothing |
 | [IR](ir.md) | `src/ir/` | `LoadedDocument` | `ApiIR`: named schemas in emit order, operations, warnings |
 | [Emitters](emitters.md) | `src/emit/` | `ApiIR` | `GeneratedFile[]` |
 | Writer | `src/writer/` | files | written, unchanged and drifted paths |
@@ -36,7 +40,8 @@ before the writer. The Hono runtime is not a stage: it is the subpath
    throws on the first problem. A later stage does not run when an earlier
    one failed, because it would report the same causes twice.
 3. **I/O at the edges only.** The loader reads the spec and the writer writes
-   the files. In between, everything is synchronous: after `Resolver.crawl`,
+   the files; `lint` reads the spec a second time, through Redocly, before
+   the IR is built. In between, everything is synchronous: after `Resolver.crawl`,
    `get`, `target` and `deref` are lookups, and the IR and the emitters are
    pure functions of their input.
 4. **One IR, two printers.** A TypeScript type and its Zod validator are

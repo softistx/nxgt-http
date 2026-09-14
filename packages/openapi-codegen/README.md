@@ -27,6 +27,13 @@ and `hono` is its optional peer:
 bun add @nxgt/openapi-codegen hono zod
 ```
 
+To lint the spec with Redocly before generating ([`lint`](docs/guide/options.md#lint)),
+add its other optional peer:
+
+```sh
+bun add -d @redocly/openapi-core
+```
+
 The generator runs on Bun; the code it generates runs anywhere.
 
 ## Subpaths

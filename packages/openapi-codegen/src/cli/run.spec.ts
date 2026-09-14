@@ -135,6 +135,18 @@ describe('nxgt-openapi', () => {
 		expect(err).toContain('[unsupported_keyword]');
 	});
 
+	it('lints each spec with Redocly first under --lint', async () => {
+		const cwd = await project({
+			'redocly.yaml': 'rules:\n  info-license: error\n',
+		});
+		const args = ['generate', '-i', 'openapi.json', '-o', 'gen'];
+		expect((await cli(args, cwd)).code).toBe(0);
+		const { code, err } = await cli([...args, '--lint'], cwd);
+		expect(code).toBe(1);
+		expect(err).toStartWith('error openapi.json:1:');
+		expect(err).toEndWith('(info-license) [lint_error]');
+	});
+
 	it('exits 1 when there is no config file, or it exports no config', async () => {
 		const cwd = await project({ 'empty.config.mjs': 'export default {};\n' });
 		for (const args of [

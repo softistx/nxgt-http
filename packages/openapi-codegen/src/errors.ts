@@ -30,7 +30,9 @@ export type DiagnosticCode =
 	| 'path_parameter_mismatch'
 	| 'missing_operation_id'
 	| 'duplicate_operation_id'
-	| 'ignored';
+	| 'ignored'
+	| 'lint_error'
+	| 'lint_warning';
 
 export type Severity = 'error' | 'warning';
 
@@ -42,14 +44,23 @@ export interface Diagnostic {
 	file?: string;
 	/** JSON pointer inside `file`; `''` is the document root. */
 	pointer?: string;
+	/** Where in `file`, 1-based; only a `lint` problem knows. */
+	line?: number;
+	column?: number;
 }
 
-/** `error paths/employees.yaml#/get/responses/200/$ref: … [pointer_not_found]` */
+/**
+ * `error paths/employees.yaml#/get/responses/200/$ref: … [pointer_not_found]`,
+ * or `file:line:column: …` when the line is known.
+ */
 export function formatDiagnostic(d: Diagnostic, baseDir?: string): string {
 	let where = '';
 	if (d.file !== undefined) {
 		const file = baseDir ? relative(baseDir, d.file) || d.file : d.file;
-		where = `${file}#${d.pointer ?? ''}: `;
+		where =
+			d.line === undefined
+				? `${file}#${d.pointer ?? ''}: `
+				: `${file}:${d.line}:${d.column ?? 1}: `;
 	}
 	return `${d.severity} ${where}${d.message} [${d.code}]`;
 }

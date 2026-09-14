@@ -50,17 +50,22 @@
 		]
 	},
 	"devDependencies": {
+		"@redocly/openapi-core": "^2.52.1",
 		"@types/bun": "^1.4.0",
 		"hono": "^4.13.4",
 		"openapi-fetch": "^0.17.0",
 		"zod": "^4.5.4"
 	},
 	"peerDependencies": {
+		"@redocly/openapi-core": "^2.52.1",
 		"hono": "^4.13.4",
 		"typescript": "^6.0.3",
 		"zod": "^4.5.4"
 	},
 	"peerDependenciesMeta": {
+		"@redocly/openapi-core": {
+			"optional": true
+		},
 		"hono": {
 			"optional": true
 		}

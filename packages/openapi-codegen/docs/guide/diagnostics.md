@@ -3,7 +3,8 @@
 Every problem has a stable `code`. Match on the code, never on the wording.
 
 Errors stop the run. The stages run in order (options, loading the files,
-schemas and operations, names), and the first stage with errors reports all
+[`lint`](options.md#lint) when asked for, schemas and operations, names),
+and the first stage with errors reports all
 of them together in one `CodegenError`, along with its warnings. Warnings
 from a successful run come back in `warnings`, and the files are still
 written.
@@ -57,3 +58,21 @@ prints one the same way.
 | `missing_operation_id` | warning | no `operationId`, so one was derived | add an `operationId`: the derived one changes if the path does |
 | `duplicate_operation_id` | error | two operations share an `operationId` | make it unique |
 | `ignored` | warning | present but not generated: `default` and `4XX` responses, callbacks, webhooks | nothing, unless you relied on it |
+
+## Linting
+
+With [`lint`](options.md#lint), each problem Redocly reports becomes a
+diagnostic. Its message ends with the Redocly rule, and it points at a line
+rather than a pointer:
+
+```
+error paths/pets.yaml:7:5: Operation object should contain `summary` field. (operation-summary) [lint_error]
+```
+
+| Code | Severity | Meaning | Fix |
+| --- | --- | --- | --- |
+| `lint_error` | error | a rule set to `error` fails | fix the spec, or lower the rule in `redocly.yaml` |
+| `lint_warning` | warning | a rule set to `warn` fails | the same, when it matters |
+
+`lint` without `@redocly/openapi-core` installed, with a Redocly config
+that cannot be loaded, or with a custom `fs`, is an `invalid_option`.

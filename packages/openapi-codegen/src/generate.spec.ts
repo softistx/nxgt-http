@@ -260,6 +260,22 @@ describe('generate', () => {
 		expect(written).toContain(join(cwd, 'generated/openapi/types.ts'));
 	});
 
+	it('refuses a names override that is a reserved word', async () => {
+		const fs = createMemoryFileSystem({ '/s/openapi.json': SPEC });
+		const error = await generateFiles(
+			{
+				input: '/s/openapi.json',
+				output: '/s/gen',
+				names: { 'openapi.json#/components/schemas/Pet': 'default' },
+			},
+			{ fs },
+		).catch((caught: unknown) => caught);
+		expect(error).toBeInstanceOf(CodegenError);
+		expect((error as CodegenError).diagnostics.map((d) => d.message)).toEqual([
+			'names: `default` is a reserved word, which cannot name a type',
+		]);
+	});
+
 	it('refuses a dates option it does not know', async () => {
 		const fs = createMemoryFileSystem({ '/s/openapi.json': SPEC });
 		await expect(

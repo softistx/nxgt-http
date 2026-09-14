@@ -91,6 +91,13 @@ export async function run(
 		return usage(`unknown command: ${positionals.join(' ')}`);
 	}
 	const { config, input, output } = values;
+	for (const [flag, value] of [
+		['--config', config],
+		['--input', input],
+		['--output', output],
+	] as const) {
+		if (value === '') return usage(`${flag} needs a path`);
+	}
 	if (config !== undefined && (input !== undefined || output !== undefined)) {
 		return usage('pass either --config, or --input');
 	}
@@ -106,18 +113,32 @@ export async function run(
 						base: cwd,
 					}
 				: await fromFile(config, cwd);
+		// One spec that fails does not stop the others: each reports its own.
 		let stale = 0;
+		let failed = 0;
 		for (const one of configs) {
-			stale += await generateOne(one, {
-				base,
-				cwd,
-				check: values.check === true,
-				lint: values.lint === true,
-				out,
-				err,
-			});
+			try {
+				stale += await generateOne(one, {
+					base,
+					cwd,
+					check: values.check === true,
+					lint: values.lint === true,
+					out,
+					err,
+				});
+			} catch (error) {
+				failed++;
+				if (error instanceof CodegenError) {
+					for (const d of error.diagnostics) err(formatDiagnostic(d, cwd));
+				} else if (isSystemError(error)) {
+					// An output that is a file, a directory it cannot write…
+					err(`error ${error.message}`);
+				} else {
+					throw error;
+				}
+			}
 		}
-		return stale > 0 ? 1 : 0;
+		return stale > 0 || failed > 0 ? 1 : 0;
 	} catch (error) {
 		if (!(error instanceof CodegenError)) throw error;
 		// One line per diagnostic, warnings included, not the message: that one
@@ -126,6 +147,11 @@ export async function run(
 		return 1;
 	}
 }
+
+/** A failure of the file system, such as `EACCES` or `ENOTDIR`, not a bug. */
+const isSystemError = (error: unknown): error is Error & { code: string } =>
+	error instanceof Error &&
+	typeof (error as { code?: unknown }).code === 'string';
 
 async function fromFile(
 	path: string | undefined,
@@ -161,8 +187,10 @@ async function generateOne(
 	const shown = (path: string) => relative(cwd, resolve(base, path)) || '.';
 	const where = `${shown(config.input)} → ${shown(config.output ?? DEFAULT_OUTPUT)}`;
 	if (!check) {
+		const removed =
+			result.removed.length > 0 ? `, ${result.removed.length} removed` : '';
 		out(
-			`${where}: ${result.written.length} written, ${result.unchanged.length} unchanged`,
+			`${where}: ${result.written.length} written, ${result.unchanged.length} unchanged${removed}`,
 		);
 		return 0;
 	}

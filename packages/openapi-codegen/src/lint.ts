@@ -15,6 +15,14 @@ const failed = (message: string): Diagnostic[] => [
 	{ severity: 'error', code: 'invalid_option', message },
 ];
 
+const firstLine = (error: unknown): string =>
+	String(error instanceof Error ? error.message : error).split('\n')[0] ?? '';
+
+/** The package is absent, as opposed to present and broken. */
+const notInstalled = (error: unknown): boolean =>
+	(error as { code?: unknown } | null)?.code === 'ERR_MODULE_NOT_FOUND' ||
+	/Cannot find (module|package)/.test(firstLine(error));
+
 /** Redocly's problems with `input`, as `lint_error` and `lint_warning` diagnostics. */
 export async function lintSpec(
 	input: string,
@@ -24,9 +32,11 @@ export async function lintSpec(
 	let redocly: typeof import('@redocly/openapi-core');
 	try {
 		redocly = await import('@redocly/openapi-core');
-	} catch {
+	} catch (error) {
 		return failed(
-			'lint needs @redocly/openapi-core: add it to your devDependencies',
+			notInstalled(error)
+				? 'lint needs @redocly/openapi-core: add it to your devDependencies'
+				: `lint: @redocly/openapi-core failed to load: ${firstLine(error)}`,
 		);
 	}
 	const configPath =
@@ -35,10 +45,23 @@ export async function lintSpec(
 	try {
 		config = await redocly.loadConfig({ configPath });
 	} catch (error) {
-		const [reason] = String((error as Error).message).split('\n');
-		return failed(`lint: the Redocly config cannot be loaded: ${reason}`);
+		return failed(
+			`lint: the Redocly config cannot be loaded: ${firstLine(error)}`,
+		);
 	}
-	const problems = await redocly.lint({ ref: input, config });
+	let problems: Awaited<ReturnType<typeof redocly.lint>>;
+	try {
+		problems = await redocly.lint({ ref: input, config });
+	} catch (error) {
+		return [
+			{
+				severity: 'error',
+				code: 'lint_error',
+				message: `Redocly failed on the spec: ${firstLine(error)}`,
+				file: input,
+			},
+		];
+	}
 	return problems
 		.filter((problem) => !problem.ignored)
 		.map((problem) => {

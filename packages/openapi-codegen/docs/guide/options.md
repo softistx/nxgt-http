@@ -30,7 +30,7 @@ await generate({
 | [`lint`](#lint) | `false` | lint the spec with Redocly before generating |
 | [`names`](#names) | `{}` | renames schemas |
 | [`legacyNullable`](#legacynullable) | `'warn'` | tolerate or refuse 3.0's `nullable: true` |
-| `check` | `false` | write nothing, report in `drifted` what would change |
+| `check` | `false` | write nothing, report in `drifted` what would change, a file no longer generated included |
 
 A [config file](cli.md#config-file) takes the same options, `check` aside,
 and resolves its paths against its own directory.

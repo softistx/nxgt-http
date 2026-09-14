@@ -62,7 +62,7 @@ export default defineConfig(
 | --- | --- |
 | `-c, --config <file>` | the config file |
 | `-i, --input <file>`, `-o, --output <dir>` | one spec instead of a config file, relative to the current directory; `--output` defaults to `generated/openapi` |
-| `--check` | write nothing; list what is missing or stale, and exit 1 |
+| `--check` | write nothing; list what is missing, stale, or generated before and no longer generated, and exit 1 |
 | `--lint` | lint each spec with Redocly first, as [`lint: true`](options.md#lint) does; a config's own `lint` file is kept |
 | `-h, --help` | the usage |
 | `-v, --version` | the package's version |
@@ -74,6 +74,11 @@ openapi/openapi.yaml → src/generated: 2 written, 2 unchanged
 ```
 
 - **Paths** are relative to the current directory.
+- **A file no longer generated is removed**, and counted: turning `hono`
+  off deletes `hono.ts` (`1 removed`). Only a file that starts with the
+  generated header is ever deleted.
+- **A config that fails does not stop the others.** Each entry of a list is
+  generated in turn, its errors printed, and the run exits 1 at the end.
 - **Warnings** go to stderr, one per line, as `formatDiagnostic` prints
   them.
 - **With `--check`** it prints `up to date`, or `out of date` followed by the

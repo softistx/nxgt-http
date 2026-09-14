@@ -86,6 +86,20 @@ const NUMBER_FORMATS = new Set(['int32', 'int64', 'float', 'double']);
 
 const IDENTIFIER = /^[A-Za-z_$][\w$]*$/;
 
+/** Words a `names` override cannot be: `export interface default` does not compile. */
+const RESERVED = new Set([
+	...['break', 'case', 'catch', 'class', 'const', 'continue', 'debugger'],
+	...['default', 'delete', 'do', 'else', 'enum', 'export', 'extends'],
+	...['false', 'finally', 'for', 'function', 'if', 'import', 'in'],
+	...['instanceof', 'new', 'null', 'return', 'super', 'switch', 'this'],
+	...['throw', 'true', 'try', 'typeof', 'var', 'void', 'while', 'with'],
+	...['implements', 'interface', 'let', 'package', 'private', 'protected'],
+	...['public', 'static', 'yield', 'await', 'arguments', 'eval'],
+	// Predefined types TypeScript refuses as the name of an interface.
+	...['any', 'bigint', 'boolean', 'never', 'number', 'object', 'string'],
+	...['symbol', 'undefined', 'unknown'],
+]);
+
 /** Shapes worth a name when a body or a response writes them inline. */
 const NAMED_KINDS = new Set<SchemaNode['kind']>([
 	'object',
@@ -382,10 +396,18 @@ export class SchemaBuilder {
 	#nameFor(id: string, at: Location, preferred?: string): string {
 		const override = this.#options.names[this.overrideKey(at)];
 		let name = override ?? pascalCase(preferred ?? nameFromLocation(at));
-		if (override !== undefined && !/^[A-Za-z_$][\w$]*$/.test(override)) {
+		const problem =
+			override === undefined
+				? undefined
+				: !IDENTIFIER.test(override)
+					? 'is not a valid identifier'
+					: RESERVED.has(override)
+						? 'is a reserved word, which cannot name a type'
+						: undefined;
+		if (override !== undefined && problem !== undefined) {
 			this.#diagnostics.error(
 				'invalid_option',
-				`names: \`${override}\` is not a valid identifier`,
+				`names: \`${override}\` ${problem}`,
 				at,
 			);
 			name = pascalCase(override);

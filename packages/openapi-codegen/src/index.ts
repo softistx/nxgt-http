@@ -12,6 +12,7 @@ export {
 	CodegenError,
 	type Diagnostic,
 	type DiagnosticCode,
+	type Diagnostics,
 	formatDiagnostic,
 	type Severity,
 } from './errors';

@@ -3,8 +3,8 @@
  * config is the options `generate()` takes, or a list of them for several
  * specs, and its relative paths resolve against the config file's directory.
  */
-import { access } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import { access, realpath } from 'node:fs/promises';
+import { basename, dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { CodegenError } from './errors';
 import { DEFAULT_OUTPUT, type GenerateOptions } from './generate';
@@ -29,20 +29,21 @@ export function defineConfig(
 	config: CodegenConfig | readonly CodegenConfig[],
 	shared?: SharedConfig,
 ): CodegenConfig | CodegenConfig[] {
-	if (!isList(config)) return config;
-	if (shared === undefined) return [...config];
-	if ('input' in shared || 'output' in shared) {
+	if (shared !== undefined && ('input' in shared || 'output' in shared)) {
 		throw invalid(
 			'a shared config cannot set input or output: they are each spec’s own',
 		);
 	}
-	return config.map((one) => {
+	const merge = (one: CodegenConfig): CodegenConfig => {
+		if (shared === undefined) return one;
 		const merged: CodegenConfig = { ...shared, ...one };
 		if (shared.names !== undefined || one.names !== undefined) {
 			merged.names = { ...shared.names, ...one.names };
 		}
 		return merged;
-	});
+	};
+	// A plain `.js` config can pass `shared` beside one config: honour it.
+	return isList(config) ? config.map(merge) : merge(config);
 }
 
 const isList = (
@@ -65,6 +66,32 @@ export interface LoadedConfig {
 
 const invalid = (message: string): CodegenError =>
 	new CodegenError([{ severity: 'error', code: 'invalid_config', message }]);
+
+/** Every key a config may hold: the options of `generate()`, `check` aside. */
+const OPTIONS = new Set<string>([
+	'input',
+	'output',
+	'unknownKeys',
+	'importExtension',
+	'enums',
+	'hono',
+	'dates',
+	'lint',
+	'names',
+	'legacyNullable',
+] satisfies (keyof CodegenConfig)[]);
+
+/** `path` with its symlinks resolved, as far as it exists yet. */
+async function canonical(path: string): Promise<string> {
+	try {
+		return await realpath(path);
+	} catch {
+		const parent = dirname(path);
+		return parent === path
+			? path
+			: join(await canonical(parent), basename(path));
+	}
+}
 
 async function exists(path: string): Promise<boolean> {
 	try {
@@ -110,7 +137,16 @@ export async function loadConfig(
 				: `no config file: create ${CONFIG_FILES[0]}, or pass --input`,
 		);
 	}
-	const module: { default?: unknown } = await import(pathToFileURL(file).href);
+	let module: { default?: unknown };
+	try {
+		module = await import(pathToFileURL(file).href);
+	} catch (error) {
+		// A syntax error, or a config that throws: one line, not a stack.
+		const reason = String(error instanceof Error ? error.message : error);
+		throw invalid(
+			`${path ?? file} cannot be imported: ${reason.split('\n')[0]}`,
+		);
+	}
 	const configs: unknown[] = Array.isArray(module.default)
 		? module.default
 		: [module.default];
@@ -119,10 +155,21 @@ export async function loadConfig(
 			`${path ?? file}: export default a config, or a list of them, each with an input, and an output if not ${DEFAULT_OUTPUT}`,
 		);
 	}
-	// Two specs in one directory would overwrite each other's files.
+	for (const config of configs) {
+		const unknown = Object.keys(config).filter((key) => !OPTIONS.has(key));
+		if (unknown.length > 0) {
+			throw invalid(
+				`${path ?? file}: ${config.input} has an option this generator does not know: ${unknown.join(', ')}`,
+			);
+		}
+	}
+	// Two specs in one directory would overwrite each other's files, a
+	// symlink to the same directory included.
 	const outputs = new Map<string, string>();
 	for (const config of configs) {
-		const output = resolve(dirname(file), config.output ?? DEFAULT_OUTPUT);
+		const output = await canonical(
+			resolve(dirname(file), config.output ?? DEFAULT_OUTPUT),
+		);
 		const other = outputs.get(output);
 		if (other !== undefined) {
 			throw invalid(

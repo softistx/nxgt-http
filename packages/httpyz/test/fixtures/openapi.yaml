@@ -1,0 +1,139 @@
+# Every input and reply kind the client writes and reads, served in-process
+# by a Hono app generated from this same file.
+openapi: 3.2.0
+info:
+  title: Client fixture
+  version: 0.0.1
+paths:
+  /items:
+    get:
+      operationId: listItems
+      parameters:
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: tag, in: query, schema: { type: array, items: { type: string } } }
+        - name: ids
+          in: query
+          explode: false
+          schema: { type: array, items: { type: integer } }
+        - { name: active, in: query, schema: { type: boolean } }
+        - { name: since, in: query, schema: { type: string, format: date-time } }
+        - { name: X-Trace, in: header, schema: { type: string } }
+      responses:
+        '200':
+          description: What the server read
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/Echo' } }
+    post:
+      operationId: createItem
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/NewItem' } }
+          application/x-www-form-urlencoded: { schema: { $ref: '#/components/schemas/NewItem' } }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/Item' } }
+        '400':
+          description: Refused
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+    query:
+      operationId: searchItems
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, properties: { name: { type: string } } }
+      responses:
+        '200':
+          description: Found
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Item' } }
+  /items/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    get:
+      operationId: getItem
+      responses:
+        '200':
+          description: Found
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/Item' } }
+        '404':
+          description: Missing
+          content:
+            application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+    put:
+      operationId: putItemFile
+      requestBody:
+        required: true
+        content:
+          application/octet-stream: {}
+      responses:
+        '204': { description: Stored }
+    delete:
+      operationId: deleteItem
+      responses:
+        '204': { description: Deleted }
+  /items/{id}/note:
+    post:
+      operationId: noteItem
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          text/plain: { schema: { type: string } }
+      responses:
+        '200':
+          description: The note
+          content:
+            text/plain: { schema: { type: string } }
+  /uploads:
+    post:
+      operationId: upload
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+                labels: { type: array, items: { type: string } }
+                copies: { type: integer }
+      responses:
+        '201':
+          description: What the server read
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/Echo' } }
+  /health:
+    get:
+      operationId: health
+      responses:
+        '204': { description: Up }
+components:
+  schemas:
+    Echo: { type: object, additionalProperties: true }
+    NewItem:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        price: { type: number }
+    Item:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        price: { type: number }
+    Problem:
+      type: object
+      required: [title]
+      properties:
+        title: { type: string }

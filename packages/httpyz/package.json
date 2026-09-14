@@ -1,0 +1,50 @@
+{
+	"name": "@nxgt/openapi-client",
+	"version": "0.0.0",
+	"license": "UNLICENSED",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"files": [
+		"dist",
+		"README.md",
+		"package.json"
+	],
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"default": "./dist/index.js"
+		},
+		"./package.json": "./package.json"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/softistx/nxgt-core.git",
+		"directory": "packages/openapi-client"
+	},
+	"publishConfig": {
+		"registry": "https://registry.npmjs.org",
+		"access": "public"
+	},
+	"scripts": {
+		"build": "bun run ../../build.ts",
+		"fixtures": "bun run test/generate.ts",
+		"test": "bun run fixtures && bun test src",
+		"typecheck": "bun run fixtures && tsc --noEmit"
+	},
+	"nxgt": {
+		"entrypoints": [
+			"src/index.ts"
+		]
+	},
+	"devDependencies": {
+		"@nxgt/openapi-codegen": "workspace:^",
+		"@types/bun": "^1.4.0",
+		"hono": "^4.13.4",
+		"zod": "^4.5.4"
+	},
+	"peerDependencies": {
+		"typescript": "^6.0.3"
+	}
+}

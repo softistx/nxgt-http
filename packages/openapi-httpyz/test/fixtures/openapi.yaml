@@ -116,6 +116,43 @@ paths:
       operationId: health
       responses:
         '204': { description: Up }
+  /feed:
+    get:
+      operationId: watchFeed
+      parameters:
+        - { name: topic, in: query, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: One event per change
+          content:
+            text/event-stream:
+              itemSchema:
+                oneOf:
+                  - properties:
+                      event: { const: added }
+                      data:
+                        type: string
+                        contentMediaType: application/json
+                        contentSchema: { $ref: '#/components/schemas/Item' }
+                  - properties:
+                      event: { const: note }
+                      data: { type: string }
+  /export:
+    post:
+      operationId: exportItems
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                limit: { type: integer, minimum: 1 }
+      responses:
+        '200':
+          description: One item a line
+          content:
+            application/jsonl:
+              itemSchema: { $ref: '#/components/schemas/Item' }
 components:
   schemas:
     Echo: { type: object, additionalProperties: true }

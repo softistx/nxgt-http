@@ -2,6 +2,8 @@
  * `createHttpClient`: calls over the standard `fetch`, each typed by its path
  * and by the replies it declares, through `retry`, `auth` and middleware.
  */
+import { cancelled, joinSignals } from '../cancel/abort';
+import { createLatest } from '../cancel/latest';
 import { type CallContext, NetworkError, TimeoutError } from '../errors/errors';
 import { auth } from '../middleware/auth';
 import { compose, type Next } from '../middleware/compose';
@@ -24,6 +26,7 @@ import type {
 	CallOptions,
 	HttpClient,
 	HttpClientOptions,
+	HttpGroup,
 	Method,
 	SendOptions,
 } from './types';
@@ -90,6 +93,13 @@ const contextOf = (
  */
 export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
 	const signer = options.auth ? auth(options.auth) : undefined;
+	const claim = createLatest();
+	/**
+	 * A `latest` key's signal. Claimed before anything is awaited, so calls
+	 * with the same key replace each other in the order they were made.
+	 */
+	const latestSignal = (key: string | undefined) =>
+		key === undefined ? undefined : claim(key);
 	const sharedHeaders = async (): Promise<Headers> =>
 		new Headers(
 			typeof options.headers === 'function'
@@ -207,9 +217,19 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
 		path: string,
 		given: ReplyGiven = {},
 	): Promise<unknown> => {
-		const { responses, validate = true, decode = true, ...call } = given;
+		const {
+			responses,
+			validate = true,
+			decode = true,
+			latest,
+			...call
+		} = given;
+		const replaced = latestSignal(latest);
 		const built = await build(method, path, call);
-		const { deadline, signal } = withDeadline(built.timeout, built.signal);
+		const { deadline, signal } = withDeadline(
+			built.timeout,
+			joinSignals(built.signal, replaced),
+		);
 		const response = await dispatch(
 			new Request(built.url, { ...built.init, signal }),
 			built.context,
@@ -277,8 +297,13 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
 			validate = true,
 			decode = true,
 			method = 'get',
-			...call
+			latest,
+			...own
 		} = given;
+		const call = {
+			...own,
+			signal: joinSignals(own.signal, latestSignal(latest)),
+		};
 		const reconnects =
 			reconnect === undefined
 				? method !== 'post' && method !== 'patch'
@@ -306,8 +331,13 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
 			validate = true,
 			decode = true,
 			method = 'get',
-			...call
+			latest,
+			...own
 		} = given;
+		const call = {
+			...own,
+			signal: joinSignals(own.signal, latestSignal(latest)),
+		};
 		return lineStream({
 			context: contextOf(method, path, call.operationId),
 			open: opener(method, path, call, LINE_TYPES.slice(0, 2).join(', ')),
@@ -324,8 +354,10 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
 			timeout = options.timeout,
 			retry = options.retry,
 			operationId,
+			latest,
 		}: SendOptions = {},
 	): Promise<Response> => {
+		const replaced = latestSignal(latest);
 		const method = request.method.toLowerCase();
 		const context = contextOf(
 			method,
@@ -336,21 +368,64 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
 		request.headers.forEach((value, name) => {
 			headers.set(name, value);
 		});
-		const { deadline, signal } = withDeadline(timeout, request.signal);
+		const { deadline, signal } = withDeadline(
+			timeout,
+			joinSignals(request.signal, replaced),
+		);
 		const sent = new Request(request, { headers, signal });
 		return dispatch(sent, context, timeout, deadline, retry);
 	};
 
-	const client: Record<string, unknown> = {
-		request: (method: Method, path: string, given?: ReplyGiven) =>
-			request(method, path, given),
-		send,
-		events,
-		lines,
+	/**
+	 * The client's calls, each with `scope()`'s signal added to its own: none
+	 * for the client itself, the group's for a group.
+	 */
+	const surface = (scope: () => AbortSignal | undefined): HttpClient => {
+		const scoped = <T extends { readonly signal?: AbortSignal | null }>(
+			given: T | undefined,
+		): T => {
+			const extra = scope();
+			const own = given ?? ({} as T);
+			return extra
+				? ({ ...own, signal: joinSignals(own.signal, extra) } as T)
+				: own;
+		};
+		const client: Record<string, unknown> = {
+			request: (method: Method, path: string, given?: ReplyGiven) =>
+				request(method, path, scoped(given)),
+			send: (sent: Request, given?: SendOptions) => {
+				const extra = scope();
+				return send(
+					extra
+						? new Request(sent, { signal: joinSignals(sent.signal, extra) })
+						: sent,
+					given,
+				);
+			},
+			events: (path: string, given?: EventsGiven) =>
+				events(path, scoped(given)),
+			lines: (path: string, given?: LinesGiven) => lines(path, scoped(given)),
+			group: (): HttpGroup => {
+				let controller = new AbortController();
+				const group = surface(() =>
+					joinSignals(scope(), controller.signal),
+				) as HttpClient & Record<string, unknown>;
+				group.cancel = (reason?: unknown) => {
+					controller.abort(reason ?? cancelled('The group was cancelled'));
+					controller = new AbortController();
+				};
+				Object.defineProperty(group, 'signal', {
+					enumerable: true,
+					get: () => controller.signal,
+				});
+				return group as unknown as HttpGroup;
+			},
+		};
+		for (const method of METHODS) {
+			client[method] = (path: string, given?: ReplyGiven) =>
+				request(method, path, scoped(given));
+		}
+		return client as HttpClient;
 	};
-	for (const method of METHODS) {
-		client[method] = (path: string, given?: ReplyGiven) =>
-			request(method, path, given);
-	}
-	return client as HttpClient;
+	return surface(() => undefined);
 }

@@ -2,9 +2,12 @@
  * `createClient`: calls the operations of the generated `operations` table
  * with the standard `fetch`, typed by the generated `ClientOperations`.
  */
+import { auth } from './auth';
 import { encodeRequest, type Input } from './encode';
 import { NetworkError, TimeoutError, ValidationError } from './errors';
+import { compose } from './middleware';
 import { readReply } from './reply';
+import { retrying, retrySettings } from './retry';
 import type {
 	CallInit,
 	Client,
@@ -61,6 +64,7 @@ export function createClient<
 			validate === true ||
 			(typeof validate === 'object' && validate.response === true),
 	};
+	const signer = options.auth ? auth(options.auth) : undefined;
 	const table = operations as unknown as {
 		readonly [id: string]: RuntimeOperation;
 	};
@@ -83,6 +87,7 @@ export function createClient<
 		const init = ((takes ? args[1] : args[0]) ?? {}) as CallInit;
 		const {
 			timeout = options.timeout,
+			retry = options.retry,
 			headers: own,
 			signal: abort,
 			...rest
@@ -129,16 +134,30 @@ export function createClient<
 			body,
 			signal: signals.length > 1 ? AbortSignal.any(signals) : signals[0],
 		});
-		const send = options.fetch ?? ((sent: Request) => globalThis.fetch(sent));
+		const fetch = options.fetch ?? ((sent: Request) => globalThis.fetch(sent));
+		// fetch's own failure is a NetworkError, which `retry` retries; an abort is not one.
+		const send = async (sent: Request): Promise<Response> => {
+			try {
+				return await fetch(sent);
+			} catch (error) {
+				if (request.signal.aborted) throw error;
+				throw new NetworkError(context, { cause: error });
+			}
+		};
+		const again = retrySettings(retry);
+		const layers = [
+			...(again ? [retrying(again)] : []),
+			...(signer ? [signer] : []),
+			...(options.use ?? []),
+		];
 		let response: Response;
 		try {
-			response = await send(request);
+			response = await compose(layers, send, context)(request);
 		} catch (error) {
 			if (deadline?.aborted && timeout !== undefined) {
 				throw new TimeoutError(context, timeout, { cause: error });
 			}
-			if (abort?.aborted) throw error;
-			throw new NetworkError(context, { cause: error });
+			throw error;
 		}
 		return readReply(context, operation, response, {
 			validate: checks.response,

@@ -3,6 +3,9 @@
  * generator wrote (`ClientOperations`, `OperationsByRoute`), so a call costs
  * TypeScript the same whether the spec has five operations or five hundred.
  */
+import type { AuthOptions } from './auth';
+import type { Middleware } from './middleware';
+import type { RetryOptions } from './retry';
 import type { StandardSchemaV1 } from './standard';
 
 /** OpenAPI's eight methods, and 3.2's `query`. */
@@ -94,6 +97,15 @@ export interface ClientOptions {
 	validate?:
 		| boolean
 		| { readonly request?: boolean; readonly response?: boolean };
+	/** Around every request, the first outermost, inside `retry` and `auth`. */
+	use?: readonly Middleware[];
+	/** A token on every request, refreshed once on a 401. */
+	auth?: AuthOptions;
+	/**
+	 * Sends a request again after a failure that may pass: a number of
+	 * retries, or `RetryOptions`. Default: never.
+	 */
+	retry?: number | RetryOptions | false;
 }
 
 /**
@@ -111,6 +123,8 @@ export type ClientArgs<Decoded extends boolean> = Decoded extends true
 export interface CallInit extends Omit<RequestInit, 'method' | 'body'> {
 	/** Milliseconds before this call fails with a `TimeoutError`, instead of the client's. */
 	timeout?: number;
+	/** This call's `retry`, instead of the client's: `false` never retries. */
+	retry?: number | RetryOptions | false;
 }
 
 /** A call's arguments after the `operationId` or the path. */

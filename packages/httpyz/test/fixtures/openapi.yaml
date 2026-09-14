@@ -132,6 +132,7 @@ components:
         id: { type: integer }
         name: { type: string }
         price: { type: number }
+        createdAt: { type: string, format: date-time }
     Problem:
       type: object
       required: [title]

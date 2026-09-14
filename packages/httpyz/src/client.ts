@@ -3,17 +3,19 @@
  * with the standard `fetch`, typed by the generated `ClientOperations`.
  */
 import { encodeRequest, type Input } from './encode';
-import { NetworkError, TimeoutError } from './errors';
+import { NetworkError, TimeoutError, ValidationError } from './errors';
 import { readReply } from './reply';
 import type {
 	CallInit,
 	Client,
+	ClientArgs,
 	ClientOptions,
 	Method,
 	OperationsShape,
 	OperationTable,
 	RuntimeOperation,
 } from './types';
+import { checkRequest } from './validate';
 
 const METHODS: readonly Method[] = [
 	'get',
@@ -42,10 +44,23 @@ const METHODS: readonly Method[] = [
 export function createClient<
 	Ops extends OperationsShape<Ops>,
 	Routes extends { [Route in keyof Routes]: keyof Ops } = Record<never, never>,
+	Decoded extends boolean = false,
 >(
 	operations: OperationTable<Ops>,
-	options: ClientOptions = {},
-): Client<Ops, Routes> {
+	...[given]: ClientArgs<Decoded>
+): Client<Ops, Routes, Decoded> {
+	const options: ClientOptions & { readonly decode?: boolean } = given ?? {};
+	const { validate = false } = options;
+	const decode = options.decode === true;
+	const checks = {
+		request:
+			validate === true ||
+			(typeof validate === 'object' && validate.request === true),
+		response:
+			decode ||
+			validate === true ||
+			(typeof validate === 'object' && validate.response === true),
+	};
 	const table = operations as unknown as {
 		readonly [id: string]: RuntimeOperation;
 	};
@@ -86,6 +101,21 @@ export function createClient<
 			headers,
 			options.baseUrl,
 		);
+		const context = {
+			operationId: id,
+			method: operation.method,
+			path: operation.path,
+		};
+		if (checks.request) {
+			const issues = await checkRequest(operation, input);
+			if (issues.length > 0) {
+				throw new ValidationError(context, {
+					kind: 'request',
+					...context,
+					issues,
+				});
+			}
+		}
 		const deadline =
 			timeout === undefined ? undefined : AbortSignal.timeout(timeout);
 		const signals = [abort, deadline].filter(
@@ -99,11 +129,6 @@ export function createClient<
 			body,
 			signal: signals.length > 1 ? AbortSignal.any(signals) : signals[0],
 		});
-		const context = {
-			operationId: id,
-			method: operation.method,
-			path: operation.path,
-		};
 		const send = options.fetch ?? ((sent: Request) => globalThis.fetch(sent));
 		let response: Response;
 		try {
@@ -115,7 +140,10 @@ export function createClient<
 			if (abort?.aborted) throw error;
 			throw new NetworkError(context, { cause: error });
 		}
-		return readReply(context, operation, response);
+		return readReply(context, operation, response, {
+			validate: checks.response,
+			decode,
+		});
 	};
 
 	const client: Record<string, unknown> = {
@@ -134,5 +162,5 @@ export function createClient<
 			return call(id, args);
 		};
 	}
-	return client as unknown as Client<Ops, Routes>;
+	return client as unknown as Client<Ops, Routes, Decoded>;
 }

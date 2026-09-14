@@ -282,7 +282,9 @@ function clientReplies(
 		return response.content.map((media) => {
 			let data = 'globalThis.Blob';
 			if (media.kind === 'text') data = 'string';
-			if (media.schema && media.kind !== 'binary') {
+			// Its fields are text: a client hands the form over as it came.
+			if (media.kind === 'form') data = 'globalThis.FormData';
+			else if (media.schema && media.kind !== 'binary') {
 				const decoded = type(ctx, media.schema, false, inner);
 				data = wire ? ctx.wire(media.schema, decoded) : decoded;
 			} else if (media.kind === 'json') data = 'unknown';

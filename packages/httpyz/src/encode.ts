@@ -18,10 +18,10 @@ export interface Input {
 }
 
 /** A value as text: a `Date` as its ISO string. */
-const text = (value: unknown): string =>
+export const text = (value: unknown): string =>
 	value instanceof Date ? value.toISOString() : String(value);
 
-const absent = (value: unknown): value is undefined | null =>
+export const absent = (value: unknown): value is undefined | null =>
 	value === undefined || value === null;
 
 /** The URL and body of a call; its headers go onto `headers`. */
@@ -113,7 +113,7 @@ function encodeBody(
 }
 
 /** A form's fields: every item of a list, an object as JSON, a file as it is. */
-function* fields(
+export function* fields(
 	form: Readonly<Record<string, unknown>>,
 ): Generator<[string, string | Blob]> {
 	for (const [name, value] of Object.entries(form)) {

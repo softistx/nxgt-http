@@ -11,3 +11,8 @@ await generate(
 	{ input: 'fixtures/openapi.yaml', output: 'generated', hono: true },
 	{ cwd },
 );
+// The same spec with `dates: 'date'`, for a client that decodes its replies.
+await generate(
+	{ input: 'fixtures/openapi.yaml', output: 'generated/dates', dates: 'date' },
+	{ cwd },
+);

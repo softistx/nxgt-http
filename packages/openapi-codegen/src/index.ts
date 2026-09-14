@@ -55,6 +55,7 @@ export {
 	type StringNode,
 	type UnionNode,
 } from './ir/types';
+export type { Lint } from './lint';
 export {
 	type LoadedDocument,
 	type LoadOptions,

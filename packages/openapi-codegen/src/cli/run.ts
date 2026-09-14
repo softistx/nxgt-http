@@ -21,6 +21,8 @@ Options:
   -o, --output <dir>   where the files go, with --input
                        (default: generated/openapi)
       --check          write nothing; exit 1 when a file is missing or stale
+      --lint           lint each spec with Redocly first; needs
+                       @redocly/openapi-core
   -h, --help           show this help
   -v, --version        print the version
 
@@ -41,6 +43,7 @@ const OPTIONS = {
 	input: { type: 'string', short: 'i' },
 	output: { type: 'string', short: 'o' },
 	check: { type: 'boolean' },
+	lint: { type: 'boolean' },
 	help: { type: 'boolean', short: 'h' },
 	version: { type: 'boolean', short: 'v' },
 } as const;
@@ -109,6 +112,7 @@ export async function run(
 				base,
 				cwd,
 				check: values.check === true,
+				lint: values.lint === true,
 				out,
 				err,
 			});
@@ -138,17 +142,21 @@ async function generateOne(
 		base,
 		cwd,
 		check,
+		lint,
 		out,
 		err,
 	}: {
 		base: string;
 		cwd: string;
 		check: boolean;
+		/** `--lint`: lint with the config's own Redocly config, or the default one. */
+		lint: boolean;
 		out: (line: string) => void;
 		err: (line: string) => void;
 	},
 ): Promise<number> {
-	const result = await generate({ ...config, check }, { cwd: base });
+	const linted = lint && !config.lint ? { ...config, lint: true } : config;
+	const result = await generate({ ...linted, check }, { cwd: base });
 	for (const warning of result.warnings) err(formatDiagnostic(warning, cwd));
 	const shown = (path: string) => relative(cwd, resolve(base, path)) || '.';
 	const where = `${shown(config.input)} → ${shown(config.output ?? DEFAULT_OUTPUT)}`;

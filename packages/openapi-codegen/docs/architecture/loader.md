@@ -2,8 +2,10 @@
 
 `loadDocument(path, { cwd?, fs? })` (`src/loader/document.ts`) reads the root
 document, follows every `$ref` it can reach, and checks the version. It is
-the only stage that touches the disk, through the `FileSystem` interface in
-`src/loader/fs.ts`. Tests pass an in-memory one.
+the only stage that reads the spec for the generator, through the
+`FileSystem` interface in `src/loader/fs.ts`. Tests pass an in-memory one.
+The optional `lint` reads it again from disk, through Redocly, and only
+lints: what Redocly makes of a `$ref` never reaches the IR.
 
 ## Parsing (`parse.ts`)
 

@@ -11,6 +11,7 @@ await generate({
 	enums: 'object',
 	hono: false,
 	dates: 'string',
+	lint: false,
 	names: { 'components/schemas/Error.yaml': 'ApiError' },
 	legacyNullable: 'warn',
 	check: false,
@@ -26,6 +27,7 @@ await generate({
 | [`enums`](#enums) | `'object'` | a named enum as an `as const` object, or a plain union |
 | [`hono`](#hono) | `false` | also write `hono.ts`: typed routes for a Hono app |
 | [`dates`](#dates) | `'string'` | a `date-time` as its string, or decoded to a `Date` |
+| [`lint`](#lint) | `false` | lint the spec with Redocly before generating |
 | [`names`](#names) | `{}` | renames schemas |
 | [`legacyNullable`](#legacynullable) | `'warn'` | tolerate or refuse 3.0's `nullable: true` |
 | `check` | `false` | write nothing, report in `drifted` what would change |
@@ -120,6 +122,30 @@ With `'date'`:
 
 `format: date` stays a string: a day is not an instant, and `new Date()`
 would pin it to a time zone.
+
+## `lint`
+
+Runs Redocly's linter over the spec once it has loaded, before anything is
+built:
+
+| Value | Redocly config |
+| --- | --- |
+| `false` | none: no lint |
+| `true` | the `redocly.yaml` in the directory of `input`, or Redocly's defaults (its `recommended` rules) when there is none |
+| `'path/to/redocly.yaml'` | that file, relative to the current directory, or to the config file's |
+
+- **It needs `@redocly/openapi-core`**, an optional peer: add it to your
+  devDependencies. Without it, `lint` is an `invalid_option`.
+- **A rule set to `error` stops the run** (`lint_error`); one set to `warn`
+  comes back in `warnings` (`lint_warning`). Both point at a line: see
+  [Linting](diagnostics.md#linting).
+- **It lints, and nothing more.** The generator still reads the `$ref`s and
+  names the schemas itself; no Redocly bundle is made, since one renames
+  clashing schemas without saying so.
+- **It reads the spec from disk**, so it cannot be combined with `{ fs }`.
+- **Redocly's defaults are strict**: `recommended` asks for `servers`, a
+  `license`, `security` on each operation, and more. A `redocly.yaml` that
+  lists only `rules:` runs just those.
 
 ## `names`
 

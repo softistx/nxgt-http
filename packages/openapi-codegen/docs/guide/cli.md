@@ -63,6 +63,7 @@ export default defineConfig(
 | `-c, --config <file>` | the config file |
 | `-i, --input <file>`, `-o, --output <dir>` | one spec instead of a config file, relative to the current directory; `--output` defaults to `generated/openapi` |
 | `--check` | write nothing; list what is missing or stale, and exit 1 |
+| `--lint` | lint each spec with Redocly first, as [`lint: true`](options.md#lint) does; a config's own `lint` file is kept |
 | `-h, --help` | the usage |
 | `-v, --version` | the package's version |
 

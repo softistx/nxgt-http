@@ -350,6 +350,10 @@ export class EmitContext {
 					return target.variants.every((v) => refuses(v, seen));
 				case 'intersection':
 					return target.members.some((m) => refuses(m, seen));
+				case 'record':
+				case 'unknown':
+					// Any key goes.
+					return false;
 				default:
 					return true;
 			}
@@ -387,10 +391,16 @@ export class EmitContext {
 						(target): SchemaNode => ({ kind: 'ref', target }),
 					);
 					const strict = this.mode(node) === 'strict';
+					// Without properties of its own, or of a parent's that `required`
+					// restates, the object adds no member to the intersection.
+					const shapeless =
+						node.properties.length === 0 &&
+						!(node.requires ?? []).some(
+							(name) => this.propertyOf(node, name) !== undefined,
+						);
 					const kept = parents.every((p) => this.isZodObject(p))
 						? strict
-						: parents.every((p) => refuses(p)) &&
-							(strict || node.properties.length === 0);
+						: parents.every((p) => refuses(p)) && (strict || shapeless);
 					if (parents.some(said) && !kept) loosened = true;
 					for (const property of node.properties) visit(property.schema);
 					if (typeof node.additional === 'object') {

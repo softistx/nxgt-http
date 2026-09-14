@@ -28,13 +28,24 @@ describe('printer', () => {
 	});
 
 	it('prints a pattern as a literal that matches the same', () => {
-		const cases = ['^a/b$', '^[a/b]+$', '^a\\/b$', '', '\\d+'];
+		const cases = [
+			'^a/b$',
+			'^[a/b]+$',
+			'^a\\/b$',
+			'',
+			'\\d+',
+			'^\\p{L}+$',
+			'^a\\_b$',
+		];
+		// Unicode, as JSON Schema's patterns are; the legacy `\_` refuses it.
 		expect(cases.map(regexLiteral)).toEqual([
-			'/^a\\/b$/',
-			'/^[a/b]+$/',
-			'/^a\\/b$/',
-			'/(?:)/',
-			'/\\d+/',
+			'/^a\\/b$/u',
+			'/^[a/b]+$/u',
+			'/^a\\/b$/u',
+			'/(?:)/u',
+			'/\\d+/u',
+			'/^\\p{L}+$/u',
+			'/^a\\_b$/',
 		]);
 		for (const pattern of cases) {
 			const literal = regexLiteral(pattern);
@@ -42,6 +53,11 @@ describe('printer', () => {
 			const parsed = new Function(`return ${literal}`)() as RegExp;
 			expect(parsed.source).toBe(new RegExp(pattern).source);
 		}
+	});
+
+	it('groups a union whose JSDoc holds an apostrophe and a bracket', () => {
+		const union = "{\n\t/** It's (sometimes */\n\ta: string;\n} | null";
+		expect(group(union, '|')).toBe(`(${union})`);
 	});
 
 	it('writes one-line and multi-line JSDoc, defusing */', () => {

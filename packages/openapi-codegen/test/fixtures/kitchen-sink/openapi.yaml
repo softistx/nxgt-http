@@ -274,3 +274,49 @@ components:
           properties:
             object: { const: bank_account }
             account: { type: string }
+    Settings:
+      description: An object default, whose own defaults are filled in on parse.
+      type: object
+      properties:
+        theme:
+          type: object
+          properties:
+            mode: { type: string, default: light }
+          default: {}
+    Branch:
+      type: object
+      properties:
+        label: { type: string }
+        children: { type: array, items: { $ref: '#/components/schemas/Branch' } }
+    LabelledBranch:
+      description: Requires a property of a recursive parent.
+      allOf:
+        - $ref: '#/components/schemas/Branch'
+      required: [label]
+    Sized:
+      type: object
+      properties:
+        size: { type: integer, default: 1 }
+    Resized:
+      description: Restates a parent's property that has a default.
+      allOf:
+        - $ref: '#/components/schemas/Sized'
+        - type: object
+          properties:
+            size: { type: integer, minimum: 0 }
+    Notes:
+      type: array
+      items:
+        oneOf:
+          - type: object
+            properties:
+              text: { type: string, description: "It's (sometimes empty" }
+          - type: object
+            properties:
+              count: { type: integer }
+    Letters:
+      type: string
+      pattern: '^\p{L}+$'
+    Alarm:
+      type: string
+      format: time

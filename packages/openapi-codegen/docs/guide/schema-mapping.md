@@ -9,10 +9,11 @@ approximated silently.
 | JSON Schema | TypeScript | Zod |
 | --- | --- | --- |
 | `type: string` | `string` | `z.string()` |
-| `minLength`, `maxLength`, `pattern` | | `.min()`, `.max()`, `.regex()` |
+| `minLength`, `maxLength`, `pattern` | | `.min()`, `.max()`, `.regex()`; the pattern has the `u` flag, as JSON Schema's are Unicode, unless it uses a legacy escape the flag refuses (`\_`) |
 | `format: date-time` | `string` | `z.iso.datetime({ offset: true })` |
 | `format: date-time`, with [`dates: 'date'`](options.md#dates) | `Date`; `string` in `XInput` | `z.codec(z.iso.datetime({ offset: true }), z.date(), isoDate)` |
-| `format: date`, `time`, `duration` | `string` | `z.iso.date()`, `z.iso.time()`, `z.iso.duration()` |
+| `format: date`, `duration` | `string` | `z.iso.date()`, `z.iso.duration()` |
+| `format: time` | `string` | `z.string().regex(…)`: RFC 3339's full-time, with seconds and an offset, `10:00:00Z` |
 | `format: email`, `uri` | `string` | `z.email()`, `z.url()` |
 | `format: uuid` | `string` | `z.guid()` |
 | `format: ipv4`, `ipv6` | `string` | `z.ipv4()`, `z.ipv6()` |
@@ -83,7 +84,7 @@ PascalCased:
 | `additionalProperties: true` | `[key: string]: unknown` | `z.looseObject()` |
 | `additionalProperties: S` beside `properties` | `{ … } & { [key: string]: S }` | `.catchall(S)` |
 | `additionalProperties: S` alone, or no `properties` | `{ [key: string]: S }` | `z.record(z.string(), S)` |
-| `default` on an optional property | present in `X`, optional in `XInput` | `.default(v)` |
+| `default` on an optional property | present in `X`, optional in `XInput` | `.default(v)`; `.prefault(v)` when the schema takes something other than it returns, so an object default has its own defaults filled in |
 | `minProperties`, `maxProperties` | | not enforced: `not_enforced` warning |
 | `required` naming a key no `properties` declares | with an `additionalProperties` schema, a required property of it; else its presence is not checked, with a `not_enforced` warning; beside `additionalProperties: false`, an `invalid_schema` error, since nothing could match | as the type |
 

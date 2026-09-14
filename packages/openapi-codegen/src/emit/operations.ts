@@ -313,7 +313,12 @@ export function emitOperations(ctx: EmitContext): {
 		if (form) {
 			validators.push(
 				[
-					`/** \`${operation.operationId}\`'s form body, its fields read from text. */`,
+					...docComment(
+						[
+							`\`${operation.operationId}\`'s form body, its fields read from text.`,
+						],
+						'',
+					),
 					`export const z${operation.name}Form = ${formObject(ctx, form.object, helpers, scope)};`,
 				].join('\n'),
 			);

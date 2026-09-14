@@ -114,13 +114,15 @@ const without = (
 ): Record<string, unknown> =>
 	Object.fromEntries(Object.entries(object).filter(([key]) => !drop(key)));
 
-const isRegExp = (pattern: string): boolean => {
-	try {
-		return RegExp(pattern) instanceof RegExp;
-	} catch {
-		return false;
-	}
-};
+/** Whether `pattern` compiles, as Unicode or, failing that, in the legacy syntax. */
+const isRegExp = (pattern: string): boolean =>
+	['u', ''].some((flags) => {
+		try {
+			return new RegExp(pattern, flags) instanceof RegExp;
+		} catch {
+			return false;
+		}
+	});
 
 const strings = (value: unknown): string[] =>
 	Array.isArray(value)
@@ -175,24 +177,44 @@ function annotated(target: SchemaNode, from: SchemaNode): SchemaNode {
 }
 
 /** Only a `kind`, and annotations: what `{ type: string }` reads as. */
-const plain = (node: SchemaNode): boolean =>
-	Object.keys(node).every(
-		(key) => key === 'kind' || (ANNOTATED as readonly string[]).includes(key),
-	);
 
 /**
- * What a value must be to hold both `a` and `b`, as `allOf` asks: the one
- * that says more when the other adds nothing, else their intersection.
+ * What a value must be to hold both `a` and `b`, as `allOf` asks: one
+ * scalar with the constraints of both when none clash, else their
+ * intersection. Either way it keeps the annotations of both, a `default`
+ * included, so a restated property still gets its parent's default.
  */
 function meet(a: SchemaNode, b: SchemaNode): SchemaNode {
-	if (b.kind === 'unknown' || (plain(b) && b.kind === a.kind)) {
-		return annotated(a, b);
-	}
-	if (a.kind === 'unknown' || (plain(a) && a.kind === b.kind)) {
-		return annotated(b, a);
-	}
+	if (b.kind === 'unknown') return annotated(a, b);
+	if (a.kind === 'unknown') return annotated(b, a);
 	if (JSON.stringify(a) === JSON.stringify(b)) return a;
-	return { kind: 'intersection', members: [a, b] };
+	return (
+		merged(a, b) ??
+		annotated(annotated({ kind: 'intersection', members: [a, b] }, a), b)
+	);
+}
+
+const SCALARS = new Set(['string', 'number', 'boolean', 'null', 'binary']);
+
+/**
+ * `a` and `b`, scalars of one kind, as one node: every constraint of both,
+ * `integer` if either says so, and `null` only when both let it through.
+ * Nothing when they set one constraint to two values.
+ */
+function merged(a: SchemaNode, b: SchemaNode): SchemaNode | undefined {
+	if (a.kind !== b.kind || !SCALARS.has(a.kind)) return undefined;
+	const out: Record<string, unknown> = { ...a };
+	for (const [key, value] of Object.entries(b)) {
+		if (key === 'nullable' || (ANNOTATED as readonly string[]).includes(key)) {
+			continue;
+		}
+		const mine = out[key];
+		if (key === 'integer') out[key] = Boolean(mine) || Boolean(value);
+		else if (mine === undefined) out[key] = value;
+		else if (JSON.stringify(mine) !== JSON.stringify(value)) return undefined;
+	}
+	if (!(a.nullable && b.nullable)) delete out.nullable;
+	return annotated(out as unknown as SchemaNode, b);
 }
 
 export interface SchemaBuilderOptions {

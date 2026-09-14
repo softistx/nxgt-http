@@ -308,6 +308,71 @@ describe('generate', () => {
 		]);
 	});
 
+	it('keeps an operationId inside the comment it is quoted in', async () => {
+		const spec = JSON.stringify({
+			openapi: '3.1.0',
+			info: { title: 't', version: '1' },
+			paths: {
+				'/up': {
+					post: {
+						operationId: 'up*/load',
+						requestBody: {
+							content: {
+								'multipart/form-data': {
+									schema: {
+										type: 'object',
+										properties: { n: { type: 'integer' } },
+									},
+								},
+							},
+						},
+						responses: { '204': { description: 'ok' } },
+					},
+				},
+			},
+		});
+		const { files } = await generateFiles(
+			{ input: '/s/openapi.json', output: '/s/gen' },
+			{ fs: createMemoryFileSystem({ '/s/openapi.json': spec }) },
+		);
+		expect(files[2]?.content).toContain(
+			"/** `up*\\/load`'s form body, its fields read from text. */",
+		);
+	});
+
+	it('warns when a member that takes any key loosens additionalProperties: false', async () => {
+		const spec = JSON.stringify({
+			openapi: '3.1.0',
+			info: { title: 't', version: '1' },
+			paths: {},
+			components: {
+				schemas: {
+					Said: {
+						type: 'object',
+						properties: { d: { type: 'string' } },
+						additionalProperties: false,
+					},
+					Tags: { type: 'object', additionalProperties: { type: 'string' } },
+					Mixed: {
+						allOf: [
+							{ $ref: '#/components/schemas/Said' },
+							{ $ref: '#/components/schemas/Tags' },
+						],
+					},
+				},
+			},
+		});
+		const { warnings } = await generateFiles(
+			{ input: '/s/openapi.json', output: '/s/gen', unknownKeys: 'strict' },
+			{ fs: createMemoryFileSystem({ '/s/openapi.json': spec }) },
+		);
+		expect(
+			warnings
+				.filter((w) => w.code === 'not_enforced')
+				.map((w) => w.message.slice(0, w.message.indexOf(':'))),
+		).toEqual(['Mixed']);
+	});
+
 	it('refuses a dates option it does not know', async () => {
 		const fs = createMemoryFileSystem({ '/s/openapi.json': SPEC });
 		await expect(

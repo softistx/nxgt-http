@@ -54,7 +54,9 @@ const STRING_FORMATS: Record<StringFormat, string> = {
 	// RFC 3339, as JSON Schema's date-time: the offset is mandatory.
 	'date-time': 'z.iso.datetime({ offset: true })',
 	date: 'z.iso.date()',
-	time: 'z.iso.time()',
+	// RFC 3339's full-time: seconds and an offset are mandatory, which
+	// z.iso.time() gets the other way round.
+	time: 'z.string().regex(/^(?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$/)',
 	duration: 'z.iso.duration()',
 	email: 'z.email()',
 	uri: 'z.url()',
@@ -245,18 +247,7 @@ function object(ctx: EmitContext, node: ObjectNode, scope: Scope): string {
 	const mode = ctx.mode(node);
 	const shape = shapeOf(ctx, node, scope);
 	const [first, ...rest] = node.extends;
-	if (first === undefined) {
-		if (typeof mode === 'object') {
-			return `z.object(${shape}).catchall(${expr(ctx, mode.schema, scope)})`;
-		}
-		const factory =
-			mode === 'strict'
-				? 'z.strictObject'
-				: mode === 'loose'
-					? 'z.looseObject'
-					: 'z.object';
-		return `${factory}(${shape})`;
-	}
+	if (first === undefined) return own(ctx, mode, shape, scope);
 	if (
 		node.extends.every((target) => ctx.isZodObject({ kind: 'ref', target }))
 	) {
@@ -267,10 +258,29 @@ function object(ctx: EmitContext, node: ObjectNode, scope: Scope): string {
 		return out + restate(ctx, mode, ctx.modeOf(first), scope);
 	}
 	const members = node.extends.map((id) => reference(ctx, id, scope));
-	if (shape !== '{}') {
-		members.push(object(ctx, { ...node, extends: [] }, scope));
-	}
+	// The shape holds the parents' properties that `required` names, which
+	// only a lookup through the parents finds.
+	if (shape !== '{}') members.push(own(ctx, mode, shape, scope));
 	return intersection(members);
+}
+
+/** An object of `shape` alone, in `mode`. */
+function own(
+	ctx: EmitContext,
+	mode: ObjectMode,
+	shape: string,
+	scope: Scope,
+): string {
+	if (typeof mode === 'object') {
+		return `z.object(${shape}).catchall(${expr(ctx, mode.schema, scope)})`;
+	}
+	const factory =
+		mode === 'strict'
+			? 'z.strictObject'
+			: mode === 'loose'
+				? 'z.looseObject'
+				: 'z.object';
+	return `${factory}(${shape})`;
 }
 
 function restate(
@@ -345,15 +355,18 @@ function entry(
 }
 
 /**
- * `.default(value)`, or `.prefault(value)` when the value holds dates: the
- * spec writes a default as JSON, so it is the input, which the codec decodes.
+ * `.default(value)`, or `.prefault(value)` when the schema returns something
+ * other than it takes. The spec writes a default as JSON, an input, and
+ * `.default()` hands it back unparsed: a date would stay a string, and an
+ * object's own defaults would never be filled in.
  */
 export function withDefault(
 	ctx: EmitContext,
 	schema: SchemaNode,
 	value: unknown,
 ): string {
-	const method = ctx.datesIn(schema) ? 'prefault' : 'default';
+	const method =
+		ctx.datesIn(schema) || ctx.inputDiffers(schema) ? 'prefault' : 'default';
 	return `.${method}(${defaultValue(value)})`;
 }
 

@@ -220,6 +220,12 @@ export type OpenApiClient<
 	 * also end on `cancel()`, a page's or a component's together.
 	 */
 	group(): OpenApiGroup<Ops, Routes, Decoded>;
+	/**
+	 * The generated `operations` the client was bound to: for a package built
+	 * over it, such as `@nxgt/httpyz-query/openapi`, which reads the spec as
+	 * the client does.
+	 */
+	readonly operations: OperationTable<Ops>;
 } & {
 	/** Calls the operation at a path: `api.get('/employees/{id}', { param: { id } })`. */
 	readonly [M in Method]: <P extends PathsOf<Routes, M>>(

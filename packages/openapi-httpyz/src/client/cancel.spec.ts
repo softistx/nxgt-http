@@ -74,6 +74,9 @@ describe('cancelling a bound client', () => {
 	it("cancels a group's calls and streams, and only those; the group goes on", async () => {
 		const api = bound(healthOnly);
 		const page = api.group();
+		// The table the client was bound to, which a group shares.
+		expect(api.operations).toBe(operations);
+		expect(page.operations).toBe(operations);
 		const signal = page.signal;
 		const call = failure(page.op('getItem', { param: { id: 1 } }));
 		const read = failure(

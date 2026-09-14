@@ -55,6 +55,9 @@ It reads two generated files:
 | `types.ts` | `ClientOperations`, each operation's input and replies, and `OperationsByRoute`, which maps `'get /employees/{id}'` to its `operationId` |
 | `operations.ts` | `operations`, the runtime table: each parameter's location and style, the body's media types, each reply's schema, and the server's validators |
 
+The client keeps that table as `api.operations`, for a package built over it,
+such as [`@nxgt/httpyz-query/openapi`](https://www.npmjs.com/package/@nxgt/httpyz-query).
+
 The client's options are the client's own: see
 [`@nxgt/httpyz`](https://www.npmjs.com/package/@nxgt/httpyz#setup). The
 binding's are:

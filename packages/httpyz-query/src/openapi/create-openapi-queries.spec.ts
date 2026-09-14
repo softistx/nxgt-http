@@ -82,7 +82,7 @@ function api() {
 		sent,
 		reached,
 		client,
-		queries: createOpenApiQueries(bound, operations),
+		queries: createOpenApiQueries(bound),
 	};
 }
 
@@ -192,7 +192,7 @@ describe('createOpenApiQueries', () => {
 			dateOperations,
 			{ decode: true },
 		);
-		const queries = createOpenApiQueries(decoding, dateOperations);
+		const queries = createOpenApiQueries(decoding);
 		const item = await client.fetchQuery(
 			queries.queryOptions('get', '/items/{id}', { param: { id: 1 } }),
 		);

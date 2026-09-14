@@ -127,14 +127,14 @@ matches every query of that path, whatever its `param`.
 `@nxgt/httpyz-query/openapi` does the same for a client bound to a
 generated spec by
 [`@nxgt/openapi-httpyz`](https://www.npmjs.com/package/@nxgt/openapi-httpyz),
-an optional peer. It takes the bound client and the generated `operations`,
-which tell an operation's input from its init as they do for the client:
+an optional peer. It takes the bound client, and reads the spec from the
+`operations` the client was bound to, as the client does:
 
 ```ts
 import { createOpenApiQueries } from '@nxgt/httpyz-query/openapi';
-import { operations } from './generated/openapi/operations.js';
+import { api } from './api.js'; // createOpenApiClient(http, operations)
 
-export const queries = createOpenApiQueries(api, operations);
+export const queries = createOpenApiQueries(api);
 
 // As api.get() takes it: the path, the input, then the init
 useQuery(queries.queryOptions('get', '/employees/{id}', { param: { id } }));

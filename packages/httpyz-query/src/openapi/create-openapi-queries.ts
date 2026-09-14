@@ -8,7 +8,6 @@ import type {
 	OpenApiClient,
 	OperationInit,
 	OperationsShape,
-	OperationTable,
 	RuntimeOperation,
 } from '@nxgt/openapi-httpyz';
 import { joined, keyOf, paged } from '../key/key';
@@ -21,12 +20,12 @@ type Call = (
 ) => Promise<{ readonly status: number; readonly data: unknown }>;
 
 /**
- * TanStack Query options for the operations of `api`. The generated
- * `operations` tell an operation's input from its init, as they do for the
- * bound client: one that takes nothing is called with its init alone.
+ * TanStack Query options for the operations of `api`. The client's own
+ * `operations` tell an operation's input from its init, as they do for its
+ * calls: one that takes nothing is called with its init alone.
  *
  * ```ts
- * const queries = createOpenApiQueries(api, operations);
+ * const queries = createOpenApiQueries(api);
  * const { data } = useQuery(queries.queryOptions('get', '/employees/{id}', { param: { id } }));
  * ```
  */
@@ -36,13 +35,12 @@ export function createOpenApiQueries<
 	Decoded extends boolean,
 >(
 	api: OpenApiClient<Ops, Routes, Decoded>,
-	operations: OperationTable<Ops>,
 	{ scope }: QueriesOptions = {},
 ): OpenApiQueries<Ops, Routes, Decoded> {
 	// As the bound client reads its arguments: an operation that takes nothing has no input.
 	const takes = new Map<string, boolean>();
 	for (const operation of Object.values<RuntimeOperation>(
-		operations as unknown as { readonly [id: string]: RuntimeOperation },
+		api.operations as unknown as { readonly [id: string]: RuntimeOperation },
 	)) {
 		takes.set(
 			`${operation.method} ${operation.path}`,

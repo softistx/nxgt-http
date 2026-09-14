@@ -7,6 +7,7 @@ import { operationIdFor, pascalCase, sharedName, toHonoPath } from './naming';
 import type { SchemaBuilder } from './schemas';
 import {
 	type BodyIR,
+	type EventIR,
 	HTTP_METHODS,
 	type HttpMethod,
 	type MediaIR,
@@ -63,6 +64,26 @@ export function mediaKind(mediaType: string): MediaKind {
 	}
 	return type.startsWith('text/') ? 'text' : 'binary';
 }
+
+const JSON_LINES = new Set([
+	'application/jsonl',
+	'application/x-ndjson',
+	'application/ndjson',
+	'application/jsonlines',
+	'application/x-jsonlines',
+	'application/json-seq',
+]);
+
+/** A reply read an item at a time: `sse` or `jsonl`, or `undefined` for any other. */
+export function sequentialKind(mediaType: string): 'sse' | 'jsonl' | undefined {
+	const type = (mediaType.split(';')[0] ?? '').trim().toLowerCase();
+	if (type === 'text/event-stream') return 'sse';
+	return JSON_LINES.has(type) ? 'jsonl' : undefined;
+}
+
+/** A JSON Schema `contentMediaType` that says the string holds JSON. */
+const isJsonText = (media: unknown): boolean =>
+	typeof media === 'string' && mediaKind(media) === 'json';
 
 /**
  * Every operation under `paths`, with its parameters merged from the path
@@ -470,6 +491,7 @@ export class OperationBuilder {
 					response.value.content,
 					child(response.location, 'content'),
 					stem,
+					true,
 				),
 				location: response.location,
 			});
@@ -477,7 +499,8 @@ export class OperationBuilder {
 		return responses;
 	}
 
-	#content(raw: unknown, at: Location, stem: string): MediaIR[] {
+	/** A reply's `content`, where a stream is read an item at a time; a body's is sent whole. */
+	#content(raw: unknown, at: Location, stem: string, reply = false): MediaIR[] {
 		const media: MediaIR[] = [];
 		if (raw === undefined) return media;
 		if (!isObject(raw)) {
@@ -493,6 +516,21 @@ export class OperationBuilder {
 			const entry = this.#resolver.deref(value, child(at, mediaType));
 			const object = isObject(entry.value) ? entry.value : {};
 			const schemaAt = child(entry.location, 'schema');
+			const itemAt = child(entry.location, 'itemSchema');
+			const sequential = reply ? sequentialKind(mediaType) : undefined;
+			if (sequential === 'sse') {
+				const events = this.#events(object.itemSchema, itemAt, stem);
+				media.push({ mediaType, kind: 'sse', ...(events && { events }) });
+				continue;
+			}
+			if (sequential === 'jsonl') {
+				const item =
+					object.itemSchema === undefined
+						? undefined
+						: this.#schemas.inline(object.itemSchema, itemAt, `${stem}Item`);
+				media.push({ mediaType, kind: 'jsonl', ...(item && { item }) });
+				continue;
+			}
 			const kind = mediaKind(mediaType);
 			let schema: SchemaNode | undefined;
 			if (kind === 'json' || kind === 'form') {
@@ -511,5 +549,90 @@ export class OperationBuilder {
 			media.push({ mediaType, kind, schema });
 		}
 		return media;
+	}
+
+	/**
+	 * The events of an `itemSchema`: an object, or a `oneOf` or `anyOf` of
+	 * them, each naming its event with a constant `event` and describing its
+	 * `data`: JSON under `contentMediaType: application/json` and
+	 * `contentSchema`, text otherwise. An event without `event` is a
+	 * `message`, as `EventSource` names it.
+	 */
+	#events(raw: unknown, at: Location, stem: string): EventIR[] | undefined {
+		if (raw === undefined) return undefined;
+		const events: EventIR[] = [];
+		const visit = (value: unknown, site: Location): void => {
+			const { value: schema, location } = this.#resolver.deref(value, site);
+			if (!isObject(schema)) return;
+			const union = ['oneOf', 'anyOf'].find((key) =>
+				Array.isArray(schema[key]),
+			);
+			if (union !== undefined) {
+				(schema[union] as unknown[]).forEach((variant, index) => {
+					visit(variant, child(location, union, index));
+				});
+				return;
+			}
+			const properties = isObject(schema.properties) ? schema.properties : {};
+			const propertiesAt = child(location, 'properties');
+			const name = this.#eventName(
+				properties.event,
+				child(propertiesAt, 'event'),
+			);
+			if (name === undefined) {
+				this.#diagnostics.warning(
+					'not_enforced',
+					'an event without a constant `event` is not declared: a client passes it to `onUnknownEvent`',
+					location,
+				);
+				return;
+			}
+			if (events.some((event) => event.name === name)) {
+				this.#diagnostics.warning(
+					'ignored',
+					`the event \`${name}\` is declared twice: the first one is kept`,
+					location,
+				);
+				return;
+			}
+			const data = this.#eventData(
+				properties.data,
+				child(propertiesAt, 'data'),
+				`${stem}${pascalCase(name)}Data`,
+			);
+			events.push({ name, ...(data && { data }) });
+		};
+		visit(raw, at);
+		return events.length === 0 ? undefined : events;
+	}
+
+	/** An event's name: its `event`'s `const`, or its only `enum` value; `message` without one. */
+	#eventName(raw: unknown, at: Location): string | undefined {
+		if (raw === undefined) return 'message';
+		const { value } = this.#resolver.deref(raw, at);
+		if (!isObject(value)) return undefined;
+		if (typeof value.const === 'string') return value.const;
+		if (
+			Array.isArray(value.enum) &&
+			value.enum.length === 1 &&
+			typeof value.enum[0] === 'string'
+		) {
+			return value.enum[0];
+		}
+		return undefined;
+	}
+
+	/** An event's data as JSON, or `undefined` when it is text. */
+	#eventData(raw: unknown, at: Location, name: string): SchemaNode | undefined {
+		if (raw === undefined) return undefined;
+		const data = this.#resolver.deref(raw, at);
+		if (!isObject(data.value) || !isJsonText(data.value.contentMediaType)) {
+			return undefined;
+		}
+		return this.#schemas.inline(
+			data.value.contentSchema,
+			child(data.location, 'contentSchema'),
+			name,
+		);
 	}
 }

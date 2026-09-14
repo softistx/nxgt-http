@@ -74,9 +74,13 @@ export interface ParameterSpec {
 }
 
 export interface MediaSpec {
-	readonly kind: 'json' | 'form' | 'text' | 'binary';
-	/** Absent for binary content, which is passed through unvalidated. */
+	readonly kind: 'json' | 'form' | 'text' | 'binary' | 'sse' | 'jsonl';
+	/** Absent for binary content, which is passed through unvalidated, and for a stream. */
 	readonly schema?: z.ZodType;
+	/** \`sse\`: each event's data, by name: a schema for JSON, \`null\` for text. Absent: any event, as text. */
+	readonly events?: { readonly [event: string]: z.ZodType | null };
+	/** \`jsonl\`: each item. Absent: any JSON. */
+	readonly item?: z.ZodType;
 }
 
 export interface OperationSpec {
@@ -197,6 +201,7 @@ function clientOperationsType(ctx: EmitContext): string {
 			`${indent}args: ${clientArgs(ctx, operation, indent)};`,
 			`${indent}reply:${clientReplies(ctx, operation, false, indent)};`,
 			`${indent}wire:${clientReplies(ctx, operation, true, indent)};`,
+			...streamLine(ctx, operation, 'client', indent),
 			'\t};',
 		].join('\n');
 	});
@@ -213,7 +218,77 @@ const BODY_KEYS: Record<MediaIR['kind'], string> = {
 	form: 'form',
 	text: 'text',
 	binary: 'body',
+	// Only a reply is read an item at a time: a body of these kinds is text, or bytes.
+	sse: 'text',
+	jsonl: 'body',
 };
+
+/** The stream an operation replies with: the first `sse` or `jsonl` content of a 2xx reply. */
+export function streamOf(operation: OperationIR): MediaIR | undefined {
+	for (const response of operation.responses) {
+		if (response.status < 200 || response.status > 299) continue;
+		const media = response.content.find(
+			(m) => m.kind === 'sse' || m.kind === 'jsonl',
+		);
+		if (media) return media;
+	}
+	return undefined;
+}
+
+/**
+ * Each item of a stream: a JSON line, or a union of its events narrowed on
+ * `event`. `side` is who holds it: a `client` reads it, decoded or as JSON
+ * carries it (`wire`), with the ID the event came with; a `server` writes
+ * it, and may give an `id` and a `retry`.
+ */
+function streamItem(
+	ctx: EmitContext,
+	media: MediaIR,
+	side: 'client' | 'wire' | 'server',
+	indent: string,
+): string {
+	const typed = (node: SchemaNode): string => {
+		const decoded = type(ctx, node, false, `${indent}\t`);
+		return side === 'wire' ? ctx.wire(node, decoded) : decoded;
+	};
+	if (media.kind === 'jsonl') return media.item ? typed(media.item) : 'unknown';
+	const id =
+		side === 'server'
+			? 'id?: string; retry?: number'
+			: 'id: string | undefined';
+	if (!media.events) {
+		return `{ event${side === 'server' ? '?' : ''}: string; data: string; ${id} }`;
+	}
+	const members = media.events.map(
+		(event) =>
+			`{ event: ${jsString(event.name)}; data: ${event.data ? typed(event.data) : 'string'}; ${id} }`,
+	);
+	return members.length === 1
+		? (members[0] as string)
+		: members.map((member) => `\n${indent}\t| ${member}`).join('');
+}
+
+/** An operation's `stream` entry, beside its replies. */
+function streamLine(
+	ctx: EmitContext,
+	operation: OperationIR,
+	side: 'client' | 'server',
+	indent: string,
+): string[] {
+	const media = streamOf(operation);
+	if (!media) return [];
+	const inner = `${indent}\t`;
+	// After the key's colon: a space, or a union on the lines below.
+	const item = (key: string, of: 'client' | 'wire' | 'server') => {
+		const text = streamItem(ctx, media, of, inner);
+		return `${inner}${key}:${text.startsWith('\n') ? '' : ' '}${text};`;
+	};
+	const lines = [`${inner}kind: ${jsString(media.kind)};`];
+	if (side === 'client')
+		lines.push(item('item', 'client'), item('wire', 'wire'));
+	else lines.push(item('item', 'server'));
+	return [`${indent}stream: {`, ...lines, `${indent}};`];
+}
 
 /**
  * `[input]`, `[input?]` when nothing in it is required, or `[]` when the
@@ -281,7 +356,8 @@ function clientReplies(
 		}
 		return response.content.map((media) => {
 			let data = 'globalThis.Blob';
-			if (media.kind === 'text') data = 'string';
+			// A stream read whole: events as the text they came as, JSON lines as bytes.
+			if (media.kind === 'text' || media.kind === 'sse') data = 'string';
 			// Its fields are text: a client hands the form over as it came.
 			if (media.kind === 'form') data = 'globalThis.FormData';
 			else if (media.schema && media.kind !== 'binary') {
@@ -365,6 +441,7 @@ function operationEntry(ctx: EmitContext, operation: OperationIR): string {
 	}
 	lines.push(
 		`${indent}responses: ${responsesType(ctx, operation, indent)};`,
+		...streamLine(ctx, operation, 'server', indent),
 		'\t};',
 	);
 	return lines.join('\n');
@@ -394,7 +471,9 @@ function contentType(
 	const lines = content.map((media) => {
 		const value = media.schema
 			? type(ctx, media.schema, false, inner)
-			: 'globalThis.Blob';
+			: media.kind === 'sse'
+				? 'string'
+				: 'globalThis.Blob';
 		return `${inner}${jsString(media.mediaType)}: ${value};`;
 	});
 	return `{\n${lines.join('\n')}\n${indent}}`;
@@ -646,6 +725,25 @@ function contentSpec(
 	if (content.length === 0) return '{}';
 	const inner = `${indent}\t`;
 	const lines = content.map((media) => {
+		const key = `${inner}${jsString(media.mediaType)}`;
+		if (media.kind === 'jsonl' && media.item) {
+			return `${key}: { kind: 'jsonl', item: ${expr(ctx, media.item, scope(inner))} },`;
+		}
+		if (media.kind === 'sse' && media.events) {
+			const deeper = `${inner}\t\t`;
+			const events = media.events.map(
+				(event) =>
+					`${deeper}${propertyKey(event.name)}: ${event.data ? expr(ctx, event.data, scope(deeper)) : 'null'},`,
+			);
+			return [
+				`${key}: {`,
+				`${inner}\tkind: 'sse',`,
+				`${inner}\tevents: {`,
+				...events,
+				`${inner}\t},`,
+				`${inner}},`,
+			].join('\n');
+		}
 		const schema =
 			named?.media === media
 				? `, schema: ${named.validator}`

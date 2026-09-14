@@ -144,6 +144,7 @@ export interface Operations {
 | `json` | a JSON request body as validated, when there is one; `\| undefined` when it is optional |
 | `form` | a form or multipart body, likewise |
 | `responses` | status code → media type → body; `{}` for a response with no content |
+| `stream` | only on an operation that replies with a [stream](#streams): its `kind`, and the `item` a handler writes |
 
 What a caller sends, before defaults, is in [`paths.ts`](#pathsgents).
 
@@ -216,9 +217,58 @@ export interface ClientOperations {
 | `json`, `form`, `text`, `body` in the input | the request body, keyed by kind; `body` is binary. A spec that accepts several kinds gives a union of inputs, one kind each |
 | `reply` | every declared reply as `{ status, type, data }`, the body decoded; `type` and `data` are `undefined` for a reply with no content |
 | `wire` | the same replies as JSON carries them: with [`dates: 'date'`](options.md#dates), their dates are strings |
+| `stream` | only on an operation that replies with a [stream](#streams): its `kind`, each `item` decoded, and the same as JSON carries it in `wire` |
 
 As in `Operations`, only exact statuses appear: an operation that declares
 none has `reply: never`.
+
+### Streams
+
+A 2xx reply of server-sent events (`text/event-stream`) or of JSON Lines
+(`application/jsonl`, `application/x-ndjson`, `application/json-seq`) is
+read an item at a time, as OpenAPI 3.2's `itemSchema` describes it. The
+operation's entry gets a `stream`:
+
+```yaml
+text/event-stream:
+  itemSchema:
+    oneOf:
+      - properties:
+          event: { const: update }
+          data:
+            type: string
+            contentMediaType: application/json
+            contentSchema: { $ref: '#/components/schemas/Item' }
+      - properties:
+          event: { const: ping }
+          data: { type: string }
+```
+
+```ts
+stream: {
+	kind: 'sse';
+	item:
+		| { event: 'update'; data: Item; id: string | undefined }
+		| { event: 'ping'; data: string; id: string | undefined };
+	wire: …; // the same, as JSON carries it
+};
+```
+
+- Each event is named by the constant of its `event` (a `const`, or an
+  `enum` of one). An event with no `event` is a `message`, as `EventSource`
+  names it. One whose `event` is not a constant is left out, with a warning:
+  a client passes it to `onUnknownEvent`.
+- Its `data` is JSON when it has `contentMediaType: application/json`,
+  checked by `contentSchema`, and text otherwise. A `contentSchema` written
+  inline is named `<Operation><Status>Response<Event>Data`.
+- Without an `itemSchema`, any event is yielded, its data as text:
+  `{ event: string; data: string; id: string | undefined }`.
+- A JSON Lines item is its `itemSchema`, `unknown` without one. One written
+  inline is named `<Operation><Status>ResponseItem`.
+
+Only the first stream of an operation's 2xx replies becomes its `stream`.
+`reply` still declares the reply read whole: the events as text, the lines as
+a `Blob`. A request body is sent whole whatever its media type.
 
 ## `operations.ts`
 
@@ -239,7 +289,14 @@ Each entry, keyed by `operationId`, holds:
 - a `parameters` list;
 - the `param`, `query` and `header` validators;
 - the `body` media types with their validators, and the same for each
-  response.
+  response. A stream's media has no `schema`: server-sent events carry
+  `events`, a validator per event name (`null` for text data), and JSON
+  Lines carry `item`, the validator of each line.
+
+```ts
+operations.watchFeed.responses[200]?.['text/event-stream'];
+// { kind: 'sse', events: { update: zItem, ping: null } }
+```
 
 The table is typed `{ readonly [K in keyof Operations]: OperationSpec }`:
 this keeps it cheap for TypeScript on large specs, and the precise types are

@@ -188,13 +188,30 @@ export interface ParamIR {
 	location: Location;
 }
 
-export type MediaKind = 'json' | 'form' | 'text' | 'binary';
+/**
+ * `sse` and `jsonl` are replies read an item at a time, as OpenAPI 3.2's
+ * `itemSchema` describes them: server-sent events, and JSON Lines, NDJSON
+ * or JSON text sequences.
+ */
+export type MediaKind = 'json' | 'form' | 'text' | 'binary' | 'sse' | 'jsonl';
+
+/** An event a stream of server-sent events declares. */
+export interface EventIR {
+	/** Its `event` field: `message` for an event sent without one. */
+	name: string;
+	/** Its data as JSON, from `contentSchema`; absent when the data is text. */
+	data?: SchemaNode;
+}
 
 export interface MediaIR {
 	mediaType: string;
 	kind: MediaKind;
-	/** Absent for binary content, which is passed through unvalidated. */
+	/** Absent for binary content, which is passed through unvalidated, and for a stream. */
 	schema?: SchemaNode;
+	/** `sse`: the events its `itemSchema` declares. Absent when it declares none: any event, as text. */
+	events?: EventIR[];
+	/** `jsonl`: each item, from `itemSchema`. Absent when it has none: any JSON. */
+	item?: SchemaNode;
 }
 
 export interface BodyIR {

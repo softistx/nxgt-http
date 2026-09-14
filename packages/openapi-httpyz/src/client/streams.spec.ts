@@ -12,6 +12,11 @@ import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { operations as dated } from '../../test/generated/dates/operations';
 import type { ClientOperations as DatedOperations } from '../../test/generated/dates/types';
+import {
+	createRoutes,
+	streamEvents,
+	streamLines,
+} from '../../test/generated/hono';
 import { operations } from '../../test/generated/operations';
 import type {
 	ClientOperations,
@@ -170,5 +175,65 @@ describe('api.stream', () => {
 		);
 		// @ts-expect-error the topic is required
 		void api.stream('watchFeed', { query: {} });
+	});
+});
+
+describe('api.stream against the server helpers of the same spec', () => {
+	const served = new Hono();
+	createRoutes(served, { validateResponses: true })
+		.get('/feed', (c) =>
+			streamEvents(c, 'watchFeed', async (stream) => {
+				const { topic } = c.req.valid('query');
+				await stream.write({
+					event: 'added',
+					id: '9',
+					data: { id: 9, name: topic, createdAt: CREATED },
+				});
+				await stream.write({ event: 'note', data: 'done' });
+			}),
+		)
+		.post('/export', (c) =>
+			streamLines(c, 'exportItems', async (stream) => {
+				const limit = c.req.valid('json')?.limit ?? 1;
+				for (let id = 0; id < limit; id++) {
+					await stream.write({ id, name: `item ${id}` });
+				}
+			}),
+		);
+	const api = createOpenApiClient<ClientOperations, OperationsByRoute>(
+		createHttpClient({
+			baseUrl: 'http://api.test',
+			fetch: async (request) => served.fetch(request),
+		}),
+		operations,
+		{ validate: true },
+	);
+
+	it('reads what streamEvents wrote, checked at both ends', async () => {
+		const events = await collect(
+			api.stream(
+				'watchFeed',
+				{ query: { topic: 'news' } },
+				{ reconnect: false },
+			),
+		);
+		expect(events).toMatchObject([
+			{
+				event: 'added',
+				id: '9',
+				data: { id: 9, name: 'news', createdAt: CREATED },
+			},
+			{ event: 'note', data: 'done' },
+		]);
+	});
+
+	it('reads what streamLines wrote', async () => {
+		const items = await collect(
+			api.stream('exportItems', { json: { limit: 2 } }),
+		);
+		expect(items).toEqual([
+			{ id: 0, name: 'item 0' },
+			{ id: 1, name: 'item 1' },
+		]);
 	});
 });

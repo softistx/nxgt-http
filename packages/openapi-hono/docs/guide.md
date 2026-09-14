@@ -173,6 +173,8 @@ With `validateResponses`, every reply is checked against the spec:
   `c.text()` sends, `text/plain`, for any declared text type;
 - a JSON or text body is validated, except a stream: `text/event-stream`
   and the JSON line formats are never read, since they may never end.
+  `streamEvents()` and `streamLines()` check each item instead, as it is
+  written ([Streams](#streams)).
 
 A reply that fails goes through `onValidationError` as a `response`
 failure. By default it is a 500 with no `issues`, since they would show the
@@ -184,6 +186,60 @@ with an `ignored` warning, so an operation that declares only those has its
 replies typed `Response`: any reply compiles. And with `validateResponses`,
 every reply it sends fails as `undeclared_status`. Give each operation its
 exact statuses.
+
+## Streams
+
+A reply of server-sent events or JSON Lines that the spec describes an item
+at a time, with OpenAPI 3.2's `itemSchema`, is written from the handler with
+the helpers `hono.ts` exports when the spec has such an operation:
+
+```ts
+import { createRoutes, streamEvents, streamLines } from './generated/hono.js';
+
+createRoutes(app, { validateResponses: true })
+	.get('/feed', (c) =>
+		streamEvents(c, 'watchFeed', async (stream) => {
+			stream.onAbort(() => unsubscribe());
+			await stream.write({ event: 'update', id: '7', data: item });
+			await stream.write({ event: 'ping', data: 'still here' });
+		}),
+	)
+	.post('/export', (c) =>
+		streamLines(c, 'exportItems', async (stream) => {
+			for await (const item of cursor) {
+				if (stream.aborted) break;
+				await stream.write(item);
+			}
+		}),
+	);
+```
+
+`streamEvents(c, id, write)`:
+- takes only an operation whose 2xx reply is `text/event-stream`, and types
+  each event by its name: `{ event, data, id?, retry? }`;
+- sends the data as JSON when the spec declares it JSON
+  (`contentMediaType: application/json`), and as text otherwise, a `data:`
+  line per line;
+- throws for an event name the spec does not declare. With no `itemSchema`,
+  any event goes, its data as text, `event` optional.
+
+`streamLines(c, id, write)` sends each item as a line of JSON, as the media
+type the spec declares: `application/jsonl`, `application/x-ndjson`, or
+`application/json-seq`, which puts a record separator before each one.
+
+Both reply with the status the stream is declared under, and end when
+`write` returns. The writer's `sleep(ms)` pauses between items. `aborted`
+and `onAbort()` tell when the client went away.
+
+With `validateResponses`, each item is checked before it is sent. The
+status went out with the first one, so a failing item cannot turn into a
+500. Instead it is not sent, `onValidationError` receives the `response`
+failure for its side effects (a log, a metric), and the stream ends with
+an error logged by `console.error`. A throw inside `write` ends the stream
+the same way.
+
+A handler may only stream its own operation's reply: `streamEvents(c, id)`
+throws when `id` is not the running route's.
 
 ## Modules
 

@@ -392,7 +392,10 @@ const { data } = await api.GET('/employees/{id}', {
 Written with the [`hono` option](options.md#hono) only. It holds:
 - `Replies`: what each operation may send, as Hono types a reply;
 - `HonoSpec`;
-- `createRoutes` and `createApi`, bound to the spec.
+- `createRoutes` and `createApi`, bound to the spec;
+- `streamEvents` and `streamLines`, when an operation replies with a
+  [stream](#streams): its handler writes each item, typed by the
+  `operationId`.
 
 They are bound to the runtime in `@nxgt/openapi-hono`. [Typed Hono routes](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-hono/docs/guide.md)
 covers how to use them.

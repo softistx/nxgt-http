@@ -7,6 +7,7 @@ installed; `hono` is its peer because the types need it.
 | File | Holds |
 | --- | --- |
 | `engine.ts` | `createApi`: registration, request validation, reply checks |
+| `streams.ts` | `streamEvents` and `streamLines`: a reply written an item at a time |
 | `errors.ts` | issues, failures, `validationErrorHandler` |
 | `types.ts` | the types of `routes`: `ApiSpec`, `Routes`, `Scope`, `RouteHandler` |
 | `routable.ts` | `unroutable`: why Hono cannot route an operation; `@nxgt/openapi-codegen` keeps a copy, to warn at generation |
@@ -93,6 +94,31 @@ The table holds exact statuses only: the IR drops `default` and `4XX`. An
 operation declared only through those fails every reply as
 `undeclared_status`, and its `Replies` entry is `Response`.
 
+## Streams
+
+`reply` records the running route (`operationId`, table entry, settings) in
+a `WeakMap` keyed by the request's `Context`, the same object through its
+whole chain. `streamEvents(c, id, write)` and `streamLines(c, id, write)`
+read it back:
+- the `id` must be the running route's, so a handler cannot stream another
+  operation's reply;
+- the stream is the operation's first 2xx reply of that kind, sent with its
+  status.
+
+The body is a `TransformStream` written here, not with `hono/streaming`, so
+the package still imports `hono` for types only. Events are framed as
+`EventSource` reads them: `event:`, a `data:` per line, `id:`, `retry:`.
+JSON lines get a record separator first under `application/json-seq`.
+
+Each item is encoded, then, with `validateResponses`, parsed back and
+checked by its validator from the table. A failing item is never sent. The
+status is already out, so `onValidationError` is called for its side effects
+only, and the stream ends with an error. A throw inside `write` goes to
+`console.error`, and the stream ends. A cancelled body errors the writable
+side, which sets `aborted` and runs the `onAbort` listeners.
+
+The reply checks in `reply` skip a stream's body, since it may never end.
+
 ## Types
 
 `HonoSpec` gathers `Operations`, `Replies` and the indexes. A route costs
@@ -122,7 +148,7 @@ from context, so there are no overloads per middleware count.
 ## Testing
 
 `test/generate.ts` generates `@nxgt/openapi-codegen`'s fixture specs
-(`split`, `query`, `kitchen-sink`, `dates`) with `hono: true` into
+(`split`, `query`, `kitchen-sink`, `dates`, `streams`) with `hono: true` into
 `test/generated/`, which git ignores; the `test` and `typecheck` scripts run
 it first. The generator is a `workspace:^` devDependency, read from its
 build. The fixtures' `hono.ts` imports this package by name, which a
@@ -132,6 +158,7 @@ import rather than a build of it.
 | What | Where | Checks |
 | --- | --- | --- |
 | routes | `src/engine.spec.ts` | the fixtures' routes on a real Hono app, through `app.request()`: validation, errors and hooks, QUERY, forms, reply checks, modules, registration mistakes |
+| streams | `src/streams.spec.ts` | the `streams` fixture's events and lines on a real Hono app: framing, text and JSON data, checks with `validateResponses`, misuse, and what the helpers' types refuse |
 | routes typing | `test/types/routes.ts` | what `routes` refuses: an undeclared status, a wrong body, a path without that method, an unknown `operationId`, a tag or a path outside the scope |
 | routes cost | `src/perf.spec.ts` | `tsc --extendedDiagnostics` on 500 generated routes (`test/perf.ts`) stays under an instantiation budget |
 

@@ -14,7 +14,7 @@
     },
     "packages/datasource-rest": {
       "name": "@nxgt/datasource-rest",
-      "version": "1.0.3",
+      "version": "2.0.0",
       "devDependencies": {
         "@nxgt/httpyz": "workspace:^",
         "@nxgt/openapi-codegen": "workspace:^",
@@ -30,7 +30,7 @@
     },
     "packages/httpyz": {
       "name": "@nxgt/httpyz",
-      "version": "0.0.0",
+      "version": "0.1.0",
       "devDependencies": {
         "@types/bun": "^1.4.0",
         "hono": "^4.13.4",
@@ -42,7 +42,7 @@
     },
     "packages/httpyz-query": {
       "name": "@nxgt/httpyz-query",
-      "version": "0.0.0",
+      "version": "0.1.0",
       "devDependencies": {
         "@nxgt/httpyz": "workspace:^",
         "@nxgt/openapi-codegen": "workspace:^",
@@ -63,7 +63,7 @@
     },
     "packages/openapi-codegen": {
       "name": "@nxgt/openapi-codegen",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "bin": {
         "nxgt-openapi": "./dist/cli.js",
       },
@@ -85,7 +85,7 @@
     },
     "packages/openapi-hono": {
       "name": "@nxgt/openapi-hono",
-      "version": "0.0.0",
+      "version": "0.1.0",
       "devDependencies": {
         "@nxgt/openapi-codegen": "workspace:^",
         "@types/bun": "^1.4.0",
@@ -99,7 +99,7 @@
     },
     "packages/openapi-httpyz": {
       "name": "@nxgt/openapi-httpyz",
-      "version": "0.0.0",
+      "version": "0.1.0",
       "devDependencies": {
         "@nxgt/httpyz": "workspace:^",
         "@nxgt/openapi-codegen": "workspace:^",

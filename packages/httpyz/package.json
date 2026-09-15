@@ -1,14 +1,15 @@
 {
 	"name": "@nxgt/httpyz",
 	"version": "0.1.0",
-	"license": "UNLICENSED",
+	"license": "MIT",
 	"type": "module",
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"files": [
 		"dist",
 		"README.md",
-		"package.json"
+		"package.json",
+		"LICENSE"
 	],
 	"exports": {
 		".": {

@@ -51,3 +51,7 @@ bun run verify:artifacts
 A change under `packages/` needs a changeset (`bun changeset`). Merging to
 `develop` opens a "Version packages" PR, and merging that PR publishes.
 [AGENTS.md](AGENTS.md) explains why each of these steps exists.
+
+## License
+
+[MIT](LICENSE), for every package.

@@ -1,0 +1,51 @@
+{
+	"name": "@nxgt/openapi-msw",
+	"version": "0.0.0",
+	"license": "MIT",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"files": [
+		"dist",
+		"README.md",
+		"package.json",
+		"LICENSE"
+	],
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"default": "./dist/index.js"
+		},
+		"./package.json": "./package.json"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/softistx/nxgt-http.git",
+		"directory": "packages/openapi-msw"
+	},
+	"publishConfig": {
+		"registry": "https://registry.npmjs.org",
+		"access": "public"
+	},
+	"scripts": {
+		"build": "bun run ../../build.ts",
+		"fixtures": "bun run test/generate.ts",
+		"test": "bun run fixtures && bun test src",
+		"typecheck": "bun run fixtures && tsc --noEmit"
+	},
+	"devDependencies": {
+		"@nxgt/httpyz": "workspace:^",
+		"@nxgt/openapi-codegen": "workspace:^",
+		"@nxgt/openapi-httpyz": "workspace:^",
+		"@types/bun": "^1.4.0",
+		"msw": "^2.15.0",
+		"zod": "^4.5.4"
+	},
+	"peerDependencies": {
+		"@nxgt/httpyz": "workspace:^",
+		"@nxgt/openapi-httpyz": "workspace:^",
+		"msw": "^2.0.0",
+		"typescript": "^6.0.3"
+	}
+}

@@ -1,5 +1,13 @@
 # @nxgt/datasource-rest
 
+## 3.0.1
+
+### Patch Changes
+
+- Updated dependencies [[`84805cc`](https://github.com/softistx/nxgt-http/commit/84805ccba1da28e0dbcc02237391160a418e3a1e)]:
+  - @nxgt/httpyz@0.3.0
+  - @nxgt/openapi-httpyz@0.3.0
+
 ## 3.0.0
 
 ### Major Changes

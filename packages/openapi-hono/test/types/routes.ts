@@ -4,7 +4,7 @@
  */
 
 import type { HttpMethod } from '@nxgt/openapi-codegen';
-import { Hono, type MiddlewareHandler } from 'hono';
+import { type Context, Hono, type MiddlewareHandler } from 'hono';
 import type { Method } from '../../src/types';
 import { createRoutes as dateRoutes } from '../generated/dates/hono.js';
 import { createRoutes as kitchenRoutes } from '../generated/kitchen-sink/hono.js';
@@ -18,6 +18,7 @@ export const sameMethods: Same<Method, HttpMethod> = true;
 
 declare const ada: Employee;
 declare const auth: MiddlewareHandler;
+declare function logged(c: Context): void;
 
 export function examples(): void {
 	const app = new Hono();
@@ -36,6 +37,11 @@ export function examples(): void {
 		c.body(null, 204),
 	);
 	routes.operation('createEmployee', async (c) => c.json(ada, 201));
+	// The handler's c is still a Context, for a helper that takes one.
+	routes.get('/employees/{id}', (c) => {
+		logged(c);
+		return c.json(ada, 200, { 'x-trace': 't' });
+	});
 
 	// @ts-expect-error 201 is not a status getEmployee declares
 	routes.get('/employees/{id}', (c) => c.json(ada, 201));

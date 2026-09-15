@@ -420,7 +420,11 @@ get<P extends /* a GET path of the scope, starting with the prefix */>(
 ```
 
 Registers the operation at `path`, written as the spec writes it
-(`/employees/{id}`), with middlewares then its handler. The handler's
+(`/employees/{id}`), with middlewares then its handler. Its type,
+[`Register`](#register), has one overload per chain length, up to five
+middlewares, then one for longer chains, as Hono's own `app.get` has. With
+a fixed length, the handler's `c` stays typed while its reply is being
+written, so the editor can offer the body's fields. The handler's
 `c.req.valid()` and replies are those of the operation. Throws at
 registration in the cases listed under [Modules](#modules); `head()` always
 throws, since Hono answers `HEAD` with the `GET` route.
@@ -432,7 +436,7 @@ operation<Id extends Sc['ids']>(id: Id, ...chain: Chain<S, Id>): Routes<S, Sc, P
 ```
 
 Registers an operation by its `operationId` instead of its path. Throws as
-the methods above.
+the methods above. Its type, `RegisterOperation`, has the same overloads.
 
 ##### `routes.validate`
 
@@ -560,12 +564,43 @@ The `stream` that `streamLines()` hands to `write`.
 
 ```ts
 type RouteHandler<S extends ApiSpec, Id extends string> = (
-	c: Context</* … */>, // c.req.valid() holds the operation's validated input
+	c: DeclaredJson<Reply> & Context</* … */>, // c.req.valid() holds the operation's validated input
 	next: Next,
 ) => Reply | Promise<Reply>; // S['replies'][Id]
 ```
 
-The handler of operation `Id`: the last argument of a registration.
+The handler of operation `Id`: the last argument of a registration. Its `c`
+is still a `Context`, for any helper that takes one.
+
+#### `DeclaredJson`
+
+```ts
+interface DeclaredJson<R> {
+	json<Status extends /* a JSON status R declares */, Body extends Partial</* its body */>>(
+		body: Body,
+		status: Status,
+		headers?: Record<string, string | string[]>,
+	): Response & TypedResponse<JSONParsed<Body>, Status, 'json'>;
+}
+```
+
+The `c.json()` a handler gets on top of Hono's own. It types the body by the
+status passed after it, so the editor offers the fields of the body declared
+for that status, and then only those not written yet. Hono's `c.json()` has
+nothing to offer, since it takes any `T`. The reply is typed as Hono types
+it, so what the handler returns is checked against the spec as before. A
+body that is not even part of the declared one falls through to Hono's
+`c.json()`, and the handler's return is refused there.
+
+#### `Register`
+
+```ts
+interface Register<S extends ApiSpec, Sc extends Scope, Prefix extends string, M extends Method>;
+```
+
+The type of `routes.get()` and the other methods: see
+[`routes.get()`](#routesget-routesput-routespost-routesdelete-routesoptions-routeshead-routespatch-routestrace-routesquery).
+`RegisterOperation<S, Sc, Prefix>` is `routes.operation()`'s.
 
 #### `Chain`
 
@@ -675,7 +710,12 @@ the table is one.
 ## Traps
 
 - **Give `c.json()` a status.** Without one, Hono types the reply with any
-  contentful status, and it matches no declared reply.
+  contentful status, and it matches no declared reply. Without one, the
+  editor also has no declared body to offer.
+- **With `dates: 'date'`, completion stops at the first `Date`.** The
+  declared body is the one JSON carries, with dates as strings. A body that
+  holds a `Date` falls through to Hono's `c.json()`, which still checks it,
+  but has no fields to offer.
 - **Reply with plain objects.** A Mongoose document does not type as its
   schema; return `.lean()` results.
 - **Read the body through `c.req`, never `c.req.raw`.** A middleware that

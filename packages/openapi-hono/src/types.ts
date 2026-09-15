@@ -3,7 +3,14 @@
  * generator wrote, never a conditional type, so a route costs TypeScript the
  * same whether the spec has five operations or five hundred.
  */
-import type { Context, Hono, MiddlewareHandler, Next } from 'hono';
+import type {
+	Context,
+	Hono,
+	MiddlewareHandler,
+	Next,
+	TypedResponse,
+} from 'hono';
+import type { JSONParsed } from 'hono/utils/types';
 import type { ValidationErrorHook } from './errors';
 
 export type Method =
@@ -64,16 +71,38 @@ type Entry<S extends ApiSpec, Id extends string> = S['operations'][Id &
 type Reply<S extends ApiSpec, Id extends string> = S['replies'][Id &
 	keyof S['replies']];
 
+/** A JSON reply of the generated `Replies`. */
+type JsonReply = TypedResponse<any, any, 'json'>;
+
+/**
+ * `c.json(body, status)` over the JSON replies `R` declares: the body is typed
+ * by its status as it is written, so an editor offers its fields. Hono's own
+ * `c.json` stays behind it, and the reply is typed as Hono types it, so what
+ * the handler returns is checked against the spec as before. A body that is
+ * not even part of the declared one falls to Hono's, and is refused there.
+ */
+export interface DeclaredJson<R> {
+	json<
+		Status extends Extract<R, JsonReply>['_status'],
+		Body extends Partial<Extract<R, JsonReply & { _status: Status }>['_data']>,
+	>(
+		body: Body,
+		status: Status,
+		headers?: Record<string, string | string[]>,
+	): Response & TypedResponse<JSONParsed<Body>, Status, 'json'>;
+}
+
 /**
  * The handler of operation `Id`: `c.req.valid()` holds its validated
  * parameters and body, and it returns one of the replies the spec declares.
  */
 export type RouteHandler<S extends ApiSpec, Id extends string> = (
-	c: Context<
-		any,
-		(Entry<S, Id> & { honoPath: string })['honoPath'],
-		{ out: Entry<S, Id> & {} }
-	>,
+	c: DeclaredJson<Reply<S, Id>> &
+		Context<
+			any,
+			(Entry<S, Id> & { honoPath: string })['honoPath'],
+			{ out: Entry<S, Id> & {} }
+		>,
 	next: Next,
 ) => Reply<S, Id> | Promise<Reply<S, Id>>;
 
@@ -108,21 +137,130 @@ export interface RoutesOptions<
 	tag?: Tag;
 }
 
+/** The `operationId` at `M P`. */
+type RouteId<
+	S extends ApiSpec,
+	M extends Method,
+	P extends string,
+> = S['routes'][`${M} ${P}` & keyof S['routes']] & string;
+
+type Mw = MiddlewareHandler;
+
+/**
+ * Registers the route of `M` at a path: the handler, after up to five
+ * middlewares, then any number. One overload per length, as Hono's own
+ * `app.get` has: with a rest of middlewares before it, a handler whose reply
+ * is not finished yet could be one of them, and its `c` would go untyped, so
+ * an editor would offer nothing in `c.json({ … })` while it is written.
+ */
+export interface Register<
+	S extends ApiSpec,
+	Sc extends Scope,
+	Prefix extends string,
+	M extends Method,
+> {
+	<P extends Sc['paths'][M] & `${Prefix}${string}`>(
+		path: P,
+		handler: RouteHandler<S, RouteId<S, M, P>>,
+	): Routes<S, Sc, Prefix>;
+	<P extends Sc['paths'][M] & `${Prefix}${string}`>(
+		path: P,
+		m1: Mw,
+		handler: RouteHandler<S, RouteId<S, M, P>>,
+	): Routes<S, Sc, Prefix>;
+	<P extends Sc['paths'][M] & `${Prefix}${string}`>(
+		path: P,
+		m1: Mw,
+		m2: Mw,
+		handler: RouteHandler<S, RouteId<S, M, P>>,
+	): Routes<S, Sc, Prefix>;
+	<P extends Sc['paths'][M] & `${Prefix}${string}`>(
+		path: P,
+		m1: Mw,
+		m2: Mw,
+		m3: Mw,
+		handler: RouteHandler<S, RouteId<S, M, P>>,
+	): Routes<S, Sc, Prefix>;
+	<P extends Sc['paths'][M] & `${Prefix}${string}`>(
+		path: P,
+		m1: Mw,
+		m2: Mw,
+		m3: Mw,
+		m4: Mw,
+		handler: RouteHandler<S, RouteId<S, M, P>>,
+	): Routes<S, Sc, Prefix>;
+	<P extends Sc['paths'][M] & `${Prefix}${string}`>(
+		path: P,
+		m1: Mw,
+		m2: Mw,
+		m3: Mw,
+		m4: Mw,
+		m5: Mw,
+		handler: RouteHandler<S, RouteId<S, M, P>>,
+	): Routes<S, Sc, Prefix>;
+	<P extends Sc['paths'][M] & `${Prefix}${string}`>(
+		path: P,
+		...chain: Chain<S, RouteId<S, M, P>>
+	): Routes<S, Sc, Prefix>;
+}
+
+/** `routes.operation()`, with the same overloads as a method's. */
+export interface RegisterOperation<
+	S extends ApiSpec,
+	Sc extends Scope,
+	Prefix extends string,
+> {
+	<Id extends Sc['ids']>(
+		id: Id,
+		handler: RouteHandler<S, Id>,
+	): Routes<S, Sc, Prefix>;
+	<Id extends Sc['ids']>(
+		id: Id,
+		m1: Mw,
+		handler: RouteHandler<S, Id>,
+	): Routes<S, Sc, Prefix>;
+	<Id extends Sc['ids']>(
+		id: Id,
+		m1: Mw,
+		m2: Mw,
+		handler: RouteHandler<S, Id>,
+	): Routes<S, Sc, Prefix>;
+	<Id extends Sc['ids']>(
+		id: Id,
+		m1: Mw,
+		m2: Mw,
+		m3: Mw,
+		handler: RouteHandler<S, Id>,
+	): Routes<S, Sc, Prefix>;
+	<Id extends Sc['ids']>(
+		id: Id,
+		m1: Mw,
+		m2: Mw,
+		m3: Mw,
+		m4: Mw,
+		handler: RouteHandler<S, Id>,
+	): Routes<S, Sc, Prefix>;
+	<Id extends Sc['ids']>(
+		id: Id,
+		m1: Mw,
+		m2: Mw,
+		m3: Mw,
+		m4: Mw,
+		m5: Mw,
+		handler: RouteHandler<S, Id>,
+	): Routes<S, Sc, Prefix>;
+	<Id extends Sc['ids']>(id: Id, ...chain: Chain<S, Id>): Routes<S, Sc, Prefix>;
+}
+
 export type Routes<
 	S extends ApiSpec,
 	Sc extends Scope = Whole<S>,
 	Prefix extends string = '',
 > = {
-	readonly [M in Method]: <P extends Sc['paths'][M] & `${Prefix}${string}`>(
-		path: P,
-		...chain: Chain<S, S['routes'][`${M} ${P}` & keyof S['routes']] & string>
-	) => Routes<S, Sc, Prefix>;
+	readonly [M in Method]: Register<S, Sc, Prefix, M>;
 } & {
 	/** Registers an operation by its `operationId`. */
-	operation<Id extends Sc['ids']>(
-		id: Id,
-		...chain: Chain<S, Id>
-	): Routes<S, Sc, Prefix>;
+	readonly operation: RegisterOperation<S, Sc, Prefix>;
 	/**
 	 * Marks where in a chain the request is validated, when a middleware
 	 * needs validated input: `routes.put(path, auth, routes.validate, check, handler)`.

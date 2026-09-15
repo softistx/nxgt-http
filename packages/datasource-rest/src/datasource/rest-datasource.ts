@@ -14,6 +14,7 @@ import {
 	type Success,
 	UndeclaredStatusError,
 } from '@nxgt/httpyz';
+import { METHODS } from '@nxgt/httpyz/integration';
 import {
 	createOpenApiClient,
 	type OpenApiArgs,
@@ -21,6 +22,7 @@ import {
 	type OpenApiOptions,
 	type OperationsShape,
 	type OperationTable,
+	type PathMethods,
 	type RoutesOf,
 } from '@nxgt/openapi-httpyz';
 import { toDataSourceError } from '../errors/data-source-error';
@@ -57,25 +59,13 @@ type Decoding<Decoded extends boolean> = {
 	readonly decode?: Decoded;
 } & (Decoded extends true ? { readonly decode: true } : unknown);
 
-/**
- * A datasource for a service, typed by the `ClientOperations` generated from
- * its spec. Extend it with the calls a resolver makes:
- *
- * ```ts
- * class Bookmarks extends RESTDataSource<ClientOperations> {
- * 	bookmark(id: string) {
- * 		return this.data(this.api.get('/bookmarks/{id}', { param: { id } }));
- * 	}
- * }
- * new Bookmarks({ baseUrl, operations, token: () => context.token });
- * ```
- */
-export class RESTDataSource<
+/** The datasource's own members; `RESTDataSource` adds the client's path methods. */
+class DataSource<
 	Ops extends OperationsShape<Ops>,
-	Routes = RoutesOf<Ops>,
-	Decoded extends boolean = false,
+	Routes,
+	Decoded extends boolean,
 > {
-	/** The client bound to the spec: `this.api.get('/bookmarks/{id}', { param: { id } })`. */
+	/** The client bound to the spec, for `op()`, `stream()` and `group()`. */
 	readonly api: OpenApiClient<Ops, Routes, Decoded>;
 
 	constructor(options: RESTDataSourceOptions<Ops> & Decoding<Decoded>) {
@@ -126,6 +116,45 @@ export class RESTDataSource<
 		}
 	}
 }
+
+// `this.get(...)` for `this.api.get(...)`: getters on the prototype, so that a
+// subclass's own `get()` or `delete()` still wins.
+for (const method of METHODS) {
+	Object.defineProperty(DataSource.prototype, method, {
+		configurable: true,
+		get(this: { readonly api: Record<string, unknown> }) {
+			return this.api[method];
+		},
+	});
+}
+
+/**
+ * A datasource for a service, typed by the `ClientOperations` generated from
+ * its spec. It has the client's `get`, `post`… for each method the spec has
+ * an operation for. Extend it with the calls a resolver makes:
+ *
+ * ```ts
+ * class Bookmarks extends RESTDataSource<ClientOperations> {
+ * 	bookmark(id: string) {
+ * 		return this.data(this.get('/bookmarks/{id}', { param: { id } }));
+ * 	}
+ * }
+ * new Bookmarks({ baseUrl, operations, token: () => context.token });
+ * ```
+ */
+export type RESTDataSource<
+	Ops extends OperationsShape<Ops>,
+	Routes = RoutesOf<Ops>,
+	Decoded extends boolean = false,
+> = DataSource<Ops, Routes, Decoded> & PathMethods<Ops, Routes, Decoded>;
+
+export const RESTDataSource = DataSource as unknown as new <
+	Ops extends OperationsShape<Ops>,
+	Routes = RoutesOf<Ops>,
+	Decoded extends boolean = false,
+>(
+	options: RESTDataSourceOptions<Ops> & Decoding<Decoded>,
+) => RESTDataSource<Ops, Routes, Decoded>;
 
 /** A reply's body: JSON when it parses, its text otherwise, nothing when it cannot be read. */
 async function bodyOf(response: Response): Promise<unknown> {

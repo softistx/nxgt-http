@@ -244,11 +244,19 @@ export type OpenApiClient<
 	 * the client does.
 	 */
 	readonly operations: OperationTable<Ops>;
-} & {
-	/**
-	 * Calls the operation at a path: `api.get('/employees/{id}', { param: { id } })`.
-	 * Only the methods the spec has an operation for are there.
-	 */
+} & PathMethods<Ops, Routes, Decoded>;
+
+/**
+ * A method per HTTP method the spec has an operation for, which calls the
+ * operation at a path: `api.get('/employees/{id}', { param: { id } })`. For
+ * a package that offers them on an object of its own, as
+ * `@nxgt/datasource-rest` does.
+ */
+export type PathMethods<
+	Ops extends OperationsShape<Ops>,
+	Routes = RoutesOf<Ops>,
+	Decoded extends boolean = false,
+> = {
 	readonly [M in MethodsOf<Routes>]: <P extends PathsOf<Routes, M>>(
 		path: P,
 		...args: Args<Ops, IdOf<Ops, Routes, M, P>>

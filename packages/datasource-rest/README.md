@@ -32,10 +32,10 @@ import type { ClientOperations } from './generated/bookmarks/types.js';
 
 export class Bookmarks extends RESTDataSource<ClientOperations> {
 	bookmark(id: string) {
-		return this.data(this.api.get('/bookmarks/{id}', { param: { id } }));
+		return this.data(this.get('/bookmarks/{id}', { param: { id } }));
 	}
 	search(q: string) {
-		return this.data(this.api.query('/bookmarks', { json: { q } }));
+		return this.data(this.query('/bookmarks', { json: { q } }));
 	}
 }
 
@@ -47,9 +47,13 @@ const bookmarks = new Bookmarks({
 });
 ```
 
-- **`this.api`** is the bound client, typed by the spec. It offers only the
-  paths each method has, and only the methods the spec has an operation for.
-  Each call resolves to one of the declared replies, narrowed on its status.
+- **`this.get`, `this.post`, `this.query`…** call the operation at a path,
+  typed by the spec. There is one for each method the spec has an operation
+  for, and it offers only the paths that method has. Each call resolves to
+  one of the declared replies, narrowed on its status.
+- **`this.api`** is the bound client they come from, for `op(operationId)`,
+  `stream()` and `group()`. The shorthands are getters on the class, so a
+  subclass's own method of the same name wins.
 - **`this.data(call)`** returns the data of a 2xx reply. Any other reply, or
   none, throws a `DataSourceError`.
 
@@ -117,7 +121,7 @@ catch it where you throw yours.
 ```ts
 async bookmarks(first: number) {
 	return relayPaginate(
-		await this.data(this.api.get('/bookmarks', { query: { first } })),
+		await this.data(this.get('/bookmarks', { query: { first } })),
 	);
 }
 ```

@@ -14,6 +14,7 @@ export type {
 	OperationStreamOf,
 	OperationsShape,
 	OperationTable,
+	PathMethods,
 	PathsOf,
 	RoutesOf,
 	RuntimeMedia,

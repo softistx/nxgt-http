@@ -57,20 +57,21 @@ const route = (request: Request) =>
 
 class Bookmarks extends RESTDataSource<ClientOperations> {
 	bookmark(id: string) {
-		return this.data(this.api.get('/bookmarks/{id}', { param: { id } }));
+		return this.data(this.get('/bookmarks/{id}', { param: { id } }));
 	}
 	update(id: string, url: string) {
 		return this.data(
-			this.api.put('/bookmarks/{id}', { param: { id }, json: { url } }),
+			this.put('/bookmarks/{id}', { param: { id }, json: { url } }),
 		);
 	}
 	create(url: string) {
-		return this.data(this.api.post('/bookmarks', { json: { url } }));
+		return this.data(this.post('/bookmarks', { json: { url } }));
 	}
 	search(q: string) {
-		return this.data(this.api.query('/bookmarks', { json: { q } }));
+		return this.data(this.query('/bookmarks', { json: { q } }));
 	}
 	async page() {
+		// The same call, through the client itself.
 		const page = await this.data(
 			this.api.get('/bookmarks', { query: { first: 10 } }),
 		);
@@ -234,10 +235,32 @@ describe('RESTDataSource', () => {
 		const bookmarks = source(async () => new Response(null));
 		const never = () => {
 			// @ts-expect-error the spec has no such path
-			bookmarks.api.get('/nope');
+			bookmarks.get('/nope');
 			// @ts-expect-error nor any TRACE operation
+			bookmarks.trace;
+			// @ts-expect-error on the client either
 			return bookmarks.api.trace;
 		};
 		expect(never).toBeFunction();
+	});
+
+	it("leaves a subclass's own method named after a method the spec lacks", async () => {
+		const { fetch, sent } = service();
+		class Traced extends RESTDataSource<ClientOperations> {
+			trace() {
+				return 'mine';
+			}
+		}
+		const traced = new Traced({
+			baseUrl: 'http://bookmarks.test',
+			operations,
+			http: { fetch, retry: false },
+		});
+		expect(traced.trace()).toBe('mine');
+		expect(traced).toBeInstanceOf(RESTDataSource);
+		expect(
+			await traced.data(traced.get('/bookmarks/{id}', { param: { id: 'b1' } })),
+		).toMatchObject({ id: 'b1' });
+		expect(sent.map(route)).toEqual(['GET /bookmarks/b1']);
 	});
 });

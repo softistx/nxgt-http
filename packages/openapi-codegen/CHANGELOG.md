@@ -1,5 +1,11 @@
 # @nxgt/openapi-codegen
 
+## 0.2.1
+
+### Patch Changes
+
+- [#25](https://github.com/softistx/nxgt-http/pull/25) [`d2f70b5`](https://github.com/softistx/nxgt-http/commit/d2f70b56f728cc8770adf09199484f2914d2b6b6) Thanks [@SteveGT96](https://github.com/SteveGT96)! - Licensed MIT: the package ships a LICENSE file. It was `UNLICENSED` before, which gave no one the right to use it.
+
 ## 0.2.0
 
 ### Minor Changes

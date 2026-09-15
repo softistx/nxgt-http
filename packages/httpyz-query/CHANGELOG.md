@@ -1,5 +1,25 @@
 # @nxgt/httpyz-query
 
+## 0.2.0
+
+### Minor Changes
+
+- [#26](https://github.com/softistx/nxgt-http/pull/26) [`a4d9cbc`](https://github.com/softistx/nxgt-http/commit/a4d9cbc3ac1dc30a9987b38811a1ec5ca45ed9e0) Thanks [@SteveGT96](https://github.com/SteveGT96)! - - **`@nxgt/httpyz`**:
+    - The `fetch` option may return a `Response` at once, as well as a promise of one: `fetch: app.fetch` takes a Hono app as it is, with no `async` wrapper.
+    - In `responses`, a status declared with an empty media map, `{}`, types as `null` does: a reply without a body, instead of `never`.
+  - **`@nxgt/httpyz-query`**:
+    - `queryKey()`'s input takes `header` and `decode: false`, as the keys already hold them, so a filter can name them.
+    - In `./openapi`, `mutationOptions(method, path, init)` also takes a function of `mutate()`'s input that returns each call's init: its own `signal`, `latest` or headers.
+    - `infiniteQueryOptions` throws at once for an operation the spec does not have, as `queryOptions` and `mutationOptions` do.
+    - `./openapi` also exports `KeyInput`, `Paging`, `QueriesOptions`, `HttpQueryKey`, `HttpQueryOptions` and `HttpInfiniteQueryOptions`, and the new `MutationInit`.
+
+### Patch Changes
+
+- [#25](https://github.com/softistx/nxgt-http/pull/25) [`d2f70b5`](https://github.com/softistx/nxgt-http/commit/d2f70b56f728cc8770adf09199484f2914d2b6b6) Thanks [@SteveGT96](https://github.com/SteveGT96)! - Licensed MIT: the package ships a LICENSE file. It was `UNLICENSED` before, which gave no one the right to use it.
+- Updated dependencies [[`d2f70b5`](https://github.com/softistx/nxgt-http/commit/d2f70b56f728cc8770adf09199484f2914d2b6b6), [`b4688b2`](https://github.com/softistx/nxgt-http/commit/b4688b215d49c7feb7743bbd064e6feb6da6c4aa), [`a4d9cbc`](https://github.com/softistx/nxgt-http/commit/a4d9cbc3ac1dc30a9987b38811a1ec5ca45ed9e0)]:
+  - @nxgt/httpyz@0.2.0
+  - @nxgt/openapi-httpyz@0.2.0
+
 ## 0.1.0
 
 ### Minor Changes

@@ -6,7 +6,6 @@
 import { describe, expect, it, spyOn } from 'bun:test';
 import {
 	createHttpClient,
-	UndeclaredStatusError,
 	unwrap,
 	ValidationError,
 	type ValidationIssue,
@@ -71,20 +70,14 @@ const answering = (body: unknown) =>
 
 describe('validate', () => {
 	it('refuses a request the server refuses, with its issues, and sends nothing', async () => {
-		// The server's 400 taken at its word: its body is the engine's, not the
-		// one the spec declares, which a decoding client would refuse.
-		const loose = createOpenApiClient(http, operations, {
-			validate: false,
-			decode: false,
-		}) as unknown as Api;
+		// The server's 400, read by a client that decodes its replies: the
+		// generator declares the engine's body, so it is not refused.
+		const loose = client({ validate: { request: false } });
 		// Checked by default.
 		const checked = client();
-		/** The issues of the server's 400, declared or not. */
+		/** The issues of the server's 400, a reply the spec declares. */
 		const served = async (call: Call): Promise<ValidationIssue[]> => {
-			const reply = await call(loose).catch(async (error: unknown) => {
-				if (!(error instanceof UndeclaredStatusError)) throw error;
-				return { status: error.status, data: await error.response.json() };
-			});
+			const reply = await call(loose);
 			expect(reply.status).toBe(400);
 			return (reply.data as { issues: ValidationIssue[] }).issues;
 		};

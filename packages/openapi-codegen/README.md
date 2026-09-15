@@ -198,7 +198,9 @@ for (const op of ir.operations) console.log(op.method, op.path, op.operationId);
 ```
 
 `loadDocument` reads every file and checks every `$ref`; `buildIR` reduces
-the spec to one shape per schema and operation. Pass
+the spec to one shape per schema and operation; `withValidationErrors`
+declares the engine's 400, as `generate()` does unless
+`validationErrors: false`. Pass
 `{ fs: createMemoryFileSystem({ '/spec/openapi.yaml': text }) }` to read a
 spec that is not on disk. [The architecture](docs/architecture/overview.md)
 describes each stage.
@@ -235,6 +237,7 @@ this one does not, when it still starts with the generated header. See
 | `lint` | `boolean \| string` | `false` | lint with Redocly first: `true` uses the `redocly.yaml` beside `input` or Redocly's defaults, a string names the config file. Needs `@redocly/openapi-core`; cannot be combined with `context.fs` ([more](docs/guide/options.md#lint)) |
 | `names` | `Record<string, string>` | `{}` | renames schemas, keyed by file relative to the root document plus `#pointer` when the schema is not the whole file ([more](docs/guide/options.md#names)) |
 | `legacyNullable` | `'warn' \| 'error'` | `'warn'` | OpenAPI 3.0's `nullable: true`: read with a warning, or refused ([more](docs/guide/options.md#legacynullable)) |
+| `validationErrors` | `boolean` | `true` | declare, on each operation that takes a parameter or a body, the 400 `@nxgt/openapi-hono` answers a refused request with, as `ValidationErrorBody` ([more](docs/guide/options.md#validationerrors)) |
 | `check` | `boolean` | `false` | write nothing; list in `drifted` every file that is missing, stale, or generated before and no longer generated |
 
 | Context | Type | Default | Description |
@@ -328,6 +331,20 @@ emitted, and every operation. Returns an [`ApiIR`](#apiir). Throws one
 `CodegenError` listing everything the generator cannot express faithfully.
 It never approximates silently.
 
+##### `withValidationErrors`
+
+```ts
+function withValidationErrors(ir: ApiIR, root: Location): ApiIR;
+```
+
+`ir` with the 400 `@nxgt/openapi-hono` answers a refused request with
+declared on each operation that takes a parameter or a body, alone or in a
+union with the schema of the spec's own 400, and its body added to the
+schemas as `ValidationErrorBody`; `root` is the spec's root
+document, `doc.entry`. It returns `ir` itself when no operation takes an
+input. `generate()` runs it unless `validationErrors: false`; see
+[the option](docs/guide/options.md#validationerrors).
+
 ##### `createMemoryFileSystem`
 
 ```ts
@@ -376,6 +393,15 @@ const HTTP_METHODS: readonly [
 ```
 
 Every method an operation may have, OpenAPI 3.2's `query` included.
+
+##### `VALIDATION_ERROR_BODY`
+
+```ts
+const VALIDATION_ERROR_BODY: 'ValidationErrorBody';
+```
+
+The name `withValidationErrors` declares the engine's 400 body under:
+`ValidationErrorBody` in `types.ts`, `zValidationErrorBody` in `zod.ts`.
 
 ##### `nodeFileSystem`
 
@@ -444,6 +470,7 @@ interface GenerateOptions extends IROptions {
 	hono?: boolean;
 	dates?: Dates;
 	lint?: Lint;
+	validationErrors?: boolean;
 }
 ```
 
@@ -1067,8 +1094,8 @@ shows each in full.
 
 | File | Exports |
 | --- | --- |
-| `types.ts` | per schema, `interface` or `type <Name>`, and `<Name>Input` where defaults make input differ; a second `components.schemas` key for a named schema, as an alias; per named enum of two or more strings or numbers, `const <Name>` (with `enums: 'object'`); per operation, `<Operation>Param`, `<Operation>Query`, `<Operation>Header`, and an inline body or reply named `<Operation>Body`, `<Operation><status>Response`; `Operations`, `ClientOperations`, `OperationsByRoute`, `PathsByMethod`, `OperationsByTag`, `PathsByTag`; `Wire<T>` with `dates: 'date'` |
-| `zod.ts` | `z<Name>`, a validator per schema |
+| `types.ts` | per schema, `interface` or `type <Name>`, and `<Name>Input` where defaults make input differ; a second `components.schemas` key for a named schema, as an alias; per named enum of two or more strings or numbers, `const <Name>` (with `enums: 'object'`); per operation, `<Operation>Param`, `<Operation>Query`, `<Operation>Header`, and an inline body or reply named `<Operation>Body`, `<Operation><status>Response`; `Operations`, `ClientOperations`, `OperationsByRoute`, `PathsByMethod`, `OperationsByTag`, `PathsByTag`; `Wire<T>` with `dates: 'date'`; `ValidationErrorBody`, the engine's 400, unless `validationErrors: false` or no operation takes an input |
+| `zod.ts` | `z<Name>`, a validator per schema, `zValidationErrorBody` included |
 | `operations.ts` | `operations`; `z<Operation>Param`, `z<Operation>Query`, `z<Operation>Header`, `z<Operation>Form`; the types `OperationSpec`, `MediaSpec`, `ParameterSpec` |
 | `paths.ts` | `paths`, `operations`, `components`, `webhooks`, `$defs`: the openapi-typescript shape. `webhooks` and `$defs` are always empty, since webhooks are not generated |
 | `hono.ts` | `Replies`, `HonoSpec`, `createApi`, `createRoutes`; `streamEvents` and `streamLines` when an operation Hono can route replies with a stream |

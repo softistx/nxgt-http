@@ -7,6 +7,7 @@ import type {
 	ClientOperations,
 	Employee,
 	ErrorResponse,
+	ValidationErrorBody,
 } from '../generated/split/types.js';
 
 type Equal<X, Y> = [X] extends [Y] ? ([Y] extends [X] ? true : false) : false;
@@ -26,7 +27,14 @@ export type Checks = [
 			{ id: string }
 		>
 	>,
-	Assert<Equal<Reply<'deleteEmployee'>['status'], 204 | 404>>,
+	// 400: the engine's answer to a request its validators refuse.
+	Assert<Equal<Reply<'deleteEmployee'>['status'], 204 | 400 | 404>>,
+	Assert<
+		Equal<
+			Extract<Reply<'deleteEmployee'>, { status: 400 }>['data'],
+			ValidationErrorBody
+		>
+	>,
 	Assert<
 		Equal<Extract<Reply<'getEmployee'>, { status: 200 }>['data'], Employee>
 	>,

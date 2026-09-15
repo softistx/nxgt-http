@@ -583,11 +583,12 @@ A media type of a `RuntimeOperation`'s `body` or `responses`.
   the spec does not declare are dropped, unless the spec was generated to
   keep them, and a reply the spec refuses throws a `ValidationError`, even
   with `validate: false`. `decode: false` takes the reply at its word.
-- **An error reply is checked too.** A 400 declared with a schema that does
-  not describe what the server sends, such as the validation body of
-  `@nxgt/openapi-hono`, `{ status, message, timestamp, issues }`, throws a
-  `ValidationError` instead of returning the 400. Declare the body the server
-  sends, or pass `decode: false` and `validate: { response: false }`.
+- **An error reply is checked too.** A reply whose body the spec does not
+  describe throws a `ValidationError` instead of returning. The 400 that
+  `@nxgt/openapi-hono` answers a refused request with is declared by
+  `@nxgt/openapi-codegen`, as `ValidationErrorBody`, unless it ran with
+  `validationErrors: false`. Any other body the server sends, declare it, or
+  pass `decode: false` and `validate: { response: false }`.
 - **With `decode: false`, a reply is typed as JSON carries it**: with
   `dates: 'date'`, a date-time is a string.
 - **A request is typed as JSON carries it, whatever `decode` says.** With

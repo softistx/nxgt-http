@@ -79,6 +79,7 @@ const OPTIONS = new Set<string>([
 	'lint',
 	'names',
 	'legacyNullable',
+	'validationErrors',
 ] satisfies (keyof CodegenConfig)[]);
 
 /** `path` with its symlinks resolved, as far as it exists yet. */

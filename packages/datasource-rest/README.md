@@ -29,9 +29,8 @@ request:
 ```ts
 import { RESTDataSource } from '@nxgt/datasource-rest';
 import { operations } from './generated/bookmarks/operations.js';
-import type { ClientOperations } from './generated/bookmarks/types.js';
 
-export class Bookmarks extends RESTDataSource<ClientOperations> {
+export class Bookmarks extends RESTDataSource.for(operations) {
 	bookmark(id: string) {
 		return this.data(this.get('/bookmarks/{id}', { param: { id } }));
 	}
@@ -43,18 +42,24 @@ export class Bookmarks extends RESTDataSource<ClientOperations> {
 // Per request, in the GraphQL context:
 const bookmarks = new Bookmarks({
 	baseUrl: 'https://bookmarks.example.com',
-	operations,
 	token: () => context.token,
 });
 ```
 
+- **`RESTDataSource.for(operations)`** is the class bound to the generated
+  table, whose types it takes from it. The same without it:
+  `extends RESTDataSource<ClientOperations>`, with `operations` passed to the
+  constructor.
+- **It validates and decodes by default**, as its client does: the request
+  before it is sent, and each reply as its schema outputs it.
+  `validate: false` and `decode: false` turn that off.
 - **`this.get`, `this.post`, `this.query`…** call the operation at a path,
   typed by the spec. There is one for each method the spec has an operation
   for, and it offers only the paths that method has. Each call resolves to
   one of the declared replies, narrowed on its status.
 - **`this.api`** is the bound client they come from, for `op(operationId)`,
-  `stream()` and `group()`. The shorthands are getters on the class, so a
-  subclass's own method of the same name wins.
+  `stream()` and `group()`. The shorthands are set on each datasource, for
+  the spec's methods only, so a subclass's own method of the same name wins.
 - **`this.data(call)`** returns the data of a 2xx reply. Any other reply, or
   none, throws a `DataSourceError`.
 
@@ -95,8 +100,8 @@ its `extensions`, `{ code, status }`, with the error a resolver throws.
 | any 5xx | `INTERNAL_SERVER_ERROR` |
 | any other status | `BAD_REQUEST` |
 | no reply: network, timeout | `SERVICE_UNAVAILABLE` |
-| a request `validate` refuses | `BAD_REQUEST` |
-| a reply `validate` refuses | `INTERNAL_SERVER_ERROR` |
+| a request `validate` refuses, with its `issues` | `BAD_REQUEST` |
+| a reply `validate` or `decode` refuses, with its `issues` | `INTERNAL_SERVER_ERROR` |
 | anything else thrown | `INTERNAL_SERVER_ERROR` |
 
 Its message is the reply body's `message`, when it has a non-empty one. For
@@ -144,9 +149,10 @@ export class Bookmarks extends RESTDataSource<ClientOperations> {
 class RESTDataSource<
 	Ops extends OperationsShape<Ops>, // ClientOperations, generated
 	Routes = RoutesOf<Ops>,
-	Decoded extends boolean = false,
+	Decoded extends boolean = true,
 > {
 	constructor(options: RESTDataSourceOptions<Ops> & { decode?: Decoded });
+	static for(operations: OperationTable<Ops>, options?: { decode?: boolean }): BoundDataSource<Ops, Decoded>;
 	readonly api: OpenApiClient<Ops, Routes, Decoded>;
 	data<R extends { readonly status: number; readonly data: unknown }>(
 		call: Promise<R>,
@@ -157,8 +163,8 @@ class RESTDataSource<
 
 The class to extend, one per service; see [Usage](#usage). `RESTDataSource`
 is both a constructor and a type, the datasource's own members and the
-spec's path methods. With `Decoded` set to `true`, the options require
-`decode: true`.
+spec's path methods. With `Decoded` set to `false`, the options require
+`decode: false`.
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -167,14 +173,30 @@ spec's path methods. With `Decoded` set to `true`, the options require
 | `token` | `string \| null \| undefined \| (() => … \| Promise<…>)` | none | Sent as `Authorization: Bearer <token>`. A function is read, and awaited, before each request. None, or a nullish result, sends no header. |
 | `cache` | `Cache \| false` | `defaultCache` | The replies cache: your own `cache()` from `@nxgt/httpyz`, or `false` for none. See [Cache](#cache). |
 | `http` | `Omit<HttpClientOptions, 'baseUrl' \| 'auth'>` | `{}` | What else the core client takes: `headers`, `timeout`, `retry`, `use`, `fetch`… Its `use` runs inside the cache. |
-| `validate` | `boolean \| { request?: boolean; response?: boolean }` | neither | Checks the request and the reply with the spec's schemas, as `createOpenApiClient` does. |
-| `decode` | `Decoded` | `false` | `true` returns each reply as its schema outputs it. |
+| `validate` | `boolean \| { request?: boolean; response?: boolean }` | both | Checks the request and the reply with the spec's schemas, as `createOpenApiClient` does. `false`: neither. |
+| `decode` | `Decoded` | `true` | Returns each reply as its schema outputs it. `false` returns it as JSON carries it. |
 
 | Member | Type | Description |
 | --- | --- | --- |
 | `api` | `OpenApiClient<Ops, Routes, Decoded>` | The client bound to the spec, for `op()`, `stream()`, `group()` and `operations`. |
 | `data(call)` | `Promise<Success<R>['data']>` | The data of `call`'s 2xx reply. Any other reply, or none, throws a `DataSourceError`; an abort is rethrown as it is. The body of a status the spec does not declare is read for its message. |
-| `get`, `put`, `post`, `delete`, `options`, `head`, `patch`, `trace`, `query` | `PathMethods<Ops, Routes, Decoded>[M]` | `this.api[method]`, for the methods the spec has an operation for only: `(path, ...args) => Promise<reply>`. Getters on the prototype, so a subclass's method of the same name wins. |
+| `get`, `put`, `post`, `delete`, `options`, `head`, `patch`, `trace`, `query` | `PathMethods<Ops, Routes, Decoded>[M]` | `this.api[method]`, for the methods the spec has an operation for only, in the types and at runtime: `(path, ...args) => Promise<reply>`. Set on each datasource, so a subclass's method of the same name wins. |
+
+#### `RESTDataSource.for`
+
+```ts
+RESTDataSource.for<Ops extends OperationsShape<Ops>>(operations: OperationTable<Ops>): BoundDataSource<Ops, true>;
+RESTDataSource.for<Ops extends OperationsShape<Ops>>(
+	operations: OperationTable<Ops>,
+	options: { readonly decode: false },
+): BoundDataSource<Ops, false>;
+```
+
+A datasource class bound to the generated `operations` table, which takes
+its types from it: `class Bookmarks extends RESTDataSource.for(operations)`,
+with no `ClientOperations` to import. Its constructor takes every option but
+`operations`. With `{ decode: false }`, its replies are returned as JSON
+carries them. See [Usage](#usage).
 
 #### `DataSourceError`
 
@@ -185,6 +207,7 @@ class DataSourceError extends Error {
 	readonly code: DataSourceErrorCode;
 	readonly status: number | undefined;
 	readonly data: unknown;
+	readonly issues: readonly ValidationIssue[] | undefined;
 	readonly extensions: {
 		readonly code: DataSourceErrorCode;
 		readonly status: number | undefined;
@@ -201,7 +224,8 @@ passes `cause`, and any other `ErrorOptions`, on to `Error`.
 | `message` | `string` | The reply body's `message`, or the client error's; `'An error occurred'` when what was thrown is not an `Error`. |
 | `code` | `DataSourceErrorCode` | What failed, from the reply's status or the lack of one. |
 | `status` | `number \| undefined` | The status of the service's reply; none when no reply came back. |
-| `data` | `unknown` | The reply's body, as the service sent it, or the issues of a `validate` check that failed. |
+| `data` | `unknown` | The reply's body, as the service sent it; none when no reply was read. |
+| `issues` | `readonly ValidationIssue[] \| undefined` | What a `validate` or `decode` check refused, in the request or the reply, as `@nxgt/httpyz` has them; none otherwise. |
 | `extensions` | `{ code, status }` | What a GraphQL server reports with the error: graphql-js reads `extensions` off the error a resolver throws. |
 | `cause` | `unknown` | What was thrown, when `toDataSourceError` made the error: the client's own error, or anything else. |
 
@@ -271,6 +295,17 @@ interface RESTDataSourceOptions<Ops> extends OpenApiOptions {
 What the `RESTDataSource` constructor takes, with `decode`; each option is in
 [its table](#restdatasource).
 
+#### `BoundDataSource`
+
+```ts
+type BoundDataSource<Ops extends OperationsShape<Ops>, Decoded extends boolean = true> = new (
+	options: Omit<RESTDataSourceOptions<Ops>, 'operations'>,
+) => RESTDataSource<Ops, RoutesOf<Ops>, Decoded>;
+```
+
+What [`RESTDataSource.for`](#restdatasourcefor) returns: a datasource class
+bound to its table, to extend.
+
 #### `DataSourceErrorCode`
 
 ```ts
@@ -292,6 +327,7 @@ interface DataSourceErrorOptions extends ErrorOptions {
 	readonly code: DataSourceErrorCode;
 	readonly status?: number | undefined;
 	readonly data?: unknown;
+	readonly issues?: readonly ValidationIssue[] | undefined;
 }
 ```
 

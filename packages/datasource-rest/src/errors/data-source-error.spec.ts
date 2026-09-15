@@ -98,7 +98,8 @@ describe('toDataSourceError', () => {
 			});
 		expect(toDataSourceError(failed('request'))).toMatchObject({
 			code: 'BAD_REQUEST',
-			data: [{ path: ['id'], message: 'Too short' }],
+			data: undefined,
+			issues: [{ path: ['id'], message: 'Too short' }],
 		});
 		expect(toDataSourceError(failed('response')).code).toBe(
 			'INTERNAL_SERVER_ERROR',

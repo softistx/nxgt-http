@@ -99,7 +99,7 @@ export interface OpenApiOptions {
 	/**
 	 * Checks with the spec's schemas, throwing a `ValidationError`: the
 	 * request before it is sent, the reply before it is returned. `true` is
-	 * both. Default: neither, since the types already hold both to the spec.
+	 * both. Default: both, as a plain call of the client checks its reply.
 	 */
 	validate?:
 		| boolean
@@ -107,15 +107,16 @@ export interface OpenApiOptions {
 }
 
 /**
- * The binding's options, and `decode`, which returns each reply as its schema
- * outputs it: with `dates: 'date'`, a date-time as a `Date`. It changes the
+ * The binding's options, and `decode`, on by default, which returns each
+ * reply as its schema outputs it: with `dates: 'date'`, a date-time as a
+ * `Date`. `decode: false` returns it as JSON carries it, and changes the
  * replies' types: a client whose types are given says so in its third type
- * argument, `createOpenApiClient<ClientOperations, OperationsByRoute, true>`,
- * which in turn requires `decode: true`. Decoding validates the reply.
+ * argument, `createOpenApiClient<ClientOperations, OperationsByRoute, false>`,
+ * which in turn requires `decode: false`. Decoding validates the reply.
  */
-export type OpenApiArgs<Decoded extends boolean> = Decoded extends true
-	? [options: OpenApiOptions & { readonly decode: true }]
-	: [options?: OpenApiOptions & { readonly decode?: false }];
+export type OpenApiArgs<Decoded extends boolean> = Decoded extends false
+	? [options: OpenApiOptions & { readonly decode: false }]
+	: [options?: OpenApiOptions & { readonly decode?: true }];
 
 /** What a call takes after its input: the core client's call options. */
 export type OperationInit = Omit<CallOptions, 'operationId'>;
@@ -181,7 +182,7 @@ export type OperationStreamOf<
 export type OpenApiGroup<
 	Ops extends OperationsShape<Ops>,
 	Routes = RoutesOf<Ops>,
-	Decoded extends boolean = false,
+	Decoded extends boolean = true,
 > = OpenApiClient<Ops, Routes, Decoded> & {
 	/**
 	 * Aborts every call and stream of the group still running, with `reason`,
@@ -217,7 +218,7 @@ export type IdOf<
 export type OpenApiClient<
 	Ops extends OperationsShape<Ops>,
 	Routes = RoutesOf<Ops>,
-	Decoded extends boolean = false,
+	Decoded extends boolean = true,
 > = {
 	/** Calls an operation by its `operationId`. */
 	op<K extends keyof Ops & string>(
@@ -255,7 +256,7 @@ export type OpenApiClient<
 export type PathMethods<
 	Ops extends OperationsShape<Ops>,
 	Routes = RoutesOf<Ops>,
-	Decoded extends boolean = false,
+	Decoded extends boolean = true,
 > = {
 	readonly [M in MethodsOf<Routes>]: <P extends PathsOf<Routes, M>>(
 		path: P,

@@ -58,7 +58,7 @@ typed from the table alone:
 - `api.get` offers the paths that have a GET operation, and takes what the
   operation at the chosen path takes.
 - The client has only the methods the spec has an operation for: no `trace`
-  on a spec without a TRACE operation.
+  on a spec without a TRACE operation, in its types or at runtime.
 
 The types may also be given, as a table generated before
 `@nxgt/openapi-codegen` carried them requires:
@@ -193,28 +193,29 @@ where the spec says `minimum: 1`, or a reply from a server that drifted.
   schema, as [`@nxgt/openapi-hono`](https://www.npmjs.com/package/@nxgt/openapi-hono)
   checks its own with `validateResponses`.
 
+Both are checked by default, as a plain call of the client checks a declared
+reply. Turn off what you do not want:
+
 ```ts
-createOpenApiClient(http, operations, { validate: { request: true } });
+createOpenApiClient(http, operations, { validate: { request: false } }); // the reply only
+createOpenApiClient(http, operations, { validate: false, decode: false }); // nothing
 ```
 
-Unlike a plain call of the client, which checks a declared reply by default,
-the binding checks nothing by default: the types already hold both ends to
-the spec.
-
-`decode` returns each reply as its schema outputs it, which differs from what
-JSON carries once the spec is generated with `dates: 'date'`: a date-time is
-a `Date`. The client's replies are typed so:
+`decode`, also on by default, returns each reply as its schema outputs it,
+which differs from what JSON carries once the spec is generated with
+`dates: 'date'`: a date-time is a `Date`. The client's replies are typed so:
 
 ```ts
-const api = createOpenApiClient(http, operations, { decode: true });
+const api = createOpenApiClient(http, operations);
 const employee = unwrap(await api.get('/employees/{id}', { param: { id } }), 200);
 employee.hiredAt; // Date
 ```
 
-With the types given, a third type argument says the client decodes:
-`createOpenApiClient<ClientOperations, OperationsByRoute, true>`, which does
-not compile without `decode: true`. Decoding validates the reply, whatever
-`validate` says.
+Decoding validates the reply, whatever `validate` says. `decode: false`
+returns each reply, and types it, as JSON carries it. With the types given,
+a third type argument says the client does not decode:
+`createOpenApiClient<ClientOperations, OperationsByRoute, false>`, which does
+not compile without `decode: false`.
 
 ## API
 
@@ -227,17 +228,17 @@ and `watchFeed`, an event stream, at `GET /feed`.
 #### createOpenApiClient
 
 ```ts
-// With decode: true, the replies are typed as their schemas output them
+// With decode: false, the replies are typed as JSON carries them
 function createOpenApiClient<Ops extends OperationsShape<Ops>, Routes = RoutesOf<Ops>>(
 	http: HttpClient,
 	operations: OperationTable<Ops>,
-	options: OpenApiOptions & { readonly decode: true },
-): OpenApiClient<Ops, Routes, true>;
+	options: OpenApiOptions & { readonly decode: false },
+): OpenApiClient<Ops, Routes, false>;
 
 function createOpenApiClient<
 	Ops extends OperationsShape<Ops>,
 	Routes = RoutesOf<Ops>,
-	Decoded extends boolean = false,
+	Decoded extends boolean = true,
 >(
 	http: HttpClient,
 	operations: OperationTable<Ops>,
@@ -247,16 +248,18 @@ function createOpenApiClient<
 
 Binds the generated `operations` table onto `http`, a client of
 `createHttpClient()` or one of its groups. `Ops` is inferred from the table;
-`Routes` defaults to `RoutesOf<Ops>`; `Decoded` is `true` when `decode: true`
-is passed. See [Setup](#setup) and [Validating and decoding](#validating-and-decoding).
+`Routes` defaults to `RoutesOf<Ops>`; `Decoded` is `false` when
+`decode: false` is passed, and `true` otherwise. See [Setup](#setup) and [Validating and decoding](#validating-and-decoding).
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| `validate` | `boolean \| { request?: boolean; response?: boolean }` | neither | Checks with the spec's schemas, throwing a `ValidationError`: the request before it is sent, the reply before it is returned. `true` is both |
-| `decode` | `true \| false` | `false` | `true` returns each reply as its schema outputs it, and types it so. It validates the reply, whatever `validate` says. A literal: a `boolean` variable does not compile, since the replies' type depends on it |
+| `validate` | `boolean \| { request?: boolean; response?: boolean }` | both | Checks with the spec's schemas, throwing a `ValidationError`: the request before it is sent, the reply before it is returned. `true` is both, `false` neither |
+| `decode` | `true \| false` | `true` | Returns each reply as its schema outputs it, and types it so, validating it whatever `validate` says. `false` returns it as JSON carries it. A literal: a `boolean` variable does not compile, since the replies' type depends on it |
 
 Returns an [`OpenApiClient`](#openapiclient). It throws nothing itself: an
-unknown `operationId` or path fails the call made with it.
+unknown `operationId` fails the call made with it, and a path with no
+operation for its method rejects with a `ClientError`,
+`GET /x: the spec has no operation at it`.
 
 ### The client
 
@@ -387,21 +390,21 @@ does. `PathMethods<ClientOperations>` has `get` and `post` on the example spec.
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `validate` | `boolean \| { readonly request?: boolean; readonly response?: boolean }` | Checks the request, the reply, or both (`true`). Default: neither |
+| `validate` | `boolean \| { readonly request?: boolean; readonly response?: boolean }` | Checks the request, the reply, both (`true`) or neither (`false`). Default: both |
 
 The options of [`createOpenApiClient`](#createopenapiclient), beside `decode`.
 
 #### OpenApiArgs
 
 ```ts
-type OpenApiArgs<Decoded extends boolean> = Decoded extends true
-	? [options: OpenApiOptions & { readonly decode: true }]
-	: [options?: OpenApiOptions & { readonly decode?: false }];
+type OpenApiArgs<Decoded extends boolean> = Decoded extends false
+	? [options: OpenApiOptions & { readonly decode: false }]
+	: [options?: OpenApiOptions & { readonly decode?: true }];
 ```
 
-The options argument of `createOpenApiClient()`, required with `decode: true`
-when `Decoded` is `true`. `OpenApiArgs<false>` resolves to
-`[options?: OpenApiOptions & { readonly decode?: false }]`.
+The options argument of `createOpenApiClient()`, required with
+`decode: false` when `Decoded` is `false`. `OpenApiArgs<true>` resolves to
+`[options?: OpenApiOptions & { readonly decode?: true }]`.
 
 #### OperationInit
 
@@ -576,7 +579,16 @@ A media type of a `RuntimeOperation`'s `body` or `responses`.
 
 ## Traps
 
-- **Without `decode`, a reply is typed as JSON carries it**: with
+- **Decoding returns what the schema outputs**, and it is on by default: keys
+  the spec does not declare are dropped, unless the spec was generated to
+  keep them, and a reply the spec refuses throws a `ValidationError`, even
+  with `validate: false`. `decode: false` takes the reply at its word.
+- **An error reply is checked too.** A 400 declared with a schema that does
+  not describe what the server sends, such as the validation body of
+  `@nxgt/openapi-hono`, `{ status, message, timestamp, issues }`, throws a
+  `ValidationError` instead of returning the 400. Declare the body the server
+  sends, or pass `decode: false` and `validate: { response: false }`.
+- **With `decode: false`, a reply is typed as JSON carries it**: with
   `dates: 'date'`, a date-time is a string.
 - **A request is typed as JSON carries it, whatever `decode` says.** With
   `dates: 'date'`, a date-time in a body or a query is still typed as a

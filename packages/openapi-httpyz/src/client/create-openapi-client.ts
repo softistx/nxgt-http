@@ -5,6 +5,7 @@
  * replies each operation declares, and checks by the server's own schemas.
  */
 import {
+	ClientError,
 	type EventStream,
 	type HttpClient,
 	type Responses,
@@ -95,9 +96,10 @@ function checkedFirst<T>(
  * if (reply.status === 200) reply.data.name;
  * ```
  *
- * With `decode: true`, each reply is returned as its schema outputs it, and
- * typed so. The types may also be given: `createOpenApiClient<ClientOperations,
- * OperationsByRoute, true>`, whose `true` then requires `decode: true`.
+ * It checks the request and the reply, and returns each reply as its schema
+ * outputs it, typed so. `decode: false` returns it as JSON carries it. The
+ * types may also be given: `createOpenApiClient<ClientOperations,
+ * OperationsByRoute, false>`, whose `false` then requires `decode: false`.
  */
 export function createOpenApiClient<
 	Ops extends OperationsShape<Ops>,
@@ -105,12 +107,12 @@ export function createOpenApiClient<
 >(
 	http: HttpClient,
 	operations: OperationTable<Ops>,
-	options: OpenApiOptions & { readonly decode: true },
-): OpenApiClient<Ops, Routes, true>;
+	options: OpenApiOptions & { readonly decode: false },
+): OpenApiClient<Ops, Routes, false>;
 export function createOpenApiClient<
 	Ops extends OperationsShape<Ops>,
 	Routes = RoutesOf<Ops>,
-	Decoded extends boolean = false,
+	Decoded extends boolean = true,
 >(
 	http: HttpClient,
 	operations: OperationTable<Ops>,
@@ -150,8 +152,8 @@ function bind<
 	options: OpenApiOptions & { readonly decode?: boolean },
 	scope: () => AbortSignal | undefined,
 ): OpenApiClient<Ops, Routes, Decoded> {
-	const { validate = false } = options;
-	const decode = options.decode === true;
+	const { validate = true } = options;
+	const decode = options.decode !== false;
 	const checks = {
 		request:
 			validate === true ||
@@ -301,14 +303,15 @@ function bind<
 			});
 		},
 	};
+	// Only the spec's methods, as the types have them: no `trace` without a TRACE operation.
+	const methods = new Set(Object.values(table).map(({ method }) => method));
 	for (const method of METHODS) {
+		if (!methods.has(method)) continue;
 		client[method] = (path: string, ...args: unknown[]) => {
 			const id = byRoute.get(`${method} ${path}`);
 			if (id === undefined) {
 				return Promise.reject(
-					new Error(
-						`The spec has no ${method.toUpperCase()} ${path} operation`,
-					),
+					new ClientError({ method, path }, 'the spec has no operation at it'),
 				);
 			}
 			return call(id, args);

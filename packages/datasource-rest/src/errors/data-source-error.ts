@@ -9,6 +9,7 @@ import {
 	TimeoutError,
 	UndeclaredStatusError,
 	ValidationError,
+	type ValidationIssue,
 } from '@nxgt/httpyz';
 
 export type DataSourceErrorCode =
@@ -23,6 +24,7 @@ export interface DataSourceErrorOptions extends ErrorOptions {
 	readonly code: DataSourceErrorCode;
 	readonly status?: number | undefined;
 	readonly data?: unknown;
+	readonly issues?: readonly ValidationIssue[] | undefined;
 }
 
 export class DataSourceError extends Error {
@@ -30,8 +32,10 @@ export class DataSourceError extends Error {
 	readonly code: DataSourceErrorCode;
 	/** The status of the service's reply; none when no reply came back. */
 	readonly status: number | undefined;
-	/** The body of the service's reply, as it sent it, or the issues of a check that failed. */
+	/** The body of the service's reply, as it sent it; none when no reply was read. */
 	readonly data: unknown;
+	/** What a `validate` check refused, in the request or the reply; none otherwise. */
+	readonly issues: readonly ValidationIssue[] | undefined;
 	/**
 	 * What a GraphQL server reports with the error: graphql-js reads
 	 * `extensions` off the error a resolver throws.
@@ -43,12 +47,13 @@ export class DataSourceError extends Error {
 
 	constructor(
 		message: string,
-		{ code, status, data, ...options }: DataSourceErrorOptions,
+		{ code, status, data, issues, ...options }: DataSourceErrorOptions,
 	) {
 		super(message, options);
 		this.code = code;
 		this.status = status;
 		this.data = data;
+		this.issues = issues;
 		this.extensions = { code, status };
 	}
 }
@@ -111,7 +116,8 @@ export function toDataSourceError(
 				error.failure.kind === 'request'
 					? 'BAD_REQUEST'
 					: 'INTERNAL_SERVER_ERROR',
-			data: error.failure.issues,
+			status: error.failure.status,
+			issues: error.failure.issues,
 			cause: error,
 		});
 	}

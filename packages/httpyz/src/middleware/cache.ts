@@ -4,7 +4,7 @@
  *
  * Its key is the request's method, URL, the headers in `vary`
  * (`authorization` by default, so no caller is answered with another's
- * reply), and its body, when it has one: a `POST` search is cached by what it
+ * reply), and its body, when it has one: a `QUERY` is cached by what it
  * searches for.
  */
 import type { CallContext } from '../errors/errors';
@@ -16,8 +16,8 @@ export interface CacheOptions {
 	/** At most this many replies, the least recently used dropped first. Default: 500. */
 	maxEntries?: number;
 	/**
-	 * Which requests are cached. Default: `GET` and `HEAD`. A `POST` that only
-	 * reads, such as a search, may be: its body is part of the key.
+	 * Which requests are cached. Default: the reads, `GET`, `HEAD` and
+	 * `QUERY`, whose body is part of the key.
 	 */
 	cacheable?: (request: Request, call: CallContext) => boolean;
 	/**
@@ -36,8 +36,8 @@ interface Entry {
 	readonly response: Response;
 }
 
-const reads = (request: Request) =>
-	request.method === 'GET' || request.method === 'HEAD';
+const READS = new Set(['GET', 'HEAD', 'QUERY']);
+const reads = (request: Request) => READS.has(request.method.toUpperCase());
 
 /**
  * A cache of `ok` replies, for `use`. One cache is one store: share the

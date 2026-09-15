@@ -40,7 +40,7 @@ function service() {
 				metadata: { hasNextPage: false, totalElements: 1 },
 			});
 		}
-		if (pathname === '/bookmarks/search') {
+		if (request.method === 'QUERY') {
 			const { q } = (await request.json()) as { q: string };
 			return Response.json({ data: [{ id: `${q}${n}`, url: '' }] });
 		}
@@ -68,7 +68,7 @@ class Bookmarks extends RESTDataSource<ClientOperations> {
 		return this.data(this.api.post('/bookmarks', { json: { url } }));
 	}
 	search(q: string) {
-		return this.data(this.api.post('/bookmarks/search', { json: { q } }));
+		return this.data(this.api.query('/bookmarks', { json: { q } }));
 	}
 	async page() {
 		const page = await this.data(
@@ -140,7 +140,7 @@ describe('RESTDataSource', () => {
 		expect(sent.length).toBe(3);
 	});
 
-	it('caches reads, and searches by what they search for, but no other write', async () => {
+	it('caches reads, a QUERY by what it searches for, and no write', async () => {
 		const { fetch, sent } = service();
 		const bookmarks = source(fetch);
 		const found = await bookmarks.search('a');
@@ -151,8 +151,8 @@ describe('RESTDataSource', () => {
 			await bookmarks.create('https://y.test');
 		}
 		expect(sent.map(route)).toEqual([
-			'POST /bookmarks/search',
-			'POST /bookmarks/search',
+			'QUERY /bookmarks',
+			'QUERY /bookmarks',
 			'PUT /bookmarks/b1',
 			'POST /bookmarks',
 			'PUT /bookmarks/b1',

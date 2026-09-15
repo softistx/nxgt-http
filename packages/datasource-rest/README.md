@@ -35,7 +35,7 @@ export class Bookmarks extends RESTDataSource<ClientOperations> {
 		return this.data(this.api.get('/bookmarks/{id}', { param: { id } }));
 	}
 	search(q: string) {
-		return this.data(this.api.post('/bookmarks/search', { json: { q } }));
+		return this.data(this.api.query('/bookmarks', { json: { q } }));
 	}
 }
 
@@ -65,23 +65,21 @@ const bookmarks = new Bookmarks({
 ## Cache
 
 `defaultCache` is one store for every datasource, since a server makes them
-per request. It keeps `ok` replies for five minutes, for these requests:
-
-- `GET`, `HEAD` and `QUERY`;
-- a `POST` whose path holds `/search`.
+per request. It is `cache()` from `@nxgt/httpyz`, with its defaults: it
+keeps the `ok` replies of the reads, `GET`, `HEAD` and `QUERY`, for five
+minutes. A search is a `QUERY`; a `POST` is never cached.
 
 Its key is the method, the URL, the token and the body. So no caller is
 answered with another's reply, and a search is cached by what it searches
 for. It holds at most 500 replies, the least recently used going first.
 
-`defaultCache.clear()` empties it, after a write, say. `searches` is its rule
-for which requests it keeps, for a cache of your own:
+`defaultCache.clear()` empties it, after a write, say. A cache of your own
+takes `cache()`'s options:
 
 ```ts
 import { cache } from '@nxgt/httpyz';
-import { searches } from '@nxgt/datasource-rest';
 
-const bookmarksCache = cache({ ttl: 30_000, cacheable: searches });
+const bookmarksCache = cache({ ttl: 30_000 });
 new Bookmarks({ baseUrl, operations, cache: bookmarksCache });
 ```
 

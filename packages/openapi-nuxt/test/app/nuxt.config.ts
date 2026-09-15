@@ -5,6 +5,7 @@ export default defineNuxtConfig({
 	openapi: {
 		server: 'server/app.ts',
 		operations: '../generated/operations.ts',
+		query: true,
 	},
 	compatibilityDate: '2026-09-01',
 	devtools: { enabled: false },

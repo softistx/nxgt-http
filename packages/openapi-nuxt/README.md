@@ -16,6 +16,9 @@ generates, with one spec for both ends of the app:
   cookies and headers. In the browser, it calls the same origin.
 - **Presets.** `useApiData()` is `useAsyncData` with the client, and
   `createHonoApp()` is a Hono app whose `c.env.event` is the h3 event.
+- **TanStack Query**, with `query: true`. `useApiQuery()` and
+  `useApiMutation()` are `useQuery` and `useMutation` of an operation. The
+  cache SSR filled goes to the browser.
 
 ```ts
 // nuxt.config.ts
@@ -46,11 +49,14 @@ const { data: reply } = await useApiData((api) =>
 bun add @nxgt/openapi-nuxt @nxgt/openapi-httpyz @nxgt/httpyz
 bun add @nxgt/openapi-hono hono zod   # for the server
 bun add -d @nxgt/openapi-codegen
+bun add @tanstack/vue-query @nxgt/httpyz-query   # for query: true
 ```
 
 `nuxt` 4, `@nxgt/openapi-httpyz` and `@nxgt/httpyz` are peers: the module
 writes a client that imports them into your app. `hono` is an optional peer,
-for `createHonoApp`.
+for `createHonoApp`. `@tanstack/vue-query` and `@nxgt/httpyz-query` are
+optional peers, for `query`. The module refuses to start with `query` set if
+either is missing.
 
 ## Setup
 
@@ -154,6 +160,56 @@ const { data: reply, refresh } = await useApiData('employee', (api, { signal }) 
   `default`, `immediate` and the rest. `transform` and `pick` are not
   offered: shape the value in the handler.
 
+### TanStack Query
+
+With `query: true`, the module installs
+[Vue Query](https://tanstack.com/query/latest/docs/framework/vue/overview).
+It gives each request on the server its own `QueryClient`, and the browser
+one. What SSR fetched goes to the browser in the payload. Three composables
+are auto-imported:
+
+```vue
+<script setup lang="ts">
+const route = useRoute();
+const id = computed(() => Number(route.params.id));
+
+// useQuery of an operation: the input may hold refs, and the query follows them.
+const { data: employee, suspense } = useApiQuery('get', '/employees/{id}', {
+	param: { id },
+});
+await suspense(); // fetched during SSR
+
+// useMutation of an operation: mutate() takes its input.
+const queryClient = useQueryClient();
+const queries = useApiQueries();
+const rename = useApiMutation('patch', '/employees/{id}', {
+	onSuccess: () =>
+		queryClient.invalidateQueries({ queryKey: queries.queryKey('get', '/employees/{id}') }),
+});
+rename.mutate({ param: { id: id.value }, json: { name: 'Ada' } });
+</script>
+```
+
+- **A query resolves to the data of a 2xx reply**, and fails with a
+  `ReplyStatusError` for any other, as
+  [`@nxgt/httpyz-query`](https://www.npmjs.com/package/@nxgt/httpyz-query)
+  does.
+- **The options come last:** `useQuery`'s own, `enabled`, `staleTime`,
+  `placeholderData` and the rest, plus `init`, what the call is sent with:
+  `useApiQuery('get', path, input, { enabled, init: { headers } })`. An
+  operation that takes no input takes the options right after the path.
+- **`useApiQueries()`** returns the query options of every operation, for
+  `useQuery`, `useInfiniteQuery`, `useQueries`, or a key to invalidate:
+  `useQuery(queries.queryOptions('get', path, input))`.
+- **During SSR, await `suspense()`**, in `<script setup>` or in
+  `onServerPrefetch`: without it the query is left for the browser.
+- **`staleTime` is 5 s by default**, so a query SSR fetched is not fetched
+  again as the page hydrates. `query: { staleTime: 0 }` restores TanStack's
+  default.
+- **An app with a Vue Query plugin of its own** sets
+  `query: { plugin: false }`. The composables use whichever `QueryClient` is
+  installed; handing the SSR cache to the browser is then that plugin's job.
+
 ### Middleware
 
 `use()` adds middleware to the client in place. A plugin that runs after the
@@ -197,6 +253,7 @@ Under `openapi` in `nuxt.config.ts`:
 | `prefix` | `string` | `'/api'` | the path the app is served under, taken off before it answers. `api/` is read as `/api`; `/` throws |
 | `baseUrl` | `string` | the page's origin, under `prefix` | the API elsewhere. See [An API elsewhere](#an-api-elsewhere) |
 | `client` | `ClientOptions` | `{}` | `validate` and `decode`, as `createOpenApiClient` takes them |
+| `query` | `boolean \| QueryOptions` | `false` | TanStack Query: `useApiQuery()`, `useApiMutation()` and `useApiQueries()`. See [TanStack Query](#tanstack-query) |
 
 #### ModuleOptions
 
@@ -213,6 +270,19 @@ interface ClientOptions {
 
 What the client is created with. `decode: false` changes the replies' types
 too, as it does for `createOpenApiClient`.
+
+#### QueryOptions
+
+```ts
+interface QueryOptions {
+	plugin?: boolean;
+	staleTime?: number;
+}
+```
+
+`query`, spelled out. `plugin: false` leaves Vue Query to the app (default
+`true`). `staleTime` is the queries' default, in milliseconds, with the
+plugin (default `5000`).
 
 ### Composables
 
@@ -241,6 +311,35 @@ function useApiData<T, DefaultT = undefined>(
 `{ signal: AbortSignal }`. `Payload<T>` is a reply without its `response`,
 and any other value as it is. See [Data for a page](#data-for-a-page).
 
+#### useApiQuery
+
+```ts
+function useApiQuery(method, path, ...input, options?: ApiQueryOptions<Data>): UseQueryReturnType<Data, Error>;
+```
+
+`useQuery` of the operation at `path`, with `query` set. `input` is what the
+client's call takes, each field a value, a ref or a getter
+(`MaybeRefDeep`). `Data` is the data of its 2xx replies. See
+[TanStack Query](#tanstack-query).
+
+#### useApiMutation
+
+```ts
+function useApiMutation(method, path, options?: ApiMutationOptions<Variables, Data>): UseMutationReturnType<Data, Error, Variables, unknown>;
+```
+
+`useMutation` of the operation at `path`, with `query` set. `mutate()` takes
+its input.
+
+#### useApiQueries
+
+```ts
+function useApiQueries(): OpenApiQueries<…>;
+```
+
+`createOpenApiQueries(useApi())`, from `@nxgt/httpyz-query/openapi`:
+`queryOptions`, `infiniteQueryOptions`, `mutationOptions` and `queryKey`.
+
 ### Server
 
 #### createHonoApp
@@ -254,6 +353,49 @@ interface NuxtBindings { event: H3Event }
 A Hono app whose `c.env.event` is the request's h3 event, auto-imported in
 the server's files, and exported by `@nxgt/openapi-nuxt/hono`. `E` adds to
 its `Env`; `options` are Hono's.
+
+### Query
+
+What `@nxgt/openapi-nuxt/query` exports. The module writes the composables
+into the app from it. It also re-exports `QueryClient`, `VueQueryPlugin`,
+`dehydrate`, `hydrate` and `DehydratedState` from `@tanstack/vue-query`,
+so the app and the module share one copy of Vue Query.
+
+#### apiQueryComposables
+
+```ts
+function apiQueryComposables<Ops, Routes, Decoded>(
+	useApi: () => OpenApiClient<Ops, Routes, Decoded>,
+): { useApiQueries; useApiQuery; useApiMutation };
+```
+
+The three composables over the client `useApi()` returns, for an app that
+writes its own.
+
+#### ApiQueryOptions
+
+```ts
+type ApiQueryOptions<Data> = Omit<UseQueryOptions<Data>, 'queryKey' | 'queryFn'> & {
+	readonly init?: MaybeRefOrGetter<OperationInit | undefined>;
+};
+```
+
+#### ApiMutationOptions
+
+```ts
+type ApiMutationOptions<Variables, Data> = Omit<MutationOptions<Data, Error, Variables>, 'mutationKey' | 'mutationFn'> & {
+	readonly init?: MutationInit<Variables>;
+};
+```
+
+#### MaybeRefDeep
+
+```ts
+type MaybeRefDeep<T> = MaybeRefOrGetter<{ [K in keyof T]: MaybeRefDeep<T[K]> }>;
+```
+
+A value, a ref or a getter of it, and so on for each field. A `Date` or a
+function is taken as it is.
 
 ### Functions
 
@@ -352,6 +494,12 @@ Nuxt's compiler appended. Throws with neither, or without a handler.
 - **Return a reply, or plain data, from `useApiData`'s handler.** Anything
   else the SSR payload cannot serialize, a `Response` or a class of your
   own, fails the render.
+- **A query whose data the payload cannot carry fails the render.** A
+  binary reply, a `Blob`, is one: keep such an operation out of SSR with
+  `enabled: import.meta.client`, or out of TanStack Query.
+- **`useApiQuery` has no `select` of its own type.** Its data is the reply's.
+  For a query whose data is transformed, use
+  `useQuery({ ...queries.queryOptions(...), select })`.
 - **With `baseUrl`, SSR calls leave the process**, and carry none of the
   incoming request's cookies. Add them with a middleware if the API needs
   them.

@@ -117,6 +117,26 @@ describe('useApiData() during SSR', () => {
 	});
 });
 
+describe('useApiQuery() during SSR', () => {
+	test('fetches during SSR, following the refs of its input, and hands the cache to the browser', async () => {
+		const page = await fetch(`${base}/`).then((r) => r.text());
+		expect(renderedIn(page, 'query')).toEqual({
+			id: 9,
+			name: 'Item 9',
+			cookie: null,
+			path: '/items/9',
+		});
+		expect(renderedIn(page, 'queries')).toEqual({
+			id: 10,
+			name: 'Item 10',
+			cookie: null,
+			path: '/items/10',
+		});
+		// The dehydrated cache, in the payload.
+		expect(page).toContain('nxgt-openapi:query');
+	});
+});
+
 describe('useApi() during SSR', () => {
 	test('calls the app in process, with the incoming cookies', async () => {
 		const page = await fetch(`${base}/`, {

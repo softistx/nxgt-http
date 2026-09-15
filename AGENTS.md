@@ -38,7 +38,7 @@ httpyz            openapi-codegen
   ├─ openapi-httpyz ◄── openapi-codegen, openapi-hono   (dev: its fixtures)
   │    ├─ datasource-rest ◄── openapi-codegen (dev: its fixtures)
   │    ├─ openapi-msw     ◄── openapi-codegen (dev: its fixtures)
-  │    └─ openapi-nuxt    ◄── openapi-codegen, openapi-hono (dev: its fixture app)
+  │    └─ openapi-nuxt    ◄── httpyz-query (optional peer), openapi-codegen, openapi-hono (dev: its fixture app)
   └─ httpyz-query   ◄── openapi-httpyz (optional peer), openapi-codegen (dev: its fixtures)
 ```
 
@@ -67,7 +67,9 @@ no relative import into one.
   Hono. The generator is a devDependency, for its fixtures.
 - `@nxgt/openapi-nuxt` has `@nxgt/httpyz`, `@nxgt/openapi-httpyz` and `nuxt`
   as peers: the client it writes into the app imports them. `hono` is an
-  optional peer, for its `./hono` subpath. `@nuxt/kit`, `@nuxt/schema` and
+  optional peer, for its `./hono` subpath. `@nxgt/httpyz-query`,
+  `@tanstack/vue-query` and `vue` are optional peers too, for its `./query`
+  subpath: the module imports it only with `query` set. `@nuxt/kit`, `@nuxt/schema` and
   `h3`, for the event's type, are its only dependencies. It does not depend on
   `@nxgt/openapi-hono`: it serves any app with a `fetch(request)`. The
   generator, openapi-hono and Nuxt are devDependencies, for `test/app`, a
@@ -183,8 +185,8 @@ publishes to npm.
 
 ## Known state
 
-`bun run test` is **392 pass, 0 fail**: datasource-rest 26, httpyz 90, httpyz-query 14,
-openapi-codegen 160, openapi-hono 28, openapi-httpyz 28, openapi-msw 21, openapi-nuxt 25. It runs one process per package, and each
+`bun run test` is **403 pass, 0 fail**: datasource-rest 26, httpyz 90, httpyz-query 14,
+openapi-codegen 160, openapi-hono 28, openapi-httpyz 28, openapi-msw 21, openapi-nuxt 36. It runs one process per package, and each
 package's `test` script writes the generated fixtures its specs import first.
 Treat any failure as yours.
 

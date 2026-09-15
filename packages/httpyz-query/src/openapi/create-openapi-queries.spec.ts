@@ -174,6 +174,41 @@ describe('createOpenApiQueries', () => {
 		expect(created.name).toBe('new');
 	});
 
+	it('reads a function init at each mutate(), from its input', async () => {
+		const { queries, client, sent } = api();
+		const remove = new MutationObserver(
+			client,
+			queries.mutationOptions('delete', '/items/{id}', (input) => ({
+				headers: { 'x-item': String(input.param.id) },
+			})),
+		);
+		await remove.mutate({ param: { id: 3 } });
+		await remove.mutate({ param: { id: 4 } });
+		expect(sent.map((request) => request.headers.get('x-item'))).toEqual([
+			'3',
+			'4',
+		]);
+	});
+
+	it('throws at once for an operation the spec does not have, an infinite query too', () => {
+		const { queries } = api();
+		const untyped = queries as unknown as {
+			infiniteQueryOptions(...args: unknown[]): unknown;
+		};
+		expect(() =>
+			untyped.infiniteQueryOptions(
+				'get',
+				'/nowhere',
+				{},
+				{
+					pageParamName: 'after',
+					initialPageParam: null,
+					getNextPageParam: () => null,
+				},
+			),
+		).toThrow('The spec has no GET /nowhere operation');
+	});
+
 	it("returns a decoding client's data as its schemas output it", async () => {
 		const { http, client } = api();
 		const decoding = createOpenApiClient(http, dateOperations, {
@@ -211,5 +246,10 @@ function types() {
 	// @ts-expect-error: mutate() must fill the path's {id}
 	queries.mutationOptions('delete', '/items/{id}').mutationFn();
 	queries.mutationOptions('get', '/health').mutationFn();
+	// A filter may hold what a key holds: header parameters, `decode: false`.
+	queries.queryKey('get', '/items', {
+		header: { 'x-locale': 'fr' },
+		decode: false,
+	});
 }
 void types;

@@ -10,6 +10,10 @@
  * a signal aborted without a reason of its own, or by `AbortSignal.timeout()`,
  * a later call with the same `latest`, or a group's `cancel()`. The client's
  * own `TimeoutError`, past `timeout`, is a failure, not an abort.
+ *
+ * A `boolean`, not a type guard: as `error is Error`, the branch where it is
+ * false would drop `Error` from the error's type, though a failure is an
+ * `Error` too, and an `Error`-typed catch would be `never` there.
  */
 export function isAbortError(error: unknown): boolean {
 	if (typeof DOMException !== 'undefined' && error instanceof DOMException) {

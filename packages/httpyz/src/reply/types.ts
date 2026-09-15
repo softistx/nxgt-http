@@ -40,29 +40,35 @@ export type SchemaData<
 	: never;
 type Data<Schema, Decoded extends boolean> = SchemaData<Schema, Decoded>;
 
+/** A reply without a body: a status declared `null`, or with no media type. */
+interface Bodiless<Status> {
+	readonly status: Status;
+	readonly type: undefined;
+	readonly data: undefined;
+}
+
 /** The declared replies, as a union narrowed on `status`. */
 export type ReplyOf<R extends Responses, Decoded extends boolean = true> = {
 	[Status in keyof R & number]: R[Status] extends null
-		? {
-				readonly status: Status;
-				readonly type: undefined;
-				readonly data: undefined;
-			}
+		? Bodiless<Status>
 		: R[Status] extends StandardSchemaV1
 			? {
 					readonly status: Status;
 					readonly type: string;
 					readonly data: Data<R[Status], Decoded>;
 				}
-			: {
-					[Type in keyof R[Status] & string]: {
-						readonly status: Status;
-						readonly type: Type;
-						readonly data: R[Status][Type] extends StandardSchemaV1
-							? Data<R[Status][Type], Decoded>
-							: Unchecked<Type>;
-					};
-				}[keyof R[Status] & string];
+			: [keyof R[Status] & string] extends [never]
+				? // `{}` reads as `null` does: no media type, so no body.
+					Bodiless<Status>
+				: {
+						[Type in keyof R[Status] & string]: {
+							readonly status: Status;
+							readonly type: Type;
+							readonly data: R[Status][Type] extends StandardSchemaV1
+								? Data<R[Status][Type], Decoded>
+								: Unchecked<Type>;
+						};
+					}[keyof R[Status] & string];
 }[keyof R & number];
 
 /** A reply of a call that declares none: whatever came, read by its media type. */

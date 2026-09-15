@@ -109,6 +109,19 @@ describe('createHttpClient', () => {
 		expect(missing.status === 500).toBe(false);
 	});
 
+	it('takes a fetch that answers at once, and reads a status with no media type as no body', async () => {
+		const direct = createHttpClient({
+			baseUrl: 'http://api.test',
+			fetch: app.fetch,
+		});
+		const gone = await direct.delete('/items/{id}', {
+			param: { id: 1 },
+			responses: { 204: {} },
+		});
+		const data: undefined = gone.data;
+		expect([gone.status, gone.type, data]).toEqual([204, undefined, undefined]);
+	});
+
 	it('throws on a status it does not declare, and on a reply its schema refuses', async () => {
 		const boom = await failure(
 			http().get('/boom', { responses: { 200: Item } }),

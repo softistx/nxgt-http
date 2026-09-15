@@ -87,6 +87,7 @@
       "name": "@nxgt/openapi-hono",
       "version": "0.1.0",
       "devDependencies": {
+        "@nxgt/httpyz": "workspace:^",
         "@nxgt/openapi-codegen": "workspace:^",
         "@types/bun": "^1.4.0",
         "hono": "^4.13.4",

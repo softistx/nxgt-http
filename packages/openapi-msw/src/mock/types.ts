@@ -12,6 +12,7 @@ import type {
 	RoutesOf,
 } from '@nxgt/openapi-httpyz';
 import type { HttpHandler, RequestHandlerOptions } from 'msw';
+import type { Presets } from '../response/presets';
 
 export interface OpenApiMswOptions {
 	/**
@@ -21,8 +22,8 @@ export interface OpenApiMswOptions {
 	baseUrl?: string;
 	/**
 	 * Checks with the spec's schemas: the request, answered with the server's
-	 * 400 when it would refuse it, and the reply of `reply()`, a
-	 * `MockReplyError` when it is not one the spec declares. `true`, the
+	 * 400 when it would refuse it, and the responses `response` writes, a
+	 * `MockReplyError` when one is not what the spec declares. `true`, the
 	 * default, is both; an object turns off what it sets to `false`.
 	 */
 	validate?: boolean | { readonly request?: boolean; readonly reply?: boolean };
@@ -43,29 +44,111 @@ export interface DeclaredReply {
 	readonly data: unknown;
 }
 
-export interface ReplyInit<Type = string> {
-	/** Headers of the reply. A `Content-Type` here wins over the declared one. */
-	readonly headers?: HeadersInit;
-	/** The media type to reply with, when the status declares more than one. Default: the first. */
-	readonly type?: Type;
-}
-
-/** What `reply(status, …)` takes after the status: its body, unless it has none, then its init. */
-export type ReplyArgs<R extends DeclaredReply> = [R] extends [
-	{ readonly data: undefined },
-]
-	? [init?: ReplyInit<never>]
-	: [data: R['data'], init?: ReplyInit<Exclude<R['type'], undefined>>];
+declare const mocked: unique symbol;
 
 /**
- * `reply(200, item)`: a reply the operation declares, the body typed by the
- * status that comes first. It throws a `MockReplyError` for a status the
- * operation does not declare.
+ * A `Response` of `response`, the only thing a resolver returns besides
+ * nothing. `response.untyped()` makes one of any `Response`.
  */
-export type Reply<R extends DeclaredReply> = <Status extends R['status']>(
+export type MockResponse = Response & { readonly [mocked]: true };
+
+/** What a response is written with, after its body. */
+export interface ResponseOptions<Type extends string = string> {
+	/**
+	 * The media type to write the body as: required when the status declares
+	 * several the writer could write. Default: the only one.
+	 */
+	readonly type?: Type;
+	/** Headers of the response. A `Content-Type` here wins over the declared one. */
+	readonly headers?: HeadersInit;
+	readonly statusText?: string;
+}
+
+/** What a media type's body is, as the generator classifies it. */
+export type MediaKindOf<Type extends string> = Type extends
+	| 'application/json'
+	| `application/${string}+json`
+	? 'json'
+	: Type extends 'application/x-www-form-urlencoded' | 'multipart/form-data'
+		? 'form'
+		: Type extends `text/${string}`
+			? 'text'
+			: 'binary';
+
+/** The media types a reply declares. */
+type TypesOf<R extends DeclaredReply> = Extract<R['type'], string>;
+
+type IsUnion<T, All = T> = T extends unknown
+	? [All] extends [T]
+		? false
+		: true
+	: never;
+
+type OfKind<Types extends string, Kind> = Types extends unknown
+	? MediaKindOf<Types> extends Kind
+		? Types
+		: never
+	: never;
+
+/**
+ * A body and its options, the body typed by its media type. With a choice of
+ * media types, `options.type` names one and is required.
+ */
+export type BodyArgs<R extends DeclaredReply, Types extends string> =
+	true extends IsUnion<Types>
+		? {
+				[T in Types]: [
+					data: Extract<R, { readonly type: T }>['data'],
+					options: ResponseOptions<T> & { readonly type: T },
+				];
+			}[Types]
+		: [
+				data: Extract<R, { readonly type: Types }>['data'],
+				options?: ResponseOptions<Types>,
+			];
+
+export type BodyWriter<R extends DeclaredReply, Types extends string> = (
+	...args: BodyArgs<R, Types>
+) => MockResponse;
+
+/**
+ * `response(status)`: the writers of the status's body. `body` writes any of
+ * its media types, and `json`, `text`, `form` and `binary` exist for those it
+ * declares. A status without content has `body(options?)` alone.
+ */
+export type StatusResponse<R extends DeclaredReply> = [TypesOf<R>] extends [
+	never,
+]
+	? { body(options?: ResponseOptions<never>): MockResponse }
+	: { body: BodyWriter<R, TypesOf<R>> } & {
+			[K in MediaKindOf<TypesOf<R>>]: BodyWriter<R, OfKind<TypesOf<R>, K>>;
+		};
+
+/** `response.ok(item)`…: `response(status).body`, for each status declared that has a preset. */
+export type ResponsePresets<R extends DeclaredReply> = {
+	readonly [P in keyof Presets as Presets[P] extends R['status']
+		? P
+		: never]: StatusResponse<
+		Extract<R, { readonly status: Presets[P] }>
+	>['body'];
+};
+
+/**
+ * `response(200).json(item)`, `response.ok(item)`: a response the operation
+ * declares, the body typed by the status that comes first. `untyped()` and
+ * `passthrough()` step outside the spec.
+ */
+export type ResponseFactory<R extends DeclaredReply> = (<
+	Status extends R['status'],
+>(
 	status: Status,
-	...rest: ReplyArgs<Extract<R, { readonly status: Status }>>
-) => Response;
+) => StatusResponse<Extract<R, { readonly status: Status }>>) &
+	ResponsePresets<R> & {
+		/** A `Response` of your own, such as MSW's `HttpResponse.error()`: sent as it is, not checked. */
+		untyped(response: Response): MockResponse;
+		/** MSW's `passthrough()`: the request goes on to the network, as if unhandled. */
+		passthrough(): MockResponse;
+	};
 
 /** The input of a call: `[input]`, `[input?]` or none. */
 type InputOf<Args> = Args extends readonly []
@@ -115,11 +198,16 @@ export type MockInfo<
 	readonly request: Request;
 	readonly cookies: Record<string, string>;
 	readonly operationId: K;
-	readonly reply: Reply<Ops[K]['reply'] & DeclaredReply>;
+	readonly response: ResponseFactory<Ops[K]['reply'] & DeclaredReply>;
+	/**
+	 * The request, sent to the network past MSW: the real `Response`, to read,
+	 * or to return with `response.untyped()`.
+	 */
+	bypass(init?: RequestInit): Promise<Response>;
 };
 
-/** A reply of `reply()`, a `Response` of your own, or nothing, for the next handler. */
-export type MockResult = Response | undefined | void;
+/** A response of `response`, or nothing, for the next handler. */
+export type MockResult = MockResponse | undefined | void;
 
 export type MockResolver<
 	Ops extends OperationsShape<Ops>,

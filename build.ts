@@ -20,15 +20,19 @@
  * `dist/`, and what it declares would vanish for every consumer.
  */
 
-import { readdir } from 'node:fs/promises';
-import { dirname, join, relative } from 'node:path';
+import { readdir, rm } from 'node:fs/promises';
+import { dirname, join, relative, resolve } from 'node:path';
 import { $ } from 'bun';
 
 const pkg = await Bun.file('package.json').json();
 const name: string = pkg.name;
 const entrypoints: string[] = pkg.nxgt?.entrypoints ?? ['src/index.ts'];
 
-await $`rm -rf dist`.quiet();
+// Built over the last build, not after deleting it: an editor's TypeScript
+// server that reads `dist/` mid-build then still finds each declaration,
+// instead of caching a sibling as a package without types until it restarts.
+// What this build did not write is removed at the end.
+const written = new Set<string>();
 
 const result = await Bun.build({
 	entrypoints,
@@ -47,7 +51,25 @@ if (!result.success) {
 	process.exit(1);
 }
 
-await $`tsc -p tsconfig.build.json --emitDeclarationOnly`;
+for (const output of result.outputs) {
+	written.add(resolve(output.path));
+	written.add(resolve(`${output.path}.map`));
+}
+
+const tsc =
+	await $`tsc -p tsconfig.build.json --emitDeclarationOnly --listEmittedFiles`
+		.quiet()
+		.nothrow();
+const listed = tsc.stdout.toString();
+if (tsc.exitCode !== 0) {
+	console.error(`${name}: declarations failed`);
+	console.error(listed.replace(/^TSFILE: .*\n/gm, ''), tsc.stderr.toString());
+	process.exit(1);
+}
+for (const line of listed.split('\n')) {
+	if (line.startsWith('TSFILE: ')) written.add(resolve(line.slice(8).trim()));
+}
+const emitted = new Set(written);
 
 // Copy hand-written declarations, preserving their path under src/.
 async function* walk(dir: string): AsyncGenerator<string> {
@@ -65,7 +87,7 @@ for await (const file of walk('src')) {
 	// tsc got here first, which means a `.ts` next door has the same basename
 	// and this copy would replace that module's real declarations with an
 	// ambient file. Refuse rather than silently truncate the public API.
-	if (await Bun.file(target).exists()) {
+	if (emitted.has(resolve(target))) {
 		console.error(
 			`${name}: ${file} collides with the declarations tsc emitted for ` +
 				`${target}. Rename it, or move it under src/types/.`,
@@ -74,8 +96,28 @@ for await (const file of walk('src')) {
 	}
 	await $`mkdir -p ${dirname(target)}`.quiet();
 	await Bun.write(target, Bun.file(file));
+	written.add(resolve(target));
 	copied++;
 }
+
+// What the last build wrote and this one did not: a module since moved or
+// deleted, which would otherwise ship.
+let pruned = 0;
+for await (const file of walk('dist')) {
+	if (written.has(resolve(file))) continue;
+	await rm(file);
+	pruned++;
+}
+async function removeEmpty(dir: string): Promise<void> {
+	for (const entry of await readdir(dir, { withFileTypes: true })) {
+		if (!entry.isDirectory()) continue;
+		const inner = join(dir, entry.name);
+		await removeEmpty(inner);
+		if ((await readdir(inner)).length === 0)
+			await rm(inner, { recursive: true });
+	}
+}
+await removeEmpty('dist');
 
 // A bin runs as a file: it keeps the `#!` line Bun.build carries over from
 // its entry, and it must be executable, or `node_modules/.bin/<cmd>` fails.
@@ -95,5 +137,6 @@ for (const [command, target] of Object.entries(bins)) {
 
 console.log(
 	`${name}: ${result.outputs.length} artifact(s)` +
-		(copied ? `, ${copied} hand-written declaration(s) copied` : ''),
+		(copied ? `, ${copied} hand-written declaration(s) copied` : '') +
+		(pruned ? `, ${pruned} stale file(s) removed` : ''),
 );

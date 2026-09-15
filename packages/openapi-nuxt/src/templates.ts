@@ -87,12 +87,62 @@ export default defineNuxtPlugin({
 });
 `;
 
-/** `useApi()`, auto-imported. */
+/** `useApi()` and `useApiData()`, auto-imported. */
 export const useApiTemplate = (
 	client: string,
-): string => `import { useNuxtApp } from '#app';
+	runtime: string,
+): string => `import {
+	type AsyncData,
+	type AsyncDataOptions,
+	type NuxtError,
+	useAsyncData,
+	useNuxtApp,
+} from '#app';
+import { keyedArgs, type Payload, toPayload } from ${quote(runtime)};
 import type { Api } from ${quote(importPath(client))};
 
 /** The client the plugin provides, bound to the spec. */
 export const useApi = (): Api => useNuxtApp().$api as Api;
+
+/** What \`useApiData\` hands its handler beside the client. */
+export interface ApiDataContext {
+	/** Aborted when Nuxt drops the call: pass it on to the client's. */
+	readonly signal: AbortSignal;
+}
+
+type ApiDataHandler<T> = (api: Api, context: ApiDataContext) => Promise<T>;
+type ApiDataOptions<T, DefaultT> = AsyncDataOptions<
+	Payload<T>,
+	Payload<T>,
+	never[],
+	DefaultT
+>;
+type ApiData<T, DefaultT> = AsyncData<
+	Payload<T> | DefaultT,
+	NuxtError | undefined
+>;
+
+/**
+ * \`useAsyncData\` whose handler receives the client. A reply comes back
+ * without its \`Response\`, which the SSR payload cannot carry.
+ */
+export function useApiData<T, DefaultT = undefined>(
+	key: string,
+	handler: ApiDataHandler<T>,
+	options?: ApiDataOptions<T, DefaultT>,
+): ApiData<T, DefaultT>;
+export function useApiData<T, DefaultT = undefined>(
+	handler: ApiDataHandler<T>,
+	options?: ApiDataOptions<T, DefaultT>,
+): ApiData<T, DefaultT>;
+export function useApiData(...args: unknown[]): unknown {
+	const [key, handler, options] = keyedArgs(args);
+	const api = useApi();
+	return useAsyncData(
+		key,
+		(_nuxtApp, context) =>
+			(handler as ApiDataHandler<unknown>)(api, context).then(toPayload),
+		options as never,
+	);
+}
 `;

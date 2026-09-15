@@ -91,6 +91,30 @@ describe('the server', () => {
 		expect(reply.status).toBe(404);
 		expect(await reply.text()).toBe('404 Not Found');
 	});
+
+	test('auto-imports createHonoApp, whose env holds the h3 event', async () => {
+		const reply = await fetch(`${base}/api/whoami`);
+		expect(await reply.json()).toEqual({ path: '/api/whoami' });
+	});
+});
+
+/** What the page rendered in `<pre id="…">`, parsed. */
+const renderedIn = (page: string, id: string): unknown => {
+	const found = page.match(new RegExp(`<pre id="${id}">([^<]*)</pre>`))?.[1];
+	if (found === undefined) throw new Error(`the page has no #${id}`);
+	return JSON.parse(found.replaceAll('&quot;', '"'));
+};
+
+describe('useApiData() during SSR', () => {
+	test('gives the reply without its Response, keyed by Nuxt when the call is not', async () => {
+		const page = await fetch(`${base}/`).then((r) => r.text());
+		expect(renderedIn(page, 'reply')).toEqual({
+			status: 200,
+			type: 'application/json',
+			data: { id: 8, name: 'Item 8', cookie: null, path: '/items/8' },
+		});
+		expect(renderedIn(page, 'named')).toBe('named');
+	});
 });
 
 describe('useApi() during SSR', () => {

@@ -10,7 +10,7 @@ import type {
 	Operations,
 	WatchFeed200ResponseRemovedData,
 	Wire,
-} from '../generated/streams/types.js';
+} from '../generated/streams/types';
 
 type Equal<X, Y> = [X] extends [Y] ? ([Y] extends [X] ? true : false) : false;
 type Assert<T extends true> = T;

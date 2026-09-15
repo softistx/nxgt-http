@@ -3,9 +3,9 @@
  * types a client from it with nothing in between. Type-checked, never run.
  */
 import createClient from 'openapi-fetch';
-import type { paths as datePaths } from '../generated/dates/paths.js';
-import type { paths } from '../generated/kitchen-sink/paths.js';
-import type { Pet } from '../generated/kitchen-sink/types.js';
+import type { paths as datePaths } from '../generated/dates/paths';
+import type { paths } from '../generated/kitchen-sink/paths';
+import type { Pet } from '../generated/kitchen-sink/types';
 
 const requestId = '3f1c2a4e-8b7d-4c1e-9a2b-1c2d3e4f5a6b';
 

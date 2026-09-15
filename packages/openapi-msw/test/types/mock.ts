@@ -4,7 +4,7 @@
  */
 import { HttpResponse } from 'msw';
 import { createOpenApiMsw } from '../../src/index';
-import { operations } from '../generated/operations.js';
+import { operations } from '../generated/operations';
 
 const mock = createOpenApiMsw(operations);
 

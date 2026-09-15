@@ -89,3 +89,45 @@ export function apiHttpOptions(target: ApiTarget): HttpClientOptions {
 	}
 	return { baseUrl: new URL(prefix, origin).href };
 }
+
+/**
+ * A value as the SSR payload carries it: a reply without its `Response`,
+ * which the payload cannot serialize, and anything else as it is.
+ */
+export type Payload<T> = T extends { readonly response: Response }
+	? Omit<T, 'response'>
+	: T;
+
+/** `value` as `Payload<T>` types it: a reply's `response` taken off. */
+export function toPayload<T>(value: T): Payload<T> {
+	if (
+		typeof value === 'object' &&
+		value !== null &&
+		(value as { response?: unknown }).response instanceof Response
+	) {
+		const { response: _response, ...rest } = value as Record<string, unknown>;
+		return rest as Payload<T>;
+	}
+	return value as Payload<T>;
+}
+
+/**
+ * `useApiData`'s arguments, the key first: the one the call gives, or else
+ * the one Nuxt's compiler appended last, as it does for `useAsyncData`.
+ */
+export function keyedArgs(
+	args: readonly unknown[],
+): [key: string, handler: unknown, options: unknown] {
+	const rest = [...args];
+	const appended =
+		rest.length > 1 && typeof rest[rest.length - 1] === 'string'
+			? (rest.pop() as string)
+			: undefined;
+	const key = typeof rest[0] === 'string' ? (rest.shift() as string) : appended;
+	if (key === undefined || typeof rest[0] !== 'function') {
+		throw new TypeError(
+			'@nxgt/openapi-nuxt: useApiData takes a key, or none, then a handler',
+		);
+	}
+	return [key, rest[0], rest[1]];
+}

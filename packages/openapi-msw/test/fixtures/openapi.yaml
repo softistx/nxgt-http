@@ -66,6 +66,7 @@ paths:
           description: Missing
           content:
             application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } }
+            application/json: { schema: { $ref: '#/components/schemas/Problem' } }
     put:
       operationId: putItemFile
       requestBody:
@@ -153,6 +154,7 @@ paths:
           content:
             application/jsonl:
               itemSchema: { $ref: '#/components/schemas/Item' }
+            text/csv: { schema: { type: string } }
 components:
   schemas:
     Echo: { type: object, additionalProperties: true }

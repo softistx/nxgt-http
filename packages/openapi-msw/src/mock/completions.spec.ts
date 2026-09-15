@@ -1,6 +1,7 @@
 /**
- * What an editor offers in `reply(status, { … })`, asked of TypeScript's
- * language service as an editor asks it: the fields of the body declared for
+ * What an editor offers in `response.ok({ … })` and `response(200).json({ … })`,
+ * asked of TypeScript's language service as an editor asks it: the presets
+ * and writers the operation declares, the fields of the body declared for
  * that status, then only those not written yet.
  */
 import { describe, expect, test } from 'bun:test';
@@ -16,13 +17,18 @@ import { createOpenApiMsw } from '../../src/index';
 import { operations } from '../generated/operations.js';
 
 const mock = createOpenApiMsw(operations);
-mock.get('/items/{id}', ({ reply }) => reply(200, { /*ok*/ }));
-mock.get('/items/{id}', ({ reply }) => reply(404, { /*missing*/ }));
-mock.op('createItem', ({ reply }) => reply(201, { name: 'a', /*rest*/ }));
-mock.get('/items/{id}', async ({ param, reply }) => {
-	if (param.id === 1) return reply(200, { /*branch*/ });
-	return reply(404, { title: 'gone' });
+mock.get('/items/{id}', ({ response }) => response.ok({ /*ok*/ }));
+mock.get('/items/{id}', ({ response }) => response(200).json({ /*json*/ }));
+mock.get('/items/{id}', ({ response }) =>
+	response(404).json({ /*missing*/ }, { type: 'application/problem+json' }),
+);
+mock.op('createItem', ({ response }) => response.created({ name: 'a', /*rest*/ }));
+mock.get('/items/{id}', async ({ param, response }) => {
+	if (param.id === 1) return response.ok({ /*branch*/ });
+	return response.notFound({ title: 'gone' }, { type: 'application/json' });
 });
+mock.get('/items/{id}', ({ response }) => response./*presets*/ok({ id: 1, name: 'a' }));
+mock.op('exportItems', ({ response }) => response(200)./*writers*/text('a'));
 `;
 
 const config = ts.parseJsonConfigFileContent(
@@ -49,7 +55,16 @@ const service = ts.createLanguageService({
 	getDirectories: ts.sys.getDirectories,
 });
 
-/** The fields offered at `/*marker*\/`, sorted. */
+/** What every function has, `response` included. */
+const FUNCTION = new Set([
+	'arguments',
+	'caller',
+	'length',
+	'name',
+	'prototype',
+]);
+
+/** The properties offered at `/*marker*\/`, sorted. */
 const offered = (marker: string): string[] => {
 	const tag = `/*${marker}*/`;
 	const position = SOURCE.indexOf(tag) + tag.length;
@@ -60,16 +75,26 @@ const offered = (marker: string): string[] => {
 		.sort();
 };
 
+/** The members offered on `response` or a status, those of any function left out. */
+const members = (marker: string): string[] =>
+	offered(marker).filter((name) => !FUNCTION.has(name));
+
 const ITEM = ['createdAt', 'id', 'name', 'price'];
 
-describe('reply completions', () => {
+describe('response completions', () => {
 	test('offers the body declared for the status', () => {
 		expect(offered('ok')).toEqual(ITEM);
+		expect(offered('json')).toEqual(ITEM);
 		expect(offered('missing')).toEqual(['title']);
 		expect(offered('branch')).toEqual(ITEM);
 	}, 60_000);
 
 	test('offers the fields not written yet', () => {
 		expect(offered('rest')).toEqual(ITEM.filter((name) => name !== 'name'));
+	});
+
+	test('offers the presets of the declared statuses, and their writers', () => {
+		expect(members('presets')).toEqual(['badRequest', 'notFound', 'ok']);
+		expect(members('writers')).toEqual(['binary', 'body', 'text']);
 	});
 });

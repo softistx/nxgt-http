@@ -12,10 +12,10 @@ import type {
 	RoutesOf,
 	RuntimeOperation,
 } from '@nxgt/openapi-httpyz';
-import { HttpHandler, type RequestHandlerOptions } from 'msw';
+import { bypass, HttpHandler, type RequestHandlerOptions } from 'msw';
 import { MockReplyError } from '../errors/mock-reply-error';
-import { checkReply, createReply } from '../reply/reply';
 import { readRequest } from '../request/read-request';
+import { checkResponse, createResponse } from '../response/response';
 import type { OpenApiMsw, OpenApiMswOptions } from './types';
 
 type Resolver = (info: Record<string, unknown>) => unknown;
@@ -40,8 +40,8 @@ const located = (baseUrl: string | undefined, path: string): string =>
  * ```ts
  * const mock = createOpenApiMsw(operations, { baseUrl: 'https://api.example.com' });
  * const server = setupServer(
- * 	mock.get('/employees/{id}', ({ param, reply }) =>
- * 		reply(200, { id: param.id, name: 'Ada' }),
+ * 	mock.get('/employees/{id}', ({ param, response }) =>
+ * 		response.ok({ id: param.id, name: 'Ada' }),
  * 	),
  * );
  * ```
@@ -88,7 +88,7 @@ export function createOpenApiMsw<
 			method: operation.method,
 			path: operation.path,
 		};
-		const reply = createReply(context, operation);
+		const response = createResponse(context, operation);
 		return new HttpHandler(
 			operation.method.toUpperCase(),
 			located(baseUrl, path),
@@ -112,25 +112,26 @@ export function createOpenApiMsw<
 					const answer = await onValidationError?.(failure, request);
 					return answer instanceof Response ? answer : refused(issues);
 				}
-				const response = await resolver({
+				const answer = await resolver({
 					...received,
 					request,
 					cookies,
 					operationId: id,
-					reply,
+					response,
+					bypass: (init?: RequestInit) => fetch(bypass(request, init)),
 				});
-				if (checks.reply && response instanceof Response) {
-					const found = await checkReply(response);
+				if (checks.reply && answer instanceof Response) {
+					const found = await checkResponse(answer);
 					if (found.length > 0) {
 						throw new MockReplyError({
 							kind: 'response',
 							...context,
-							status: response.status,
+							status: answer.status,
 							issues: found,
 						});
 					}
 				}
-				return response as Response | undefined;
+				return answer as Response | undefined;
 			},
 			handlerOptions,
 		);

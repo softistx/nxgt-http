@@ -10,9 +10,10 @@ generates, bound to the same `operations` table as the client:
 - **The server's refusals.** A request the spec refuses gets the 400 that
   [`@nxgt/openapi-hono`](https://www.npmjs.com/package/@nxgt/openapi-hono)
   answers, with the same issues.
-- **Replies typed by their status.** In `reply(200, { … })`, the status comes
-  first and types the body, so the editor offers its fields.
-- **Mocks that fail when they drift.** A reply the spec does not declare
+- **Responses typed by their status.** In `response.ok({ … })` or
+  `response(201).json({ … })`, the status comes first and types the body, so
+  the editor offers its fields.
+- **Mocks that fail when they drift.** A response the spec does not declare
   throws, and the test fails instead of passing on a stale mock.
 
 ```ts
@@ -22,11 +23,14 @@ import { operations } from './generated/operations';
 
 const mock = createOpenApiMsw(operations, { baseUrl: 'https://api.example.com' });
 
-export const server = setupServer(
-	mock.get('/employees/{id}', ({ param, reply }) =>
-		reply(200, { id: param.id, name: 'Ada Lovelace' }),
+export const handlers = [
+	mock.get('/employees/{id}', ({ param, response }) =>
+		response.ok({ id: param.id, name: 'Ada Lovelace' }),
 	),
-);
+	mock.delete('/employees/{id}', ({ response }) => response.noContent()),
+];
+
+export const server = setupServer(...handlers);
 ```
 
 ## Install
@@ -62,13 +66,13 @@ infers it.
 ## Handlers
 
 A handler is registered by method and path, as the spec writes the path, or
-by `operationId`. Each returns an MSW handler, for `setupServer`,
-`setupWorker` or `server.use()`:
+by `operationId`. Each returns an MSW `HttpHandler`, for `setupServer`,
+`setupWorker`, `server.use()` or a list of your own:
 
 ```ts
 server.use(
-	mock.get('/employees/{id}', ({ param, reply }) => reply(200, employees[param.id])),
-	mock.op('createEmployee', ({ json, reply }) => reply(201, { id: 3, ...json })),
+	mock.get('/employees/{id}', ({ param, response }) => response.ok(employees[param.id])),
+	mock.op('createEmployee', ({ json, response }) => response.created({ id: 3, ...json })),
 );
 ```
 
@@ -78,7 +82,8 @@ The resolver receives the request as the server reads it:
 | --- | --- |
 | `param`, `query`, `header` | the path parameters, the query and the declared headers, as the spec's validators output them: `param.id` is a number when the spec says `integer` |
 | `json`, `form`, `text`, `body` | the body, by its media type: parsed JSON, a form's fields (a name sent twice is a list, a file a `File`), text, or a binary body as a `Blob` |
-| `reply` | builds a declared reply. See [Replies](#replies) |
+| `response` | builds a declared response. See [Responses](#responses) |
+| `bypass` | sends the request on to the network. See [Leaving the spec](#leaving-the-spec) |
 | `request` | the `Request`, its body unread |
 | `cookies`, `operationId` | the request's cookies, and the operation's id |
 
@@ -86,31 +91,91 @@ Only the methods the spec has an operation for exist: without a PATCH
 operation there is no `mock.patch`. A path or an `operationId` the spec lacks
 does not compile, and throws when registered.
 
-## Replies
+## Responses
 
 ```ts
-mock.get('/employees/{id}', ({ param, reply }) =>
+mock.get('/employees/{id}', ({ param, response }) =>
 	param.id === 0
-		? reply(404, { message: 'errors.not-found' })
-		: reply(200, { id: param.id, name: 'Ada Lovelace' }),
+		? response.notFound({ message: 'errors.not-found' })
+		: response.ok({ id: param.id, name: 'Ada Lovelace' }),
 );
 ```
 
-`reply(status, body, init)` writes the body as the status's media type
-carries it: JSON, text, a form, or binary as it is. A status without content
-takes no body: `reply(204)`. The `Content-Type` is the declared one. When a
-status declares several, `init.type` picks one, and `init.headers` adds
-headers:
+`response(status)` gives the writers of the status's body. Each writes the
+body as its media type carries it, with the declared `Content-Type`:
+
+| Writer | Writes |
+| --- | --- |
+| `json(data, options?)` | a JSON media type: `application/json`, `application/problem+json`… |
+| `text(data, options?)` | a `text/*` media type, server-sent events included |
+| `form(data, options?)` | `application/x-www-form-urlencoded` or `multipart/form-data`, from an object, a `FormData` or `URLSearchParams` |
+| `binary(data, options?)` | any other media type, JSON Lines included: a `Blob`, a buffer, a stream |
+| `body(data, options?)` | any media type the status declares |
+
+A writer exists only for the media types its status declares, and its `data`
+is typed by the one it writes. A status without content has
+`body(options?)` alone: `response(204).body()`.
 
 ```ts
-reply(400, { title: 'Invalid' }, { type: 'application/problem+json', headers: { 'x-trace': id } });
+response(201).json(employee);
+response(200).text('id,name\n1,Ada');
+response(400).json(problem, { type: 'application/problem+json', headers: { 'x-trace': id } });
 ```
 
-The resolver may also return:
+The options come after the body:
 
-- a `Response` of its own, as MSW's `HttpResponse.error()` or `passthrough()`
-  do, which is sent as it is and not checked;
-- nothing, and MSW tries the next handler.
+| Option | Type | Description |
+| --- | --- | --- |
+| `type` | one of the writer's media types | the media type to write. Required when the status declares several the writer could write, and the body is typed by it |
+| `headers` | `HeadersInit` | headers of the response. A `Content-Type` here wins over the declared one |
+| `statusText` | `string` | the response's status text |
+
+### Presets
+
+A preset is `response(status).body`, for a common status the operation
+declares. `response.ok(item)` is `response(200).body(item)`:
+
+| Preset | Status |
+| --- | --- |
+| `ok` | 200 |
+| `created` | 201 |
+| `accepted` | 202 |
+| `noContent` | 204 |
+| `badRequest` | 400 |
+| `unauthorized` | 401 |
+| `forbidden` | 403 |
+| `notFound` | 404 |
+| `conflict` | 409 |
+| `unprocessableEntity` | 422 |
+| `tooManyRequests` | 429 |
+| `internalServerError` | 500 |
+
+An operation without a 404 has no `response.notFound`. Any other declared
+status goes through `response(status)`.
+
+### Leaving the spec
+
+A resolver returns a response of `response`, or nothing, and MSW tries the
+next handler. Three ways out of the spec, none checked against it:
+
+```ts
+// A Response of your own: MSW's, or any other.
+mock.get('/employees/{id}', ({ response }) => response.untyped(HttpResponse.error()));
+
+// The request goes on to the network, as if no handler matched.
+mock.get('/employees/{id}', ({ response }) => response.passthrough());
+
+// The real response, read, then answered with a typed one.
+mock.get('/employees/{id}', async ({ bypass, response }) => {
+	const employee = await (await bypass()).json();
+	return response.ok({ ...employee, name: 'Patched' });
+});
+```
+
+`untyped()` takes any `Response` and gives it the type a resolver returns,
+so it compiles. A bare `Response` returned from a resolver does not.
+`bypass(init?)` sends the request past MSW, with `init` over it, and returns
+the network's `Response`.
 
 ## Validation
 
@@ -127,11 +192,12 @@ The resolver may also return:
   required gets the server's own issue codes: `invalid_json`,
   `invalid_content_type`, `missing_body`. Answer a refusal your own way with
   `onValidationError`.
-- **The reply.** A body `reply()` wrote is checked against the status's
+- **The response.** A body `response` wrote is checked against the status's
   schema, as JSON carries it, so a `Date` is checked as its text. A mock that
   does not match throws a `MockReplyError` naming its issues. MSW then
   answers with a 500, and the test that made the request fails. A status the
-  operation does not declare throws too.
+  operation does not declare, or a media type the status does not, throws
+  too.
 
 `validate: false` turns off both checks. `{ request: false }` or
 `{ reply: false }` turns off one.
@@ -155,7 +221,7 @@ Binds the generated `operations` table. `Ops` is inferred from it, and
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `baseUrl` | `string` | any origin | where the app calls the API. The paths are matched under it |
-| `validate` | `boolean \| { request?: boolean; reply?: boolean }` | `true` | checks the request and the replies of `reply()`. See [Validation](#validation) |
+| `validate` | `boolean \| { request?: boolean; reply?: boolean }` | `true` | checks the request and the responses of `response`. See [Validation](#validation) |
 | `onValidationError` | `(failure: ValidationFailure, request: Request) => Response \| undefined \| Promise<…>` | the 400 | answers a request the spec refuses. Return nothing for the default |
 
 ### The mock
@@ -188,6 +254,17 @@ readonly mock.operations: OperationTable<Ops>;
 
 The generated table the mock was bound to.
 
+### Constants
+
+#### PRESETS
+
+```ts
+const PRESETS: { readonly ok: 200; readonly created: 201; /* … */ readonly internalServerError: 500 };
+type Presets = typeof PRESETS;
+```
+
+The name and status of each [preset](#presets).
+
 ### Classes
 
 #### MockReplyError
@@ -198,8 +275,8 @@ class MockReplyError extends Error {
 }
 ```
 
-Thrown by a handler whose reply the spec does not declare: its status, its
-media type or its body. Its message names the operation and each issue.
+Thrown by a handler whose response the spec does not declare: its status,
+its media type or its body. Its message names the operation and each issue.
 
 ### Types
 
@@ -219,11 +296,10 @@ What `createOpenApiMsw()` returns. `MockPathMethods<Ops, Routes>` holds the
 
 ```ts
 type MockResolver<Ops, K extends keyof Ops> = (info: MockInfo<Ops, K>) => MockResult | Promise<MockResult>;
-type MockResult = Response | undefined | void;
+type MockResult = MockResponse | undefined | void;
 ```
 
-A handler's resolver: it returns a reply of `reply()`, a `Response` of its
-own, or nothing.
+A handler's resolver: it returns a response of `response`, or nothing.
 
 #### MockInfo
 
@@ -232,32 +308,64 @@ type MockInfo<Ops, K extends keyof Ops> = MockInput<Ops, K> & {
 	readonly request: Request;
 	readonly cookies: Record<string, string>;
 	readonly operationId: K;
-	readonly reply: Reply<Ops[K]['reply'] & DeclaredReply>;
+	readonly response: ResponseFactory<Ops[K]['reply'] & DeclaredReply>;
+	bypass(init?: RequestInit): Promise<Response>;
 };
 ```
 
 What a resolver is called with. `MockInput<Ops, K>` is the request's
 `param`, `query`, `header` and body. See [Handlers](#handlers).
 
-#### Reply
+#### ResponseFactory
 
 ```ts
-type Reply<R extends DeclaredReply> = <Status extends R['status']>(
-	status: Status,
-	...rest: ReplyArgs<Extract<R, { status: Status }>>
-) => Response;
+type ResponseFactory<R extends DeclaredReply> =
+	(<Status extends R['status']>(status: Status) => StatusResponse<Extract<R, { status: Status }>>) &
+	ResponsePresets<R> & {
+		untyped(response: Response): MockResponse;
+		passthrough(): MockResponse;
+	};
 ```
 
-The `reply` a resolver receives. `ReplyArgs` is the status's body and its
-init, or its init alone when it has no content. `DeclaredReply` is a reply
-as the generated `ClientOperations` has it, `{ status, type, data }`.
+The `response` a resolver receives. `DeclaredReply` is a reply as the
+generated `ClientOperations` has it, `{ status, type, data }`.
+`ResponsePresets<R>` holds the [presets](#presets) of the statuses `R`
+declares.
 
-#### ReplyInit
+#### StatusResponse
 
-| Field | Type | Description |
-| --- | --- | --- |
-| `headers` | `HeadersInit` | headers of the reply. A `Content-Type` here wins over the declared one |
-| `type` | one of the status's media types | the media type to reply with. Default: the first declared |
+```ts
+type StatusResponse<R extends DeclaredReply> =
+	| { body(options?: ResponseOptions<never>): MockResponse } // a status without content
+	| ({ body: BodyWriter<R, Types> } & { json?; text?; form?; binary?: BodyWriter<R, …> });
+```
+
+What `response(status)` returns: `body`, and a writer for each media kind the
+status declares. `MediaKindOf<Type>` gives the kind of a media type, as the
+generator classifies it. See [Responses](#responses).
+
+#### BodyWriter
+
+```ts
+type BodyWriter<R extends DeclaredReply, Types extends string> = (...args: BodyArgs<R, Types>) => MockResponse;
+```
+
+A writer. `BodyArgs` is `[data, options?]`, or `[data, options]` with
+`options.type` required when `Types` holds several media types. `data` is
+the body of the media type written.
+
+#### ResponseOptions
+
+The options after a body, in the [table](#responses) above.
+
+#### MockResponse
+
+```ts
+type MockResponse = Response & { readonly [mocked]: true };
+```
+
+A `Response` built by `response`, the only kind a resolver returns.
+`response.untyped()` makes one of any `Response`.
 
 #### OpenApiMswOptions
 
@@ -266,10 +374,10 @@ The options of `createOpenApiMsw()`, in its [table](#createopenapimsw).
 ## Traps
 
 - **Streams have no typed events yet.** For a server-sent events or JSON
-  Lines reply, `reply()` takes the whole body, as text or a `Blob`, and does
-  not check it item by item.
-- **A `Response` of your own is not checked.** Only the replies `reply()`
-  writes are.
+  Lines response, `text()` or `binary()` takes the whole body, as text or a
+  `Blob`, and does not check it item by item.
+- **`untyped()`, `passthrough()` and `bypass()` are not checked.** Only the
+  bodies `response` writes are.
 - **`baseUrl` must be where the app calls the API**, its path prefix
   included. Otherwise the request goes unhandled, and MSW warns.
 - **A binary body arrives as a `Blob`,** whatever the client sent it as.

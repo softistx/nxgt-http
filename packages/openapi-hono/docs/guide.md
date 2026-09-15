@@ -11,8 +11,9 @@ it binds to the spec.
 
 ## Setup
 
-`hono.ts` imports `@nxgt/openapi-hono` and `hono` at runtime, and
-`operations.ts` imports `zod`, so all three are dependencies of your app.
+`hono.ts` imports `@nxgt/openapi-hono` at runtime and `hono`'s types,
+`operations.ts` imports `zod`, and your app builds its own `Hono`, so all
+three are dependencies of your app.
 The generator stays a dev dependency:
 
 ```sh

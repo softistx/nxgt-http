@@ -2,7 +2,8 @@ import type { Connection, Paginated } from './types';
 
 /**
  * A service's `{ data, metadata }` page as a Relay connection: each item an
- * edge, its `id` the cursor. A page with neither is an empty last page.
+ * edge, its `id` the cursor. Without `metadata`, its page info is an empty
+ * last page's, even when it has items.
  */
 export function relayPaginate<T extends { id: string }>(
 	page: Paginated<T>,

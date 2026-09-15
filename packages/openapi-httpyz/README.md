@@ -18,15 +18,23 @@ validators.
 
 ```sh
 bun add @nxgt/httpyz @nxgt/openapi-httpyz zod
-bun add -d @nxgt/openapi-codegen
+bun add -d @nxgt/openapi-codegen typescript
 ```
 
-`@nxgt/httpyz` is a peer: the binding uses your client, not a copy of its
-own. The generated `operations.ts` imports `zod`, so the app needs it too.
+Both peers are required: `@nxgt/httpyz`, since the binding uses your client,
+not a copy of its own, and `typescript` 6, for the types. The generated
+`operations.ts` imports `zod`, so the app needs it too.
 
 ## Setup
 
-Generate the spec's files with `nxgt-openapi generate`, then bind them:
+Generate the spec's files, into `generated/openapi` unless `-o` says
+otherwise:
+
+```sh
+bunx nxgt-openapi generate -i openapi.yaml
+```
+
+Then bind them:
 
 ```ts
 import { createHttpClient } from '@nxgt/httpyz';
@@ -52,21 +60,18 @@ typed from the table alone:
 - The client has only the methods the spec has an operation for: no `trace`
   on a spec without a TRACE operation.
 
-The types may also be given, `createOpenApiClient<ClientOperations,
-OperationsByRoute>(http, operations)`, as a table generated before
-`@nxgt/openapi-codegen` carried them requires.
+The types may also be given, as a table generated before
+`@nxgt/openapi-codegen` carried them requires:
+`createOpenApiClient<ClientOperations, OperationsByRoute>(http, operations)`.
+`OperationsByRoute` may be left out: it is worked out of `ClientOperations`.
 
 The client keeps that table as `api.operations`, for a package built over it,
 such as [`@nxgt/httpyz-query/openapi`](https://www.npmjs.com/package/@nxgt/httpyz-query).
 
 The client's options are the client's own: see
 [`@nxgt/httpyz`](https://www.npmjs.com/package/@nxgt/httpyz#setup). The
-binding's are:
-
-| Option | Default | |
-| --- | --- | --- |
-| `validate` | neither | `true`, or `{ request, response }`: check with the spec's validators. See [Validating and decoding](#validating-and-decoding) |
-| `decode` | `false` | `true` returns each reply as its schema outputs it |
+binding's, `validate` and `decode`, are listed under
+[`createOpenApiClient`](#createopenapiclient).
 
 ## Calls
 
@@ -211,6 +216,364 @@ With the types given, a third type argument says the client decodes:
 not compile without `decode: true`. Decoding validates the reply, whatever
 `validate` says.
 
+## API
+
+The examples below use a spec with `getEmployee` at `GET /employees/{id}`,
+`listEmployees` at `GET /employees`, `createEmployee` at `POST /employees`,
+and `watchFeed`, an event stream, at `GET /feed`.
+
+### Functions
+
+#### createOpenApiClient
+
+```ts
+// With decode: true, the replies are typed as their schemas output them
+function createOpenApiClient<Ops extends OperationsShape<Ops>, Routes = RoutesOf<Ops>>(
+	http: HttpClient,
+	operations: OperationTable<Ops>,
+	options: OpenApiOptions & { readonly decode: true },
+): OpenApiClient<Ops, Routes, true>;
+
+function createOpenApiClient<
+	Ops extends OperationsShape<Ops>,
+	Routes = RoutesOf<Ops>,
+	Decoded extends boolean = false,
+>(
+	http: HttpClient,
+	operations: OperationTable<Ops>,
+	...options: OpenApiArgs<Decoded>
+): OpenApiClient<Ops, Routes, Decoded>;
+```
+
+Binds the generated `operations` table onto `http`, a client of
+`createHttpClient()` or one of its groups. `Ops` is inferred from the table;
+`Routes` defaults to `RoutesOf<Ops>`; `Decoded` is `true` when `decode: true`
+is passed. See [Setup](#setup) and [Validating and decoding](#validating-and-decoding).
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `validate` | `boolean \| { request?: boolean; response?: boolean }` | neither | Checks with the spec's schemas, throwing a `ValidationError`: the request before it is sent, the reply before it is returned. `true` is both |
+| `decode` | `true \| false` | `false` | `true` returns each reply as its schema outputs it, and types it so. It validates the reply, whatever `validate` says. A literal: a `boolean` variable does not compile, since the replies' type depends on it |
+
+Returns an [`OpenApiClient`](#openapiclient). It throws nothing itself: an
+unknown `operationId` or path fails the call made with it.
+
+### The client
+
+#### op
+
+```ts
+api.op<K extends keyof Ops & string>(id: K, ...args: Args<Ops, K>): Promise<WithResponse<OperationReply<Ops, K, Decoded>>>;
+```
+
+Calls an operation by its `operationId`, with its input, if it takes one,
+then an [`OperationInit`](#operationinit). See [Calls](#calls).
+
+Resolves to one of the declared replies, `{ status, type, data, response }`,
+as in [Replies](#replies). Rejects with a `ValidationError` when `validate`
+refuses the request or the reply, with the client's errors, such as
+`UndeclaredStatusError`, and with an `Error` for an `operationId` the table
+does not have.
+
+#### Path methods
+
+```ts
+api.get<P extends PathsOf<Routes, 'get'>>(path: P, ...args: Args<Ops, IdOf<Ops, Routes, 'get', P>>): Promise<WithResponse<OperationReply<Ops, IdOf<Ops, Routes, 'get', P>, Decoded>>>;
+// and put, post, delete, options, head, patch, trace, query: each the spec has an operation for
+```
+
+Calls the operation at a method and a path, as the spec writes it:
+`api.get('/employees/{id}', { param: { id } })`. The client types only the
+methods in [`MethodsOf<Routes>`](#methodsof), each taking only its
+[`PathsOf`](#pathsof). The arguments, reply and errors are those of
+[`op`](#op); a path with no operation for the method rejects with an `Error`.
+
+#### stream
+
+```ts
+api.stream<K extends StreamIds<Ops>>(id: K, ...args: StreamArgs<Ops, K>): OperationStreamOf<Ops, K, Decoded>;
+```
+
+Reads an operation's stream by its `operationId`, an item at a time: an
+`EventStream` of events narrowed on `event`, or a `Stream` of JSON lines. It
+takes the input, then a [`StreamInit`](#streaminit). See [Streams](#streams).
+
+It connects when read, and `close()` ends it. It throws an `Error`, where it
+is called, for an operation without a stream. A `ValidationError` from
+`validate`, or a client error, is thrown where the stream is read.
+
+#### group
+
+```ts
+api.group(): OpenApiGroup<Ops, Routes, Decoded>;
+```
+
+The same client, with the same options, over the client's `http.group()`:
+its calls and streams also end on its `cancel()`. See [Cancelling](#cancelling).
+
+#### group.cancel
+
+```ts
+page.cancel(reason?: unknown): void;
+```
+
+Aborts every call and stream of the group still running, with `reason`, or
+an `AbortError`. The group goes on: the calls made after it run.
+
+#### group.signal
+
+```ts
+readonly page.signal: AbortSignal;
+```
+
+Aborts on the next `cancel()`: for work of your own that ends with the
+group's calls. It is a new signal after each `cancel()`.
+
+#### operations
+
+```ts
+readonly api.operations: OperationTable<Ops>;
+```
+
+The generated `operations` table the client was bound to, for a package
+built over it that reads the spec as the client does, such as
+[`@nxgt/httpyz-query/openapi`](https://www.npmjs.com/package/@nxgt/httpyz-query).
+
+### Types
+
+#### OpenApiClient
+
+```ts
+type OpenApiClient<Ops extends OperationsShape<Ops>, Routes = RoutesOf<Ops>, Decoded extends boolean = false> = {
+	op: …; // see op
+	stream: …; // see stream
+	group(): OpenApiGroup<Ops, Routes, Decoded>;
+	readonly operations: OperationTable<Ops>;
+} & PathMethods<Ops, Routes, Decoded>;
+```
+
+What `createOpenApiClient()` returns: the members are under
+[The client](#the-client).
+
+#### OpenApiGroup
+
+```ts
+type OpenApiGroup<Ops, Routes = RoutesOf<Ops>, Decoded extends boolean = false> =
+	OpenApiClient<Ops, Routes, Decoded> & {
+		cancel(reason?: unknown): void;
+		readonly signal: AbortSignal;
+	};
+```
+
+What [`group()`](#group) returns: the client, with
+[`cancel`](#groupcancel) and [`signal`](#groupsignal).
+
+#### PathMethods
+
+```ts
+type PathMethods<Ops, Routes = RoutesOf<Ops>, Decoded extends boolean = false> = {
+	readonly [M in MethodsOf<Routes>]: <P extends PathsOf<Routes, M>>(
+		path: P,
+		...args: Args<Ops, IdOf<Ops, Routes, M, P>>
+	) => Promise<WithResponse<OperationReply<Ops, IdOf<Ops, Routes, M, P>, Decoded>>>;
+};
+```
+
+The [path methods](#path-methods) alone, for a package that offers them on an
+object of its own, as [`@nxgt/datasource-rest`](https://www.npmjs.com/package/@nxgt/datasource-rest)
+does. `PathMethods<ClientOperations>` has `get` and `post` on the example spec.
+
+#### OpenApiOptions
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `validate` | `boolean \| { readonly request?: boolean; readonly response?: boolean }` | Checks the request, the reply, or both (`true`). Default: neither |
+
+The options of [`createOpenApiClient`](#createopenapiclient), beside `decode`.
+
+#### OpenApiArgs
+
+```ts
+type OpenApiArgs<Decoded extends boolean> = Decoded extends true
+	? [options: OpenApiOptions & { readonly decode: true }]
+	: [options?: OpenApiOptions & { readonly decode?: false }];
+```
+
+The options argument of `createOpenApiClient()`, required with `decode: true`
+when `Decoded` is `true`. `OpenApiArgs<false>` resolves to
+`[options?: OpenApiOptions & { readonly decode?: false }]`.
+
+#### OperationInit
+
+```ts
+type OperationInit = Omit<CallOptions, 'operationId'>;
+```
+
+What a call takes after its input: the client's call options, the binding
+naming the call itself.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `headers` | `HeadersInit` | Over the client's `headers`; a `Content-Type` here gives way to the one a JSON, text or binary body sets |
+| `timeout` | `number` | This call's timeout, instead of the client's |
+| `retry` | `number \| RetryOptions \| false` | This call's retry, instead of the client's: `false` never retries |
+| `latest` | `string` | Aborts the call before it with the same key, if it still runs |
+| `signal`, `cache`, `credentials`, … | as in `RequestInit` | fetch's own options, but `method`, `body` and `headers` |
+
+#### StreamInit
+
+```ts
+interface StreamInit extends OperationInit {
+	reconnect?: boolean | ReconnectOptions;
+	lastEventId?: string;
+	onUnknownEvent?: (event: ServerEvent) => void;
+}
+```
+
+What [`stream()`](#stream) takes after its input.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `reconnect` | `boolean \| ReconnectOptions` | Events only: connects again when the connection drops or the stream ends, as `EventSource` does. Default: on, but for POST and PATCH |
+| `lastEventId` | `string` | Events only: sent as `Last-Event-ID` on the first connection |
+| `onUnknownEvent` | `(event: ServerEvent) => void` | Events only: an event the spec does not declare, which is not yielded |
+
+#### Args
+
+A call's arguments after the `operationId` or the path: the operation's own,
+then an `OperationInit`.
+`Args<ClientOperations, 'getEmployee'>` resolves to
+`[input: { param: { id: number } }, init?: OperationInit]`.
+
+#### StreamArgs
+
+A stream's arguments after the `operationId`: the operation's own, then a
+`StreamInit`.
+`StreamArgs<ClientOperations, 'watchFeed'>` resolves to
+`[input: { query: { topic: string } }, init?: StreamInit]`.
+
+#### OperationReply
+
+An operation's replies, decoded or as JSON carries them, as `op()` and the
+path methods resolve to them without `response`.
+`OperationReply<ClientOperations, 'getEmployee', false>` resolves to
+`ClientOperations['getEmployee']['wire']`, and with `true` to its `reply`.
+
+#### OperationStreamOf
+
+What [`stream()`](#stream) returns: an `EventStream` for server-sent events, a
+`Stream` for JSON lines, of items decoded or as JSON carries them.
+`OperationStreamOf<ClientOperations, 'watchFeed', false>` resolves to
+`EventStream<ClientOperations['watchFeed']['stream']['wire']>`.
+
+#### StreamIds
+
+The operations that reply with a stream: the only ones `stream()` accepts.
+`StreamIds<ClientOperations>` resolves to `'watchFeed'`.
+
+#### RoutesOf
+
+`OperationsByRoute`, worked out of `ClientOperations`: each `'method path'`
+to its `operationId`, and the default of `Routes`.
+`RoutesOf<ClientOperations>['get /employees/{id}']` resolves to `'getEmployee'`.
+
+#### MethodsOf
+
+The methods the spec has an operation for: the only path methods a client
+offers. `MethodsOf<RoutesOf<ClientOperations>>` resolves to `'get' | 'post'`.
+
+#### PathsOf
+
+The paths with an operation for a method.
+`PathsOf<RoutesOf<ClientOperations>, 'get'>` resolves to
+`'/employees' | '/employees/{id}' | '/feed'`.
+
+#### IdOf
+
+The `operationId` of the operation at a method and a path.
+`IdOf<ClientOperations, RoutesOf<ClientOperations>, 'get', '/employees/{id}'>`
+resolves to `'getEmployee'`.
+
+#### OperationsShape
+
+```ts
+type OperationsShape<Ops> = { [K in keyof Ops]: ClientOperation };
+```
+
+The constraint on `Ops`: the generated `ClientOperations`, an entry per
+`operationId`.
+
+#### ClientOperation
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `method` | `Method` | The operation's method, lowercased |
+| `path` | `string` | The path as the spec writes it |
+| `args` | `readonly unknown[]` | What a call takes after the `operationId`: `[input]`, `[input?]` or `[]` |
+| `reply` | `unknown` | Every declared reply, `{ status; type; data }`, decoded |
+| `wire` | `unknown` | The same replies as JSON carries them |
+| `stream` | `OperationStream`, optional | A reply read an item at a time, when the operation has one |
+
+What the binding reads of an entry of the generated `ClientOperations`.
+
+#### OperationStream
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `kind` | `'sse' \| 'jsonl'` | Server-sent events, or JSON lines |
+| `item` | `unknown` | Each item, decoded: an event narrowed on `event`, or a line |
+| `wire` | `unknown` | Each item as JSON carries it |
+
+The `stream` of a `ClientOperation`.
+
+#### OperationTable
+
+```ts
+type OperationTable<Ops> = {
+	readonly [K in keyof Ops]: RuntimeOperation & { readonly '~client'?: Ops[K] };
+};
+```
+
+The type of the generated `operations` table, and of `api.operations`. Each
+entry carries its `ClientOperations` entry as `'~client'`, a type that is
+never set, which is how `createOpenApiClient(http, operations)` infers `Ops`.
+
+#### RuntimeOperation
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `method` | `Method` | The operation's method |
+| `path` | `string` | As the spec writes it: `/employees/{id}` |
+| `parameters` | `readonly RuntimeParameter[]` | How each parameter is written |
+| `param`, `query`, `header` | `StandardSchemaV1`, optional | The server's validators of each location, which read text: for `validate` |
+| `body` | `{ required: boolean; content: { [mediaType]: RuntimeMedia } }`, optional | The request body's media types |
+| `responses` | `{ [status]: { [mediaType]: RuntimeMedia } }` | Each declared reply's media types |
+
+What the binding reads of an entry of the `operations` table.
+
+#### RuntimeParameter
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `name` | `string` | As the spec writes it |
+| `in` | `'path' \| 'query' \| 'header'` | Where it goes |
+| `required` | `boolean` | Whether the spec requires it |
+| `explode` | `boolean` | A query list as `?a=1&a=2` (`true`) or `?a=1,2` (`false`) |
+| `list` | `boolean` | Whether it is validated as a list |
+
+An entry of a `RuntimeOperation`'s `parameters`.
+
+#### RuntimeMedia
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `kind` | `'json' \| 'form' \| 'text' \| 'binary' \| 'sse' \| 'jsonl'` | How the content is read or written |
+| `schema` | `StandardSchemaV1`, optional | The content's schema; absent for binary content and a stream |
+| `events` | `{ [event]: StandardSchemaV1 \| null }`, optional | `sse`: each event's data, by name: a schema for JSON, `null` for text |
+| `item` | `StandardSchemaV1`, optional | `jsonl`: each item |
+
+A media type of a `RuntimeOperation`'s `body` or `responses`.
+
 ## Traps
 
 - **Without `decode`, a reply is typed as JSON carries it**: with
@@ -219,9 +582,9 @@ not compile without `decode: true`. Decoding validates the reply, whatever
   `dates: 'date'`, a date-time in a body or a query is still typed as a
   string: pass `date.toISOString()`.
 - **Give each operation its exact statuses.** A `default` or `4XX` reply is
-  not in the types, so it throws `UndeclaredStatusError`.
-- **Leave `OperationsByRoute` out, and only `op()` is typed.** The calls by
-  path look an operation up by its route in that map.
+  not generated, so it throws `UndeclaredStatusError`.
+- **A stream's request is refused where the stream is read**, not where
+  `stream()` is called: put the `try` around the `for await`.
 - **The client's `baseUrl` is still required outside a browser**, and its
   options, `auth`, `retry` and `use` included, apply to every call the
   binding makes.

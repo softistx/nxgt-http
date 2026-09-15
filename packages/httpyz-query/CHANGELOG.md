@@ -1,0 +1,20 @@
+# @nxgt/httpyz-query
+
+## 0.1.0
+
+### Minor Changes
+
+- [#13](https://github.com/softistx/nxgt-http/pull/13) [`752b3f7`](https://github.com/softistx/nxgt-http/commit/752b3f77bf9f4b2abb086c679864fdd5180ec9d3) Thanks [@SteveGT96](https://github.com/SteveGT96)! - `@nxgt/httpyz-query/openapi`: TanStack Query options for the operations of an `@nxgt/openapi-httpyz` bound client.
+  
+  `createOpenApiQueries(api)` takes a call as the bound client does, by method and path, and returns `queryOptions`, `infiniteQueryOptions`, `mutationOptions` and `queryKey`. It reads the spec from the client's own `operations`. A key holds the operation's input and never its init. `pageParamName` must be one of the operation's query parameters. A decoding client's queries resolve to what its schemas output. `@nxgt/openapi-httpyz` is an optional peer.
+
+- [#12](https://github.com/softistx/nxgt-http/pull/12) [`8ac32ac`](https://github.com/softistx/nxgt-http/commit/8ac32ac6981583ed56734ce69b88fde803b14205) Thanks [@SteveGT96](https://github.com/SteveGT96)! - TanStack Query options for the calls of an `@nxgt/httpyz` client.
+  
+  `createQueries(http)` gives `queryOptions`, `infiniteQueryOptions`, `mutationOptions` and `queryKey`. Each one returns a plain options object that any adapter takes. A query resolves to the data of a 2xx reply, and its call is sent with the query's `signal`, so a cancelled query aborts its request. Keys tell calls apart by what they send and are tagged with their data. An infinite query sends each page param as a query parameter.
+
+### Patch Changes
+
+- [#24](https://github.com/softistx/nxgt-http/pull/24) [`7f8bef2`](https://github.com/softistx/nxgt-http/commit/7f8bef228fa4ce8803b750f6ddf6de0e3b5dbf99) Thanks [@SteveGT96](https://github.com/SteveGT96)! - Each README now has an **API** section, after the usage sections, that documents every export: each function and method with its signature, options, return value and errors, each class with its members, and each type.
+- Updated dependencies [[`7f8bef2`](https://github.com/softistx/nxgt-http/commit/7f8bef228fa4ce8803b750f6ddf6de0e3b5dbf99), [`db77777`](https://github.com/softistx/nxgt-http/commit/db77777bca24768bbcfae9b1821d842d0350104f), [`a0a4992`](https://github.com/softistx/nxgt-http/commit/a0a4992ce185dfbc870dac22386687476d9adb2a), [`8ac32ac`](https://github.com/softistx/nxgt-http/commit/8ac32ac6981583ed56734ce69b88fde803b14205), [`71ced62`](https://github.com/softistx/nxgt-http/commit/71ced62c2bef0d75ca11e08b2fcde50355574526), [`eba5ec8`](https://github.com/softistx/nxgt-http/commit/eba5ec8b79a352d13731a33d5f11f4b005c66260), [`0340149`](https://github.com/softistx/nxgt-http/commit/0340149dbb3980e656730c611059245071994fee), [`810a97d`](https://github.com/softistx/nxgt-http/commit/810a97dda83a9618ebd317e09874ffd51121e4c4), [`0759ad4`](https://github.com/softistx/nxgt-http/commit/0759ad44fa8f44c9545c91c4516240dac18c92f1), [`752b3f7`](https://github.com/softistx/nxgt-http/commit/752b3f77bf9f4b2abb086c679864fdd5180ec9d3), [`be69f9c`](https://github.com/softistx/nxgt-http/commit/be69f9cb09b092bf7a506649f18701adf4b0d251), [`eba5ec8`](https://github.com/softistx/nxgt-http/commit/eba5ec8b79a352d13731a33d5f11f4b005c66260)]:
+  - @nxgt/httpyz@0.1.0
+  - @nxgt/openapi-httpyz@0.1.0

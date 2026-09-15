@@ -242,6 +242,32 @@ describe('RESTDataSource', () => {
 			return bookmarks.api.trace;
 		};
 		expect(never).toBeFunction();
+		// Nor at runtime: only the spec's methods are there.
+		expect('trace' in bookmarks).toBe(false);
+		expect('trace' in bookmarks.api).toBe(false);
+		expect(bookmarks.get).toBeFunction();
+	});
+
+	it('binds a class to the generated table, its types taken from it', async () => {
+		const { fetch, sent } = service();
+		const http = { fetch, retry: false as const };
+		class Bound extends RESTDataSource.for(operations) {
+			bookmark(id: string) {
+				return this.data(this.get('/bookmarks/{id}', { param: { id } }));
+			}
+		}
+		const bound = new Bound({ baseUrl: 'http://bookmarks.test', http });
+		const bookmark: Bookmark = await bound.bookmark('b1');
+		expect(bookmark).toMatchObject({ id: 'b1' });
+		expect(bound).toBeInstanceOf(RESTDataSource);
+
+		const Wire = RESTDataSource.for(operations, { decode: false });
+		const wire = new Wire({ baseUrl: 'http://bookmarks.test', http });
+		const read = await wire.data(
+			wire.get('/bookmarks/{id}', { param: { id: 'b2' } }),
+		);
+		expect(read.id).toBe('b2');
+		expect(sent.map(route)).toEqual(['GET /bookmarks/b1', 'GET /bookmarks/b2']);
 	});
 
 	it("leaves a subclass's own method named after a method the spec lacks", async () => {

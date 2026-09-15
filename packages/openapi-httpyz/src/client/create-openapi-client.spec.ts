@@ -4,6 +4,7 @@
  */
 import { describe, expect, it } from 'bun:test';
 import {
+	ClientError,
 	createHttpClient,
 	type HttpClientOptions,
 	ReplyStatusError,
@@ -226,9 +227,14 @@ describe('createOpenApiClient', () => {
 				() => 'rejected',
 			);
 		// @ts-expect-error the spec has no such path
-		expect(await settled(() => api.get('/nope'))).toBe('rejected');
-		// @ts-expect-error nor any TRACE operation: the client offers only the spec's methods
-		expect(api.trace).toBeFunction();
+		const nowhere = await api.get('/nope').catch((caught: unknown) => caught);
+		expect(nowhere).toBeInstanceOf(ClientError);
+		expect((nowhere as Error).message).toBe(
+			'GET /nope: the spec has no operation at it',
+		);
+		// @ts-expect-error nor any TRACE operation: the client has only the spec's methods
+		expect(api.trace).toBeUndefined();
+		expect('trace' in api).toBe(false);
 		// @ts-expect-error getItem needs its path parameter
 		expect(await settled(() => api.op('getItem'))).toBe('rejected');
 		// @ts-expect-error health takes no input: this is not a fetch option

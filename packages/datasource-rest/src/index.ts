@@ -1,4 +1,5 @@
 export {
+	type BoundDataSource,
 	defaultCache,
 	RESTDataSource,
 	type RESTDataSourceOptions,

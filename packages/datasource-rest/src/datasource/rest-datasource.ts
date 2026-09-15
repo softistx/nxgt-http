@@ -54,10 +54,10 @@ export interface RESTDataSourceOptions<Ops> extends OpenApiOptions {
 	http?: Omit<HttpClientOptions, 'baseUrl' | 'auth'>;
 }
 
-/** `decode`, as the binding takes it: a datasource typed as decoding must decode. */
+/** `decode`, as the binding takes it: a datasource typed as not decoding must say `decode: false`. */
 type Decoding<Decoded extends boolean> = {
 	readonly decode?: Decoded;
-} & (Decoded extends true ? { readonly decode: true } : unknown);
+} & (Decoded extends false ? { readonly decode: false } : unknown);
 
 /** The datasource's own members; `RESTDataSource` adds the client's path methods. */
 class DataSource<
@@ -67,6 +67,20 @@ class DataSource<
 > {
 	/** The client bound to the spec, for `op()`, `stream()` and `group()`. */
 	readonly api: OpenApiClient<Ops, Routes, Decoded>;
+
+	/**
+	 * A datasource class bound to `operations`, whose types it takes from the
+	 * generated table: no `ClientOperations` to import. Its constructor takes
+	 * the other options.
+	 */
+	static for(operations: object, fixed: { readonly decode?: boolean } = {}) {
+		const Base = DataSource as unknown as new (options: object) => object;
+		return class extends Base {
+			constructor(options: object) {
+				super({ ...options, ...fixed, operations });
+			}
+		};
+	}
 
 	constructor(options: RESTDataSourceOptions<Ops> & Decoding<Decoded>) {
 		const {
@@ -94,6 +108,18 @@ class DataSource<
 			// `Decoding` already holds `decode` to `Decoded`.
 			...([binding] as unknown as OpenApiArgs<Decoded>),
 		);
+		// `this.get(...)` for `this.api.get(...)`, for the spec's methods only.
+		// A subclass's own `get()` or `delete()` is already there, and wins.
+		const api = this.api as unknown as Record<string, unknown>;
+		for (const method of METHODS) {
+			if (method in api && !(method in this)) {
+				Object.defineProperty(this, method, {
+					configurable: true,
+					writable: true,
+					value: api[method],
+				});
+			}
+		}
 	}
 
 	/**
@@ -117,44 +143,56 @@ class DataSource<
 	}
 }
 
-// `this.get(...)` for `this.api.get(...)`: getters on the prototype, so that a
-// subclass's own `get()` or `delete()` still wins.
-for (const method of METHODS) {
-	Object.defineProperty(DataSource.prototype, method, {
-		configurable: true,
-		get(this: { readonly api: Record<string, unknown> }) {
-			return this.api[method];
-		},
-	});
-}
-
 /**
  * A datasource for a service, typed by the `ClientOperations` generated from
  * its spec. It has the client's `get`, `post`… for each method the spec has
  * an operation for. Extend it with the calls a resolver makes:
  *
  * ```ts
- * class Bookmarks extends RESTDataSource<ClientOperations> {
+ * class Bookmarks extends RESTDataSource.for(operations) {
  * 	bookmark(id: string) {
  * 		return this.data(this.get('/bookmarks/{id}', { param: { id } }));
  * 	}
  * }
- * new Bookmarks({ baseUrl, operations, token: () => context.token });
+ * new Bookmarks({ baseUrl, token: () => context.token });
  * ```
  */
 export type RESTDataSource<
 	Ops extends OperationsShape<Ops>,
 	Routes = RoutesOf<Ops>,
-	Decoded extends boolean = false,
+	Decoded extends boolean = true,
 > = DataSource<Ops, Routes, Decoded> & PathMethods<Ops, Routes, Decoded>;
 
-export const RESTDataSource = DataSource as unknown as new <
+/** What `RESTDataSource.for(operations)` returns: a datasource class bound to the table. */
+export type BoundDataSource<
 	Ops extends OperationsShape<Ops>,
-	Routes = RoutesOf<Ops>,
-	Decoded extends boolean = false,
->(
-	options: RESTDataSourceOptions<Ops> & Decoding<Decoded>,
-) => RESTDataSource<Ops, Routes, Decoded>;
+	Decoded extends boolean = true,
+> = new (
+	options: Omit<RESTDataSourceOptions<Ops>, 'operations'>,
+) => RESTDataSource<Ops, RoutesOf<Ops>, Decoded>;
+
+export const RESTDataSource = DataSource as unknown as {
+	new <
+		Ops extends OperationsShape<Ops>,
+		Routes = RoutesOf<Ops>,
+		Decoded extends boolean = true,
+	>(
+		options: RESTDataSourceOptions<Ops> & Decoding<Decoded>,
+	): RESTDataSource<Ops, Routes, Decoded>;
+	/**
+	 * A datasource class bound to `operations`, whose types it takes from the
+	 * generated table: `class Bookmarks extends RESTDataSource.for(operations)`.
+	 * `{ decode: false }` returns the replies as JSON carries them.
+	 */
+	for<Ops extends OperationsShape<Ops>>(
+		operations: OperationTable<Ops>,
+		options: { readonly decode: false },
+	): BoundDataSource<Ops, false>;
+	for<Ops extends OperationsShape<Ops>>(
+		operations: OperationTable<Ops>,
+		options?: { readonly decode?: true },
+	): BoundDataSource<Ops, true>;
+};
 
 /** A reply's body: JSON when it parses, its text otherwise, nothing when it cannot be read. */
 async function bodyOf(response: Response): Promise<unknown> {

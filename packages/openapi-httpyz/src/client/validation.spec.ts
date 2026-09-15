@@ -71,8 +71,14 @@ const answering = (body: unknown) =>
 
 describe('validate', () => {
 	it('refuses a request the server refuses, with its issues, and sends nothing', async () => {
-		const loose = client();
-		const checked = client({ validate: { request: true } });
+		// The server's 400 taken at its word: its body is the engine's, not the
+		// one the spec declares, which a decoding client would refuse.
+		const loose = createOpenApiClient(http, operations, {
+			validate: false,
+			decode: false,
+		}) as unknown as Api;
+		// Checked by default.
+		const checked = client();
 		/** The issues of the server's 400, declared or not. */
 		const served = async (call: Call): Promise<ValidationIssue[]> => {
 			const reply = await call(loose).catch(async (error: unknown) => {
@@ -119,11 +125,15 @@ describe('validate', () => {
 			const issues = logged.mock.calls[0]?.[1] as ValidationIssue[];
 			expect(issues.length).toBeGreaterThan(0);
 			const call = (api: Api) => api.get('/items/{id}', { param: { id: 1 } });
-			// Unchecked, the reply is taken at its word.
-			expect((await call(client())).data as unknown).toEqual(BAD_ITEM);
-			const error = await call(client({ validate: true })).catch(
-				(caught: unknown) => caught,
-			);
+			// Unchecked and undecoded, the reply is taken at its word.
+			const unchecked = createOpenApiClient(http, operations, {
+				validate: false,
+				decode: false,
+			});
+			const taken = await unchecked.get('/items/{id}', { param: { id: 1 } });
+			expect(taken.data as unknown).toEqual(BAD_ITEM);
+			// Checked by default.
+			const error = await call(client()).catch((caught: unknown) => caught);
 			expect(error).toBeInstanceOf(ValidationError);
 			expect((error as ValidationError).failure).toEqual({
 				kind: 'response',
@@ -159,10 +169,12 @@ describe('validate', () => {
 });
 
 describe('decode', () => {
-	it('keeps a checked reply as it came, and decodes it with decode', async () => {
-		const wire = createOpenApiClient<DOps, DRoutes>(answering(ITEM), dated, {
-			validate: true,
-		});
+	it('decodes a reply by default, and keeps it as it came with decode: false', async () => {
+		const wire = createOpenApiClient<DOps, DRoutes, false>(
+			answering(ITEM),
+			dated,
+			{ validate: true, decode: false },
+		);
 		const kept = unwrap(
 			await wire.get('/items/{id}', { param: { id: 1 } }),
 			200,
@@ -170,11 +182,7 @@ describe('decode', () => {
 		const text: string | undefined = kept.createdAt;
 		expect(text).toBe(ITEM.createdAt);
 
-		const decoding = createOpenApiClient<DOps, DRoutes, true>(
-			answering(ITEM),
-			dated,
-			{ decode: true },
-		);
+		const decoding = createOpenApiClient(answering(ITEM), dated);
 		const decoded = unwrap(
 			await decoding.get('/items/{id}', { param: { id: 1 } }),
 			200,
@@ -183,17 +191,18 @@ describe('decode', () => {
 		expect(date).toEqual(new Date(ITEM.createdAt));
 	});
 
-	it('types the replies as decoded only for a client that decodes', () => {
+	it('types the replies as decoded unless the client says decode: false', () => {
 		const http = answering(ITEM);
 		const decoding = (api: OpenApiClient<DOps, DRoutes, true>) => api;
-		// `decode: true` is what types the replies as decoded, inferred or given.
-		decoding(createOpenApiClient(http, dated, { decode: true }));
-		decoding(createOpenApiClient<DOps, DRoutes>(http, dated, { decode: true }));
-		// @ts-expect-error a client that does not decode is not typed as one
+		// Decoding is the default, inferred or given.
 		decoding(createOpenApiClient(http, dated));
-		// @ts-expect-error a client typed as decoding must decode
-		createOpenApiClient<DOps, DRoutes, true>(http, dated, {});
+		decoding(createOpenApiClient(http, dated, { decode: true }));
+		decoding(createOpenApiClient<DOps, DRoutes>(http, dated));
+		// @ts-expect-error a client that does not decode is not typed as one
+		decoding(createOpenApiClient(http, dated, { decode: false }));
+		// @ts-expect-error a client typed as not decoding must say decode: false
+		createOpenApiClient<DOps, DRoutes, false>(http, dated, {});
 		// @ts-expect-error nor may it leave its options out
-		createOpenApiClient<DOps, DRoutes, true>(http, dated);
+		createOpenApiClient<DOps, DRoutes, false>(http, dated);
 	});
 });

@@ -101,10 +101,10 @@ async function agreement(
 	const imports = [
 		"import type { z } from 'zod';",
 		...(parameters.length > 0
-			? ["import type * as O from './operations.js';"]
+			? ["import type * as O from './operations';"]
 			: []),
-		"import type * as T from './types.js';",
-		"import type * as Z from './zod.js';",
+		"import type * as T from './types';",
+		"import type * as Z from './zod';",
 	];
 	const checks = [...schemas, ...parameters];
 	// Nothing to agree on: no import left unused under the strict typecheck.

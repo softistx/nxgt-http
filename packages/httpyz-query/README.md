@@ -55,7 +55,7 @@ fails with the client's `ReplyStatusError` on any other:
 ```ts
 import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
-import { queries } from './queries.js';
+import { queries } from './queries';
 
 const Employee = z.object({ id: z.int(), name: z.string() });
 const Problem = z.object({ title: z.string() });
@@ -156,7 +156,7 @@ an optional peer. It takes the bound client, and reads the spec from the
 
 ```ts
 import { createOpenApiQueries } from '@nxgt/httpyz-query/openapi';
-import { api } from './api.js'; // createOpenApiClient(http, operations)
+import { api } from './api'; // createOpenApiClient(http, operations)
 
 export const queries = createOpenApiQueries(api);
 

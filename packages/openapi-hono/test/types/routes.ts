@@ -85,6 +85,35 @@ export function examples(): void {
 		c.json({ ...c.req.valid('json'), id: '1', createdAt: 1 }, 201),
 	);
 
+	// A handler's c.env is the app's, through createRoutes and createApi.
+	const bound = new Hono<{ Bindings: { db: string } }>();
+	createRoutes(bound).get('/employees/{id}', (c) => {
+		c.env.db satisfies string;
+		// @ts-expect-error the app binds no cache
+		c.env.cache;
+		return c.json(ada, 200);
+	});
+	createApi()
+		.routes(bound, { tag: 'employees' })
+		.operation('getEmployee', auth, (c) => {
+			c.env.db satisfies string;
+			return c.json(ada, 200);
+		});
+	createRoutes(bound)
+		.with({ validateResponses: true })
+		.get('/employees/{id}', (c) => {
+			// @ts-expect-error db is a string
+			c.env.db satisfies number;
+			return c.json(ada, 200);
+		});
+	createRoutes(bound, { prefix: '/employees' }).get(
+		'/employees',
+		auth,
+		auth,
+		routes.validate,
+		(c) => c.json([{ ...ada, name: c.env.db }], 200),
+	);
+
 	// A hook answers, throws, or returns nothing for the default answer.
 	createRoutes(app, {
 		onValidationError: (failure, c) => c.json(failure, 422),

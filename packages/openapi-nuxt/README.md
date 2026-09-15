@@ -106,6 +106,12 @@ server's files, and importable from `@nxgt/openapi-nuxt/hono` elsewhere:
 const app = createHonoApp();
 app.get('/whoami', (c) => c.json({ user: c.env.event.context.user ?? null }));
 
+// The spec's routes on it type it too.
+createRoutes(app).get('/employees/{id}', async (c) => {
+	const user = c.env.event.context.user;
+	return c.json(await employees.find(c.req.valid('param').id, user), 200);
+});
+
 // With variables of your own, and Hono's options:
 const typed = createHonoApp<{ Variables: { user: User } }>({ strict: false });
 ```
@@ -343,9 +349,6 @@ Nuxt's compiler appended. Throws with neither, or without a handler.
   them into the app.
 - **`useApi()` has no types before `nuxi prepare`.** They come from the
   files the module writes into `.nuxt/`.
-- **Inside `createRoutes`' handlers, `c.env` is not typed.** The routes of
-  `@nxgt/openapi-hono` do not carry the app's `Env` yet. `c.env.event`
-  works there all the same; a plain Hono route, `app.get(…)`, has it typed.
 - **Return a reply, or plain data, from `useApiData`'s handler.** Anything
   else the SSR payload cannot serialize, a `Response` or a class of your
   own, fails the render.

@@ -39,7 +39,7 @@ Then bind them:
 ```ts
 import { createHttpClient } from '@nxgt/httpyz';
 import { createOpenApiClient } from '@nxgt/openapi-httpyz';
-import { operations } from './generated/openapi/operations.js';
+import { operations } from './generated/openapi/operations';
 
 const http = createHttpClient({
 	baseUrl: 'https://api.example.com',

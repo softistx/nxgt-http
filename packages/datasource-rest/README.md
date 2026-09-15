@@ -28,7 +28,7 @@ request:
 
 ```ts
 import { RESTDataSource } from '@nxgt/datasource-rest';
-import { operations } from './generated/bookmarks/operations.js';
+import { operations } from './generated/bookmarks/operations';
 
 export class Bookmarks extends RESTDataSource.for(operations) {
 	bookmark(id: string) {

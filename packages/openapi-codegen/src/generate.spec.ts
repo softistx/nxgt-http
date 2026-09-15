@@ -206,7 +206,7 @@ describe('generate', () => {
 		expect(types).toContain(
 			'export type Status = (typeof Status)[keyof typeof Status] | null;',
 		);
-		expect(zod).toContain("import { Status } from './types.js';");
+		expect(zod).toContain("import { Status } from './types';");
 		expect(zod).toContain('export const zStatus = z.enum(Status).nullable();');
 		const union = await generateFiles({ ...options, enums: 'union' }, { fs });
 		expect(union.files[0]?.content).not.toContain('export const Status');

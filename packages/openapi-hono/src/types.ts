@@ -5,6 +5,7 @@
  */
 import type {
 	Context,
+	Env,
 	Hono,
 	MiddlewareHandler,
 	Next,
@@ -95,11 +96,16 @@ export interface DeclaredJson<R> {
 /**
  * The handler of operation `Id`: `c.req.valid()` holds its validated
  * parameters and body, and it returns one of the replies the spec declares.
+ * `c.env` is the app's: `E`, from the `Hono<E>` the routes are registered on.
  */
-export type RouteHandler<S extends ApiSpec, Id extends string> = (
+export type RouteHandler<
+	S extends ApiSpec,
+	Id extends string,
+	E extends Env = any,
+> = (
 	c: DeclaredJson<Reply<S, Id>> &
 		Context<
-			any,
+			E,
 			(Entry<S, Id> & { honoPath: string })['honoPath'],
 			{ out: Entry<S, Id> & {} }
 		>,
@@ -107,9 +113,9 @@ export type RouteHandler<S extends ApiSpec, Id extends string> = (
 ) => Reply<S, Id> | Promise<Reply<S, Id>>;
 
 /** Middlewares, then the handler. */
-export type Chain<S extends ApiSpec, Id extends string> = [
+export type Chain<S extends ApiSpec, Id extends string, E extends Env = any> = [
 	...MiddlewareHandler[],
-	RouteHandler<S, Id>,
+	RouteHandler<S, Id, E>,
 ];
 
 export interface ApiOptions {
@@ -158,37 +164,38 @@ export interface Register<
 	Sc extends Scope,
 	Prefix extends string,
 	M extends Method,
+	E extends Env = any,
 > {
 	<P extends Sc['paths'][M] & `${Prefix}${string}`>(
 		path: P,
-		handler: RouteHandler<S, RouteId<S, M, P>>,
-	): Routes<S, Sc, Prefix>;
+		handler: RouteHandler<S, RouteId<S, M, P>, E>,
+	): Routes<S, Sc, Prefix, E>;
 	<P extends Sc['paths'][M] & `${Prefix}${string}`>(
 		path: P,
 		m1: Mw,
-		handler: RouteHandler<S, RouteId<S, M, P>>,
-	): Routes<S, Sc, Prefix>;
+		handler: RouteHandler<S, RouteId<S, M, P>, E>,
+	): Routes<S, Sc, Prefix, E>;
 	<P extends Sc['paths'][M] & `${Prefix}${string}`>(
 		path: P,
 		m1: Mw,
 		m2: Mw,
-		handler: RouteHandler<S, RouteId<S, M, P>>,
-	): Routes<S, Sc, Prefix>;
+		handler: RouteHandler<S, RouteId<S, M, P>, E>,
+	): Routes<S, Sc, Prefix, E>;
 	<P extends Sc['paths'][M] & `${Prefix}${string}`>(
 		path: P,
 		m1: Mw,
 		m2: Mw,
 		m3: Mw,
-		handler: RouteHandler<S, RouteId<S, M, P>>,
-	): Routes<S, Sc, Prefix>;
+		handler: RouteHandler<S, RouteId<S, M, P>, E>,
+	): Routes<S, Sc, Prefix, E>;
 	<P extends Sc['paths'][M] & `${Prefix}${string}`>(
 		path: P,
 		m1: Mw,
 		m2: Mw,
 		m3: Mw,
 		m4: Mw,
-		handler: RouteHandler<S, RouteId<S, M, P>>,
-	): Routes<S, Sc, Prefix>;
+		handler: RouteHandler<S, RouteId<S, M, P>, E>,
+	): Routes<S, Sc, Prefix, E>;
 	<P extends Sc['paths'][M] & `${Prefix}${string}`>(
 		path: P,
 		m1: Mw,
@@ -196,12 +203,12 @@ export interface Register<
 		m3: Mw,
 		m4: Mw,
 		m5: Mw,
-		handler: RouteHandler<S, RouteId<S, M, P>>,
-	): Routes<S, Sc, Prefix>;
+		handler: RouteHandler<S, RouteId<S, M, P>, E>,
+	): Routes<S, Sc, Prefix, E>;
 	<P extends Sc['paths'][M] & `${Prefix}${string}`>(
 		path: P,
-		...chain: Chain<S, RouteId<S, M, P>>
-	): Routes<S, Sc, Prefix>;
+		...chain: Chain<S, RouteId<S, M, P>, E>
+	): Routes<S, Sc, Prefix, E>;
 }
 
 /** `routes.operation()`, with the same overloads as a method's. */
@@ -209,37 +216,38 @@ export interface RegisterOperation<
 	S extends ApiSpec,
 	Sc extends Scope,
 	Prefix extends string,
+	E extends Env = any,
 > {
 	<Id extends Sc['ids']>(
 		id: Id,
-		handler: RouteHandler<S, Id>,
-	): Routes<S, Sc, Prefix>;
+		handler: RouteHandler<S, Id, E>,
+	): Routes<S, Sc, Prefix, E>;
 	<Id extends Sc['ids']>(
 		id: Id,
 		m1: Mw,
-		handler: RouteHandler<S, Id>,
-	): Routes<S, Sc, Prefix>;
+		handler: RouteHandler<S, Id, E>,
+	): Routes<S, Sc, Prefix, E>;
 	<Id extends Sc['ids']>(
 		id: Id,
 		m1: Mw,
 		m2: Mw,
-		handler: RouteHandler<S, Id>,
-	): Routes<S, Sc, Prefix>;
+		handler: RouteHandler<S, Id, E>,
+	): Routes<S, Sc, Prefix, E>;
 	<Id extends Sc['ids']>(
 		id: Id,
 		m1: Mw,
 		m2: Mw,
 		m3: Mw,
-		handler: RouteHandler<S, Id>,
-	): Routes<S, Sc, Prefix>;
+		handler: RouteHandler<S, Id, E>,
+	): Routes<S, Sc, Prefix, E>;
 	<Id extends Sc['ids']>(
 		id: Id,
 		m1: Mw,
 		m2: Mw,
 		m3: Mw,
 		m4: Mw,
-		handler: RouteHandler<S, Id>,
-	): Routes<S, Sc, Prefix>;
+		handler: RouteHandler<S, Id, E>,
+	): Routes<S, Sc, Prefix, E>;
 	<Id extends Sc['ids']>(
 		id: Id,
 		m1: Mw,
@@ -247,20 +255,24 @@ export interface RegisterOperation<
 		m3: Mw,
 		m4: Mw,
 		m5: Mw,
-		handler: RouteHandler<S, Id>,
-	): Routes<S, Sc, Prefix>;
-	<Id extends Sc['ids']>(id: Id, ...chain: Chain<S, Id>): Routes<S, Sc, Prefix>;
+		handler: RouteHandler<S, Id, E>,
+	): Routes<S, Sc, Prefix, E>;
+	<Id extends Sc['ids']>(
+		id: Id,
+		...chain: Chain<S, Id, E>
+	): Routes<S, Sc, Prefix, E>;
 }
 
 export type Routes<
 	S extends ApiSpec,
 	Sc extends Scope = Whole<S>,
 	Prefix extends string = '',
+	E extends Env = any,
 > = {
-	readonly [M in Method]: Register<S, Sc, Prefix, M>;
+	readonly [M in Method]: Register<S, Sc, Prefix, M, E>;
 } & {
 	/** Registers an operation by its `operationId`. */
-	readonly operation: RegisterOperation<S, Sc, Prefix>;
+	readonly operation: RegisterOperation<S, Sc, Prefix, E>;
 	/**
 	 * Marks where in a chain the request is validated, when a middleware
 	 * needs validated input: `routes.put(path, auth, routes.validate, check, handler)`.
@@ -268,18 +280,22 @@ export type Routes<
 	 */
 	readonly validate: MiddlewareHandler;
 	/** The same routes, with other options for the routes registered through it. */
-	with(options: ApiOptions): Routes<S, Sc, Prefix>;
+	with(options: ApiOptions): Routes<S, Sc, Prefix, E>;
 };
 
 export interface Api<S extends ApiSpec> {
-	/** Registers routes on `app`, which may be a module's sub-app. */
+	/**
+	 * Registers routes on `app`, which may be a module's sub-app. Their
+	 * handlers' `c.env` is typed by the app's `Env`.
+	 */
 	routes<
 		Prefix extends string = '',
 		Tag extends keyof S['tags'] & string = never,
+		E extends Env = any,
 	>(
-		app: Hono<any, any, any>,
+		app: Hono<E, any, any>,
 		options?: RoutesOptions<Prefix, Tag>,
-	): Routes<S, ScopeOf<S, Tag>, Prefix>;
+	): Routes<S, ScopeOf<S, Tag>, Prefix, E>;
 	/** The `operationId`s no route was registered for, of one tag or of all. */
 	missing(tag?: keyof S['tags'] & string): string[];
 	/** Throws, listing them, when an operation of the tag, or of the spec, has no route. */

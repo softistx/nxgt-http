@@ -7,7 +7,7 @@ await generate({
 	input: 'openapi/openapi.yaml',
 	output: 'src/generated',
 	unknownKeys: 'strip',
-	importExtension: '.js',
+	importExtension: '',
 	enums: 'object',
 	hono: false,
 	dates: 'string',
@@ -23,7 +23,7 @@ await generate({
 | `input` | required | the root document of the spec |
 | `output` | `'generated/openapi'` | the directory the files are written to |
 | [`unknownKeys`](#unknownkeys) | `'strip'` | what an object does with keys it does not declare |
-| [`importExtension`](#importextension) | `'.js'` | how generated files import each other |
+| [`importExtension`](#importextension) | `''` | how generated files import each other |
 | [`enums`](#enums) | `'object'` | a named enum as an `as const` object, or a plain union |
 | [`hono`](#hono) | `false` | also write `hono.ts`: typed routes for a Hono app |
 | [`dates`](#dates) | `'string'` | a `date-time` as its string, or decoded to a `Date` |
@@ -68,9 +68,13 @@ How the generated files import each other (`types`, `zod`,
 
 | Value | Import | Works with |
 | --- | --- | --- |
-| `'.js'` | `'./types.js'` | every `moduleResolution`, Node's included |
-| `''` | `'./types'` | bundlers only |
+| `''` | `'./types'` | a bundler, Bun, `moduleResolution: bundler` |
+| `'.js'` | `'./types.js'` | every `moduleResolution`, `nodenext` included |
 | `'.ts'` | `'./types.ts'` | `allowImportingTsExtensions` |
+
+An app whose `tsconfig` resolves with `node16` or `nodenext`, or that runs
+the files with Node without a bundler, sets `'.js'`: Node's resolution
+requires the extension.
 
 ## `enums`
 

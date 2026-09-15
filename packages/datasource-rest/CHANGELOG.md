@@ -1,5 +1,27 @@
 # @nxgt/datasource-rest
 
+## 2.0.0
+
+### Major Changes
+
+- [#20](https://github.com/softistx/nxgt-http/pull/20) [`400055f`](https://github.com/softistx/nxgt-http/commit/400055f150f842606aa4c3cb6be88c70b2b08e4a) Thanks [@SteveGT96](https://github.com/SteveGT96)! - `RESTDataSource` is now built over `@nxgt/openapi-httpyz`, not openapi-fetch, and depends on no exception package.
+  
+  - **The client.** It takes `{ baseUrl, operations }`, the table `@nxgt/openapi-codegen` generates, and is typed by `ClientOperations`: `class Bookmarks extends RESTDataSource<ClientOperations>`. Calls go through the shorthands of the bound client, `this.get('/bookmarks/{id}', { param: { id } })`, `this.post`, `this.query`…, one for each method the spec has an operation for; `this.api` is the client itself, for `op()`, `stream()` and `group()`. `this.data(call)` returns a 2xx reply's data and throws for any other.
+  - **The token.** `token` replaces `authOptions`, and a function is now awaited before each request; before, a promise was sent as the header. `shouldUseToken` is gone.
+  - **The cache.** `cache` replaces `cacheOptions`. By default it is `defaultCache`, shared by every datasource as before, and it keeps the reads, `GET`, `HEAD` and `QUERY`. It is now keyed by the token and by a `QUERY`'s body, so no caller gets another's reply and two searches are no longer one. It no longer keeps any `POST`, `PUT`, `PATCH` or `DELETE` reply: a search is a `QUERY`, and the `POST` whose path holds `/search` is no longer cached. It is bounded, `defaultCache.clear()` empties it, and `cache: false` turns it off.
+  - **Errors.** A failed call throws a `DataSourceError`, the package's own, with a `code` (`UNAUTHENTICATED`, `FORBIDDEN`, `NOT_FOUND`, `BAD_REQUEST`, `INTERNAL_SERVER_ERROR`, `SERVICE_UNAVAILABLE`), the reply's `status` and `data`, and `extensions`, which a GraphQL server reports. `toDataSourceError` replaces `errorToException`, and `@nxgt/shared-exceptions` is no longer a dependency.
+  - **Peers.** `@nxgt/httpyz` and `@nxgt/openapi-httpyz` are now peers; `openapi-fetch` is gone.
+  - **Unchanged.** `relayPaginate` and the `Paginated`, `Connection`, `Edge` and `PageInfo` types stay as they were. The old `MediaType`, `HttpMethod`, `UpperHttpMethod` and `ErrorResponse` types are gone.
+
+### Patch Changes
+
+- [#17](https://github.com/softistx/nxgt-http/pull/17) [`f91e556`](https://github.com/softistx/nxgt-http/commit/f91e55613dea8f40e8ce3dcd7dab3255559442aa) Thanks [@SteveGT96](https://github.com/SteveGT96)! - `@nxgt/datasource-rest` is now developed and published from `softistx/nxgt-http`, with its history. It no longer depends on `@nxgt/shared` or `lodash`, which it never imported.
+
+- [#24](https://github.com/softistx/nxgt-http/pull/24) [`7f8bef2`](https://github.com/softistx/nxgt-http/commit/7f8bef228fa4ce8803b750f6ddf6de0e3b5dbf99) Thanks [@SteveGT96](https://github.com/SteveGT96)! - Each README now has an **API** section, after the usage sections, that documents every export: each function and method with its signature, options, return value and errors, each class with its members, and each type.
+- Updated dependencies [[`7f8bef2`](https://github.com/softistx/nxgt-http/commit/7f8bef228fa4ce8803b750f6ddf6de0e3b5dbf99), [`db77777`](https://github.com/softistx/nxgt-http/commit/db77777bca24768bbcfae9b1821d842d0350104f), [`a0a4992`](https://github.com/softistx/nxgt-http/commit/a0a4992ce185dfbc870dac22386687476d9adb2a), [`8ac32ac`](https://github.com/softistx/nxgt-http/commit/8ac32ac6981583ed56734ce69b88fde803b14205), [`71ced62`](https://github.com/softistx/nxgt-http/commit/71ced62c2bef0d75ca11e08b2fcde50355574526), [`eba5ec8`](https://github.com/softistx/nxgt-http/commit/eba5ec8b79a352d13731a33d5f11f4b005c66260), [`0340149`](https://github.com/softistx/nxgt-http/commit/0340149dbb3980e656730c611059245071994fee), [`810a97d`](https://github.com/softistx/nxgt-http/commit/810a97dda83a9618ebd317e09874ffd51121e4c4), [`0759ad4`](https://github.com/softistx/nxgt-http/commit/0759ad44fa8f44c9545c91c4516240dac18c92f1), [`752b3f7`](https://github.com/softistx/nxgt-http/commit/752b3f77bf9f4b2abb086c679864fdd5180ec9d3), [`be69f9c`](https://github.com/softistx/nxgt-http/commit/be69f9cb09b092bf7a506649f18701adf4b0d251), [`eba5ec8`](https://github.com/softistx/nxgt-http/commit/eba5ec8b79a352d13731a33d5f11f4b005c66260)]:
+  - @nxgt/httpyz@0.1.0
+  - @nxgt/openapi-httpyz@0.1.0
+
 ## 1.0.3
 
 ### Patch Changes

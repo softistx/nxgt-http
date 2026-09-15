@@ -1,0 +1,60 @@
+openapi: 3.1.0
+info:
+  title: openapi-nuxt fixture
+  version: 1.0.0
+paths:
+  /items:
+    post:
+      operationId: createItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewItem'
+      responses:
+        '201':
+          description: The item created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+  /items/{id}:
+    get:
+      operationId: getItem
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: The item
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+components:
+  schemas:
+    NewItem:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+    Item:
+      type: object
+      required: [id, name, cookie, path]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        cookie:
+          description: The cookie the server received, to show SSR forwards it.
+          type: [string, 'null']
+        path:
+          description: The path the app answered, to show the prefix is taken off.
+          type: string

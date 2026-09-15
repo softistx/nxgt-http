@@ -15,6 +15,7 @@ The `@nxgt/*` packages for HTTP APIs, published to the public npm registry:
 | `@nxgt/httpyz-query` | TanStack Query options for the calls of an `@nxgt/httpyz` client |
 | `@nxgt/datasource-rest` | a REST service called from a GraphQL resolver through the bound client: token forwarding, a shared cache, its own `DataSourceError` |
 | `@nxgt/openapi-msw` | MSW handlers for the generated operations: the request read and refused as the server does, replies typed and checked against the spec |
+| `@nxgt/openapi-nuxt` | a Nuxt module: the Hono app served by Nitro under a prefix, and `useApi()`, the bound client, which calls it in process during SSR |
 
 They were extracted from `softistx/nxgt-core` on 2026-09-13 with their
 history (`git filter-repo`). Before that, the client was `@nxgt/openapi-client`
@@ -36,7 +37,8 @@ httpyz            openapi-codegen
   │                 └─ openapi-hono          (dev: generates its fixtures)
   ├─ openapi-httpyz ◄── openapi-codegen, openapi-hono   (dev: its fixtures)
   │    ├─ datasource-rest ◄── openapi-codegen (dev: its fixtures)
-  │    └─ openapi-msw     ◄── openapi-codegen (dev: its fixtures)
+  │    ├─ openapi-msw     ◄── openapi-codegen (dev: its fixtures)
+  │    └─ openapi-nuxt    ◄── openapi-codegen, openapi-hono (dev: its fixture app)
   └─ httpyz-query   ◄── openapi-httpyz (optional peer), openapi-codegen (dev: its fixtures)
 ```
 
@@ -63,6 +65,14 @@ no relative import into one.
   `operations` table through openapi-httpyz's types and checks with httpyz's
   `check`; it does not depend on `@nxgt/openapi-hono`, which would pull in
   Hono. The generator is a devDependency, for its fixtures.
+- `@nxgt/openapi-nuxt` has `@nxgt/httpyz`, `@nxgt/openapi-httpyz` and `nuxt`
+  as peers: the client it writes into the app imports them. `@nuxt/kit` and
+  `@nuxt/schema` are its only dependencies. It does not depend on
+  `@nxgt/openapi-hono`: it serves any app with a `fetch(request)`. The
+  generator, openapi-hono and Nuxt are devDependencies, for `test/app`, a
+  Nuxt app its specs build with `nuxi` under Node, serve and call over HTTP.
+  That is why CI sets up Node 22 beside Bun. Its `typecheck` runs
+  `nuxi prepare`, then checks the app's `.ts` with the app's own tsconfig.
 - `@nxgt/openapi-hono` has the generator as a devDependency, for its
   fixtures. The one `paths` entry left is its own name, so that the
   generated `hono.ts` in its fixtures runs the engine the specs import from
@@ -167,8 +177,8 @@ publishes to npm.
 
 ## Known state
 
-`bun run test` is **362 pass, 0 fail**: datasource-rest 26, httpyz 90, httpyz-query 14,
-openapi-codegen 160, openapi-hono 28, openapi-httpyz 28, openapi-msw 16. It runs one process per package, and each
+`bun run test` is **376 pass, 0 fail**: datasource-rest 26, httpyz 90, httpyz-query 14,
+openapi-codegen 160, openapi-hono 28, openapi-httpyz 28, openapi-msw 16, openapi-nuxt 14. It runs one process per package, and each
 package's `test` script writes the generated fixtures its specs import first.
 Treat any failure as yours.
 

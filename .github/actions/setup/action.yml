@@ -10,6 +10,12 @@ runs:
       uses: oven-sh/setup-bun@v2
       with:
         bun-version: 1.4.2
+    # `@nxgt/openapi-nuxt`'s specs build their fixture app with Nuxt, under
+    # Node as an app is built, and Nuxt 4 wants a newer Node than the runner's.
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
     - name: Install dependencies
       # No token: @nxgt/* are public on npmjs, and installing them needs no
       # authentication. Only the release job authenticates, through bunfig.toml

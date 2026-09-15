@@ -1,0 +1,5 @@
+node_modules
+dist
+test/generated
+test/app/.nuxt
+test/app/.output

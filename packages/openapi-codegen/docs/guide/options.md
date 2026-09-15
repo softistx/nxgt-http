@@ -30,6 +30,7 @@ await generate({
 | [`lint`](#lint) | `false` | lint the spec with Redocly before generating |
 | [`names`](#names) | `{}` | renames schemas |
 | [`legacyNullable`](#legacynullable) | `'warn'` | tolerate or refuse 3.0's `nullable: true` |
+| [`validationErrors`](#validationerrors) | `true` | declare the 400 `@nxgt/openapi-hono` answers a refused request with |
 | `check` | `false` | write nothing, report in `drifted` what would change, a file no longer generated included |
 
 A [config file](cli.md#config-file) takes the same options, `check` aside,
@@ -179,6 +180,33 @@ follow from it.
 OpenAPI 3.0's `nullable: true` is read as `type: [T, 'null']`, with one
 warning per file that uses it. Fragment libraries written for 3.0 are full
 of it. Set `'error'` to refuse it instead, once a spec has been converted.
+
+## `validationErrors`
+
+`@nxgt/openapi-hono` answers a request its validators refuse with a 400 of
+its own, `{ status: 400, message, timestamp, issues }`, which a spec rarely
+declares. A client that decodes its replies, as `@nxgt/openapi-httpyz` does
+by default, would refuse that reply as one the spec does not describe. So
+the generator declares it, as `ValidationErrorBody` and
+`zValidationErrorBody`, on each operation that takes a parameter or a body,
+the only ones the engine checks:
+
+| The spec's 400 | What is generated |
+| --- | --- |
+| none | a 400 with `application/json: ValidationErrorBody` |
+| with a JSON media type and schema `S` | that media type's schema becomes `S \| ValidationErrorBody` |
+| with a JSON media type and no schema | nothing: any JSON is already declared |
+| with no JSON media type | `application/json: ValidationErrorBody` added to it |
+
+The JSON media type is the one a client reads the engine's
+`application/json` reply as: `application/json` itself, then
+`application/*`, then `*/*`, then the first JSON one, such as
+`application/problem+json`, which a handler's `c.json()` stands for too.
+
+Set `false` when the app answers with a body of its own through
+`onValidationError`, and declare that body in the spec instead. A schema of
+the spec already named `ValidationErrorBody` is a `name_collision`: rename it
+with [`names`](#names).
 
 ## In memory: `generateFiles`
 

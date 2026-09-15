@@ -56,6 +56,10 @@ export {
 	type StringNode,
 	type UnionNode,
 } from './ir/types';
+export {
+	VALIDATION_ERROR_BODY,
+	withValidationErrors,
+} from './ir/validation-errors';
 export type { Lint } from './lint';
 export {
 	type LoadedDocument,

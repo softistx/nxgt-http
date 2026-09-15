@@ -83,7 +83,10 @@ routes.operation('deleteEmployee', auth, async (c) => {
 
 By default, a request the spec refuses gets a 400 response. Its body is
 `{ status, message: 'errors.validation-failed', timestamp, issues }`, and
-each issue is `{ target, path, code, message }`. To answer differently:
+each issue is `{ target, path, code, message }`. `@nxgt/openapi-codegen`
+declares it, as `ValidationErrorBody`, on every operation that takes an
+input, so a client that checks its replies reads it. To answer differently,
+generate with `validationErrors: false` and declare your own body:
 
 ```ts
 const routes = createRoutes(app, {

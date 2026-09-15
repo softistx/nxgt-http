@@ -23,7 +23,9 @@ export type Checks = [
 	Assert<
 		Equal<Operations['listEmployees']['query']['page'], number | undefined>
 	>,
-	Assert<Equal<keyof Operations['deleteEmployee']['responses'], 204 | 404>>,
+	Assert<
+		Equal<keyof Operations['deleteEmployee']['responses'], 204 | 400 | 404>
+	>,
 	Assert<
 		Equal<
 			OperationsByTag['employees'],

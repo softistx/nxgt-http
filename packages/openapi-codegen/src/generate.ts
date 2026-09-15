@@ -3,6 +3,7 @@ import { emitFiles, FILE_NAMES, type GeneratedFile } from './emit';
 import type { Dates, Enums, UnknownKeys } from './emit/context';
 import { CodegenError, type Diagnostic } from './errors';
 import { buildIR, type IROptions } from './ir';
+import { withValidationErrors } from './ir/validation-errors';
 import { type Lint, lintSpec } from './lint';
 import { loadDocument } from './loader/document';
 import type { FileSystem } from './loader/fs';
@@ -47,6 +48,14 @@ export interface GenerateOptions extends IROptions {
 	 * error stops the run; a lint warning comes back with the others.
 	 */
 	lint?: Lint;
+	/**
+	 * Declare, on each operation that takes a parameter or a body, the 400
+	 * `@nxgt/openapi-hono` answers a request its validators refuse with, as
+	 * `ValidationErrorBody`: a client that checks its replies then reads it
+	 * rather than refusing it. Default `true`; `false` for an app that answers
+	 * with a body of its own through `onValidationError`.
+	 */
+	validationErrors?: boolean;
 }
 
 export interface GenerateContext {
@@ -110,6 +119,12 @@ export async function generateFiles(
 			`lint must be true, false or a Redocly config file, not ${String(lint)}`,
 		);
 	}
+	const validationErrors = options.validationErrors ?? true;
+	if (typeof validationErrors !== 'boolean') {
+		throw invalid(
+			`validationErrors must be true or false, not ${String(validationErrors)}`,
+		);
+	}
 	if (lint !== false && fs !== undefined) {
 		throw invalid('lint reads the spec from disk: it cannot be used with fs');
 	}
@@ -120,7 +135,8 @@ export async function generateFiles(
 	if (linted.some((d) => d.severity === 'error')) {
 		throw new CodegenError(linted, dirname(input));
 	}
-	const ir = buildIR(doc, options);
+	const built = buildIR(doc, options);
+	const ir = validationErrors ? withValidationErrors(built, doc.entry) : built;
 	const { files, warnings } = emitFiles(ir, {
 		unknownKeys,
 		enums,

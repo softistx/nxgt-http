@@ -142,7 +142,7 @@ export interface HttpQueries {
 export interface QueriesOptions {
 	/**
 	 * Put first in every key, to keep two clients' queries apart when their
-	 * paths are the same: `'storex'`.
+	 * paths are the same: `'catalog'`.
 	 */
 	readonly scope?: string;
 }

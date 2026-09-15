@@ -12,6 +12,9 @@ generator whose output serves a spec with Hono and calls it with that client.
 | [`@nxgt/httpyz-query`](packages/httpyz-query) | TanStack Query options for an `@nxgt/httpyz` client's calls, which a cancelled query aborts | [npm](https://www.npmjs.com/package/@nxgt/httpyz-query) |
 | [`@nxgt/datasource-rest`](packages/datasource-rest) | a REST service called from a GraphQL resolver through the bound client: the caller's token forwarded, reads cached, one error with a code | [npm](https://www.npmjs.com/package/@nxgt/datasource-rest) |
 
+Each package's README, its npm page, shows how to use it, then documents
+every function, method, class and type it exports in its **API** section.
+
 ## How they fit
 
 ```

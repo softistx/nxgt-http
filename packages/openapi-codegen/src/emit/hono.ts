@@ -1,8 +1,8 @@
 /**
  * `hono.ts`, with the `hono` option: every operation's replies as Hono
  * types them, and `createApi` / `createRoutes` bound to the spec. The one
- * generated file that imports more than `zod`: `hono`, and this package's
- * `/hono` runtime.
+ * generated file that imports more than `zod`: the `@nxgt/openapi-hono`
+ * runtime, and `hono`'s types.
  */
 
 import type { MediaIR, OperationIR, ResponseIR } from '../ir/types';

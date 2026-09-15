@@ -16,13 +16,15 @@ Typed Hono routes for an OpenAPI spec. This is the runtime that the
 
 ```sh
 bun add @nxgt/openapi-hono hono zod
-bun add -d @nxgt/openapi-codegen
+bun add -d @nxgt/openapi-codegen typescript
 ```
 
-- `hono` is a peer. The runtime imports it for types only.
-- The app also needs `zod`, because the generated `operations.ts` imports it.
+- `hono` is a required peer. This package imports it for types only; your
+  app imports it to build the app.
+- `typescript` 6 is a required peer, as for every `@nxgt` package.
+- `zod` is not a peer, but the app needs it: the generated `operations.ts`
+  imports it.
 - The generator is only a dev dependency.
-- `typescript` 6 is a peer, as for every `@nxgt` package.
 
 ## Setup
 
@@ -45,7 +47,7 @@ from this package: there they are bound to your spec.
 
 ## Usage
 
-### Routes
+### Registering routes
 
 ```ts
 import { Hono } from 'hono';
@@ -69,6 +71,9 @@ routes.operation('deleteEmployee', auth, async (c) => {
 
 - **Paths are written as the spec writes them:** `{id}`, not `:id`. Each
   method offers only the paths that have an operation for it.
+- **`c.req.valid()`** holds `param`, `query`, `header`, and `json` or `form`
+  for a body, already validated. A text body is validated too; read it with
+  `c.req.text()`.
 - **A route runs as `[...middlewares, validator, handler]`**, so a 401 from
   `auth` comes before a 400.
 - **`routes.validate`** marks where validation runs, for a middleware that
@@ -108,8 +113,9 @@ const routes = createRoutes(app, {
 
 Every reply is checked against the spec: its status, its `Content-Type`,
 and, for JSON and text, its body. A reply that fails goes through
-`onValidationError`, as a 500 by default. The check reads every reply body
-twice, so keep it for development and tests.
+`onValidationError`, as a 500 by default, its issues logged with
+`console.error` rather than sent. The check reads every reply body twice,
+so keep it for development and tests.
 
 ### Streams
 
@@ -171,24 +177,497 @@ api.assertComplete(); // throws, listing every operation without a route
 a registry for that one app.
 
 Registering a route throws at startup in these cases:
+- the spec has no operation at that method and path, or no such
+  `operationId`;
 - the operation already has a route;
 - an earlier route would always answer first;
 - the operation is outside the `prefix` or the `tag`;
-- Hono cannot route it.
+- the last argument is not the handler, or `routes.validate` appears twice;
+- Hono cannot route it: a `HEAD` operation (Hono answers it with the `GET`
+  route), or a path parameter that does not fill its segment
+  (`/files/{name}.json`). Generating warns about both, and `missing()`
+  leaves them out.
 
-## Exports
+## API
 
-The generated `hono.ts` uses these. An app rarely imports them directly.
+The app imports from its generated `hono.ts`, which binds this package to
+the spec. The package's own exports are what `hono.ts` is built from, and
+the types of a failure for your own `onValidationError`.
 
-| Export | For |
-| --- | --- |
-| `createApi` | the engine that `hono.ts` binds to its spec |
-| `streamEvents`, `streamLines`, `EventWriter`, `LineWriter` | the streams that `hono.ts` binds to its spec |
-| `validationErrorHandler` | the default hook: 400 for a request, 500 for a reply |
-| `ValidationFailure`, `ValidationIssue`, `ValidationTarget`, `ValidationErrorHook`, `SchemaIssue` | the types of a failure, for your own `onValidationError` |
-| `Api`, `ApiOptions`, `RoutesOptions`, `Routes`, `RouteHandler`, `Chain` | the types of what `createApi` and `routes` return and take |
-| `ApiSpec`, `Scope`, `ScopeOf`, `Tagged`, `Whole`, `Method` | the spec and scope types that `routes` is typed with |
-| `OperationTable`, `RuntimeOperation`, `RuntimeMedia`, `Validator` | the shape of the generated `operations.ts` table |
+### Generated `hono.ts`
+
+Generated with `hono: true`. `S` below is its `HonoSpec`.
+
+#### `createApi()`
+
+```ts
+const createApi: (options?: ApiOptions) => Api<HonoSpec>;
+```
+
+One registry for the whole spec: `api.routes(app)` in each module, then
+`api.assertComplete()`. `options` are the defaults of every `routes()` it
+makes ([`ApiOptions`](#apioptions)). See [Modules](#modules).
+
+#### `createRoutes()`
+
+```ts
+const createRoutes: <Prefix extends string = '', Tag extends keyof OperationsByTag & string = never>(
+	app: Hono<any, any, any>,
+	options?: RoutesOptions<Prefix, Tag>,
+) => Routes<HonoSpec, ScopeOf<HonoSpec, Tag>, Prefix>;
+```
+
+Routes on one app, with a registry of their own: `createApi(options).routes(app, options)`.
+Takes [`RoutesOptions`](#routesoptions) and returns [`Routes`](#routes).
+See [Registering routes](#registering-routes).
+
+#### `streamEvents()`
+
+```ts
+const streamEvents: <Id extends /* each operation that replies with server-sent events */>(
+	c: Context<any, any, any>,
+	id: Id,
+	write: (stream: EventWriter<Operations[Id]['stream']['item']>) => Promise<void>,
+) => Replies[Id];
+```
+
+Replies with the operation's server-sent events, each typed by the spec.
+Generated only when the spec has such an operation. Behaves as the
+package's [`streamEvents()`](#streamevents-1). See [Streams](#streams).
+
+#### `streamLines()`
+
+```ts
+const streamLines: <Id extends /* each operation that replies with JSON Lines */>(
+	c: Context<any, any, any>,
+	id: Id,
+	write: (stream: LineWriter<Operations[Id]['stream']['item']>) => Promise<void>,
+) => Replies[Id];
+```
+
+Replies with the operation's JSON lines, each typed by the spec. Generated
+only when the spec has such an operation. Behaves as the package's
+[`streamLines()`](#streamlines-1).
+
+#### `Replies`
+
+```ts
+interface Replies {
+	updateEmployee:
+		| TypedResponse<Employee, 200, 'json'>
+		| TypedResponse<Problem, 404, 'json'>;
+	deleteEmployee: TypedResponse<null, 204, 'body'>;
+}
+```
+
+What each operation may reply, keyed by `operationId`: a handler returning
+anything else does not compile. A JSON body is typed as JSON carries it, a
+reply without content as `c.body(null, status)` (and `c.redirect()` for a
+3xx other than 304), a binary or streamed body as `unknown`. A status Hono
+has no type for is typed `any`, and an operation that declares only
+`default` or ranges replies `Response`.
+
+#### `HonoSpec`
+
+```ts
+interface HonoSpec {
+	operations: Operations;
+	replies: Replies;
+	routes: OperationsByRoute;
+	paths: PathsByMethod;
+	tags: OperationsByTag;
+	tagPaths: PathsByTag;
+}
+```
+
+The spec, as this package reads it: the [`ApiSpec`](#apispec) that every
+generic below is given. The indexes come from the generated `types.ts`.
+
+### Functions
+
+#### `createApi()`
+
+```ts
+function createApi<S extends ApiSpec>(
+	operations: OperationTable,
+	defaults?: ApiOptions,
+): Api<S>;
+```
+
+The engine: one registry over the `operations` table of `operations.ts`.
+`defaults` apply to every `routes()` it makes, under the options given
+there. Returns an [`Api`](#api-1). `hono.ts` calls it; an app calls the
+generated `createApi()` instead.
+
+#### `validationErrorHandler()`
+
+```ts
+const validationErrorHandler: (failure: ValidationFailure, c: Context) => Response;
+```
+
+The default answer to a failure. For a `request`, a 400:
+`{ status: 400, message: 'errors.validation-failed', timestamp, issues }`.
+For a `response`, a 500 without the issues, which would show what the reply
+held: `{ status: 500, message: 'errors.response-validation-failed', timestamp }`,
+the issues going to `console.error`. Call it from your own hook to fall back
+to it.
+
+#### `streamEvents()`
+
+```ts
+function streamEvents<Event>(
+	c: Context,
+	id: string,
+	write: (stream: EventWriter<Event>) => Promise<void>,
+): Response;
+```
+
+Replies with server-sent events from the handler of operation `id`, as
+`text/event-stream` with `cache-control: no-cache`, under the operation's
+first 2xx status that declares them. The reply ends when `write` returns;
+a throw inside it ends it too and goes to `console.error`. Throws when `id`
+is not the route running `c`, or when the operation does not reply with
+server-sent events. See [Streams](#streams).
+
+#### `streamLines()`
+
+```ts
+function streamLines<Item>(
+	c: Context,
+	id: string,
+	write: (stream: LineWriter<Item>) => Promise<void>,
+): Response;
+```
+
+Replies with JSON lines from the handler of operation `id`: one JSON text a
+line, as the media type the spec declares (`application/jsonl`,
+`application/x-ndjson`, or `application/json-seq`, which puts a record
+separator before each). Ends and throws as [`streamEvents()`](#streamevents-1).
+
+### Objects
+
+#### `Api`
+
+```ts
+interface Api<S extends ApiSpec> {
+	routes(app, options?): Routes;
+	missing(tag?): string[];
+	assertComplete(tag?): void;
+}
+```
+
+What `createApi()` returns: one registry, shared by every `routes()` it
+makes. See [Modules](#modules).
+
+##### `api.routes()`
+
+```ts
+routes<Prefix extends string = '', Tag extends keyof S['tags'] & string = never>(
+	app: Hono<any, any, any>,
+	options?: RoutesOptions<Prefix, Tag>,
+): Routes<S, ScopeOf<S, Tag>, Prefix>;
+```
+
+Registers routes on `app`, which may be a module's sub-app. The options
+override the defaults given to `createApi()`.
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `prefix` | `string` | none | Where `app` is mounted, as the spec writes it: `/employees`. Routes are registered relative to it, and only paths under it are offered. |
+| `tag` | a tag of the spec | none | Offers only the operations with this tag. |
+| `onValidationError` | [`ValidationErrorHook`](#validationerrorhook) | `validationErrorHandler` | Answers a failure. |
+| `validateResponses` | `boolean` | `false` | Checks every reply against the spec. |
+
+##### `api.missing()`
+
+```ts
+missing(tag?: keyof S['tags'] & string): string[];
+```
+
+The `operationId`s with no route yet, of one tag or of the whole spec. An
+operation Hono cannot route is never missing.
+
+##### `api.assertComplete()`
+
+```ts
+assertComplete(tag?: keyof S['tags'] & string): void;
+```
+
+Throws an `Error` listing every operation of `missing(tag)`, as
+`operationId (METHOD /path)`; returns when there is none. Call it once every
+module is registered.
+
+#### `Routes`
+
+```ts
+type Routes<S extends ApiSpec, Sc extends Scope = Whole<S>, Prefix extends string = ''>;
+```
+
+What `createRoutes()` and `api.routes()` return: a method per HTTP method,
+`operation`, `validate` and `with`. Every registration returns the same
+`Routes`, so calls chain. See [Registering routes](#registering-routes).
+
+##### `routes.get()`, `routes.put()`, `routes.post()`, `routes.delete()`, `routes.options()`, `routes.head()`, `routes.patch()`, `routes.trace()`, `routes.query()`
+
+```ts
+get<P extends /* a GET path of the scope, starting with the prefix */>(
+	path: P,
+	...chain: [...MiddlewareHandler[], RouteHandler<S, /* the operationId of GET P */>]
+): Routes<S, Sc, Prefix>;
+```
+
+Registers the operation at `path`, written as the spec writes it
+(`/employees/{id}`), with middlewares then its handler. The handler's
+`c.req.valid()` and replies are those of the operation. Throws at
+registration in the cases listed under [Modules](#modules); `head()` always
+throws, since Hono answers `HEAD` with the `GET` route.
+
+##### `routes.operation()`
+
+```ts
+operation<Id extends Sc['ids']>(id: Id, ...chain: Chain<S, Id>): Routes<S, Sc, Prefix>;
+```
+
+Registers an operation by its `operationId` instead of its path. Throws as
+the methods above.
+
+##### `routes.validate`
+
+```ts
+readonly validate: MiddlewareHandler;
+```
+
+A marker for where the request is validated in a chain, when a middleware
+needs validated input: `routes.put(path, auth, routes.validate, owns, handler)`.
+Without it, validation runs after every middleware. It throws if it is ever
+run outside a `routes` chain.
+
+##### `routes.with()`
+
+```ts
+with(options: ApiOptions): Routes<S, Sc, Prefix>;
+```
+
+The same routes, on the same app and registry, with `onValidationError` or
+`validateResponses` changed for the routes registered through it only.
+
+### Types
+
+#### `ApiOptions`
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `onValidationError?` | [`ValidationErrorHook`](#validationerrorhook) | Answers a request the spec refuses, or a reply it does not declare. Default `validationErrorHandler`. |
+| `validateResponses?` | `boolean` | Checks every reply: its status, its content type and, for JSON and text, its body. For development and tests. |
+
+Taken by `createApi()` and `routes.with()`. See
+[Validation errors](#validation-errors) and [Checking replies](#checking-replies).
+
+#### `RoutesOptions`
+
+```ts
+interface RoutesOptions<Prefix extends string = '', Tag extends string = never> extends ApiOptions {
+	prefix?: Prefix;
+	tag?: Tag;
+}
+```
+
+Taken by `createRoutes()` and `api.routes()`; see the table under
+[`api.routes()`](#apiroutes).
+
+#### `ValidationFailure`
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `kind` | `'request' \| 'response'` | A request the spec refuses, or, with `validateResponses`, a reply it does not declare. |
+| `operationId` | `string` | The operation. |
+| `method` | `string` | Its method, lowercase. |
+| `path` | `string` | As the spec writes it: `/employees/{id}`. |
+| `status?` | `number` | The reply's status, for a `response` failure. |
+| `issues` | [`ValidationIssue[]`](#validationissue) | Every issue, from every target at once. |
+
+What `onValidationError` receives.
+
+#### `ValidationIssue`
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `target` | [`ValidationTarget`](#validationtarget) `\| 'response'` | Where the value was read. |
+| `path` | `(string \| number)[]` | Inside the target: `['items', 0, 'name']`, or `[]` for the whole of it. |
+| `code` | `string` | Zod's issue code, or one of `invalid_json`, `invalid_form`, `invalid_content_type`, `missing_body`, `repeated_parameter`, `undeclared_status`. |
+| `message` | `string` | What is wrong. |
+
+One entry of `ValidationFailure.issues`, and of the default 400's `issues`.
+
+#### `ValidationTarget`
+
+```ts
+type ValidationTarget = 'param' | 'query' | 'header' | 'json' | 'form' | 'body';
+```
+
+Where a request value was read: a target of `c.req.valid()`, or `body` for
+a text body, which a handler reads with `c.req.text()`.
+
+#### `ValidationErrorHook`
+
+```ts
+type ValidationErrorHook = (
+	failure: ValidationFailure,
+	c: Context,
+) => Response | undefined | Promise<Response | undefined>;
+```
+
+The type of `onValidationError`: return a `Response` to send it, throw to
+hand the failure to `app.onError`, or return nothing for the default.
+
+#### `SchemaIssue`
+
+```ts
+interface SchemaIssue {
+	readonly path: readonly PropertyKey[];
+	readonly code: string;
+	readonly message: string;
+}
+```
+
+What the engine reads of a Zod issue, in a [`Validator`](#validator)'s
+failed result.
+
+#### `EventWriter`
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `write(event)` | `(event: Event) => Promise<void>` | Sends an event, `{ event?, data, id?, retry? }` in `hono.ts`. Throws for an event name the spec does not declare, or an `event` or `id` holding a line break. |
+| `sleep(ms)` | `(ms: number) => Promise<void>` | Resolves after `ms` milliseconds: a pause between two items. |
+| `aborted` | `boolean` | Whether the client went away: stop writing then. |
+| `onAbort(listener)` | `(listener: () => void \| Promise<void>) => void` | Runs `listener` when the client goes away. |
+
+The `stream` that `streamEvents()` hands to `write`.
+
+#### `LineWriter`
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `write(item)` | `(item: Item) => Promise<void>` | Sends an item, as a line of JSON. |
+| `sleep(ms)`, `aborted`, `onAbort(listener)` | | As on [`EventWriter`](#eventwriter). |
+
+The `stream` that `streamLines()` hands to `write`.
+
+#### `RouteHandler`
+
+```ts
+type RouteHandler<S extends ApiSpec, Id extends string> = (
+	c: Context</* … */>, // c.req.valid() holds the operation's validated input
+	next: Next,
+) => Reply | Promise<Reply>; // S['replies'][Id]
+```
+
+The handler of operation `Id`: the last argument of a registration.
+
+#### `Chain`
+
+```ts
+type Chain<S extends ApiSpec, Id extends string> = [...MiddlewareHandler[], RouteHandler<S, Id>];
+```
+
+Middlewares, then the handler: the arguments after the path or the
+`operationId`.
+
+#### `Method`
+
+```ts
+type Method = 'get' | 'put' | 'post' | 'delete' | 'options' | 'head' | 'patch' | 'trace' | 'query';
+```
+
+The HTTP methods of an operation, and the registration methods of
+[`Routes`](#routes).
+
+#### `ApiSpec`
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `operations` | `object` | `Operations`, from `types.ts`, keyed by `operationId`. |
+| `replies` | `object` | `Replies`, from `hono.ts`, keyed by `operationId`. |
+| `routes` | `object` | `OperationsByRoute`: `'put /employees/{id}'` to its `operationId`. |
+| `paths` | `{ [M in Method]: string }` | `PathsByMethod`. |
+| `tags` | `object` | `OperationsByTag`. |
+| `tagPaths` | `object` | `PathsByTag`. |
+
+What a spec must provide to type `routes`; the generated
+[`HonoSpec`](#honospec) is one.
+
+#### `Scope`
+
+```ts
+interface Scope {
+	ids: string;
+	paths: { [M in Method]: string };
+}
+```
+
+The operations a `Routes` offers: their `operationId`s, and their paths by
+method.
+
+#### `Whole`
+
+The scope of every operation of a spec: `Whole<HonoSpec>`, the default of
+`Routes`.
+
+#### `Tagged`
+
+The scope of the operations of one tag: `Tagged<HonoSpec, 'employees'>`.
+
+#### `ScopeOf`
+
+`Whole<S>` when no tag is given, else `Tagged<S, Tag>`; evaluated once per
+`routes()`: `ScopeOf<HonoSpec, 'employees'>`.
+
+#### `OperationTable`
+
+```ts
+type OperationTable = { readonly [operationId: string]: RuntimeOperation };
+```
+
+The `operations` table that `operations.ts` exports, and `createApi()` takes.
+
+#### `RuntimeOperation`
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `method` | [`Method`](#method) | The operation's method. |
+| `path` | `string` | As the spec writes it: `/employees/{id}`. |
+| `honoPath` | `string` | As Hono routes it: `/employees/:id`. |
+| `tags` | `readonly string[]` | Its tags. |
+| `parameters` | `readonly { name; in: 'path' \| 'query' \| 'header'; list: boolean; explode: boolean }[]` | How each parameter is read. |
+| `param`, `query`, `header` | [`Validator`](#validator) | The validator of each target. |
+| `body?` | `{ required: boolean; content: { [mediaType]: RuntimeMedia } }` | Its request body, by media type. |
+| `responses` | `{ [status]: { [mediaType]: RuntimeMedia } }` | Its replies, by status, then media type. |
+
+One entry of the [`OperationTable`](#operationtable).
+
+#### `RuntimeMedia`
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `kind` | `'json' \| 'form' \| 'text' \| 'binary' \| 'sse' \| 'jsonl'` | How the content is read or written. |
+| `schema?` | [`Validator`](#validator) | Validates the whole content. |
+| `events?` | `{ [event]: Validator \| null }` | `sse`: each event's data, by name: a validator for JSON, `null` for text. |
+| `item?` | [`Validator`](#validator) | `jsonl`: each item. |
+
+One media type of a body or a reply in a [`RuntimeOperation`](#runtimeoperation).
+
+#### `Validator`
+
+```ts
+interface Validator {
+	safeParse(value: unknown):
+		| { success: true; data: unknown }
+		| { success: false; error: { issues: readonly SchemaIssue[] } };
+}
+```
+
+What the engine asks of a validator: Zod's `safeParse`. Every validator of
+the table is one.
 
 ## Traps
 
@@ -198,6 +677,8 @@ The generated `hono.ts` uses these. An app rarely imports them directly.
   schema; return `.lean()` results.
 - **Read the body through `c.req`, never `c.req.raw`.** A middleware that
   drains `c.req.raw` leaves the validator nothing to read.
+- **Register the static path first.** `/users/{id}` registered before
+  `/users/me` would answer for it, so the second registration throws.
 - **`security` is not enforced.** Register your own auth middlewares.
 - **Limit the body size yourself.** Put Hono's `bodyLimit` first.
 

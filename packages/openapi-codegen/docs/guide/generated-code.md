@@ -146,7 +146,7 @@ export interface Operations {
 | `responses` | status code → media type → body; `{}` for a response with no content |
 | `stream` | only on an operation that replies with a [stream](#streams): its `kind`, and the `item` a handler writes |
 
-What a caller sends, before defaults, is in [`paths.ts`](#pathsgents).
+What a caller sends, before defaults, is in [`paths.ts`](#pathsts).
 
 Four indexes come with it:
 

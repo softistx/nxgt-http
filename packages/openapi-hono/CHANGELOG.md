@@ -1,5 +1,11 @@
 # @nxgt/openapi-hono
 
+## 0.3.0
+
+### Minor Changes
+
+- [#43](https://github.com/softistx/nxgt-http/pull/43) [`ded70d8`](https://github.com/softistx/nxgt-http/commit/ded70d8b161744a74400d0839280d6abe78728bf) Thanks [@SteveGT96](https://github.com/SteveGT96)! - `c.env` is typed in the handlers of `routes`: `createRoutes(app)` and `createApi().routes(app)` take the app's `Env` from its `Hono<E>`, so a handler reads `c.env.db` as the app declares it. Regenerate `hono.ts` to get it. `Routes`, `RouteHandler`, `Register` and `RegisterOperation` take the `Env` as a last type parameter, `any` by default.
+
 ## 0.2.0
 
 ### Minor Changes

@@ -12,6 +12,7 @@ generator whose output serves a spec with Hono and calls it with that client.
 | [`@nxgt/httpyz-query`](packages/httpyz-query) | TanStack Query options for an `@nxgt/httpyz` client's calls, which a cancelled query aborts | [npm](https://www.npmjs.com/package/@nxgt/httpyz-query) |
 | [`@nxgt/datasource-rest`](packages/datasource-rest) | a REST service called from a GraphQL resolver through the bound client: the caller's token forwarded, reads cached, one error with a code | [npm](https://www.npmjs.com/package/@nxgt/datasource-rest) |
 | [`@nxgt/openapi-msw`](packages/openapi-msw) | MSW handlers for the generated operations: typed replies, the server's 400, and mocks that fail when they drift from the spec | [npm](https://www.npmjs.com/package/@nxgt/openapi-msw) |
+| [`@nxgt/openapi-nuxt`](packages/openapi-nuxt) | a Nuxt module: the Hono app served by Nitro, and a typed `useApi()` that calls it in process during SSR | [npm](https://www.npmjs.com/package/@nxgt/openapi-nuxt) |
 
 Each package's README, its npm page, shows how to use it, then documents
 every function, method, class and type it exports in its **API** section.
@@ -31,6 +32,9 @@ every function, method, class and type it exports in its **API** section.
           ┌───────────────────┴───────────────────┐
  @nxgt/datasource-rest                    @nxgt/openapi-msw
       (GraphQL)                             (mocks)
+
+ @nxgt/openapi-nuxt: a Hono app of openapi-hono served by Nitro,
+                     and the openapi-httpyz client as useApi()
 ```
 
 The server and the client read the same generated schemas, so a request the

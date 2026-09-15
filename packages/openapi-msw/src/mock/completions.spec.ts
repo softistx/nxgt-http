@@ -14,7 +14,7 @@ const ROOT = resolve(import.meta.dir, '../..');
 const FILE = resolve(ROOT, 'test/types/completions.virtual.ts');
 const SOURCE = `
 import { createOpenApiMsw } from '../../src/index';
-import { operations } from '../generated/operations.js';
+import { operations } from '../generated/operations';
 
 const mock = createOpenApiMsw(operations);
 mock.get('/items/{id}', ({ response }) => response.ok({ /*ok*/ }));

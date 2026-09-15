@@ -13,8 +13,8 @@ const ROOT = resolve(import.meta.dir, '..');
 const FILE = resolve(ROOT, 'test/types/completions.virtual.ts');
 const SOURCE = `
 import { Hono } from 'hono';
-import { createRoutes as dateRoutes } from '../generated/dates/hono.js';
-import { createRoutes } from '../generated/split/hono.js';
+import { createRoutes as dateRoutes } from '../generated/dates/hono';
+import { createRoutes } from '../generated/split/hono';
 
 const routes = createRoutes(new Hono());
 routes.get('/employees/{id}', (c) => c.json({ /*ok*/ }, 200));

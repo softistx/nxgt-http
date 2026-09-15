@@ -6,11 +6,11 @@
 import type { HttpMethod } from '@nxgt/openapi-codegen';
 import { type Context, Hono, type MiddlewareHandler } from 'hono';
 import type { Method } from '../../src/types';
-import { createRoutes as dateRoutes } from '../generated/dates/hono.js';
-import { createRoutes as kitchenRoutes } from '../generated/kitchen-sink/hono.js';
-import { createRoutes as searchRoutes } from '../generated/query/hono.js';
-import { createApi, createRoutes } from '../generated/split/hono.js';
-import type { Employee } from '../generated/split/types.js';
+import { createRoutes as dateRoutes } from '../generated/dates/hono';
+import { createRoutes as kitchenRoutes } from '../generated/kitchen-sink/hono';
+import { createRoutes as searchRoutes } from '../generated/query/hono';
+import { createApi, createRoutes } from '../generated/split/hono';
+import type { Employee } from '../generated/split/types';
 
 type Same<X, Y> = [X] extends [Y] ? ([Y] extends [X] ? true : false) : false;
 /** The runtime routes every method the IR reads: none is left unrouted. */

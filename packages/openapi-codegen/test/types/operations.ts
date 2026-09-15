@@ -10,7 +10,7 @@ import type {
 	PathsByMethod,
 	PathsByTag,
 	UpdateEmployeeParam,
-} from '../generated/split/types.js';
+} from '../generated/split/types';
 
 type Equal<X, Y> = [X] extends [Y] ? ([Y] extends [X] ? true : false) : false;
 type Assert<T extends true> = T;

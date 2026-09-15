@@ -1,7 +1,7 @@
 {
 	"name": "@nxgt/openapi-codegen",
 	"version": "0.2.0",
-	"license": "UNLICENSED",
+	"license": "MIT",
 	"type": "module",
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
@@ -12,7 +12,8 @@
 		"dist",
 		"docs",
 		"README.md",
-		"package.json"
+		"package.json",
+		"LICENSE"
 	],
 	"exports": {
 		".": {

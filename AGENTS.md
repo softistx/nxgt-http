@@ -95,8 +95,8 @@ Rules carried over from nxgt-core, each learned from a shipped defect:
   consumer does, imports every subpath in `exports`, runs every bin with
   `--help`, and rejects a manifest that would break an install. That means a
   `link:` or `file:` in a field a consumer resolves, a **required** peer on no
-  registry, or an exact pin on a sibling. `changeset:publish` runs it, so a
-  release cannot skip it.
+  registry, an exact pin on a sibling, or a package that is not MIT or ships
+  no `LICENSE`. `changeset:publish` runs it, so a release cannot skip it.
 - **Build before typecheck and tests.** `exports` points at `dist/`, so on a
   clean checkout `@nxgt/httpyz` resolves to nothing for the binding. CI builds
   first.
@@ -131,12 +131,15 @@ publishes to npm.
 - **Every package is public**, like the repository. Never `private: true`,
   not even for a package that is not ready: `changeset:status` and
   `verify:artifacts` already keep a half-finished package from shipping.
+- **Every package is MIT**, `"license": "MIT"`, with `LICENSE` in its `files`
+  and a copy of the root `LICENSE` in its directory. A new package copies it.
 
 ## Deliberate duplication: do not "clean this up"
 
 | Kept twice | Why |
 | --- | --- |
 | `unroutable`, in `openapi-hono/src/routable.ts` and `openapi-codegen/src/emit/routable.ts` | the runtime refuses the route and the generator warns. Importing one from the other would make the runtime a dependency of the generator. Change both together |
+| `LICENSE`, at the root and in each `packages/*/` | npm ships only the `LICENSE` in the package's own directory. `verify:artifacts` fails a tarball without one. Change them all together |
 | `openapi-codegen/test/fixtures/shared-components/` | a copy of the `openapi/components/` that nxgt-core's `@nxgt/shared-openapi` publishes: real split fragments for the loader and the `split` fixture. It is a fixture, not a dependency |
 
 ## Conventions

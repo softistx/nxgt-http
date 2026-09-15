@@ -1,14 +1,15 @@
 {
 	"name": "@nxgt/datasource-rest",
 	"version": "2.0.0",
-	"license": "UNLICENSED",
+	"license": "MIT",
 	"type": "module",
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"files": [
 		"dist",
 		"README.md",
-		"package.json"
+		"package.json",
+		"LICENSE"
 	],
 	"exports": {
 		".": {

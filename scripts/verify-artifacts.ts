@@ -71,6 +71,8 @@ async function readPackages(): Promise<Pkg[]> {
  *     resolved to a newer one: two copies in one tree, and two
  *     `ValidationError` classes. `workspace:^` publishes
  *     as a caret range, which dedupes.
+ *   - a **license other than MIT, or no `LICENSE` in the tarball**. npm only
+ *     ships the `LICENSE` in the package's own directory, never the root's.
  */
 async function manifestProblems(tarballs: string[]): Promise<string[]> {
 	const problems: string[] = [];
@@ -82,6 +84,15 @@ async function manifestProblems(tarballs: string[]): Promise<string[]> {
 		const manifest = JSON.parse(raw);
 		manifests.push(manifest);
 		own.add(manifest.name);
+		if (manifest.license !== 'MIT') {
+			problems.push(
+				`${manifest.name}: license is ${manifest.license}, not MIT`,
+			);
+		}
+		const entries = (await $`tar -tzf ${tgz}`.quiet().text()).split('\n');
+		if (!entries.includes('package/LICENSE')) {
+			problems.push(`${manifest.name}: the tarball has no LICENSE`);
+		}
 	}
 
 	for (const manifest of manifests) {
@@ -154,7 +165,8 @@ try {
 		for (const problem of problems) console.error(`  ${problem}`);
 		console.error(
 			'\nA `link:` or `file:` no consumer can resolve, a required peer that is\n' +
-				'on no registry, or an exact pin on a sibling. See AGENTS.md.',
+				'on no registry, an exact pin on a sibling, or a license other than\n' +
+				'MIT or no LICENSE shipped. See AGENTS.md.',
 		);
 		process.exit(1);
 	}

@@ -12,7 +12,7 @@ import type {
 } from '@nxgt/openapi-httpyz';
 import { joined, keyOf, paged } from '../key/key';
 import type { KeyInput, Paging, QueriesOptions } from '../queries/types';
-import type { OpenApiQueries } from './types';
+import type { MutationInit, OpenApiQueries } from './types';
 
 type Call = (
 	path: string,
@@ -96,31 +96,45 @@ export function createOpenApiQueries<
 			input: object | undefined,
 			{ pageParamName, ...paging }: Paging<unknown, unknown>,
 			init?: OperationInit,
-		) => ({
-			...paging,
-			// Apart from the query of the same call, whose data is one page, not all of them.
-			queryKey: [...queryKey(method, path, input), 'infinite'],
-			queryFn: ({
-				signal,
-				pageParam,
-			}: {
-				signal: AbortSignal;
-				pageParam: unknown;
-			}) =>
-				call(
-					method,
-					path,
-					paged(input, pageParamName, pageParam),
-					init,
+		) => {
+			takesInput(method, path);
+			return {
+				...paging,
+				// Apart from the query of the same call, whose data is one page, not all of them.
+				queryKey: [...queryKey(method, path, input), 'infinite'],
+				queryFn: ({
 					signal,
-				),
-		}),
-		mutationOptions: (method: Method, path: string, init?: OperationInit) => {
+					pageParam,
+				}: {
+					signal: AbortSignal;
+					pageParam: unknown;
+				}) =>
+					call(
+						method,
+						path,
+						paged(input, pageParamName, pageParam),
+						init,
+						signal,
+					),
+			};
+		},
+		mutationOptions: (
+			method: Method,
+			path: string,
+			init?: MutationInit<object | undefined>,
+		) => {
 			takesInput(method, path);
 			return {
 				mutationKey: queryKey(method, path),
-				mutationFn: (input: object | undefined) =>
-					call(method, path, input || undefined, init),
+				mutationFn: (variables: object | undefined) => {
+					const input = variables || undefined;
+					return call(
+						method,
+						path,
+						input,
+						typeof init === 'function' ? init(input) : init,
+					);
+				},
 			};
 		},
 	} as unknown as OpenApiQueries<Ops, Routes, Decoded>;

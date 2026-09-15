@@ -41,7 +41,7 @@ export const http = createHttpClient({
 | Option | Default | |
 | --- | --- | --- |
 | `baseUrl` | none: relative URLs, which only a browser resolves | may carry a path prefix: `https://example.com/api` |
-| `fetch` | `globalThis.fetch`, looked up at each call | anything that takes a `Request` and resolves to a `Response`: `async (request) => app.fetch(request)` for a Hono app, in tests |
+| `fetch` | `globalThis.fetch`, looked up at each call | anything that takes a `Request` and returns a `Response`, or a promise of one: a Hono app's `app.fetch`, in tests |
 | `headers` | none | sent with every request: an object, or a function run before each one |
 | `init` | none | fetch options for every request: `credentials`, `mode`, `cache`… |
 | `timeout` | none | milliseconds before a call fails with `TimeoutError` |
@@ -504,7 +504,7 @@ come from its calls. See [Setup](#setup).
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `baseUrl` | `string \| URL` | none | where the API is served; a trailing `/` is dropped |
-| `fetch` | `(request: Request) => Promise<Response>` | `globalThis.fetch`, looked up at each call | sends each request |
+| `fetch` | `(request: Request) => Response \| Promise<Response>` | `globalThis.fetch`, looked up at each call | sends each request; it may answer at once, as `app.fetch` of Hono does |
 | `headers` | `HeadersInit \| (() => HeadersInit \| Promise<HeadersInit>)` | none | sent with every request; a function runs before each one |
 | `init` | `Omit<RequestInit, 'method' \| 'body' \| 'headers' \| 'signal'>` | none | fetch options for every request |
 | `timeout` | `number` | none | milliseconds before a call fails with a `TimeoutError` |
@@ -523,7 +523,9 @@ function isAbortError(error: unknown): boolean;
 Whether `error` ended a call because it was aborted rather than failed: a
 `DOMException` named `AbortError` or `TimeoutError`, or any `Error` named
 `AbortError`. It is false for the client's own `TimeoutError`, and is a
-plain `boolean`, not a type guard. See [Cancelling](#cancelling).
+plain `boolean`, not a type guard: as `error is Error`, the branch where it
+is false would drop `Error` from the error's type, though a failure is an
+`Error` too. See [Cancelling](#cancelling).
 
 ##### `unwrap`
 
@@ -908,7 +910,8 @@ type R = ReplyOf<{ 200: typeof Employee; 204: null }>;
 
 With a media type map, `type` is that media type, and an unchecked `data` is
 `string` for `text/*`, `FormData` for a form, `unknown` for JSON and `Blob`
-for the rest.
+for the rest. An empty map, `{}`, reads as `null` does: a reply without a
+body.
 
 ##### `AnyReply`
 

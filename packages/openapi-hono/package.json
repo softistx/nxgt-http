@@ -35,6 +35,7 @@
 		"typecheck": "bun run fixtures && tsc --noEmit"
 	},
 	"devDependencies": {
+		"@nxgt/httpyz": "workspace:^",
 		"@nxgt/openapi-codegen": "workspace:^",
 		"@types/bun": "^1.4.0",
 		"hono": "^4.13.4",

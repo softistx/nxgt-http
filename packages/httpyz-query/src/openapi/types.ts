@@ -42,6 +42,14 @@ export type QueryNames<Input> = Input extends { readonly query?: infer Query }
 	? keyof NonNullable<Query> & string
 	: never;
 
+/**
+ * What every call of a mutation is sent with, or a function of `mutate()`'s
+ * input that returns each call's: its own `signal`, `latest` or headers.
+ */
+export type MutationInit<Variables> =
+	| OperationInit
+	| ((variables: Variables) => OperationInit | undefined);
+
 export interface OpenApiMutationOptions<Variables, Data> {
 	readonly mutationKey: readonly unknown[];
 	readonly mutationFn: (variables: Variables) => Promise<Data>;
@@ -86,12 +94,15 @@ export type OpenApiQueries<
 	>;
 	/**
 	 * A mutation of the operation at a path, whose `mutate()` takes its input.
-	 * `init` holds what every call shares.
+	 * `init` holds what every call shares, or is a function of the input that
+	 * returns each call's own.
 	 */
 	mutationOptions<M extends MethodsOf<Routes>, P extends PathsOf<Routes, M>>(
 		method: M,
 		path: P,
-		init?: OperationInit,
+		init?: MutationInit<
+			OperationVariables<Ops[IdOf<Ops, Routes, M, P>]['args']>
+		>,
 	): OpenApiMutationOptions<
 		OperationVariables<Ops[IdOf<Ops, Routes, M, P>]['args']>,
 		OperationData<Ops, IdOf<Ops, Routes, M, P>, Decoded>

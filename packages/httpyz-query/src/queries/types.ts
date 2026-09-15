@@ -84,10 +84,13 @@ export interface HttpMutationOptions<Path extends string, Data> {
 export interface KeyInput {
 	readonly param?: { readonly [name: string]: unknown };
 	readonly query?: QueryInput;
+	readonly header?: { readonly [name: string]: unknown };
 	readonly json?: unknown;
 	readonly form?: unknown;
 	readonly text?: string;
 	readonly body?: unknown;
+	/** `false` for the calls that do not decode, which their keys hold. */
+	readonly decode?: false;
 }
 
 export interface HttpQueries {

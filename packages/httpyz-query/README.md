@@ -187,7 +187,9 @@ remove.mutate({ param: { id } });
 - The key holds the input, header parameters included, and never the init.
 - `pageParamName` is one of the operation's query parameters.
 - `mutate()` takes the operation's input; `mutationOptions`' third argument
-  is the init every call shares.
+  is the init every call shares, or a function of the input that returns
+  each call's own: TanStack gives a mutation no signal, so this is where one
+  goes.
 
 Coming from `openapi-react-query`: `$api.queryOptions('get', path, { params:
 { path, query }, body })` becomes `queries.queryOptions('get', path, { param,
@@ -320,7 +322,7 @@ built as the options' keys are. It is not tagged with any data. See
 | --- | --- | --- | --- |
 | `method` | `Method` | | the method |
 | `path` | `string` | none | the path, `{name}`s unfilled |
-| `input` | [`KeyInput`](#keyinput) | none | what the calls send: `param`, `query`, a body |
+| `input` | [`KeyInput`](#keyinput) | none | what the calls send: `param`, `query`, `header`, a body; `decode: false` |
 
 #### Types
 
@@ -391,10 +393,12 @@ The fourth argument of `infiniteQueryOptions`. In `./openapi`,
 | --- | --- | --- |
 | `param` | `{ readonly [name: string]: unknown }` | the path's parameters |
 | `query` | `QueryInput` | the query: an object, or a `URLSearchParams` |
+| `header` | `{ readonly [name: string]: unknown }` | header parameters, an operation's input's |
 | `json` | `unknown` | a JSON body |
 | `form` | `unknown` | a form body |
 | `text` | `string` | a text body |
 | `body` | `unknown` | a raw body |
+| `decode` | `false` | the calls that do not decode, whose keys hold it |
 
 What `queryKey` takes as its `input`, every field optional.
 
@@ -510,7 +514,8 @@ The options of an infinite query of an operation, each page sent with its
 | `init` | `OperationInit` | none | the call options every page is sent with |
 
 Returns the fields of [`infiniteQueryOptions`](#infinitequeryoptions) above.
-A page of an operation the spec does not have rejects when it is fetched.
+`infiniteQueryOptions` throws at once for an operation the spec does not
+have.
 
 ##### `mutationOptions`
 
@@ -518,7 +523,7 @@ A page of an operation the spec does not have rejects when it is fetched.
 mutationOptions<M extends MethodsOf<Routes>, P extends PathsOf<Routes, M>>(
 	method: M,
 	path: P,
-	init?: OperationInit,
+	init?: MutationInit<OperationVariables<Ops[IdOf<Ops, Routes, M, P>]['args']>>,
 ): OpenApiMutationOptions<
 	OperationVariables<Ops[IdOf<Ops, Routes, M, P>]['args']>,
 	OperationData<Ops, IdOf<Ops, Routes, M, P>, Decoded>
@@ -531,16 +536,25 @@ The options of a mutation of an operation, whose `mutate()` takes its input.
 | --- | --- | --- | --- |
 | `method` | `MethodsOf<Routes>` | | as `queryOptions` |
 | `path` | `PathsOf<Routes, M>` | | as `queryOptions` |
-| `init` | `OperationInit` | none | the call options every call shares |
+| `init` | [`MutationInit`](#mutationinit) | none | the call options every call shares, or a function of `mutate()`'s input that returns each call's |
 
 | Field | Type | Description |
 | --- | --- | --- |
 | `mutationKey` | `readonly unknown[]` | `[scope?, method, path]` |
-| `mutationFn` | `(variables: OperationVariables<Args>) => Promise<Data>` | calls the operation with `variables` as its input, and `init` |
+| `mutationFn` | `(variables: OperationVariables<Args>) => Promise<Data>` | calls the operation with `variables` as its input, and `init`, or what `init(variables)` returns |
 
-The `mutationFn` rejects as a query does, and is sent with no signal of
-TanStack's. `mutationOptions` throws at once for an operation the spec does
-not have.
+The `mutationFn` rejects as a query does. TanStack gives a mutation no
+signal; a function `init` gives each call its own:
+
+```ts
+const save = useMutation(
+	queries.mutationOptions('put', '/employees/{id}', (input) => ({
+		latest: `save ${input.param.id}`, // a second save of the same employee aborts the first
+	})),
+);
+```
+
+`mutationOptions` throws at once for an operation the spec does not have.
 
 ##### `queryKey`
 
@@ -553,8 +567,9 @@ by the spec.
 
 #### Types
 
-`QueriesOptions`, `HttpQueryOptions`, `HttpInfiniteQueryOptions`, `Paging`
-and `KeyInput` are exported from `@nxgt/httpyz-query`.
+`QueriesOptions`, `HttpQueryKey`, `HttpQueryOptions`,
+`HttpInfiniteQueryOptions`, `Paging` and `KeyInput`, documented above, are
+exported from `@nxgt/httpyz-query/openapi` too: one import is enough.
 
 ##### `OpenApiQueries`
 
@@ -573,6 +588,17 @@ interface OpenApiMutationOptions<Variables, Data> {
 ```
 
 What `mutationOptions` of `createOpenApiQueries` returns.
+
+##### `MutationInit`
+
+```ts
+type MutationInit<Variables> =
+	| OperationInit
+	| ((variables: Variables) => OperationInit | undefined);
+```
+
+The third argument of `mutationOptions`: the init every call shares, or a
+function of `mutate()`'s input that returns each call's own.
 
 ##### `OperationData`
 

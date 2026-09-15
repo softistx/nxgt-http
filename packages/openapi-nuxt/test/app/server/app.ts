@@ -1,7 +1,7 @@
-import { Hono } from 'hono';
 import { createRoutes } from '../../generated/hono';
 
-const app = new Hono();
+// Auto-imported by the module: `c.env.event` is the h3 event.
+const app = createHonoApp();
 const routes = createRoutes(app);
 
 routes.get('/items/{id}', (c) => {
@@ -28,5 +28,8 @@ routes.post('/items', (c) =>
 		201,
 	),
 );
+
+// Outside the spec: a plain Hono route, its env typed.
+app.get('/whoami', (c) => c.json({ path: c.env.event.path }));
 
 export default app;

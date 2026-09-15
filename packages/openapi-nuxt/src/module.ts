@@ -8,6 +8,7 @@ import {
 	addImports,
 	addPluginTemplate,
 	addServerHandler,
+	addServerImports,
 	addServerTemplate,
 	addTemplate,
 	createResolver,
@@ -75,10 +76,15 @@ const openapiNuxt: NuxtModule<ModuleOptions> = defineNuxtModule<ModuleOptions>({
 	async setup(options, nuxt) {
 		const logger = useLogger('@nxgt/openapi-nuxt');
 		const prefix = normalizePrefix(options.prefix ?? '/api');
-		const runtime = await resolvePath(
-			createResolver(import.meta.url).resolve('./runtime/index'),
-		);
+		const resolver = createResolver(import.meta.url);
+		const runtime = await resolvePath(resolver.resolve('./runtime/index'));
 		const fromRoot = (file: string) => resolve(nuxt.options.rootDir, file);
+
+		// Imported only by the server's files that call it.
+		addServerImports({
+			name: 'createHonoApp',
+			from: await resolvePath(resolver.resolve('./hono/index')),
+		});
 
 		if (options.server === undefined && options.operations === undefined) {
 			logger.warn(
@@ -119,9 +125,19 @@ const openapiNuxt: NuxtModule<ModuleOptions> = defineNuxtModule<ModuleOptions>({
 			const useApi = addTemplate({
 				filename: 'nxgt-openapi/use-api.ts',
 				write: true,
-				getContents: () => useApiTemplate(client.dst),
+				getContents: () => useApiTemplate(client.dst, runtime),
 			});
-			addImports({ name: 'useApi', from: useApi.dst });
+			addImports([
+				{ name: 'useApi', from: useApi.dst },
+				{ name: 'useApiData', from: useApi.dst },
+			]);
+			// Nuxt's compiler appends a key to a call that gives none, as it
+			// does for `useAsyncData`.
+			nuxt.options.optimization.keyedComposables.push({
+				name: 'useApiData',
+				source: useApi.dst,
+				argumentLength: 3,
+			});
 		}
 	},
 });

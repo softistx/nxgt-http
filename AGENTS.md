@@ -66,8 +66,9 @@ no relative import into one.
   `check`; it does not depend on `@nxgt/openapi-hono`, which would pull in
   Hono. The generator is a devDependency, for its fixtures.
 - `@nxgt/openapi-nuxt` has `@nxgt/httpyz`, `@nxgt/openapi-httpyz` and `nuxt`
-  as peers: the client it writes into the app imports them. `@nuxt/kit` and
-  `@nuxt/schema` are its only dependencies. It does not depend on
+  as peers: the client it writes into the app imports them. `hono` is an
+  optional peer, for its `./hono` subpath. `@nuxt/kit`, `@nuxt/schema` and
+  `h3`, for the event's type, are its only dependencies. It does not depend on
   `@nxgt/openapi-hono`: it serves any app with a `fetch(request)`. The
   generator, openapi-hono and Nuxt are devDependencies, for `test/app`, a
   Nuxt app its specs build with `nuxi` under Node, serve and call over HTTP.
@@ -168,6 +169,12 @@ publishes to npm.
   `update`, `chore`, `docs` and `typo`.
 - A repository script is a TypeScript file run by Bun, with Bun Shell, not a
   `.sh`.
+- **Imports carry no extension**: `import { operations } from
+  '../generated/operations'`, not `'…/operations.js'`. Every tsconfig here
+  resolves as a bundler does, and Bun runs the specs the same way. The code
+  the generator writes is the exception: its `from './types.js'` is for the
+  apps that resolve with `nodenext`, which requires the extension, so leave
+  the emitter and its snapshots as they are.
 - **A package's `README.md` is its page on npmjs.** It is read by someone who
   has never seen this repository: organize it by section, with a copy-paste
   example each, and never name a private application.
@@ -177,8 +184,8 @@ publishes to npm.
 
 ## Known state
 
-`bun run test` is **381 pass, 0 fail**: datasource-rest 26, httpyz 90, httpyz-query 14,
-openapi-codegen 160, openapi-hono 28, openapi-httpyz 28, openapi-msw 21, openapi-nuxt 14. It runs one process per package, and each
+`bun run test` is **392 pass, 0 fail**: datasource-rest 26, httpyz 90, httpyz-query 14,
+openapi-codegen 160, openapi-hono 28, openapi-httpyz 28, openapi-msw 21, openapi-nuxt 25. It runs one process per package, and each
 package's `test` script writes the generated fixtures its specs import first.
 Treat any failure as yours.
 

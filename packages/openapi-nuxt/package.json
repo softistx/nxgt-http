@@ -22,12 +22,18 @@
 			"import": "./dist/runtime/index.js",
 			"default": "./dist/runtime/index.js"
 		},
+		"./hono": {
+			"types": "./dist/hono/index.d.ts",
+			"import": "./dist/hono/index.js",
+			"default": "./dist/hono/index.js"
+		},
 		"./package.json": "./package.json"
 	},
 	"nxgt": {
 		"entrypoints": [
 			"src/module.ts",
-			"src/runtime/index.ts"
+			"src/runtime/index.ts",
+			"src/hono/index.ts"
 		]
 	},
 	"repository": {
@@ -43,11 +49,12 @@
 		"build": "bun run ../../build.ts",
 		"fixtures": "bun run test/generate.ts",
 		"test": "bun run fixtures && bun test src",
-		"typecheck": "bun run fixtures && tsc --noEmit && nuxi prepare test/app && tsc --noEmit -p test/app/.nuxt/tsconfig.app.json"
+		"typecheck": "bun run fixtures && tsc --noEmit && nuxi prepare test/app && tsc --noEmit -p test/app/.nuxt/tsconfig.app.json && tsc --noEmit -p test/app/.nuxt/tsconfig.server.json"
 	},
 	"dependencies": {
 		"@nuxt/kit": "^4.0.0",
-		"@nuxt/schema": "^4.0.0"
+		"@nuxt/schema": "^4.0.0",
+		"h3": "^1.15.0"
 	},
 	"devDependencies": {
 		"@nxgt/httpyz": "workspace:^",
@@ -62,7 +69,13 @@
 	"peerDependencies": {
 		"@nxgt/httpyz": "workspace:^",
 		"@nxgt/openapi-httpyz": "workspace:^",
+		"hono": "^4.0.0",
 		"nuxt": "^4.0.0",
 		"typescript": "^6.0.3"
+	},
+	"peerDependenciesMeta": {
+		"hono": {
+			"optional": true
+		}
 	}
 }

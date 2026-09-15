@@ -87,6 +87,55 @@ export default defineNuxtPlugin({
 });
 `;
 
+/**
+ * With `query`: Vue Query, one `QueryClient` per request on the server, one
+ * in the browser. What SSR fetched goes to the browser in the payload.
+ */
+export const queryPluginTemplate = (
+	query: string,
+	options: { readonly staleTime: number },
+): string => `import { defineNuxtPlugin, useState } from '#app';
+import {
+	type DehydratedState,
+	dehydrate,
+	hydrate,
+	QueryClient,
+	VueQueryPlugin,
+} from ${quote(query)};
+
+export default defineNuxtPlugin({
+	name: '@nxgt/openapi-nuxt:query',
+	setup(nuxtApp) {
+		const queryClient = new QueryClient({
+			defaultOptions: { queries: { staleTime: ${options.staleTime} } },
+		});
+		nuxtApp.vueApp.use(VueQueryPlugin, { queryClient });
+		const state = useState<DehydratedState | null>(
+			'nxgt-openapi:query',
+			() => null,
+		);
+		if (import.meta.server) {
+			nuxtApp.hooks.hook('app:rendered', () => {
+				state.value = dehydrate(queryClient);
+			});
+		} else if (state.value) {
+			hydrate(queryClient, state.value);
+		}
+	},
+});
+`;
+
+/** With `query`: `useApiQueries()`, `useApiQuery()` and `useApiMutation()`, auto-imported. */
+export const useApiQueryTemplate = (
+	useApi: string,
+	query: string,
+): string => `import { apiQueryComposables } from ${quote(query)};
+import { useApi } from ${quote(importPath(useApi))};
+
+export const { useApiQueries, useApiQuery, useApiMutation } =
+	apiQueryComposables(useApi);
+`;
+
 /** `useApi()` and `useApiData()`, auto-imported. */
 export const useApiTemplate = (
 	client: string,

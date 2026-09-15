@@ -14,6 +14,7 @@ import {
 	createResolver,
 	defineNuxtModule,
 	resolvePath,
+	tryResolveModule,
 	useLogger,
 } from '@nuxt/kit';
 import type { NuxtModule } from '@nuxt/schema';
@@ -21,7 +22,9 @@ import {
 	type ClientOptions,
 	clientTemplate,
 	pluginTemplate,
+	queryPluginTemplate,
 	serverTemplate,
+	useApiQueryTemplate,
 	useApiTemplate,
 } from './templates';
 
@@ -50,7 +53,32 @@ export interface ModuleOptions {
 	baseUrl?: string;
 	/** What the client is created with. */
 	client?: ClientOptions;
+	/**
+	 * TanStack Query for the client: `useApiQueries()`, `useApiQuery()` and
+	 * `useApiMutation()`, auto-imported, over Vue Query. Needs
+	 * `@tanstack/vue-query` and `@nxgt/httpyz-query` installed.
+	 */
+	query?: boolean | QueryOptions;
 }
+
+/** `query`, spelled out. */
+export interface QueryOptions {
+	/**
+	 * Install Vue Query: one `QueryClient` per request, and what SSR fetched
+	 * handed to the browser in the payload. `false` for an app that installs
+	 * its own. Default: `true`.
+	 */
+	plugin?: boolean;
+	/**
+	 * The queries' default `staleTime`, in milliseconds, with the plugin: a
+	 * query SSR fetched is not fetched again as the page hydrates. Default:
+	 * `5000`.
+	 */
+	staleTime?: number;
+}
+
+/** What `query` needs installed in the app. */
+const QUERY_PACKAGES = ['@tanstack/vue-query', '@nxgt/httpyz-query'];
 
 /** The Nitro handler's module id. */
 const HANDLER = '#nxgt/openapi-nuxt/handler.mjs';
@@ -138,6 +166,46 @@ const openapiNuxt: NuxtModule<ModuleOptions> = defineNuxtModule<ModuleOptions>({
 				source: useApi.dst,
 				argumentLength: 3,
 			});
+
+			if (options.query) {
+				const settings = options.query === true ? {} : options.query;
+				const from = [nuxt.options.rootDir, ...nuxt.options.modulesDir].map(
+					(dir) => `${dir}/`,
+				);
+				for (const id of QUERY_PACKAGES) {
+					if ((await tryResolveModule(id, from)) === undefined) {
+						throw new Error(
+							`@nxgt/openapi-nuxt: \`openapi.query\` needs ${id}. Install it, or leave \`query\` out.`,
+						);
+					}
+				}
+				const query = await resolvePath(resolver.resolve('./query/index'));
+				if (settings.plugin !== false) {
+					addPluginTemplate({
+						filename: 'nxgt-openapi/query-plugin.ts',
+						write: true,
+						getContents: () =>
+							queryPluginTemplate(query, {
+								staleTime: settings.staleTime ?? 5000,
+							}),
+					});
+				}
+				const composables = addTemplate({
+					filename: 'nxgt-openapi/use-api-query.ts',
+					write: true,
+					getContents: () => useApiQueryTemplate(useApi.dst, query),
+				});
+				addImports(
+					['useApiQueries', 'useApiQuery', 'useApiMutation'].map((name) => ({
+						name,
+						from: composables.dst,
+					})),
+				);
+			}
+		} else if (options.query) {
+			logger.warn(
+				'`openapi.query` needs `openapi.operations`: there is no client to query with.',
+			);
 		}
 	},
 });

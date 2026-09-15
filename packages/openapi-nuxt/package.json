@@ -27,13 +27,19 @@
 			"import": "./dist/hono/index.js",
 			"default": "./dist/hono/index.js"
 		},
+		"./query": {
+			"types": "./dist/query/index.d.ts",
+			"import": "./dist/query/index.js",
+			"default": "./dist/query/index.js"
+		},
 		"./package.json": "./package.json"
 	},
 	"nxgt": {
 		"entrypoints": [
 			"src/module.ts",
 			"src/runtime/index.ts",
-			"src/hono/index.ts"
+			"src/hono/index.ts",
+			"src/query/index.ts"
 		]
 	},
 	"repository": {
@@ -58,23 +64,38 @@
 	},
 	"devDependencies": {
 		"@nxgt/httpyz": "workspace:^",
+		"@nxgt/httpyz-query": "workspace:^",
 		"@nxgt/openapi-codegen": "workspace:^",
 		"@nxgt/openapi-hono": "workspace:^",
 		"@nxgt/openapi-httpyz": "workspace:^",
+		"@tanstack/vue-query": "^5.102.8",
 		"@types/bun": "^1.4.0",
 		"hono": "^4.13.4",
 		"nuxt": "^4.5.2",
+		"vue": "^3.5.0",
 		"zod": "^4.5.4"
 	},
 	"peerDependencies": {
 		"@nxgt/httpyz": "workspace:^",
+		"@nxgt/httpyz-query": "workspace:^",
 		"@nxgt/openapi-httpyz": "workspace:^",
+		"@tanstack/vue-query": "^5.90.0",
 		"hono": "^4.0.0",
 		"nuxt": "^4.0.0",
-		"typescript": "^6.0.3"
+		"typescript": "^6.0.3",
+		"vue": "^3.5.0"
 	},
 	"peerDependenciesMeta": {
+		"@nxgt/httpyz-query": {
+			"optional": true
+		},
+		"@tanstack/vue-query": {
+			"optional": true
+		},
 		"hono": {
+			"optional": true
+		},
+		"vue": {
 			"optional": true
 		}
 	}

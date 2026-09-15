@@ -39,3 +39,34 @@ export async function typedData(): Promise<string | undefined> {
 	await useApiData((api) => api.get('/nothing'));
 	return name;
 }
+
+export async function typedQuery(): Promise<number> {
+	const id = ref(7);
+	const { data, suspense } = useApiQuery(
+		'get',
+		'/items/{id}',
+		{ param: { id } },
+		{
+			enabled: computed(() => id.value > 0),
+			init: { headers: { 'x-trace': '1' } },
+		},
+	);
+	await suspense();
+	data.value?.name satisfies string | undefined;
+	// @ts-expect-error: the id is an integer
+	useApiQuery('get', '/items/{id}', { param: { id: 'x' } });
+	// @ts-expect-error: no such path
+	useApiQuery('get', '/nothing');
+	// @ts-expect-error: /items has only a POST
+	useApiQuery('get', '/items');
+	const create = useApiMutation('post', '/items', {
+		onSuccess: (item) => {
+			item.name satisfies string;
+		},
+	});
+	const item = await create.mutateAsync({ json: { name: 'new' } });
+	// @ts-expect-error: a name is required
+	create.mutate({ json: {} });
+	useApiQueries().queryKey('get', '/items/{id}');
+	return item.id;
+}

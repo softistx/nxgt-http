@@ -11,6 +11,7 @@ generator whose output serves a spec with Hono and calls it with that client.
 | [`@nxgt/openapi-httpyz`](packages/openapi-httpyz) | the generated operations, called through an `@nxgt/httpyz` client | [npm](https://www.npmjs.com/package/@nxgt/openapi-httpyz) |
 | [`@nxgt/httpyz-query`](packages/httpyz-query) | TanStack Query options for an `@nxgt/httpyz` client's calls, which a cancelled query aborts | [npm](https://www.npmjs.com/package/@nxgt/httpyz-query) |
 | [`@nxgt/datasource-rest`](packages/datasource-rest) | a REST service called from a GraphQL resolver through the bound client: the caller's token forwarded, reads cached, one error with a code | [npm](https://www.npmjs.com/package/@nxgt/datasource-rest) |
+| [`@nxgt/openapi-msw`](packages/openapi-msw) | MSW handlers for the generated operations: typed replies, the server's 400, and mocks that fail when they drift from the spec | [npm](https://www.npmjs.com/package/@nxgt/openapi-msw) |
 
 Each package's README, its npm page, shows how to use it, then documents
 every function, method, class and type it exports in its **API** section.
@@ -27,8 +28,9 @@ every function, method, class and type it exports in its **API** section.
  @nxgt/openapi-hono    @nxgt/openapi-httpyz ── @nxgt/httpyz ── @nxgt/httpyz-query
      (server)                (client)                (TanStack Query)
                               │
-                     @nxgt/datasource-rest
-                          (GraphQL)
+          ┌───────────────────┴───────────────────┐
+ @nxgt/datasource-rest                    @nxgt/openapi-msw
+      (GraphQL)                             (mocks)
 ```
 
 The server and the client read the same generated schemas, so a request the

@@ -14,6 +14,7 @@ The `@nxgt/*` packages for HTTP APIs, published to the public npm registry:
 | `@nxgt/openapi-httpyz` | the binding of the generated operations onto `@nxgt/httpyz` |
 | `@nxgt/httpyz-query` | TanStack Query options for the calls of an `@nxgt/httpyz` client |
 | `@nxgt/datasource-rest` | a REST service called from a GraphQL resolver through the bound client: token forwarding, a shared cache, its own `DataSourceError` |
+| `@nxgt/openapi-msw` | MSW handlers for the generated operations: the request read and refused as the server does, replies typed and checked against the spec |
 
 They were extracted from `softistx/nxgt-core` on 2026-09-13 with their
 history (`git filter-repo`). Before that, the client was `@nxgt/openapi-client`
@@ -34,7 +35,8 @@ lands in `@nxgt/httpyz` first, and in the binding second.
 httpyz            openapi-codegen
   │                 └─ openapi-hono          (dev: generates its fixtures)
   ├─ openapi-httpyz ◄── openapi-codegen, openapi-hono   (dev: its fixtures)
-  │    └─ datasource-rest ◄── openapi-codegen (dev: its fixtures)
+  │    ├─ datasource-rest ◄── openapi-codegen (dev: its fixtures)
+  │    └─ openapi-msw     ◄── openapi-codegen (dev: its fixtures)
   └─ httpyz-query   ◄── openapi-httpyz (optional peer), openapi-codegen (dev: its fixtures)
 ```
 
@@ -56,6 +58,11 @@ no relative import into one.
   peers, and as devDependencies to build against; the generator is a
   devDependency, for its fixtures. It depends on no exception package: its
   `DataSourceError` is its own, as each package here keeps its errors.
+- `@nxgt/openapi-msw` has `@nxgt/httpyz`, `@nxgt/openapi-httpyz` and `msw`
+  as peers, and as devDependencies to build against. It reads the
+  `operations` table through openapi-httpyz's types and checks with httpyz's
+  `check`; it does not depend on `@nxgt/openapi-hono`, which would pull in
+  Hono. The generator is a devDependency, for its fixtures.
 - `@nxgt/openapi-hono` has the generator as a devDependency, for its
   fixtures. The one `paths` entry left is its own name, so that the
   generated `hono.ts` in its fixtures runs the engine the specs import from
@@ -140,6 +147,7 @@ publishes to npm.
 | --- | --- |
 | `unroutable`, in `openapi-hono/src/routable.ts` and `openapi-codegen/src/emit/routable.ts` | the runtime refuses the route and the generator warns. Importing one from the other would make the runtime a dependency of the generator. Change both together |
 | `LICENSE`, at the root and in each `packages/*/` | npm ships only the `LICENSE` in the package's own directory. `verify:artifacts` fails a tarball without one. Change them all together |
+| How a request is read and refused, in `openapi-hono/src/engine.ts` and `openapi-msw/src/request/read-request.ts` | the mock answers with the server's 400, with the same issues in the same order. The engine reads through Hono's `Context`, which the mock has no use for, and the mock depending on the runtime would pull in Hono. Change both together |
 | `openapi-codegen/test/fixtures/shared-components/` | a copy of the `openapi/components/` that nxgt-core's `@nxgt/shared-openapi` publishes: real split fragments for the loader and the `split` fixture. It is a fixture, not a dependency |
 
 ## Conventions
@@ -159,8 +167,8 @@ publishes to npm.
 
 ## Known state
 
-`bun run test` is **328 pass, 0 fail**: datasource-rest 25, httpyz 86, httpyz-query 12,
-openapi-codegen 154, openapi-hono 24, openapi-httpyz 27. It runs one process per package, and each
+`bun run test` is **362 pass, 0 fail**: datasource-rest 26, httpyz 90, httpyz-query 14,
+openapi-codegen 160, openapi-hono 28, openapi-httpyz 28, openapi-msw 16. It runs one process per package, and each
 package's `test` script writes the generated fixtures its specs import first.
 Treat any failure as yours.
 

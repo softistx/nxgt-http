@@ -6,7 +6,6 @@
  */
 import {
 	type Cache,
-	type CallContext,
 	createHttpClient,
 	type HttpClientOptions,
 	isAbortError,
@@ -29,26 +28,13 @@ import { toDataSourceError } from '../errors/data-source-error';
 type Token = string | null | undefined;
 
 /**
- * The requests the default cache keeps: reads (`GET`, `HEAD`, `QUERY`), and a
- * `POST` whose path holds `/search`, keyed by what it searches for.
- */
-export function searches(request: Request, call: CallContext): boolean {
-	const method = request.method.toUpperCase();
-	return (
-		method === 'GET' ||
-		method === 'HEAD' ||
-		method === 'QUERY' ||
-		(method === 'POST' && call.path.includes('/search'))
-	);
-}
-
-/**
  * The cache every datasource shares unless it is given its own: a server
  * makes its datasources per request, and each would otherwise start empty.
- * It is keyed by the caller's token, so no caller is answered with another's
- * reply. `defaultCache.clear()` empties it.
+ * It keeps the reads, `GET`, `HEAD` and `QUERY`, a search by what it searches
+ * for. It is keyed by the caller's token, so no caller is answered with
+ * another's reply. `defaultCache.clear()` empties it.
  */
-export const defaultCache: Cache = replies({ cacheable: searches });
+export const defaultCache: Cache = replies();
 
 export interface RESTDataSourceOptions<Ops> extends OpenApiOptions {
 	/** The service's base URL. */

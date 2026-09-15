@@ -81,6 +81,20 @@ describe('cache', () => {
 		});
 	});
 
+	it('caches a QUERY by default, keyed by what it searches for', async () => {
+		const { fetch, seen } = server();
+		const http = client(fetch, { use: [cache()] });
+		const first = await data(http.query('/items', { json: { q: 'a' } }));
+		expect(await data(http.query('/items', { json: { q: 'a' } }))).toEqual(
+			first,
+		);
+		expect(await data(http.query('/items', { json: { q: 'b' } }))).toEqual({
+			n: 2,
+			body: '{"q":"b"}',
+		});
+		expect(seen.length).toBe(2);
+	});
+
 	it('keeps no reply that is not ok', async () => {
 		const { fetch, seen } = server();
 		const http = client(fetch, { use: [cache()] });

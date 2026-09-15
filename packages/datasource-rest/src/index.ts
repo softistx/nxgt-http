@@ -2,7 +2,6 @@ export {
 	defaultCache,
 	RESTDataSource,
 	type RESTDataSourceOptions,
-	searches,
 } from './datasource/rest-datasource';
 export {
 	codeOf,

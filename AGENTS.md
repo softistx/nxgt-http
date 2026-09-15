@@ -156,7 +156,7 @@ publishes to npm.
 
 ## Known state
 
-`bun run test` is **326 pass, 0 fail**: datasource-rest 24, httpyz 85, httpyz-query 12,
+`bun run test` is **327 pass, 0 fail**: datasource-rest 24, httpyz 86, httpyz-query 12,
 openapi-codegen 154, openapi-hono 24, openapi-httpyz 27. It runs one process per package, and each
 package's `test` script writes the generated fixtures its specs import first.
 Treat any failure as yours.

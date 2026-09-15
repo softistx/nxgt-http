@@ -26,8 +26,7 @@ paths:
           description: Created
           content:
             application/json: { schema: { $ref: '#/components/schemas/Bookmark' } }
-  /bookmarks/search:
-    post:
+    query:
       operationId: searchBookmarks
       requestBody:
         required: true

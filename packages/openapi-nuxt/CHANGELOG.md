@@ -1,5 +1,13 @@
 # @nxgt/openapi-nuxt
 
+## 0.2.1
+
+### Patch Changes
+
+- [#43](https://github.com/softistx/nxgt-http/pull/43) [`b113b06`](https://github.com/softistx/nxgt-http/commit/b113b066220f190695b6cfb6793244d2f5605b77) Thanks [@SteveGT96](https://github.com/SteveGT96)! - README: with `@nxgt/openapi-hono` 0.3.0 and a regenerated `hono.ts`, `c.env.event` is typed in the handlers of `createRoutes(createHonoApp())` too; the trap that said otherwise is gone.
+- Updated dependencies []:
+  - @nxgt/openapi-httpyz@0.3.0
+
 ## 0.2.0
 
 ### Minor Changes

@@ -383,6 +383,20 @@ outermost, and all of them run inside `retry` and `auth`, so they see each
 try, with its token. A middleware's own error comes through as it is, and is
 not retried.
 
+`http.use()` adds middleware to a client you already have. It changes the
+client in place, and returns it:
+
+```ts
+http.use(timing).use(logging);
+```
+
+- **After the chain the client has:** retry → auth → `use` → what `use()`
+  added, in order → fetch.
+- **From then on:** a call already sent keeps the chain it started with.
+- **Groups:** a group runs through its parent's middleware, even what is
+  added after the group was made. What is added to a group is the group's
+  alone, and its own groups'.
+
 Headers that only need a value, such as a `traceparent` from the current
 span, need no middleware: `headers` may be a function.
 
@@ -684,6 +698,7 @@ What `createHttpClient` returns.
 | `events` | `(path: Path, ...args: EventsArgs<Path, E, Decoded>) => EventStream<StreamEvent<E, Decoded>>` | server-sent events. See [Server-sent events](#server-sent-events) |
 | `lines` | `(path: Path, ...args: LinesArgs<Path, I, Decoded>) => Stream<StreamItem<I, Decoded>>` | JSON Lines. See [JSON Lines](#json-lines) |
 | `group` | `() => HttpGroup` | the same client, for calls that end together. See [Cancelling](#cancelling) |
+| `use` | `(...middlewares: Middleware[]) => this` | adds middleware to this client, in place, and returns it. See [Middleware](#middleware) |
 
 ##### `HttpGroup`
 

@@ -8,6 +8,7 @@ import type {
 	CallOptions,
 	EventStream,
 	Method,
+	Middleware,
 	ReconnectOptions,
 	ServerEvent,
 	StandardSchemaV1,
@@ -219,7 +220,14 @@ export type OpenApiClient<
 	Ops extends OperationsShape<Ops>,
 	Routes = RoutesOf<Ops>,
 	Decoded extends boolean = true,
-> = {
+> = ClientMembers<Ops, Routes, Decoded> & PathMethods<Ops, Routes, Decoded>;
+
+/** The client's members but its path methods: an interface, for `use()`'s `this`. */
+export interface ClientMembers<
+	Ops extends OperationsShape<Ops>,
+	Routes,
+	Decoded extends boolean,
+> {
 	/** Calls an operation by its `operationId`. */
 	op<K extends keyof Ops & string>(
 		id: K,
@@ -240,12 +248,17 @@ export type OpenApiClient<
 	 */
 	group(): OpenApiGroup<Ops, Routes, Decoded>;
 	/**
+	 * Adds middleware to the core client, in place, as its `use()` does, and
+	 * returns this client. On a group, to the group's alone.
+	 */
+	use(...middlewares: Middleware[]): this;
+	/**
 	 * The generated `operations` the client was bound to: for a package built
 	 * over it, such as `@nxgt/httpyz-query/openapi`, which reads the spec as
 	 * the client does.
 	 */
 	readonly operations: OperationTable<Ops>;
-} & PathMethods<Ops, Routes, Decoded>;
+}
 
 /**
  * A method per HTTP method the spec has an operation for, which calls the

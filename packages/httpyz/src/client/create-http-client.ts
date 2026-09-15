@@ -6,7 +6,7 @@ import { cancelled, joinSignals } from '../cancel/abort';
 import { createLatest } from '../cancel/latest';
 import { type CallContext, NetworkError, TimeoutError } from '../errors/errors';
 import { auth } from '../middleware/auth';
-import { compose, type Next } from '../middleware/compose';
+import { compose, type Middleware, type Next } from '../middleware/compose';
 import {
 	type RetryOptions,
 	retrying,
@@ -123,13 +123,17 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
 		};
 	};
 
-	/** Through `retry`, `auth` and `use` to `fetch`, fetch's failure and the deadline made errors. */
+	/**
+	 * Through `retry`, `auth`, `use` and then `added`, what `use()` added, to
+	 * `fetch`: fetch's failure and the deadline made errors.
+	 */
 	const dispatch = async (
 		request: Request,
 		context: CallContext,
 		timeout: number | undefined,
 		deadline: AbortSignal | undefined,
 		retry: number | RetryOptions | false | undefined,
+		added: readonly Middleware[],
 	): Promise<Response> => {
 		const fetch = options.fetch ?? ((sent: Request) => globalThis.fetch(sent));
 		// fetch's own failure is a NetworkError, which `retry` retries; an abort is not one.
@@ -148,6 +152,7 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
 			...(again ? [retrying(again)] : []),
 			...(signer ? [signer] : []),
 			...(options.use ?? []),
+			...added,
 		];
 		try {
 			return await compose(layers, send, context)(request);
@@ -215,7 +220,8 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
 	const request = async (
 		method: Method,
 		path: string,
-		given: ReplyGiven = {},
+		given: ReplyGiven,
+		added: readonly Middleware[],
 	): Promise<unknown> => {
 		const {
 			responses,
@@ -236,6 +242,7 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
 			built.timeout,
 			deadline,
 			built.retry,
+			added,
 		);
 		return readReply(
 			built.context,
@@ -251,7 +258,13 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
 	 * and no longer, since a stream has no end to wait for.
 	 */
 	const opener =
-		(method: Method, path: string, call: Given, accept: string): Open =>
+		(
+			method: Method,
+			path: string,
+			call: Given,
+			accept: string,
+			added: readonly Middleware[],
+		): Open =>
 		async (stream, lastEventId) => {
 			const built = await build(method, path, call, (headers) => {
 				if (!headers.has('accept')) headers.set('accept', accept);
@@ -282,13 +295,18 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
 					built.timeout,
 					deadline.signal,
 					built.retry,
+					added,
 				);
 			} finally {
 				clearTimeout(clock);
 			}
 		};
 
-	const events = (path: string, given: EventsGiven = {}) => {
+	const events = (
+		path: string,
+		given: EventsGiven,
+		added: readonly Middleware[],
+	) => {
 		const {
 			events,
 			onUnknownEvent,
@@ -311,7 +329,7 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
 		const settings = typeof reconnect === 'object' ? reconnect : {};
 		return eventStream({
 			context: contextOf(method, path, call.operationId),
-			open: opener(method, path, call, 'text/event-stream'),
+			open: opener(method, path, call, 'text/event-stream', added),
 			signal: call.signal ?? undefined,
 			validate,
 			decode,
@@ -325,7 +343,11 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
 		});
 	};
 
-	const lines = (path: string, given: LinesGiven = {}) => {
+	const lines = (
+		path: string,
+		given: LinesGiven,
+		added: readonly Middleware[],
+	) => {
 		const {
 			item,
 			validate = true,
@@ -340,7 +362,13 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
 		};
 		return lineStream({
 			context: contextOf(method, path, call.operationId),
-			open: opener(method, path, call, LINE_TYPES.slice(0, 2).join(', ')),
+			open: opener(
+				method,
+				path,
+				call,
+				LINE_TYPES.slice(0, 2).join(', '),
+				added,
+			),
 			signal: call.signal ?? undefined,
 			validate,
 			decode,
@@ -355,7 +383,8 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
 			retry = options.retry,
 			operationId,
 			latest,
-		}: SendOptions = {},
+		}: SendOptions,
+		added: readonly Middleware[],
 	): Promise<Response> => {
 		const replaced = latestSignal(latest);
 		const method = request.method.toLowerCase();
@@ -373,14 +402,20 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
 			joinSignals(request.signal, replaced),
 		);
 		const sent = new Request(request, { headers, signal });
-		return dispatch(sent, context, timeout, deadline, retry);
+		return dispatch(sent, context, timeout, deadline, retry, added);
 	};
 
 	/**
-	 * The client's calls, each with `scope()`'s signal added to its own: none
-	 * for the client itself, the group's for a group.
+	 * The client's calls, each with `scope()`'s signal added to its own, and
+	 * the middleware of `use()`: `inherited()`, a parent's, read as each call
+	 * is made, then its own. A group's `use()` is the group's alone.
 	 */
-	const surface = (scope: () => AbortSignal | undefined): HttpClient => {
+	const surface = (
+		scope: () => AbortSignal | undefined,
+		inherited: () => readonly Middleware[],
+	): HttpClient => {
+		const own: Middleware[] = [];
+		const layers = () => [...inherited(), ...own];
 		const scoped = <T extends { readonly signal?: AbortSignal | null }>(
 			given: T | undefined,
 		): T => {
@@ -392,23 +427,30 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
 		};
 		const client: Record<string, unknown> = {
 			request: (method: Method, path: string, given?: ReplyGiven) =>
-				request(method, path, scoped(given)),
+				request(method, path, scoped(given), layers()),
 			send: (sent: Request, given?: SendOptions) => {
 				const extra = scope();
 				return send(
 					extra
 						? new Request(sent, { signal: joinSignals(sent.signal, extra) })
 						: sent,
-					given,
+					given ?? {},
+					layers(),
 				);
 			},
 			events: (path: string, given?: EventsGiven) =>
-				events(path, scoped(given)),
-			lines: (path: string, given?: LinesGiven) => lines(path, scoped(given)),
+				events(path, scoped(given), layers()),
+			lines: (path: string, given?: LinesGiven) =>
+				lines(path, scoped(given), layers()),
+			use: (...middlewares: Middleware[]) => {
+				own.push(...middlewares);
+				return client;
+			},
 			group: (): HttpGroup => {
 				let controller = new AbortController();
-				const group = surface(() =>
-					joinSignals(scope(), controller.signal),
+				const group = surface(
+					() => joinSignals(scope(), controller.signal),
+					layers,
 				) as HttpClient & Record<string, unknown>;
 				group.cancel = (reason?: unknown) => {
 					controller.abort(reason ?? cancelled('The group was cancelled'));
@@ -423,9 +465,12 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
 		};
 		for (const method of METHODS) {
 			client[method] = (path: string, given?: ReplyGiven) =>
-				request(method, path, scoped(given));
+				request(method, path, scoped(given), layers());
 		}
-		return client as HttpClient;
+		return client as unknown as HttpClient;
 	};
-	return surface(() => undefined);
+	return surface(
+		() => undefined,
+		() => [],
+	);
 }

@@ -8,6 +8,7 @@ import {
 	ClientError,
 	type EventStream,
 	type HttpClient,
+	type Middleware,
 	type Responses,
 	ValidationError,
 } from '@nxgt/httpyz';
@@ -289,6 +290,10 @@ function bind<
 		operations,
 		op: (id: string, ...args: unknown[]) => call(id, args),
 		stream: (id: string, ...args: unknown[]) => stream(id, args),
+		use: (...middlewares: Middleware[]) => {
+			http.use(...middlewares);
+			return client;
+		},
 		group: () => {
 			const group = http.group();
 			const bound = bind<Ops, Routes, Decoded>(

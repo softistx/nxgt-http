@@ -84,14 +84,15 @@ export interface HonoSpec {
 export const createApi = (
 	options?: runtime.ApiOptions,
 ): runtime.Api<HonoSpec> => runtime.createApi<HonoSpec>(operations, options);`,
-		`/** Routes on one app, with a registry of their own. */
+		`/** Routes on one app, with a registry of their own: their handlers' \`c.env\` is the app's. */
 export const createRoutes = <
 	Prefix extends string = '',
 	Tag extends keyof OperationsByTag & string = never,
+	E extends Hono.Env = any,
 >(
-	app: Hono.Hono<any, any, any>,
+	app: Hono.Hono<E, any, any>,
 	options?: runtime.RoutesOptions<Prefix, Tag>,
-): runtime.Routes<HonoSpec, runtime.ScopeOf<HonoSpec, Tag>, Prefix> =>
+): runtime.Routes<HonoSpec, runtime.ScopeOf<HonoSpec, Tag>, Prefix, E> =>
 	createApi(options).routes(app, options);`,
 		...streamHelpers(ctx),
 	]);

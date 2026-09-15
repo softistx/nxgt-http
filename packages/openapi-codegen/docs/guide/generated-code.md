@@ -80,8 +80,8 @@ export type EmployeeStatus = (typeof EmployeeStatus)[keyof typeof EmployeeStatus
 
 ```ts
 import { z } from 'zod';
-import { EmployeeStatus } from './types.js';
-import type { Employee } from './types.js';
+import { EmployeeStatus } from './types';
+import type { Employee } from './types';
 
 export const zEmployeeStatus = z.enum(EmployeeStatus);
 
@@ -180,7 +180,7 @@ They are plain interfaces, so a lookup costs TypeScript the same whatever
 the size of the spec:
 
 ```ts
-import type { Operations, OperationsByRoute } from './generated/types.js';
+import type { Operations, OperationsByRoute } from './generated/types';
 
 type Id = OperationsByRoute['put /employees/{id}']; // 'updateEmployee'
 type Updated = Operations[Id]['responses'][200]['application/json']; // Employee
@@ -275,7 +275,7 @@ a `Blob`. A request body is sent whole whatever its media type.
 The same operations as data, for code that reads requests at runtime:
 
 ```ts
-import { operations } from './generated/operations.js';
+import { operations } from './generated/operations';
 
 const op = operations.getPet;
 op.param.parse({ petId: '7' }); // { petId: 7 }
@@ -368,7 +368,7 @@ export interface operations {
 
 ```ts
 import createClient from 'openapi-fetch';
-import type { paths } from './generated/paths.js';
+import type { paths } from './generated/paths';
 
 const api = createClient<paths>({ baseUrl: 'https://api.example.com' });
 const { data } = await api.GET('/employees/{id}', {

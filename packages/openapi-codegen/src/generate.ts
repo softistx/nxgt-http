@@ -20,9 +20,9 @@ export interface GenerateOptions extends IROptions {
 	 */
 	unknownKeys?: UnknownKeys;
 	/**
-	 * Appended to imports between generated files. The default `.js` resolves
-	 * under every `moduleResolution`; `''` suits bundlers only, `.ts` needs
-	 * `allowImportingTsExtensions`.
+	 * Appended to imports between generated files: none by default
+	 * (`'./types'`), for a bundler or `moduleResolution: bundler`. `.js` for
+	 * `nodenext`, which requires it; `.ts` needs `allowImportingTsExtensions`.
 	 */
 	importExtension?: '' | '.js' | '.ts';
 	/**
@@ -95,7 +95,7 @@ export async function generateFiles(
 			`unknownKeys must be strip, strict or loose, not ${unknownKeys}`,
 		);
 	}
-	const importExtension = options.importExtension ?? '.js';
+	const importExtension = options.importExtension ?? '';
 	if (!EXTENSIONS.includes(importExtension)) {
 		throw invalid(
 			`importExtension must be '', '.js' or '.ts', not ${importExtension}`,

@@ -171,10 +171,9 @@ publishes to npm.
   `.sh`.
 - **Imports carry no extension**: `import { operations } from
   '../generated/operations'`, not `'…/operations.js'`. Every tsconfig here
-  resolves as a bundler does, and Bun runs the specs the same way. The code
-  the generator writes is the exception: its `from './types.js'` is for the
-  apps that resolve with `nodenext`, which requires the extension, so leave
-  the emitter and its snapshots as they are.
+  resolves as a bundler does, and Bun runs the specs the same way. The
+  generated code follows it too: `importExtension` defaults to `''`, and an
+  app under `nodenext` sets `'.js'`. The READMEs' examples carry none.
 - **A package's `README.md` is its page on npmjs.** It is read by someone who
   has never seen this repository: organize it by section, with a copy-paste
   example each, and never name a private application.

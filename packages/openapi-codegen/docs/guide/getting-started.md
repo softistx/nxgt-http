@@ -80,8 +80,8 @@ them in a build step.
 ## Use
 
 ```ts
-import type { Employee } from './generated/types.js';
-import { zNewEmployee } from './generated/zod.js';
+import type { Employee } from './generated/types';
+import { zNewEmployee } from './generated/zod';
 
 const input = zNewEmployee.parse(await request.json()); // throws a ZodError on bad input
 ```

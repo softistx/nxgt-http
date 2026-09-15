@@ -36,7 +36,7 @@ export default defineConfig({
 
 ```ts
 import { Hono } from 'hono';
-import { createRoutes } from './generated/hono.js';
+import { createRoutes } from './generated/hono';
 
 const app = new Hono();
 const routes = createRoutes(app);
@@ -195,7 +195,7 @@ at a time, with OpenAPI 3.2's `itemSchema`, is written from the handler with
 the helpers `hono.ts` exports when the spec has such an operation:
 
 ```ts
-import { createRoutes, streamEvents, streamLines } from './generated/hono.js';
+import { createRoutes, streamEvents, streamLines } from './generated/hono';
 
 createRoutes(app, { validateResponses: true })
 	.get('/feed', (c) =>
@@ -248,7 +248,7 @@ throws when `id` is not the running route's.
 its routes on its own sub-app:
 
 ```ts
-import { createApi } from './generated/hono.js';
+import { createApi } from './generated/hono';
 
 export const api = createApi();
 

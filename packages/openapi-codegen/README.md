@@ -119,8 +119,8 @@ URN `$ref` is refused.
 ### Validate with the generated code
 
 ```ts
-import { zNewEmployee } from './generated/zod.js';
-import { operations } from './generated/operations.js';
+import { zNewEmployee } from './generated/zod';
+import { operations } from './generated/operations';
 
 const body = zNewEmployee.parse(await request.json());
 const query = operations.listEmployees.query.parse({ page: '2' }); // { page: 2 }
@@ -132,7 +132,7 @@ With `hono: true` in the config:
 
 ```ts
 import { Hono } from 'hono';
-import { createRoutes } from './generated/hono.js';
+import { createRoutes } from './generated/hono';
 
 const app = new Hono();
 
@@ -230,7 +230,7 @@ this one does not, when it still starts with the generated header. See
 | `input` | `string` | required | the spec's root document: `openapi.yaml`, or one that `$ref`s the rest. `.json` is read as JSON, anything else as YAML 1.2 |
 | `output` | `string` | `'generated/openapi'` | the directory the files are written to |
 | `unknownKeys` | `'strip' \| 'strict' \| 'loose'` | `'strip'` | what an object does with keys it does not declare, where the spec does not say with `additionalProperties` ([more](docs/guide/options.md#unknownkeys)) |
-| `importExtension` | `'' \| '.js' \| '.ts'` | `'.js'` | appended to imports between generated files ([more](docs/guide/options.md#importextension)) |
+| `importExtension` | `'' \| '.js' \| '.ts'` | `''` | appended to imports between generated files; `'.js'` for `nodenext` ([more](docs/guide/options.md#importextension)) |
 | `enums` | `'object' \| 'union'` | `'object'` | a named enum as an `as const` object that `z.enum()` reuses, or a plain union ([more](docs/guide/options.md#enums)) |
 | `hono` | `boolean` | `false` | also write `hono.ts`; `hono` and `@nxgt/openapi-hono` become runtime dependencies ([more](docs/guide/options.md#hono)) |
 | `dates` | `'string' \| 'date'` | `'string'` | a `date-time` kept as its string, or decoded to a `Date` by a `z.codec` ([more](docs/guide/options.md#dates)) |
@@ -1187,9 +1187,9 @@ on one app, with a registry of its own. See
 - **`readOnly` and `writeOnly` are not enforced.** A required `readOnly`
   property is required in a request body too. Give requests their own
   schema.
-- **Imports end in `.js`** (`./types.js`) so they resolve under every
-  `moduleResolution`. Set `importExtension: ''` if a tool needs bare
-  specifiers.
+- **Imports carry no extension** (`./types`), as a bundler resolves them.
+  Under `moduleResolution: node16` or `nodenext`, or run by Node without a
+  bundler, set `importExtension: '.js'`.
 - **Keep the output away from your formatter and linter.** It is printed
   tab-indented, not by your tools. Exclude the output directory.
 - **`hono.ts` imports `@nxgt/openapi-hono` at runtime.** Install it, and

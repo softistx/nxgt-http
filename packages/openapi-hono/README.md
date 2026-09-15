@@ -51,7 +51,7 @@ from this package: there they are bound to your spec.
 
 ```ts
 import { Hono } from 'hono';
-import { createRoutes } from './generated/hono.js';
+import { createRoutes } from './generated/hono';
 
 const app = new Hono();
 const routes = createRoutes(app);
@@ -126,7 +126,7 @@ An operation whose reply the spec describes an item at a time, with OpenAPI
 3.2's `itemSchema`, streams it from its handler with the `hono.ts` helpers:
 
 ```ts
-import { createRoutes, streamEvents, streamLines } from './generated/hono.js';
+import { createRoutes, streamEvents, streamLines } from './generated/hono';
 
 createRoutes(app)
 	.get('/feed', (c) =>
@@ -154,7 +154,7 @@ createRoutes(app)
 ### Modules
 
 ```ts
-import { createApi } from './generated/hono.js';
+import { createApi } from './generated/hono';
 
 export const api = createApi();
 

@@ -91,6 +91,61 @@ describe('use', () => {
 	});
 });
 
+describe('use()', () => {
+	/** Tags each request it sees with `name`, in `x-seen`. */
+	const tag =
+		(name: string): Middleware =>
+		(request, next) => {
+			const seen = request.headers.get('x-seen');
+			request.headers.set('x-seen', seen ? `${seen} ${name}` : name);
+			return next(request);
+		};
+	/** Answers every request with the middleware it went through. */
+	const echo = async (request: Request) =>
+		new Response(request.headers.get('x-seen'));
+	const seenBy = async (reply: Promise<{ data: unknown }>) =>
+		(await reply).data;
+	const get = (client: HttpClient) => client.get('/items', { decode: false });
+
+	it('adds to the client in place, after its use, and returns it', async () => {
+		const client = api(echo, { use: [tag('option')] });
+		expect(await seenBy(get(client))).toBe('option');
+		const returned = client.use(tag('a'), tag('b')).use(tag('c'));
+		expect(returned).toBe(client);
+		expect(await seenBy(get(client))).toBe('option a b c');
+		const sent = await client.send(new Request('http://api.test/items'));
+		expect(await sent.text()).toBe('option a b c');
+	});
+
+	it('runs inside retry and auth, and sees each try', async () => {
+		const { fetch, seen } = script(status(503), item());
+		const tries: (string | null)[] = [];
+		const client = api(fetch, {
+			retry: { attempts: 1, delay: () => 0 },
+			auth: { token: () => 't' },
+		}).use(async (request, next) => {
+			tries.push(request.headers.get('authorization'));
+			return next(request);
+		});
+		expect((await getItem(client)).status).toBe(200);
+		expect(tries).toEqual(['Bearer t', 'Bearer t']);
+		expect(seen).toHaveLength(2);
+	});
+
+	it('reaches a group, even when added later; a group’s stays its own', async () => {
+		const client = api(echo);
+		const group = client.group();
+		client.use(tag('client'));
+		expect(group.use(tag('group'))).toBe(group);
+		const inner = group.group().use(tag('inner'));
+		expect(await seenBy(get(client))).toBe('client');
+		expect(await seenBy(get(group))).toBe('client group');
+		expect(await seenBy(get(inner))).toBe('client group inner');
+		// Still a group: `cancel` and `signal` come with what `use()` returns.
+		expect(typeof inner.cancel).toBe('function');
+	});
+});
+
 describe('auth', () => {
 	it('sends the token it awaits', async () => {
 		const { fetch, seen } = script(item(), item());

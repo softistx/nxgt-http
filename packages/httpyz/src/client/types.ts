@@ -152,7 +152,10 @@ export type HttpGroup = HttpClient & {
 	readonly signal: AbortSignal;
 };
 
-export type HttpClient = {
+/** `http.get`, `http.post`… : a call for each method. */
+type MethodCalls = { readonly [M in Method]: Call };
+
+export interface HttpClient extends MethodCalls {
 	/** A call with the method as a value: `http.request('get', '/items/{id}', { param })`. */
 	request<
 		Path extends string,
@@ -201,4 +204,12 @@ export type HttpClient = {
 	 * is cancelled with it.
 	 */
 	group(): HttpGroup;
-} & { readonly [M in Method]: Call };
+	/**
+	 * Adds middleware to this client, in place, after the chain it has: retry
+	 * → auth → `use` → what `use()` added, in order → fetch. It returns the
+	 * client, and the calls made from then on run through it. A group runs
+	 * through its parent's, even what is added later; what is added to a group
+	 * is the group's alone.
+	 */
+	use(...middlewares: Middleware[]): this;
+}

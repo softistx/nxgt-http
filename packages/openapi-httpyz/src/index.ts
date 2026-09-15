@@ -1,6 +1,7 @@
 export { createOpenApiClient } from './client/create-openapi-client';
 export type {
 	Args,
+	ClientMembers,
 	ClientOperation,
 	IdOf,
 	MethodsOf,

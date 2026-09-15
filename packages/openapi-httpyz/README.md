@@ -289,7 +289,7 @@ Calls the operation at a method and a path, as the spec writes it:
 `api.get('/employees/{id}', { param: { id } })`. The client types only the
 methods in [`MethodsOf<Routes>`](#methodsof), each taking only its
 [`PathsOf`](#pathsof). The arguments, reply and errors are those of
-[`op`](#op); a path with no operation for the method rejects with an `Error`.
+[`op`](#op); a path with no operation for the method rejects with a `ClientError`.
 
 #### stream
 
@@ -332,6 +332,17 @@ readonly page.signal: AbortSignal;
 Aborts on the next `cancel()`: for work of your own that ends with the
 group's calls. It is a new signal after each `cancel()`.
 
+#### use
+
+```ts
+api.use(...middlewares: Middleware[]): this;
+```
+
+Adds middleware to the core client, in place, as its
+[`http.use()`](https://www.npmjs.com/package/@nxgt/httpyz#middleware) does, and
+returns this client: `api.use(timing)`. Every client bound to the same core
+client goes through it. On a group, it is the group's alone.
+
 #### operations
 
 ```ts
@@ -347,21 +358,25 @@ built over it that reads the spec as the client does, such as
 #### OpenApiClient
 
 ```ts
-type OpenApiClient<Ops extends OperationsShape<Ops>, Routes = RoutesOf<Ops>, Decoded extends boolean = false> = {
+type OpenApiClient<Ops extends OperationsShape<Ops>, Routes = RoutesOf<Ops>, Decoded extends boolean = true> = {
 	op: …; // see op
 	stream: …; // see stream
 	group(): OpenApiGroup<Ops, Routes, Decoded>;
+	use(...middlewares: Middleware[]): this;
 	readonly operations: OperationTable<Ops>;
 } & PathMethods<Ops, Routes, Decoded>;
 ```
 
 What `createOpenApiClient()` returns: the members are under
-[The client](#the-client).
+[The client](#the-client). In the declarations, the members but the path
+methods are an interface, `ClientMembers<Ops, Routes, Decoded>`, intersected
+with [`PathMethods`](#pathmethods): its `use()` returns `this`, which a type
+alias cannot declare.
 
 #### OpenApiGroup
 
 ```ts
-type OpenApiGroup<Ops, Routes = RoutesOf<Ops>, Decoded extends boolean = false> =
+type OpenApiGroup<Ops, Routes = RoutesOf<Ops>, Decoded extends boolean = true> =
 	OpenApiClient<Ops, Routes, Decoded> & {
 		cancel(reason?: unknown): void;
 		readonly signal: AbortSignal;
@@ -374,7 +389,7 @@ What [`group()`](#group) returns: the client, with
 #### PathMethods
 
 ```ts
-type PathMethods<Ops, Routes = RoutesOf<Ops>, Decoded extends boolean = false> = {
+type PathMethods<Ops, Routes = RoutesOf<Ops>, Decoded extends boolean = true> = {
 	readonly [M in MethodsOf<Routes>]: <P extends PathsOf<Routes, M>>(
 		path: P,
 		...args: Args<Ops, IdOf<Ops, Routes, M, P>>

@@ -7,6 +7,7 @@ import {
 	ClientError,
 	createHttpClient,
 	type HttpClientOptions,
+	type Middleware,
 	ReplyStatusError,
 	UndeclaredStatusError,
 	unwrap,
@@ -172,6 +173,24 @@ describe('createOpenApiClient', () => {
 			labels: ['a', 'b'],
 			copies: 2,
 		});
+	});
+
+	it('adds middleware to the core client in place, a group’s to the group alone', async () => {
+		const calls: string[] = [];
+		const named =
+			(name: string): Middleware =>
+			(request, next, call) => {
+				calls.push(`${name} ${call.operationId}`);
+				return next(request);
+			};
+		const api = client();
+		const group = api.group();
+		expect(api.use(named('api'))).toBe(api);
+		expect(group.use(named('group'))).toBe(group);
+		await api.op('health');
+		await group.get('/items/{id}', { param: { id: 1 } });
+		expect(calls).toEqual(['api health', 'api getItem', 'group getItem']);
+		expect(typeof group.cancel).toBe('function');
 	});
 
 	it('reads a reply without content, and takes no input when there is none', async () => {

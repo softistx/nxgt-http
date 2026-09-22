@@ -21,7 +21,7 @@
  * consumer who uses the subpath that needs one would.
  */
 
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { $ } from 'bun';
@@ -71,19 +71,40 @@ async function readPackages(): Promise<Pkg[]> {
  *     resolved to a newer one: two copies in one tree, and two
  *     `ValidationError` classes. `workspace:^` publishes
  *     as a caret range, which dedupes.
+ *   - a **sibling range that excludes the sibling being published beside it**.
+ *     `workspace:^` is substituted from `bun.lock`, not from the sibling's
+ *     `package.json`, so a `changeset version` that is not followed by a
+ *     `bun install` publishes yesterday's numbers. This repository was carrying
+ *     that exact staleness on 2026-09-22: PR #46 released
+ *     `@nxgt/openapi-nuxt@0.3.0` and left `bun.lock` saying `0.2.1`. Nothing
+ *     shipped wrong only because no sibling depends on `openapi-nuxt`. In
+ *     `nxgt-core` the same shape put `@nxgt/shared-graphql@2.0.0` on npm asking
+ *     for `@nxgt/security@^3.2.1` while its `dist` imported the 4.0.0 API: the
+ *     install succeeds, the types check, and the consumer quietly gets both
+ *     majors. Every range involved is a well-formed caret, which is why nothing
+ *     else notices.
+ *   - a **package that lists itself** in a field a consumer installs. Neither
+ *     of the checks above sees it: `@nxgt/material` shipped
+ *     `"@nxgt/material": "."` for four months, and `.` is neither a `file:`
+ *     prefix nor a digit. It is not inert — `.` resolves to the *consumer's*
+ *     directory, so every install grew a second copy of the package reporting
+ *     the consumer's own version, plus a `bun.lock` entry no manifest declared
+ *     and `bun install` kept re-creating. A package self-references through its
+ *     `name` and `exports`; it never needs to depend on itself.
  *   - a **license other than MIT, or no `LICENSE` in the tarball**. npm only
  *     ships the `LICENSE` in the package's own directory, never the root's.
  */
 async function manifestProblems(tarballs: string[]): Promise<string[]> {
 	const problems: string[] = [];
-	const own = new Set<string>();
+	/** Sibling name to the version being published in this same run. */
+	const own = new Map<string, string>();
 	const manifests: Record<string, unknown>[] = [];
 
 	for (const tgz of tarballs) {
 		const raw = await $`tar -xzOf ${tgz} package/package.json`.quiet().text();
 		const manifest = JSON.parse(raw);
 		manifests.push(manifest);
-		own.add(manifest.name);
+		own.set(manifest.name, manifest.version);
 		if (manifest.license !== 'MIT') {
 			problems.push(
 				`${manifest.name}: license is ${manifest.license}, not MIT`,
@@ -109,10 +130,25 @@ async function manifestProblems(tarballs: string[]): Promise<string[]> {
 				if (/^(link|file):/.test(String(range))) {
 					problems.push(`${name}: ${field}.${dep} = ${range}`);
 				}
+				if (dep === name) {
+					problems.push(
+						`${name}: ${field} lists itself as ${range}; a relative path ` +
+							"there resolves to the CONSUMER's directory — " +
+							'`exports` already makes the package self-referencing',
+					);
+				}
 				if (own.has(dep) && /^\d/.test(String(range))) {
 					problems.push(
 						`${name}: ${field}.${dep} = ${range} pins a sibling exactly; ` +
 							'use `workspace:^` so the consumer gets one copy',
+					);
+				}
+				const sibling = own.get(dep);
+				if (sibling && !Bun.semver.satisfies(sibling, String(range))) {
+					problems.push(
+						`${name}: ${field}.${dep} = ${range} excludes ${dep}@${sibling}, ` +
+							'which is being published beside it; run `bun install` after ' +
+							'`changeset version` so `bun.lock` carries the new numbers',
 					);
 				}
 			}
@@ -142,7 +178,73 @@ async function manifestProblems(tarballs: string[]): Promise<string[]> {
 	return problems;
 }
 
+/**
+ * The newest mtime under a directory, or 0 if it does not exist. Deep, because
+ * a build is only as fresh as its stalest input.
+ */
+async function newestMtime(dir: string, skip?: RegExp): Promise<number> {
+	let newest = 0;
+	const glob = new Bun.Glob('**/*');
+	for await (const rel of glob.scan({ cwd: dir, onlyFiles: true })) {
+		if (skip?.test(rel)) continue;
+		const { mtimeMs } = await stat(join(dir, rel));
+		if (mtimeMs > newest) newest = mtimeMs;
+	}
+	return newest;
+}
+
+/**
+ * Specs and their snapshots live under `src/` but the build does not emit
+ * them, so they cannot make `dist/` stale — and `bun test` rewrites a snapshot
+ * file's mtime. CI runs the tests *between* the build and this script, so
+ * counting them made a green pipeline fail with
+ * `@nxgt/openapi-codegen: src/ is 57s newer than dist/`. Measured on
+ * nxgt-http, 2026-09-22.
+ */
+const NOT_A_BUILD_INPUT = /(^|\/)__snapshots__\/|\.(spec|test)\.[cm]?[jt]sx?$/;
+
+/**
+ * Packages whose `dist/` is missing, or older than their own `src/`.
+ *
+ * This script packs `dist/` and does not build. CI builds first and so does
+ * `changeset:publish`, so only a bare local `bun run verify:artifacts` can
+ * verify yesterday's artifact — and `dist/` is gitignored, so the staleness is
+ * invisible and cannot be reasoned about from the diff. Measured in `nxgt-core`
+ * on 2026-09-22, where it cost an hour: four subpaths failed on `Cannot find
+ * package 'stx-sdk'` while the same commit passed in CI, and a *resolution*
+ * error sends you to the environment, not to the build.
+ */
+async function staleBuilds(pkgs: Pkg[]): Promise<string[]> {
+	const stale: string[] = [];
+	for (const pkg of pkgs) {
+		const dist = await newestMtime(join(pkg.dir, 'dist'));
+		if (dist === 0) {
+			stale.push(`${pkg.name}: no dist/`);
+			continue;
+		}
+		const src = await newestMtime(join(pkg.dir, 'src'), NOT_A_BUILD_INPUT);
+		if (src > dist) {
+			const age = Math.round((src - dist) / 1000);
+			stale.push(`${pkg.name}: src/ is ${age}s newer than dist/`);
+		}
+	}
+	return stale;
+}
+
 const packages = await readPackages();
+
+const stale = await staleBuilds(packages);
+if (stale.length > 0) {
+	console.error('This would verify a stale build, not the working tree:\n');
+	for (const one of stale) console.error(`  ${one}`);
+	console.error(
+		'\nRun `bun run build` first. This script packs `dist/`, which is\n' +
+			'gitignored, so a stale one reports failures the source does not have —\n' +
+			'and they look like environment problems, not build problems.',
+	);
+	process.exit(1);
+}
+
 const workdir = await mkdtemp(join(tmpdir(), 'nxgt-http-verify-'));
 
 try {
@@ -165,8 +267,10 @@ try {
 		for (const problem of problems) console.error(`  ${problem}`);
 		console.error(
 			'\nA `link:` or `file:` no consumer can resolve, a required peer that is\n' +
-				'on no registry, an exact pin on a sibling, or a license other than\n' +
-				'MIT or no LICENSE shipped. See AGENTS.md.',
+				'on no registry, an exact pin on a sibling, a sibling range that\n' +
+				'excludes the sibling published beside it, a package that lists\n' +
+				'itself, or a license other than MIT or no LICENSE shipped. See\n' +
+				'AGENTS.md.',
 		);
 		process.exit(1);
 	}

@@ -134,7 +134,7 @@
     },
     "packages/openapi-nuxt": {
       "name": "@nxgt/openapi-nuxt",
-      "version": "0.2.1",
+      "version": "0.3.0",
       "dependencies": {
         "@nuxt/kit": "^4.0.0",
         "@nuxt/schema": "^4.0.0",

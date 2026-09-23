@@ -41,6 +41,18 @@ const result = await Bun.build({
 	target: 'node',
 	format: 'esm',
 	packages: 'external',
+	// Shared modules become ONE chunk every entry point imports, instead of being
+	// inlined into each. Without it a package with several entry points hands an
+	// app two copies of its OWN classes: `@nxgt/httpyz` was defining
+	// `ValidationError`, `NetworkError`, `TimeoutError`, `ReplyStatusError`,
+	// `ClientError` and `UndeclaredStatusError` once in `dist/index.js` and again
+	// in `dist/integration/index.js`, because `/integration` re-exports `METHODS`
+	// from `create-http-client` and that pulled the whole client in behind it. An
+	// `instanceof` across the two is false. Exactly the argument `packages:
+	// 'external'` makes above, which already refuses to duplicate a DEPENDENCY's
+	// classes and names `ValidationError` while doing it; this is the half that
+	// was missing for our own.
+	splitting: true,
 	sourcemap: 'linked',
 	naming: { entry: '[dir]/[name].[ext]', chunk: 'chunks/[name]-[hash].[ext]' },
 });

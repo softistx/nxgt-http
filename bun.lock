@@ -30,7 +30,7 @@
     },
     "packages/httpyz": {
       "name": "@nxgt/httpyz",
-      "version": "0.3.0",
+      "version": "0.3.1",
       "devDependencies": {
         "@types/bun": "^1.4.0",
         "hono": "^4.13.4",
@@ -42,7 +42,7 @@
     },
     "packages/httpyz-query": {
       "name": "@nxgt/httpyz-query",
-      "version": "0.2.1",
+      "version": "0.2.2",
       "devDependencies": {
         "@nxgt/httpyz": "workspace:^",
         "@nxgt/openapi-codegen": "workspace:^",
@@ -63,7 +63,7 @@
     },
     "packages/openapi-codegen": {
       "name": "@nxgt/openapi-codegen",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "bin": {
         "nxgt-openapi": "./dist/cli.js",
       },

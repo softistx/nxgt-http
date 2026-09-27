@@ -39,6 +39,8 @@ import { type Tarball, tarballProblems } from './tarball';
  *     `name` and `exports`; it never needs to depend on itself.
  *   - a **license other than MIT, or no `LICENSE` in the tarball**. npm only
  *     ships the `LICENSE` in the package's own directory, never the root's.
+ *   - **test code**: a `*.spec.*`, a `*.test.*`, a snapshot, or a
+ *     `<subject>.fixtures.*` file.
  */
 export async function manifestProblems(
 	tarballs: readonly Tarball[],

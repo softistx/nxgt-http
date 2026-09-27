@@ -10,14 +10,16 @@ describe('staleBuilds', () => {
 		Promise.all(dirs.map((dir) => rm(dir, { recursive: true, force: true }))),
 	);
 
-	test('reports a src/ newer than dist/', async () => {
+	test('reports a missing dist/, and a src/ newer than dist/', async () => {
 		const root = await mkdtemp(join(tmpdir(), 'nxgt-http-stale-'));
 		dirs.push(root);
 		const pkg = (name: string) => ({ name, dir: join(root, name) });
 
-		for (const name of ['fresh', 'stale']) {
+		for (const name of ['fresh', 'stale', 'unbuilt']) {
 			await mkdir(join(root, name, 'src'), { recursive: true });
 			await writeFile(join(root, name, 'src', 'index.ts'), '');
+		}
+		for (const name of ['fresh', 'stale']) {
 			await mkdir(join(root, name, 'dist'), { recursive: true });
 			await writeFile(join(root, name, 'dist', 'index.js'), '');
 		}
@@ -28,9 +30,9 @@ describe('staleBuilds', () => {
 		await utimes(join(root, 'stale', 'dist', 'index.js'), old, old);
 		await utimes(join(root, 'stale', 'src', 'index.ts'), later, later);
 
-		expect(await staleBuilds([pkg('fresh'), pkg('stale')])).toEqual([
-			'stale: src/ is 60s newer than dist/',
-		]);
+		expect(
+			await staleBuilds([pkg('fresh'), pkg('stale'), pkg('unbuilt')]),
+		).toEqual(['stale: src/ is 60s newer than dist/', 'unbuilt: no dist/']);
 	});
 
 	test('does not count a spec or a snapshot as a build input', () => {

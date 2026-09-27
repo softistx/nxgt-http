@@ -117,6 +117,13 @@ Rules carried over from nxgt-core, each learned from a shipped defect:
   `link:` or `file:` in a field a consumer resolves, a **required** peer on no
   registry, an exact pin on a sibling, or a package that is not MIT or ships
   no `LICENSE`. `changeset:publish` runs it, so a release cannot skip it.
+  `scripts/verify-artifacts.ts` only runs the stages in order and stops at
+  the first that fails; each lives in `scripts/artifacts/`, one module per
+  responsibility, with a spec beside each pure one: `packages.ts` reads the
+  workspace, `tarball.ts` a tarball's entries, `manifest.ts` its dependency
+  fields, `registry.ts` asks npm, then `stale.ts`, `install.ts`, `load.ts`
+  and `classes.ts`. The split follows nxgt-janus's copy module for module,
+  so a check added to one copy is a check to port to the others.
 - **Build before typecheck and tests.** `exports` points at `dist/`, so on a
   clean checkout `@nxgt/httpyz` resolves to nothing for the binding. CI builds
   first.
@@ -185,9 +192,11 @@ publishes to npm.
 
 ## Known state
 
-`bun run test` is **403 pass, 0 fail**: datasource-rest 26, httpyz 90, httpyz-query 14,
-openapi-codegen 160, openapi-hono 28, openapi-httpyz 28, openapi-msw 21, openapi-nuxt 36. It runs one process per package, and each
-package's `test` script writes the generated fixtures its specs import first.
+`bun run test` is **418 pass, 0 fail**: datasource-rest 26, httpyz 90, httpyz-query 14,
+openapi-codegen 160, openapi-hono 28, openapi-httpyz 28, openapi-msw 21, openapi-nuxt 36,
+scripts 15. It runs one process per package, and each
+package's `test` script writes the generated fixtures its specs import first;
+then `bun test scripts` runs the repository scripts' own specs.
 Treat any failure as yours.
 
 **The generated code compiles under the strictest settings.** It lands in an

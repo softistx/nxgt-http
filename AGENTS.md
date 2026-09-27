@@ -132,6 +132,11 @@ Rules carried over from nxgt-core, each learned from a shipped defect:
   fields, `registry.ts` asks npm, then `stale.ts`, `install.ts`, `load.ts`
   and `classes.ts`. The split follows nxgt-janus's copy module for module,
   so a check added to one copy is a check to port to the others.
+  It packs `dist/` and does not build, so it refuses to start on a package
+  with no `dist/` or a `src/` newer than it: `<package>: no dist/`, then
+  "Run `bun run build` first". Until 2026-09-27 the missing-`dist/` case
+  crashed on a raw `ENOENT` instead, because on Bun 1.4.2
+  `Bun.Glob().scan` throws on a missing `cwd`; `stale.spec.ts` now holds it.
 - **Build before typecheck and tests.** `exports` points at `dist/`, so on a
   clean checkout `@nxgt/httpyz` resolves to nothing for the binding. CI builds
   first.
@@ -200,7 +205,7 @@ publishes to npm.
 
 ## Known state
 
-`bun run test` is **423 pass, 0 fail**: datasource-rest 26, httpyz 90, httpyz-query 14,
+`bun run test` is **423 pass, 0 fail** on 2026-09-27: datasource-rest 26, httpyz 90, httpyz-query 14,
 openapi-codegen 160, openapi-hono 28, openapi-httpyz 28, openapi-msw 21, openapi-nuxt 36,
 scripts 20. It runs one process per package, and each
 package's `test` script writes the generated fixtures its specs import first;

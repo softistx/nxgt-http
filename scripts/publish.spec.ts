@@ -1,10 +1,15 @@
-import { describe, expect, test } from 'bun:test';
-import { mkdtemp, readFile } from 'node:fs/promises';
+import { afterAll, describe, expect, test } from 'bun:test';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { appendChangesetsOutput, changesetsGitTagEvent } from './publish';
 
 describe('changesets/action@v2 output', () => {
+	const dirs: string[] = [];
+	afterAll(() =>
+		Promise.all(dirs.map((dir) => rm(dir, { recursive: true, force: true }))),
+	);
+
 	test('emits one NDJSON git-tag event per line', () => {
 		const line = changesetsGitTagEvent('@nxgt/shared', '@nxgt/shared@1.2.3');
 		expect(line.endsWith('\n')).toBe(true);
@@ -17,6 +22,7 @@ describe('changesets/action@v2 output', () => {
 
 	test('appends events so a second publish does not clobber the first', async () => {
 		const dir = await mkdtemp(join(tmpdir(), 'changesets-output-'));
+		dirs.push(dir);
 		const path = join(dir, 'output.ndjson');
 		await appendChangesetsOutput(path, '@nxgt/i18n', '@nxgt/i18n@1.0.3');
 		await appendChangesetsOutput(path, '@nxgt/shared', '@nxgt/shared@1.0.4');

@@ -116,7 +116,15 @@ Rules carried over from nxgt-core, each learned from a shipped defect:
   `--help`, and rejects a manifest that would break an install. That means a
   `link:` or `file:` in a field a consumer resolves, a **required** peer on no
   registry, an exact pin on a sibling, or a package that is not MIT or ships
-  no `LICENSE`. `changeset:publish` runs it, so a release cannot skip it.
+  no `LICENSE`. It also fails a tarball that ships test code — a `*.spec.*`,
+  a `*.test.*`, a snapshot, or a `<subject>.fixtures.*` — with
+  `<package>: the tarball ships test code: <path>`. A plain `fixtures.*`
+  passes: the dotted prefix is what marks the fixtures specs share. Each
+  `tsconfig.build.json` excludes only `test/` and `**/*.spec.ts`; the only
+  other kind under a `src/` is openapi-codegen's `__snapshots__/*.snap`,
+  which `tsc` does not emit and `files` does not list, so no tarball holds
+  any today. This check is what holds that. `changeset:publish` runs it, so
+  a release cannot skip it.
   `scripts/verify-artifacts.ts` only runs the stages in order and stops at
   the first that fails; each lives in `scripts/artifacts/`, one module per
   responsibility, with a spec beside each pure one: `packages.ts` reads the
@@ -192,9 +200,9 @@ publishes to npm.
 
 ## Known state
 
-`bun run test` is **418 pass, 0 fail**: datasource-rest 26, httpyz 90, httpyz-query 14,
+`bun run test` is **423 pass, 0 fail**: datasource-rest 26, httpyz 90, httpyz-query 14,
 openapi-codegen 160, openapi-hono 28, openapi-httpyz 28, openapi-msw 21, openapi-nuxt 36,
-scripts 15. It runs one process per package, and each
+scripts 20. It runs one process per package, and each
 package's `test` script writes the generated fixtures its specs import first;
 then `bun test scripts` runs the repository scripts' own specs.
 Treat any failure as yours.

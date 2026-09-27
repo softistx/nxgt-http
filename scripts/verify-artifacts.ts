@@ -50,14 +50,14 @@ async function builtFresh(packages: readonly Pkg[]): Promise<boolean> {
 async function tarballsSound({ tarballs }: Packed): Promise<boolean> {
 	const problems = await manifestProblems(tarballs);
 	if (problems.length === 0) return true;
-	console.error('\nA published manifest would break a consumer:\n');
+	console.error('\nA published tarball would break a consumer:\n');
 	for (const problem of problems) console.error(`  ${problem}`);
 	console.error(
 		'\nA `link:` or `file:` no consumer can resolve, a required peer that is\n' +
 			'on no registry, an exact pin on a sibling, a sibling range that\n' +
 			'excludes the sibling published beside it, a package that lists\n' +
-			'itself, or a license other than MIT or no LICENSE shipped. See\n' +
-			'AGENTS.md.',
+			'itself, a license other than MIT or no LICENSE shipped, or test\n' +
+			'code shipped. See AGENTS.md.',
 	);
 	return false;
 }

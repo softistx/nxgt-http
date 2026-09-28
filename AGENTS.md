@@ -145,6 +145,19 @@ Rules carried over from nxgt-core, each learned from a shipped defect:
 - **Build before typecheck and tests.** `exports` points at `dist/`, so on a
   clean checkout `@nxgt/httpyz` resolves to nothing for the binding. CI builds
   first.
+- **CI lints with the Biome `bun.lock` resolved**: `bunx biome ci`, the
+  version `bun run check` runs locally, and the one `biome.json`'s `$schema`
+  names. Not `biomejs/setup-biome` with `latest`, which linted
+  CI with a newer Biome than anyone ran locally. Raising Biome is a lock bump
+  that moves the `$schema` with it.
+- **Every job has a `timeout-minutes`**, sized from the runs measured up to
+  2026-09-27: 8 for CI, whose job took 1 to 2 minutes, and 10 for the
+  release, which took under a minute and a half — generous, since a publish
+  killed half-way is worse than one waited on. Past it a run is hung, and the
+  six-hour default holds the runner for nothing. `ci.yml` has nxgt-janus's
+  `concurrency` group: a pull request's new push cancels its run in progress,
+  and a push to `develop`, were CI ever to run on one, never would. The
+  release keeps its own group, which never cancels a run under way.
 - **An asset ships only if it is outside `dist`.** The codegen docs are in
   `files` for that reason.
 
@@ -185,16 +198,17 @@ publishes to npm.
 | --- | --- |
 | `unroutable`, in `openapi-hono/src/routable.ts` and `openapi-codegen/src/emit/routable.ts` | the runtime refuses the route and the generator warns. Importing one from the other would make the runtime a dependency of the generator. Change both together |
 | `LICENSE`, at the root and in each `packages/*/` | npm ships only the `LICENSE` in the package's own directory. `verify:artifacts` fails a tarball without one. Change them all together |
-| `scripts/verify-artifacts.ts` and `scripts/artifacts/`, beside nxgt-janus, nxgt-data and nxgt-core | each repository releases on its own, so the skeleton is copied, not shared. All four are split module for module and hold the same three checks: the test-code check, the guard that reports an unbuilt package as `no dist/`, and `missingFiles`, whose spec holds that a `files` entry `dis` is not covered by `dist/`. This copy lacks nxgt-core's `browser.ts`, a check for the `browser` export condition, which no package here declares. It also reads a sibling's version from the packed manifests, where nxgt-janus and nxgt-data read it from the workspace. Outside `scripts/artifacts/`, `check-changesets.ts` and `check-nxgt-versions.ts` are nxgt-janus's alone. A check added to one copy is a check to port to the others |
+| `scripts/verify-artifacts.ts` and `scripts/artifacts/`, beside nxgt-janus, nxgt-data and nxgt-core | each repository releases on its own, so the skeleton is copied, not shared. All four are split module for module and hold the same three checks: the test-code check, the guard that reports an unbuilt package as `no dist/`, and `missingFiles`, whose spec holds that a `files` entry `dis` is not covered by `dist/`. This copy lacks nxgt-core's `browser.ts`, a check for the `browser` export condition, which no package here declares. It also reads a sibling's version from the packed manifests, where nxgt-janus and nxgt-data read it from the workspace. Outside `scripts/artifacts/`, `check-changesets.ts` is nxgt-janus's alone, and `check-nxgt-versions.ts` with its weekly `nxgt versions` workflow is nxgt-janus's, copied into nxgt-data and nxgt-core by softistx/nxgt-data#139 and softistx/nxgt-core#158, but not here: it tracks `@nxgt/*` devDependencies from outside the repository, and every `@nxgt/*` package here depends only on its siblings, by `workspace:^`. A package that takes one from outside brings the check with it. A check added to one copy is a check to port to the others |
 | How a request is read and refused, in `openapi-hono/src/engine.ts` and `openapi-msw/src/request/read-request.ts` | the mock answers with the server's 400, with the same issues in the same order. The engine reads through Hono's `Context`, which the mock has no use for, and the mock depending on the runtime would pull in Hono. Change both together |
 | `openapi-codegen/test/fixtures/shared-components/` | a copy of the `openapi/components/` that nxgt-core's `@nxgt/shared-openapi` publishes: real split fragments for the loader and the `split` fixture. It is a fixture, not a dependency |
 
 ## Conventions
 
 - Biome, with tabs and single quotes. Run `./node_modules/.bin/biome check
-  --write` before committing, and `biome ci` must pass.
+  --write` before committing, and `bunx biome ci` must pass, as in CI.
 - Commit messages: `<type>: <Capitalized summary>`, with types `feat`, `fix`,
-  `update`, `chore`, `docs` and `typo`.
+  `update`, `chore`, `docs`, `typo`, and `ci` for the workflows and the setup
+  action.
 - A repository script is a TypeScript file run by Bun, with Bun Shell, not a
   `.sh`.
 - **Imports carry no extension**: `import { operations } from

@@ -11,9 +11,9 @@ on:
 # A pull request's new push supersedes its run in progress. A push to
 # `develop` never would: each one is in a group of its own, by run id. This
 # workflow runs on pull requests alone today, so that half only matters if a
-# `push` trigger is added — nxgt-data and nxgt-janus run on develop to fill
-# their caches, and there a cancelled develop run is a cold cache for every
-# pull request. The same group as theirs.
+# `push` trigger is added — nxgt-janus runs on develop to fill its caches,
+# and there a cancelled develop run is a cold cache for every pull request.
+# The same group as nxgt-janus's.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref != 'refs/heads/develop' && github.ref || github.run_id }}
   cancel-in-progress: true

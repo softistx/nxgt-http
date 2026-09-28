@@ -116,7 +116,11 @@ Rules carried over from nxgt-core, each learned from a shipped defect:
   `--help`, and rejects a manifest that would break an install. That means a
   `link:` or `file:` in a field a consumer resolves, a **required** peer on no
   registry, an exact pin on a sibling, or a package that is not MIT or ships
-  no `LICENSE`. It also fails a tarball that ships test code — a `*.spec.*`,
+  no `LICENSE`. It fails a `files` entry the tarball holds nothing under,
+  with `<package>: files lists <entry>, which the tarball does not hold — build it
+  first, or drop it from files` —
+  npm skips such an entry without a word. It also fails a tarball that ships
+  test code — a `*.spec.*`,
   a `*.test.*`, a snapshot, or a `<subject>.fixtures.*` — with
   `<package>: the tarball ships test code: <path>`. A plain `fixtures.*`
   passes: the dotted prefix is what marks the fixtures specs share. Each
@@ -131,7 +135,8 @@ Rules carried over from nxgt-core, each learned from a shipped defect:
   workspace, `tarball.ts` a tarball's entries, `manifest.ts` its dependency
   fields, `registry.ts` asks npm, then `stale.ts`, `install.ts`, `load.ts`
   and `classes.ts`. The split follows nxgt-janus's copy module for module,
-  so a check added to one copy is a check to port to the others.
+  so a check added to one copy is a check to port to the others; the table
+  under *Kept twice* says what this copy has and lacks.
   It packs `dist/` and does not build, so it refuses to start on a package
   with no `dist/` or a `src/` newer than it: `<package>: no dist/`, then
   "Run `bun run build` first". Until 2026-09-27 the missing-`dist/` case
@@ -180,6 +185,7 @@ publishes to npm.
 | --- | --- |
 | `unroutable`, in `openapi-hono/src/routable.ts` and `openapi-codegen/src/emit/routable.ts` | the runtime refuses the route and the generator warns. Importing one from the other would make the runtime a dependency of the generator. Change both together |
 | `LICENSE`, at the root and in each `packages/*/` | npm ships only the `LICENSE` in the package's own directory. `verify:artifacts` fails a tarball without one. Change them all together |
+| `scripts/verify-artifacts.ts` and `scripts/artifacts/`, beside nxgt-janus, nxgt-data and nxgt-core | each repository releases on its own, so the skeleton is copied, not shared. All four are split module for module and hold the test-code check and the guard that reports an unbuilt package as `no dist/`. `missingFiles` is here, in nxgt-janus and in nxgt-data; nxgt-core's port is on its `fix/artifacts-missing-files` branch. This copy lacks nxgt-core's `browser.ts`, a check for the `browser` export condition, which no package here declares. It also reads a sibling's version from the packed manifests, where nxgt-janus and nxgt-data read it from the workspace. A check added to one copy is a check to port to the others |
 | How a request is read and refused, in `openapi-hono/src/engine.ts` and `openapi-msw/src/request/read-request.ts` | the mock answers with the server's 400, with the same issues in the same order. The engine reads through Hono's `Context`, which the mock has no use for, and the mock depending on the runtime would pull in Hono. Change both together |
 | `openapi-codegen/test/fixtures/shared-components/` | a copy of the `openapi/components/` that nxgt-core's `@nxgt/shared-openapi` publishes: real split fragments for the loader and the `split` fixture. It is a fixture, not a dependency |
 
@@ -205,9 +211,9 @@ publishes to npm.
 
 ## Known state
 
-`bun run test` is **423 pass, 0 fail** on 2026-09-27: datasource-rest 26, httpyz 90, httpyz-query 14,
+`bun run test` is **427 pass, 0 fail** on 2026-09-27: datasource-rest 26, httpyz 90, httpyz-query 14,
 openapi-codegen 160, openapi-hono 28, openapi-httpyz 28, openapi-msw 21, openapi-nuxt 36,
-scripts 20. It runs one process per package, and each
+scripts 24. It runs one process per package, and each
 package's `test` script writes the generated fixtures its specs import first;
 then `bun test scripts` runs the repository scripts' own specs.
 Treat any failure as yours.

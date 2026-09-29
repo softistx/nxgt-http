@@ -23,11 +23,9 @@ optional, and the generator adds its own 400 beside it.
 **Why:** the library is not installed where the spec is, or the project has
 no `package.json` to resolve it from.
 
-**Fix:** install it next to the spec's project, as a devDependency:
-
-```sh
-bun add -d @nxgt/typespec @typespec/compiler @typespec/http @typespec/openapi3 @nxgt/openapi-codegen
-```
+**Fix:** install it and its peers next to the spec's project, as
+devDependencies, with the command in the
+[README's Install section](../README.md#install).
 
 ## `Duplicate type name: 'NotFoundBody'`
 
@@ -48,31 +46,52 @@ namespace, so they share the spec's schema names.
 @get read(@path postId: string): Post | NotFound;
 ```
 
-## `Two operations of @operationIds interfaces are named listPets`
+## `Two operations are named listPets: an OpenAPI operation id must be unique`
 
-**When:** two operations of `@operationIds` interfaces end up with one id:
-two interfaces of one name in two namespaces share an operation name, or an
-interface `extends` another whose operation has an `@operationId`, which is
-copied as is.
+**When:** an operation of an `@operationIds` interface has the id of another
+operation:
+
+- two interfaces of one name, in two namespaces, share an operation name:
+  `Store.Pets` and `Shelter.Pets` both give `listPets`;
+- an interface `extends` another, whose operation has an `@operationId`:
+  `extends` copies it as is;
+- an `@operationId` written elsewhere takes the id `@operationIds` gives.
 
 ```text
-error @nxgt/typespec/duplicate-operation-id: Two operations of @operationIds interfaces are named listPets. Give one of them its own @operationId.
+error @nxgt/typespec/duplicate-operation-id: Two operations are named listPets: an OpenAPI operation id must be unique.
 ```
 
 **Why:** `@operationIds` names each operation `<operation><Interface>`, without
-the namespace, and an OpenAPI operation id must be unique. `@typespec/openapi3`
-would emit both without a word.
+the namespace. `@typespec/openapi3` would emit both ids without a word, and
+the generator would then refuse the spec.
 
-**Fix:** give one of them its own id:
+**Fix:** give one of them its own `@operationId`. An inherited operation takes
+one by being declared again in the interface that extends:
 
 ```tsp
-namespace Shelter {
-  @route("/shelter/pets")
-  @operationIds
-  interface Pets {
-    @get @operationId("listShelterPets") list(): Pet[];
-  }
+import "@typespec/openapi";
+
+using OpenAPI;
+
+@route("/drafts")
+interface Drafts extends Posts {
+  @get @operationId("getDraft") read(@path postId: string): Post | NotFound;
 }
+```
+
+## `Unknown decorator @operationId`
+
+**When:** a spec writes `@operationId` next to `@operationIds`.
+
+**Why:** `@operationIds` comes from `@nxgt/typespec`, but `@operationId`
+comes from `@typespec/openapi`, which the file does not import.
+
+**Fix:** import it in that file:
+
+```tsp
+import "@typespec/openapi";
+
+using OpenAPI;
 ```
 
 ## `unsupported_version` from the generator

@@ -97,10 +97,14 @@ no relative import into one.
   generator's own `typespec` fixture does. A decorator is exported only
   through `$decorators`, under `Nxgt`: a top-level `$name` export declares it
   a second time in the global namespace, and every use becomes
-  `ambiguous-symbol`. `@operationIds` sets its ids in `$onValidate`, after
-  every decorator, so an operation's own `@operationId` wins whatever the
-  order. A spec the library must refuse is a `.tsp` under `test/invalid/`,
-  compiled in memory by its spec.
+  `ambiguous-symbol`. `$lib` is in `src/lib.ts`, each feature's JS in its
+  own file, and `src/index.ts` only exports them. `@operationIds` sets its
+  ids in `$onValidate`, after every decorator, so an operation's own
+  `@operationId` wins whatever the order; on a template, TypeSpec runs it on
+  each instance, never emitted, so the ids go to the interfaces extending
+  it. A program the library must accept or refuse, without a fixture of its
+  own, is a `.tsp` under `test/programs/`, compiled without emitting by its
+  spec.
 - `@nxgt/openapi-hono` has the generator as a devDependency, for its
   fixtures. The one `paths` entry left is its own name, so that the
   generated `hono.ts` in its fixtures runs the engine the specs import from
@@ -251,8 +255,8 @@ publishes to npm.
 
 ## Known state
 
-`bun run test` is **454 pass, 0 fail** on 2026-09-29: datasource-rest 26, httpyz 90, httpyz-query 14,
-openapi-codegen 164, openapi-hono 31, openapi-httpyz 28, openapi-msw 21, openapi-nuxt 36, typespec 20,
+`bun run test` is **456 pass, 0 fail** on 2026-09-29: datasource-rest 26, httpyz 90, httpyz-query 14,
+openapi-codegen 164, openapi-hono 31, openapi-httpyz 28, openapi-msw 21, openapi-nuxt 36, typespec 22,
 scripts 24. It runs one process per package, and each
 package's `test` script writes the generated fixtures its specs import first;
 then `bun test scripts` runs the repository scripts' own specs.

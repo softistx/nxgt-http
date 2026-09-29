@@ -139,6 +139,10 @@ generator turns that id into the client's method and its types' prefix. Put
 the interface instead:
 
 ```tsp
+import "@typespec/openapi"; // for @operationId
+
+using OpenAPI;
+
 @route("/posts")
 @operationIds
 interface Posts {
@@ -147,8 +151,10 @@ interface Posts {
 }
 ```
 
-An operation's own `@operationId` wins. Two operations named alike are an
-error, `duplicate-operation-id`. More in
+An operation's own `@operationId` wins. An interface that extends a marked
+one, or an instance of a marked template, is named after itself. An operation
+of a marked interface that has another operation's id is an error,
+`duplicate-operation-id`. More in
 [Operation ids](docs/guide/operation-ids.md).
 
 ## API

@@ -12,8 +12,8 @@ interface and its method, joined by `_`:
 ```tsp
 @route("/posts")
 interface Posts {
-  @get list(): Post[];         // Posts_list
-  @post create(@body post: Create<Post>): Post; // Posts_create
+  @get list(@query status?: PostStatus): Post[]; // Posts_list
+  @post create(@body post: Create<Post>): Post;  // Posts_create
 }
 ```
 
@@ -52,10 +52,10 @@ interface Posts {
 - An operation with its own `@operationId` keeps it, whether it is written
   before or after `@operationIds`. `import "@typespec/openapi"` and
   `using OpenAPI` are only needed for that `@operationId`.
-- An interface that `extends` another names the operations it inherits
-  after itself: `@operationIds interface Drafts extends Posts {}` gives
-  `listDrafts`. An inherited `@operationId` is copied as is, though, so
-  `Drafts` would name its `read` `getPost` too: see below.
+- An interface that `extends` a marked one is marked too, and names the
+  operations it inherits after itself: `interface Drafts extends Posts {}`
+  gives `listDrafts`. An inherited `@operationId` is copied as is, though,
+  so `Drafts` would name its `read` `getPost` too: see below.
 
 The generated `operations` then has one entry per id:
 
@@ -63,21 +63,42 @@ The generated `operations` then has one entry per id:
 import { operations } from './generated/operations';
 
 Object.keys(operations);
-// ['listPosts', 'getPost', 'createPosts', 'updatePosts', 'deletePosts']
+// ['listPosts', 'createPosts', 'getPost', 'updatePosts', 'deletePosts']
+```
+
+## On a template
+
+On an interface template, `@operationIds` names the operations of each
+interface that extends an instance, after that interface:
+
+```tsp
+@operationIds
+interface Resource<Item> {
+  @get list(): Item[];
+}
+
+@route("/pets")
+interface Pets extends Resource<Pet> {}     // listPets
+
+@route("/orders")
+interface Orders extends Resource<Order> {} // listOrders
 ```
 
 ## Two operations named alike
 
-An id must be unique, and two cases break that:
+An id must be unique, and three cases break that:
 
 - the namespace is not part of the id, so `Store.Pets` and `Shelter.Pets`
   would both name their `list` `listPets`;
 - an `@operationId` is copied by `extends`, so `Drafts extends Posts` would
-  have a second `getPost`.
+  have a second `getPost`;
+- an `@operationId` written on another operation, in any interface, takes
+  the id `@operationIds` gives.
 
-`@operationIds` refuses both with `duplicate-operation-id`, where
-`@typespec/openapi3` would emit them without a word. Give one of them its own
-`@operationId` ([troubleshooting](../troubleshooting.md)).
+`@operationIds` refuses each with `duplicate-operation-id`, where
+`@typespec/openapi3` would emit both without a word. Give one of them its own
+`@operationId`; an inherited operation takes one by being declared again in
+the interface that extends ([troubleshooting](../troubleshooting.md)).
 
 ## Without the library
 

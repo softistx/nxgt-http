@@ -63,7 +63,7 @@ model Post {
 | --- | --- | --- | --- |
 | `Timestamps` | `createdAt`, `updatedAt: utcDateTime` | read | `timestamps()` |
 | `SoftDelete` | `deletedAt: utcDateTime \| null` | read | `softDelete()` |
-| `Versioned` | `version: integer` | read, update | `version()` |
+| `Versioned` | `version: integer`, at least 0 | read, update | `version()` |
 | `Actors<Id = uuid>` | `createdBy`, `updatedBy`, `deletedBy: Id \| null` | read | `actors()` |
 
 The server sets every read-only column, so `Create<Post>` and
@@ -86,8 +86,11 @@ that version, and throws `OptimisticLockError` otherwise. Declare the
 
 ```ts
 import { OptimisticLockError } from '@nxgt/drizzle';
+import { Hono } from 'hono';
+import { createRoutes } from './generated/hono';
 import type { ConflictBody } from './generated/types';
 
+const app = new Hono();
 createRoutes(app).patch('/posts/{postId}', async (c) => {
 	try {
 		const post = await posts.update(c.req.valid('param').postId, c.req.valid('json'));
@@ -110,5 +113,5 @@ without it is not checked against the version.
 ## Names
 
 `Uuid` and `Email` are schemas of their own, and their names are global: a
-model named `Email` in the spec collides with them
+model named `Email` in a spec that also uses `email` collides with it
 ([troubleshooting](../troubleshooting.md)).

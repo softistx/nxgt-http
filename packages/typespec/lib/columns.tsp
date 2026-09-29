@@ -28,6 +28,7 @@ model SoftDelete {
  */
 model Versioned {
   @visibility(Lifecycle.Read, Lifecycle.Update)
+  @minValue(0)
   version: integer;
 }
 

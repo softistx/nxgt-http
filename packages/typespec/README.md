@@ -353,10 +353,9 @@ of a marked interface that has another operation's id is an error,
   at one of them.
 - **The library's schema names are global.** `BadRequestBody` …
   `InternalServerErrorBody`, `ValidationIssue`, `ValidationTarget`, `Uuid`,
-  `Email`, and each
-  `<Item>Page` and `<Item>CursorPage` are emitted under those names, without
-  a namespace. A model of the same name
-  in your spec fails with `duplicate-type-name`
+  `Email`, and each `<Item>Page` and `<Item>CursorPage` are emitted under
+  those names, without a namespace, once the spec uses them. A model of the
+  same name in your spec then fails with `duplicate-type-name`
   ([troubleshooting](docs/troubleshooting.md)).
 
 ## Documentation

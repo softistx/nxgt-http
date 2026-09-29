@@ -2,9 +2,11 @@
  * The scalars of `lib/scalars.tsp` and the columns of `lib/columns.tsp`, on
  * the blog fixture, served by `@nxgt/openapi-hono`: a `uuid` or an `email`
  * is checked, the server's columns are read-only, and `version` goes back in
- * an update.
+ * an update. `test/programs/actors.tsp` is compiled without emitting.
  */
 import { describe, expect, it } from 'bun:test';
+import { fileURLToPath } from 'node:url';
+import { compile, NodeHost } from '@typespec/compiler';
 import { Hono } from 'hono';
 import { VERSIONS } from '../test/generate';
 import { createRoutes as routes31 } from '../test/generated/blog/3.1.0/hono';
@@ -46,6 +48,13 @@ function app(createRoutes: typeof routes31): Hono {
 				updatedAt: timestamp,
 			};
 			return c.json(author, 201);
+		})
+		.get('/posts', (c) => {
+			const { page, pageSize } = c.req.valid('query');
+			return c.json(
+				{ items: [post], total: 1, page, pageSize, pageCount: 1 },
+				200,
+			);
 		})
 		.patch('/posts/{postId}', (c) => {
 			const { version } = c.req.valid('json');
@@ -89,9 +98,11 @@ for (const version of VERSIONS) {
 			expect(refused.status).toBe(400);
 		});
 
-		it('checks a uuid in the path', async () => {
+		it('checks a uuid in the path and the query', async () => {
 			const refused = await send(createRoutes, 'PATCH', '/posts/42', {});
 			expect(refused.status).toBe(400);
+			const query = await app(createRoutes).request('/posts?authorId=42');
+			expect(query.status).toBe(400);
 		});
 
 		it('takes the version back in an update', async () => {
@@ -101,6 +112,10 @@ for (const version of VERSIONS) {
 			});
 			expect(updated.status).toBe(200);
 			expect(await updated.json()).toMatchObject({ version: 4 });
+			const refused = await send(createRoutes, 'PATCH', `/posts/${id}`, {
+				version: -1,
+			});
+			expect(refused.status).toBe(400);
 		});
 	});
 }
@@ -110,6 +125,31 @@ it('leaves the read-only columns out of what a client sends', () => {
 	const created: keyof CreateComment = 'createdAt';
 	// @ts-expect-error: createdBy is the server's
 	const stamped: keyof PostMergePatchUpdate = 'createdBy';
+	// @ts-expect-error: deletedAt is the server's
+	const deleted: keyof CreateComment = 'deletedAt';
+	// @ts-expect-error: updatedAt is the server's
+	const touched: keyof PostMergePatchUpdate = 'updatedAt';
 	const locked: keyof PostMergePatchUpdate = 'version';
-	expect([created, stamped, locked]).toHaveLength(3);
+	expect([created, stamped, deleted, touched, locked]).toHaveLength(5);
 });
+
+it('types the actors with another id, as actors("integer")', async () => {
+	const main = fileURLToPath(
+		new URL('../test/programs/actors.tsp', import.meta.url),
+	);
+	const program = await compile(NodeHost, main, { noEmit: true });
+	expect(program.diagnostics).toEqual([]);
+	const order = program
+		.getGlobalNamespaceType()
+		.namespaces.get('Shop')
+		?.models.get('Order');
+	const createdBy = order?.properties.get('createdBy')?.type;
+	expect(createdBy?.kind).toBe('Union');
+	const variants =
+		createdBy?.kind === 'Union'
+			? [...createdBy.variants.values()].map(({ type }) =>
+					type.kind === 'Scalar' ? type.name : type.kind,
+				)
+			: [];
+	expect(variants).toEqual(['integer', 'Intrinsic']);
+}, 30_000);

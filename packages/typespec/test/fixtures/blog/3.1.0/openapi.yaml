@@ -648,6 +648,7 @@ components:
           readOnly: true
         version:
           type: integer
+          minimum: 0
         createdBy:
           anyOf:
             - $ref: '#/components/schemas/Uuid'
@@ -685,6 +686,7 @@ components:
             - type: 'null'
         version:
           type: integer
+          minimum: 0
       description: An article, by one author.
     PostPage:
       type: object

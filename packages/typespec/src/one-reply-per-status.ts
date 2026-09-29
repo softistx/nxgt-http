@@ -1,12 +1,13 @@
 /**
  * One reply per status: `@typespec/openapi3` merges two replies of one
  * status into one without a word. A reply without a body beside one with a
- * body is lost in the merge, an error. Two bodies of one content type are
- * merged under the first reply's description, a warning where the status is
- * a code: under `*` or a range, the description is the same either way.
+ * body is lost in the merge, an error; a `void` body is none, as the emitter
+ * sees it. Two bodies of one content type are merged under the first reply's
+ * description, a warning where the status is a code. Under `*` or a range,
+ * where undocumented `@error` models share one description, they pass.
  * Bodies of different content types are one reply, negotiated, and pass.
  */
-import type { Operation, Program } from '@typespec/compiler';
+import { isVoidType, type Operation, type Program } from '@typespec/compiler';
 import {
 	getAllHttpServices,
 	type HttpOperationResponse,
@@ -26,7 +27,9 @@ function mergeOf({
 	| 'duplicate-status-reply'
 	| 'merged-status-reply'
 	| undefined {
-	const bodies = responses.flatMap(({ body }) => (body ? [body] : []));
+	const bodies = responses.flatMap(({ body }) =>
+		body && !isVoidType(body.type) ? [body] : [],
+	);
 	if (bodies.length > 0 && bodies.length < responses.length) {
 		return 'duplicate-status-reply';
 	}

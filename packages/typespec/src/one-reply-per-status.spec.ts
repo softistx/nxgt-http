@@ -35,6 +35,7 @@ it('refuses a reply without a body beside one with a body, and warns of two bodi
 			message:
 				"create declares two replies with a body of status 409: the emitter merges their bodies under the first one's description. Declare the one the route sends.",
 		},
+		lost('probe', '200'),
 		lost('read', '401'),
 	]);
 });

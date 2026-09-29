@@ -113,7 +113,7 @@ answers with the envelope, `Unauthorized`:
 
 **When:** a warning: an operation declares two replies with a body for one
 status code, such as the idempotent write's 409 beside the optimistic
-lock's:
+lock's, or its 422, `IdempotencyKeyReused`, beside `UnprocessableEntity`:
 
 ```tsp
 @post create(@body post: Post): Post | IdempotencyInProgress | Conflict;
@@ -124,8 +124,8 @@ warning @nxgt/typespec/merged-status-reply: create declares two replies with a b
 ```
 
 **Why:** `@typespec/openapi3` keeps both bodies, as one reply whose body is
-either, under the first one's description: the second's is gone, and each
-header of either reply becomes optional, `Retry-After` too.
+either, under the first one's description: the second's is gone, and a
+header either reply declares required becomes optional.
 
 **Fix:** declare the one the route sends. Both carry the envelope, and the
 `message` key tells them apart:

@@ -341,7 +341,7 @@ of a marked interface that has another operation's id is an error,
 | Code | Reported when |
 | --- | --- |
 | `duplicate-operation-id` | error: an operation of an `@operationIds` interface has another operation's id |
-| `duplicate-status-reply` | error: an operation declares a reply without a body and one with a body of one status, which the emitter merges, losing the first |
+| `duplicate-status-reply` | error: an operation declares a reply without a body and one with a body of one status, which the emitter merges, losing the one without a body |
 | `merged-status-reply` | warning: an operation declares two replies with a body of one status code, which the emitter merges under the first one's description |
 
 ### Models

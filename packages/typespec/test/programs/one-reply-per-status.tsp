@@ -45,6 +45,12 @@ interface Pets {
   // Kept: two 204s, nothing to lose.
   @delete @route("/{name}") remove(@path name: string): void | NoContentResponse;
 
+  // Refused: a `void` body is none.
+  @get @route("/{name}/void") probe(@path name: string): Pet | {
+    @statusCode _: 200;
+    @body body: void;
+  };
+
   // Kept: two errors under `*`, one description either way.
   @get @route("/{name}/toys") toys(@path name: string): Toy[] | ShelterError | StoreError;
 }
@@ -79,5 +85,16 @@ namespace Back {
   op stock(): string[] | ClientError | {
     @statusCode @minValue(400) @maxValue(499) _: int32;
     @body body: string;
+  };
+
+  // Kept: two bodies under a range.
+  @route("/stock/{sku}")
+  @get
+  op item(@path sku: string): string | {
+    @statusCode @minValue(500) @maxValue(599) _: int32;
+    @body body: ShelterError;
+  } | {
+    @statusCode @minValue(500) @maxValue(599) _: int32;
+    @body body: StoreError;
   };
 }

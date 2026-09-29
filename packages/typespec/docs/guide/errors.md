@@ -158,8 +158,8 @@ its own way, through `onValidationError`, turns that off with the generator's
 | Response | Status | Body | Sent when |
 | --- | --- | --- | --- |
 | `BadRequest` | 400 | `BadRequestBody` | the validators or a handler refuse the request |
-| `Unauthorized` | 401 | `UnauthorizedBody` | no credentials, or invalid ones; a `@nxgt/janus` guard sends `AuthenticationRequired` instead ([Authentication](auth.md)) |
-| `Forbidden` | 403 | `ForbiddenBody` | authenticated, but not allowed; a `@nxgt/janus` guard sends `AccessDenied` instead |
+| `Unauthorized` | 401 | `UnauthorizedBody` | no credentials, or invalid ones; a `@nxgt/janus-hono` guard sends `AuthenticationRequired` instead ([Authentication](auth.md)) |
+| `Forbidden` | 403 | `ForbiddenBody` | authenticated, but not allowed; a `@nxgt/janus-hono` guard sends `AccessDenied` instead, and `janusErrors()` its own `{ code }` body ([Authentication](auth.md)) |
 | `NotFound` | 404 | `NotFoundBody` | nothing is there |
 | `Conflict` | 409 | `ConflictBody` | the request conflicts with the resource's state, such as a stale `version` |
 | `UnprocessableEntity` | 422 | `UnprocessableEntityBody` | well-formed, but not something the server can act on |

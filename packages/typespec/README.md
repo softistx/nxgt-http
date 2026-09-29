@@ -340,8 +340,9 @@ of a marked interface that has another operation's id is an error,
 
 | Code | Reported when |
 | --- | --- |
-| `duplicate-operation-id` | an operation of an `@operationIds` interface has another operation's id |
-| `duplicate-status-reply` | an operation declares two replies of one status, which the emitter would merge |
+| `duplicate-operation-id` | error: an operation of an `@operationIds` interface has another operation's id |
+| `duplicate-status-reply` | error: an operation declares a reply without a body and one with a body of one status, which the emitter merges, losing the first |
+| `merged-status-reply` | warning: an operation declares two replies with a body of one status code, which the emitter merges under the first one's description |
 
 ### Models
 
@@ -423,14 +424,15 @@ envelope and the rate limit's headers.
   }
   ```
 - **One status, one reply.** `@typespec/openapi3` merges two replies of one
-  status into one: with `AuthenticationRequired` and `Unauthorized`, the 401
-  keeps the envelope, and the reply without a body is lost. The library
-  refuses it, `duplicate-status-reply`, as it does `Conflict` beside
-  `IdempotencyInProgress`, and `UnprocessableEntity` beside
-  `IdempotencyKeyReused`. Declare the one the route sends: the guard's or the
-  handler's; for the idempotent write, the `message` key tells them apart.
-  Two plain bodies, `Post | Draft`, and two bodies of different content
-  types stay one reply, and pass
+  status into one. With `AuthenticationRequired` and `Unauthorized`, the 401
+  keeps the envelope and the reply without a body is lost: the library
+  refuses it, `duplicate-status-reply`. With `Conflict` beside
+  `IdempotencyInProgress`, or `UnprocessableEntity` beside
+  `IdempotencyKeyReused`, both bodies stay, under the first reply's
+  description: the library warns, `merged-status-reply`. Declare the one the
+  route sends; for the idempotent write, the `message` key tells them apart.
+  Two plain bodies, `Post | Draft`, bodies of different content types, and
+  two `@error` models without a `@statusCode` pass
   ([troubleshooting](docs/troubleshooting.md)).
 - **Both versions at once write two folders.** With
   `openapi-versions: ['3.1.0', '3.2.0']`, the emitter writes

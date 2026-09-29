@@ -13,7 +13,13 @@ export const $lib = createTypeSpecLibrary({
 		'duplicate-status-reply': {
 			severity: 'error',
 			messages: {
-				default: paramMessage`${'operation'} declares two replies of status ${'status'}: the emitter merges them into one, and a reply without a body is lost. Declare the one the route sends.`,
+				default: paramMessage`${'operation'} declares a reply without a body and one with a body of status ${'status'}: the emitter merges them into one, and the reply without a body is lost. Declare the one the route sends.`,
+			},
+		},
+		'merged-status-reply': {
+			severity: 'warning',
+			messages: {
+				default: paramMessage`${'operation'} declares two replies with a body of status ${'status'}: the emitter merges their bodies under the first one's description. Declare the one the route sends.`,
 			},
 		},
 	},

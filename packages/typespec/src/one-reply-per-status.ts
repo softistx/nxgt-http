@@ -1,14 +1,15 @@
 /**
  * One reply per status: `@typespec/openapi3` merges two replies of one
- * status into one without a word, and a reply without a body is lost in the
- * merge. Two bodies of different content types are one reply, negotiated,
- * and pass.
+ * status into one without a word. A reply without a body beside one with a
+ * body is lost in the merge, an error. Two bodies of one content type are
+ * merged under the first reply's description, a warning where the status is
+ * a code: under `*` or a range, the description is the same either way.
+ * Bodies of different content types are one reply, negotiated, and pass.
  */
-import type { Program } from '@typespec/compiler';
+import type { Operation, Program } from '@typespec/compiler';
 import {
 	getAllHttpServices,
 	type HttpOperationResponse,
-	type HttpOperationResponseContent,
 	type HttpStatusCodesEntry,
 } from '@typespec/http';
 import { $lib } from './lib';
@@ -17,34 +18,46 @@ function statusOf(code: HttpStatusCodesEntry): string {
 	return typeof code === 'object' ? `${code.start}-${code.end}` : `${code}`;
 }
 
-/** Whether the emitter would merge the two: one has no body, or both share a content type. */
-function collide(
-	a: HttpOperationResponseContent,
-	b: HttpOperationResponseContent,
-): boolean {
-	if (a.body === undefined || b.body === undefined) return true;
-	const types = new Set(a.body.contentTypes);
-	return b.body.contentTypes.some((type) => types.has(type));
-}
-
-function isMerged({ responses }: HttpOperationResponse): boolean {
-	return responses.some((a, i) =>
-		responses.slice(i + 1).some((b) => collide(a, b)),
-	);
+/** What the emitter's merge costs: a reply, a description, or nothing. */
+function mergeOf({
+	statusCodes,
+	responses,
+}: HttpOperationResponse):
+	| 'duplicate-status-reply'
+	| 'merged-status-reply'
+	| undefined {
+	const bodies = responses.flatMap(({ body }) => (body ? [body] : []));
+	if (bodies.length > 0 && bodies.length < responses.length) {
+		return 'duplicate-status-reply';
+	}
+	if (typeof statusCodes !== 'number') return undefined;
+	const seen = new Set<string>();
+	for (const body of bodies) {
+		if (body.contentTypes.some((type) => seen.has(type))) {
+			return 'merged-status-reply';
+		}
+		for (const type of body.contentTypes) seen.add(type);
+	}
+	return undefined;
 }
 
 /**
- * Checks each operation of each service, as the emitter sees it. The
- * services' own diagnostics are the emitter's to report.
+ * Checks each operation of each service, as the emitter sees it, once: a
+ * service nested in another is listed in both. The services' own
+ * diagnostics are the emitter's to report.
  */
 export function validateOneReplyPerStatus(program: Program): void {
 	const [services] = getAllHttpServices(program);
+	const checked = new Set<Operation>();
 	for (const service of services) {
 		for (const operation of service.operations) {
+			if (checked.has(operation.operation)) continue;
+			checked.add(operation.operation);
 			for (const response of operation.responses) {
-				if (!isMerged(response)) continue;
+				const code = mergeOf(response);
+				if (code === undefined) continue;
 				$lib.reportDiagnostic(program, {
-					code: 'duplicate-status-reply',
+					code,
 					format: {
 						operation: operation.operation.name,
 						status: statusOf(response.statusCodes),

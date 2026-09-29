@@ -7,19 +7,25 @@ import { describe, expect, it } from 'bun:test';
 import { readFile } from 'node:fs/promises';
 import { generateFiles } from '@nxgt/openapi-codegen';
 import { Hono } from 'hono';
-import { emitted, project } from '../test/generate';
-import { createRoutes } from '../test/generated/errors/hono';
+import { emitted, spec, VERSIONS } from '../test/generate';
+import { createRoutes as routes31 } from '../test/generated/errors/3.1.0/hono';
 import type {
 	BadRequestBody,
 	ConflictBody,
 	NotFoundBody,
-} from '../test/generated/errors/types';
-import { zBadRequestBody } from '../test/generated/errors/zod';
+} from '../test/generated/errors/3.1.0/types';
+import { zBadRequestBody as zBadRequestBody31 } from '../test/generated/errors/3.1.0/zod';
+import { createRoutes as routes32 } from '../test/generated/errors/3.2.0/hono';
+import { zBadRequestBody as zBadRequestBody32 } from '../test/generated/errors/3.2.0/zod';
 
-const yaml = `${project('errors')}openapi.yaml`;
+/** What each version generates: the same code, checked both ways. */
+const served = {
+	'3.1.0': { createRoutes: routes31, zBadRequestBody: zBadRequestBody31 },
+	'3.2.0': { createRoutes: routes32, zBadRequestBody: zBadRequestBody32 },
+};
 const timestamp = '2026-09-29T08:00:00.000Z';
 
-function app(): Hono {
+function app(createRoutes: typeof routes31): Hono {
 	const hono = new Hono();
 	createRoutes(hono, { validateResponses: true })
 		.get('/articles/{id}', (c) => {
@@ -49,62 +55,70 @@ function app(): Hono {
 	return hono;
 }
 
-const put = (body: unknown) =>
-	app().request('/articles/1', {
+const put = (createRoutes: typeof routes31, body: unknown) =>
+	app(createRoutes).request('/articles/1', {
 		method: 'PUT',
 		body: JSON.stringify(body),
 		headers: { 'content-type': 'application/json' },
 	});
 
-describe('error replies', () => {
-	it('is what errors/main.tsp compiles to: `bun run fixtures:typespec` accepts a change', async () => {
-		expect(await emitted('errors')).toBe(await readFile(yaml, 'utf8'));
-	}, 30_000);
+it('errors/main.tsp compiles to the committed 3.1 and 3.2 specs: `bun run fixtures:typespec` accepts a change', async () => {
+	const now = await emitted('errors');
+	for (const version of VERSIONS) {
+		expect(now[version]).toBe(await readFile(spec('errors', version), 'utf8'));
+	}
+}, 30_000);
 
-	it('generates with no warning', async () => {
-		const { warnings } = await generateFiles({
-			input: yaml,
-			output: '/unused',
-			hono: true,
-		});
-		expect(warnings).toEqual([]);
-	});
+for (const version of VERSIONS) {
+	describe(`error replies, from OpenAPI ${version}`, () => {
+		const { createRoutes, zBadRequestBody } = served[version];
+		const yaml = spec('errors', version);
 
-	it('declares the envelope a handler sends, and refuses one that breaks it', async () => {
-		const found = await app().request('/articles/1');
-		expect(found.status).toBe(404);
-		expect(await found.json()).toEqual({
-			status: 404,
-			message: 'errors.not-found',
-			timestamp,
+		it('generates with no warning', async () => {
+			const { warnings } = await generateFiles({
+				input: yaml,
+				output: '/unused',
+				hono: true,
+			});
+			expect(warnings).toEqual([]);
 		});
-		const broken = await app().request('/articles/broken');
-		expect(broken.status).toBe(500);
-		expect(await broken.json()).toMatchObject({
-			status: 500,
-			message: 'errors.response-validation-failed',
-		});
-	});
 
-	it("types the validators' 400 as BadRequestBody, with its issues", async () => {
-		const refused = await put({ id: '1' });
-		expect(refused.status).toBe(400);
-		const body = await refused.json();
-		expect(body.issues).toEqual([
-			expect.objectContaining({ target: 'json', path: ['title'] }),
-		]);
-		expect(zBadRequestBody.safeParse(body).success).toBe(true);
-	});
-
-	it("declares a handler's own 400 and 409", async () => {
-		const bad = await put({ id: '1', title: 'x' });
-		expect(bad.status).toBe(400);
-		expect(await bad.json()).toEqual({
-			status: 400,
-			message: 'errors.bad-title',
-			timestamp,
+		it('declares the envelope a handler sends, and refuses one that breaks it', async () => {
+			const found = await app(createRoutes).request('/articles/1');
+			expect(found.status).toBe(404);
+			expect(await found.json()).toEqual({
+				status: 404,
+				message: 'errors.not-found',
+				timestamp,
+			});
+			const broken = await app(createRoutes).request('/articles/broken');
+			expect(broken.status).toBe(500);
+			expect(await broken.json()).toMatchObject({
+				status: 500,
+				message: 'errors.response-validation-failed',
+			});
 		});
-		const conflict = await put({ id: '1', title: 'taken' });
-		expect(conflict.status).toBe(409);
+
+		it("types the validators' 400 as BadRequestBody, with its issues", async () => {
+			const refused = await put(createRoutes, { id: '1' });
+			expect(refused.status).toBe(400);
+			const body = await refused.json();
+			expect(body.issues).toEqual([
+				expect.objectContaining({ target: 'json', path: ['title'] }),
+			]);
+			expect(zBadRequestBody.safeParse(body).success).toBe(true);
+		});
+
+		it("declares a handler's own 400 and 409", async () => {
+			const bad = await put(createRoutes, { id: '1', title: 'x' });
+			expect(bad.status).toBe(400);
+			expect(await bad.json()).toEqual({
+				status: 400,
+				message: 'errors.bad-title',
+				timestamp,
+			});
+			const conflict = await put(createRoutes, { id: '1', title: 'taken' });
+			expect(conflict.status).toBe(409);
+		});
 	});
-});
+}

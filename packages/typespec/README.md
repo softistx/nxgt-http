@@ -2,7 +2,7 @@
 
 nxgt's HTTP conventions as a [TypeSpec](https://typespec.io) library, so an
 API spec states them in one word instead of rewriting them. Compile the spec to
-OpenAPI 3.1 with `@typespec/openapi3`, then generate the code with
+OpenAPI 3.1 or 3.2 with `@typespec/openapi3`, then generate the code with
 [`@nxgt/openapi-codegen`](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-codegen/README.md).
 Each shape here is the one the `@nxgt/*` packages actually send on the wire.
 
@@ -13,8 +13,9 @@ bun add -d @nxgt/typespec @typespec/compiler @typespec/http @typespec/openapi3
 ```
 
 `@typespec/compiler` and `@typespec/http` 1.16 or later are peer dependencies.
-Emit OpenAPI 3.1 in `tspconfig.yaml`: `@typespec/openapi3` emits 3.0 by
-default, and the generator refuses it.
+Emit OpenAPI 3.1 or 3.2 in `tspconfig.yaml`: `@typespec/openapi3` emits 3.0
+by default, and the generator refuses it. Every convention here is compiled
+to both in CI, and generates the same code from either.
 
 ```yaml
 # api/tspconfig.yaml
@@ -129,7 +130,9 @@ on every operation that takes a parameter or a body. With `BadRequest`, a
     @body body: ServiceUnavailableBody;
   }
   ```
-- **OpenAPI 3.1 only.** Set `openapi-versions: ['3.1.0']`.
+- **OpenAPI 3.1 or 3.2, not 3.0.** Set `openapi-versions: ['3.1.0']` or
+  `['3.2.0']`. With both, the emitter writes `3.1.0/openapi.yaml` and
+  `3.2.0/openapi.yaml`, each in its own folder.
 
 ## Documentation
 

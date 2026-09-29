@@ -1,10 +1,11 @@
-# Compiled by src/typespec.spec.ts with the TypeSpec pinned in package.json,
-# which fails when openapi.yaml is not what this file and main.tsp emit.
-# To accept a change: bun run fixtures:typespec
+# Compiled by test/generate.ts with the TypeSpec pinned in package.json, to
+# 3.1.0/openapi.yaml and 3.2.0/openapi.yaml. The case's spec fails when they
+# are not what this file and main.tsp emit. To accept a change:
+# bun run fixtures:typespec
 emit:
   - '@typespec/openapi3'
 options:
   '@typespec/openapi3':
-    openapi-versions: ['3.1.0']
+    openapi-versions: ['3.1.0', '3.2.0']
     emitter-output-dir: '{project-root}'
     output-file: openapi.yaml

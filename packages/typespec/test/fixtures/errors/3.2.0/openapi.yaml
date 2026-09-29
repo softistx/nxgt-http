@@ -1,0 +1,335 @@
+openapi: 3.2.0
+info:
+  title: Errors
+  version: 0.0.0
+tags: []
+paths:
+  /articles/{id}:
+    get:
+      operationId: Articles_read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Article'
+        '401':
+          description: No credentials, or credentials that are not valid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedBody'
+        '403':
+          description: Authenticated, but not allowed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenBody'
+        '404':
+          description: Nothing is there.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundBody'
+    put:
+      operationId: Articles_update
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Article'
+        '400':
+          description: The request is refused, by the validators or by a handler.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestBody'
+        '409':
+          description: The request conflicts with the resource's state, such as a version that moved on.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictBody'
+        '422':
+          description: Well-formed, but not something the server can act on.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnprocessableEntityBody'
+        '429':
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TooManyRequestsBody'
+        '500':
+          description: |-
+            The server failed. `@nxgt/openapi-hono` answers it too when a reply
+            breaks the spec, with `errors.response-validation-failed`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerErrorBody'
+        '503':
+          description: Any other status, with the same body.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - message
+                  - timestamp
+                properties:
+                  status:
+                    type: number
+                    enum:
+                      - 503
+                    description: The reply's status, repeated in the body.
+                  message:
+                    type: string
+                    description: An i18n key, such as `errors.not-found`, not a sentence.
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: When the error was answered.
+                description: The body of an error reply, as `@nxgt/openapi-hono` sends it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Article'
+components:
+  schemas:
+    Article:
+      type: object
+      required:
+        - id
+        - title
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+    BadRequestBody:
+      type: object
+      required:
+        - status
+        - message
+        - timestamp
+      properties:
+        status:
+          type: number
+          enum:
+            - 400
+          description: The reply's status, repeated in the body.
+        message:
+          type: string
+          description: An i18n key, such as `errors.not-found`, not a sentence.
+        timestamp:
+          type: string
+          format: date-time
+          description: When the error was answered.
+        issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationIssue'
+          description: Every value the validators refused, from every target at once.
+      description: |-
+        The 400. `@nxgt/openapi-hono` sends it with the `issues` when its
+        validators refuse a request; a handler sends it without them.
+    ConflictBody:
+      type: object
+      required:
+        - status
+        - message
+        - timestamp
+      properties:
+        status:
+          type: number
+          enum:
+            - 409
+          description: The reply's status, repeated in the body.
+        message:
+          type: string
+          description: An i18n key, such as `errors.not-found`, not a sentence.
+        timestamp:
+          type: string
+          format: date-time
+          description: When the error was answered.
+      description: The body of an error reply, as `@nxgt/openapi-hono` sends it.
+    ForbiddenBody:
+      type: object
+      required:
+        - status
+        - message
+        - timestamp
+      properties:
+        status:
+          type: number
+          enum:
+            - 403
+          description: The reply's status, repeated in the body.
+        message:
+          type: string
+          description: An i18n key, such as `errors.not-found`, not a sentence.
+        timestamp:
+          type: string
+          format: date-time
+          description: When the error was answered.
+      description: The body of an error reply, as `@nxgt/openapi-hono` sends it.
+    InternalServerErrorBody:
+      type: object
+      required:
+        - status
+        - message
+        - timestamp
+      properties:
+        status:
+          type: number
+          enum:
+            - 500
+          description: The reply's status, repeated in the body.
+        message:
+          type: string
+          description: An i18n key, such as `errors.not-found`, not a sentence.
+        timestamp:
+          type: string
+          format: date-time
+          description: When the error was answered.
+      description: The body of an error reply, as `@nxgt/openapi-hono` sends it.
+    NotFoundBody:
+      type: object
+      required:
+        - status
+        - message
+        - timestamp
+      properties:
+        status:
+          type: number
+          enum:
+            - 404
+          description: The reply's status, repeated in the body.
+        message:
+          type: string
+          description: An i18n key, such as `errors.not-found`, not a sentence.
+        timestamp:
+          type: string
+          format: date-time
+          description: When the error was answered.
+      description: The body of an error reply, as `@nxgt/openapi-hono` sends it.
+    TooManyRequestsBody:
+      type: object
+      required:
+        - status
+        - message
+        - timestamp
+      properties:
+        status:
+          type: number
+          enum:
+            - 429
+          description: The reply's status, repeated in the body.
+        message:
+          type: string
+          description: An i18n key, such as `errors.not-found`, not a sentence.
+        timestamp:
+          type: string
+          format: date-time
+          description: When the error was answered.
+      description: The body of an error reply, as `@nxgt/openapi-hono` sends it.
+    UnauthorizedBody:
+      type: object
+      required:
+        - status
+        - message
+        - timestamp
+      properties:
+        status:
+          type: number
+          enum:
+            - 401
+          description: The reply's status, repeated in the body.
+        message:
+          type: string
+          description: An i18n key, such as `errors.not-found`, not a sentence.
+        timestamp:
+          type: string
+          format: date-time
+          description: When the error was answered.
+      description: The body of an error reply, as `@nxgt/openapi-hono` sends it.
+    UnprocessableEntityBody:
+      type: object
+      required:
+        - status
+        - message
+        - timestamp
+      properties:
+        status:
+          type: number
+          enum:
+            - 422
+          description: The reply's status, repeated in the body.
+        message:
+          type: string
+          description: An i18n key, such as `errors.not-found`, not a sentence.
+        timestamp:
+          type: string
+          format: date-time
+          description: When the error was answered.
+      description: The body of an error reply, as `@nxgt/openapi-hono` sends it.
+    ValidationIssue:
+      type: object
+      required:
+        - target
+        - path
+        - code
+        - message
+      properties:
+        target:
+          $ref: '#/components/schemas/ValidationTarget'
+        path:
+          type: array
+          items:
+            anyOf:
+              - type: string
+              - type: integer
+          description: 'Inside the target: `["items", 0, "name"]`, or `[]` for the whole of it.'
+        code:
+          type: string
+          description: |-
+            Zod's issue code, or one of the engine's own: `invalid_json`,
+            `invalid_form`, `invalid_content_type`, `missing_body`,
+            `repeated_parameter`, `undeclared_status`.
+        message:
+          type: string
+      description: One value `@nxgt/openapi-hono` refused, and why.
+    ValidationTarget:
+      type: string
+      enum:
+        - param
+        - query
+        - header
+        - json
+        - form
+        - body
+        - response
+      description: |-
+        Where `@nxgt/openapi-hono` found a request value wrong: a request location,
+        or `response` for a reply the spec does not declare.

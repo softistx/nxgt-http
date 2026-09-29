@@ -16,7 +16,7 @@ The `@nxgt/*` packages for HTTP APIs, published to the public npm registry:
 | `@nxgt/datasource-rest` | a REST service called from a GraphQL resolver through the bound client: token forwarding, a shared cache, its own `DataSourceError` |
 | `@nxgt/openapi-msw` | MSW handlers for the generated operations: the request read and refused as the server does, replies typed and checked against the spec |
 | `@nxgt/openapi-nuxt` | a Nuxt module: the Hono app served by Nitro under a prefix, and `useApi()`, the bound client, which calls it in process during SSR |
-| `@nxgt/typespec` | a TypeSpec library of nxgt's HTTP conventions, which a spec is written with before it is compiled to OpenAPI 3.1 and generated |
+| `@nxgt/typespec` | a TypeSpec library of nxgt's HTTP conventions, which a spec is written with before it is compiled to OpenAPI 3.1 or 3.2 and generated |
 
 They were extracted from `softistx/nxgt-core` on 2026-09-13 with their
 history (`git filter-repo`). Before that, the client was `@nxgt/openapi-client`
@@ -86,8 +86,10 @@ no relative import into one.
   are devDependencies: `test/generate.ts` compiles each fixture's `.tsp`,
   generates it, and its specs serve it. A fixture imports the package by its
   own name, `import "@nxgt/typespec"`, as an app does; TypeSpec resolves the
-  self-reference through the package's `exports`. Each fixture's
-  `openapi.yaml` is committed, and a spec fails when it is not what the `.tsp`
+  self-reference through the package's `exports`. Each fixture compiles to
+  OpenAPI 3.1 and 3.2 alike, `<case>/3.1.0/openapi.yaml` and
+  `<case>/3.2.0/openapi.yaml`, generated and served both ways; both are
+  committed, and a spec fails when it is not what the `.tsp`
   compiles to (`bun run fixtures:typespec` accepts a change), as the
   generator's own `typespec` fixture does.
 - `@nxgt/openapi-hono` has the generator as a devDependency, for its
@@ -239,8 +241,8 @@ publishes to npm.
 
 ## Known state
 
-`bun run test` is **439 pass, 0 fail** on 2026-09-29: datasource-rest 26, httpyz 90, httpyz-query 14,
-openapi-codegen 164, openapi-hono 31, openapi-httpyz 28, openapi-msw 21, openapi-nuxt 36, typespec 5,
+`bun run test` is **443 pass, 0 fail** on 2026-09-29: datasource-rest 26, httpyz 90, httpyz-query 14,
+openapi-codegen 164, openapi-hono 31, openapi-httpyz 28, openapi-msw 21, openapi-nuxt 36, typespec 9,
 scripts 24. It runs one process per package, and each
 package's `test` script writes the generated fixtures its specs import first;
 then `bun test scripts` runs the repository scripts' own specs.

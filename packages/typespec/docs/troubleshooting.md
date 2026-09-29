@@ -35,5 +35,5 @@ bun add -d @nxgt/typespec @typespec/compiler @typespec/http @typespec/openapi3
 
 **Why:** `@typespec/openapi3` emits OpenAPI 3.0 by default.
 
-**Fix:** in `tspconfig.yaml`, set `openapi-versions: ['3.1.0']` under the
-`@typespec/openapi3` options.
+**Fix:** in `tspconfig.yaml`, set `openapi-versions: ['3.1.0']` or
+`['3.2.0']` under the `@typespec/openapi3` options.

@@ -1,5 +1,11 @@
 # @nxgt/typespec
 
+## 0.2.0
+
+### Minor Changes
+
+- [#69](https://github.com/softistx/nxgt-http/pull/69) [`2b4f64d`](https://github.com/softistx/nxgt-http/commit/2b4f64d2e0fefa7409f453ce8b34c7fecbd58a78) Thanks [@SteveGT96](https://github.com/SteveGT96)! - Check that each status has one reply. `@typespec/openapi3` merges two replies of one status without a warning: a reply without a body beside one with a body, such as `AuthenticationRequired` beside `Unauthorized`, is lost, and is now an error, `duplicate-status-reply`. Two replies with a body of one status code, such as `Conflict` beside `IdempotencyInProgress`, are merged under the first one's description, and now warned of, `merged-status-reply`. Plain body unions, bodies of different content types and `@error` models without a `@statusCode` still pass.
+
 ## 0.1.0
 
 ### Minor Changes

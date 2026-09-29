@@ -39,6 +39,7 @@ fixtures' `hono.ts`, which imports that package.
 | `query` | OpenAPI 3.2's `query` method, with an inline body and defaults |
 | `kitchen-sink` | one schema per mapping row, one parameter per way a value reaches a request, and a form with numbers, flags and lists |
 | `conformance/*` | real, public 3.1 and 3.2 specs, vendored unchanged; sources, licences and upstream commits are in its `README.md`. Generated and type-checked, not snapshotted |
+| `typespec` | a spec authored in TypeSpec: `main.tsp` and its `tspconfig.yaml`, and the `openapi.yaml` that `@typespec/openapi3` compiles them to, committed. `src/typespec.spec.ts` compiles it again with the TypeSpec pinned in `package.json` and fails when the two differ; `bun run fixtures:typespec` rewrites it. `@nxgt/openapi-hono` serves it |
 | `dates` | generated with `dates: 'date'`: a date-time in every place a value goes (named, nullable, defaulted, listed, recursive, a query, a form, a reply); `src/emit/dates.spec.ts` runs it |
 
 `test/generate.ts` writes each case's generated files to

@@ -15,6 +15,9 @@ long one: a **guide** for generating and using the code, and the
 | [Options](guide/options.md) | changing what is generated, or renaming a schema |
 | [How schemas map](guide/schema-mapping.md) | wondering what a keyword becomes, or why it was refused |
 | [Diagnostics](guide/diagnostics.md) | the generator reported an error or a warning |
+| [Authoring the spec in TypeSpec](guide/typespec.md) | writing the spec in TypeSpec and compiling it to OpenAPI 3.1 first |
+| [Troubleshooting](troubleshooting.md) | something went wrong and you have the message |
+| [Roadmap](roadmap.md) | wondering what is coming, and what is not planned |
 
 ## Architecture: working on the package
 

@@ -9,6 +9,7 @@ namespace Blog;
 /** Comments live under their post. */
 @route("/posts/{postId}/comments")
 @tag("Comments")
+@operationIds
 interface Comments {
   @get list(@path @format("uuid") postId: string): Comment[] | NotFound;
   @post create(

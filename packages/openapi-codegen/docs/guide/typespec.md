@@ -185,7 +185,9 @@ read-only properties. Name the visibility the body takes:
 - **Operation ids.** Without `@operationId`, TypeSpec names an operation
   after its interface: `Pets_list`. That id becomes the client's method and
   the prefix of its types (`PetsListQuery`). Give each operation an
-  `@operationId`, or set the emitter's `operation-id-strategy`.
+  `@operationId`, or put
+  [`@nxgt/typespec`](https://github.com/softistx/nxgt-http/blob/develop/packages/typespec/docs/guide/operation-ids.md)'s
+  `@operationIds` on the interface, which names them `listPets`.
 - **Template instances.** `Page<Pet>` is emitted inline, and the generator
   names it after the operation and status: `PetsList200Response`. Give the
   template a name pattern to get a named schema:

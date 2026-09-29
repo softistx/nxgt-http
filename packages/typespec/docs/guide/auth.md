@@ -74,13 +74,14 @@ createRoutes(app).delete('/posts/{postId}/comments/{commentId}', async (c) => {
 });
 ```
 
+A handler that sends one of the guards' replies with a body does not
+type-check. With
+`validateResponses`, `@nxgt/openapi-hono` checks a reply's body only where
+the spec declares one, so it lets a body through on these at run time.
+
 The errors `janusErrors()` answers are another shape: `fresh()`'s step-up
 403 and janus's own errors carry its `{ code }` body, which this library does
 not declare.
-
-A handler that sends one of them with a body does not type-check. With
-`validateResponses`, `@nxgt/openapi-hono` checks a reply's body only where
-the spec declares one, so it lets a body through on these at run time.
 
 ## Beside a handler's refusal
 

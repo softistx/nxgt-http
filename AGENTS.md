@@ -98,7 +98,8 @@ no relative import into one.
   through `$decorators`, under `Nxgt`: a top-level `$name` export declares it
   a second time in the global namespace, and every use becomes
   `ambiguous-symbol`. `$lib` is in `src/lib.ts`, each feature's JS in its
-  own file, and `src/index.ts` only exports them. `@operationIds` sets its
+  own file (`$onValidate` runs each check: operation ids, one reply per
+  status), and `src/index.ts` only exports them. `@operationIds` sets its
   ids in `$onValidate`, after every decorator, so an operation's own
   `@operationId` wins whatever the order; on a template, TypeSpec runs it on
   each instance, never emitted, so the ids go to the interfaces extending
@@ -255,8 +256,8 @@ publishes to npm.
 
 ## Known state
 
-`bun run test` is **493 pass, 0 fail** on 2026-09-29: datasource-rest 26, httpyz 90, httpyz-query 14,
-openapi-codegen 164, openapi-hono 31, openapi-httpyz 28, openapi-msw 21, openapi-nuxt 36, typespec 59,
+`bun run test` is **495 pass, 0 fail** on 2026-09-29: datasource-rest 26, httpyz 90, httpyz-query 14,
+openapi-codegen 164, openapi-hono 31, openapi-httpyz 28, openapi-msw 21, openapi-nuxt 36, typespec 61,
 scripts 24. It runs one process per package, and each
 package's `test` script writes the generated fixtures its specs import first;
 then `bun test scripts` runs the repository scripts' own specs.

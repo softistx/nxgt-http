@@ -84,6 +84,36 @@ interface Drafts extends Posts {
 }
 ```
 
+## `declares two replies of status 401: the emitter merges them into one`
+
+**When:** an operation declares two replies of one status, such as the guard's
+and the handler's 401, or `Conflict` beside `IdempotencyInProgress`:
+
+```tsp
+@get list(): Post[] | AuthenticationRequired | Unauthorized;
+```
+
+```text
+error @nxgt/typespec/duplicate-status-reply: list declares two replies of status 401: the emitter merges them into one, and a reply without a body is lost. Declare the one the route sends.
+```
+
+**Why:** OpenAPI has one reply per status. `@typespec/openapi3` merges the two
+without a warning: the 401 keeps the envelope, and a client never learns the
+guard's reply has no body. Two replies with a body are merged too, under the
+first one's description.
+
+**Fix:** declare the one the route sends. A route behind a
+`@nxgt/janus-hono` guard sends `AuthenticationRequired`; a handler that
+answers with the envelope, `Unauthorized`:
+
+```tsp
+@get list(): Post[] | AuthenticationRequired;
+```
+
+Two plain bodies, `Post | Draft`, are one reply whose body is either, and
+pass; so are two bodies of different content types, which the client
+negotiates.
+
 ## `Unknown decorator @operationId`
 
 **When:** a spec writes `@operationId` next to `@operationIds`.

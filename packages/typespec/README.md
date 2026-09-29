@@ -336,6 +336,13 @@ of a marked interface that has another operation's id is an error,
 | --- | --- | --- |
 | `@operationIds` | an interface | names each operation `<operation><Interface>`, unless it has an `@operationId` |
 
+### Diagnostics
+
+| Code | Reported when |
+| --- | --- |
+| `duplicate-operation-id` | an operation of an `@operationIds` interface has another operation's id |
+| `duplicate-status-reply` | an operation declares two replies of one status, which the emitter would merge |
+
 ### Models
 
 | Model | What it is |
@@ -415,14 +422,16 @@ envelope and the rate limit's headers.
     @body body: ServiceUnavailableBody;
   }
   ```
-- **One status, one reply.** An operation that declares both
-  `AuthenticationRequired` and `Unauthorized` gets a single 401, with the
-  envelope: the reply without a body is lost, without a warning. Declare the
-  one the route sends: the guard's, or the handler's. The same goes for
-  `Conflict` beside `IdempotencyInProgress`, and `UnprocessableEntity`
-  beside `IdempotencyKeyReused`: both keep one body, but the reply's
-  description is the first one's, and the body a union of the envelope with
-  itself. Declare one of each pair: the `message` key tells them apart.
+- **One status, one reply.** `@typespec/openapi3` merges two replies of one
+  status into one: with `AuthenticationRequired` and `Unauthorized`, the 401
+  keeps the envelope, and the reply without a body is lost. The library
+  refuses it, `duplicate-status-reply`, as it does `Conflict` beside
+  `IdempotencyInProgress`, and `UnprocessableEntity` beside
+  `IdempotencyKeyReused`. Declare the one the route sends: the guard's or the
+  handler's; for the idempotent write, the `message` key tells them apart.
+  Two plain bodies, `Post | Draft`, and two bodies of different content
+  types stay one reply, and pass
+  ([troubleshooting](docs/troubleshooting.md)).
 - **Both versions at once write two folders.** With
   `openapi-versions: ['3.1.0', '3.2.0']`, the emitter writes
   `3.1.0/openapi.yaml` and `3.2.0/openapi.yaml`: point the generator's input

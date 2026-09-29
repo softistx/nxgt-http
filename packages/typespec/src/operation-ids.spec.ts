@@ -31,18 +31,18 @@ it.each([
 	'names the operations from OpenAPI %s after their method and interface',
 	(_, operations) => {
 		expect(Object.keys(operations).sort()).toEqual([
-			'createAuthors',
+			'createAuthor',
 			'createComments',
 			'createPosts',
-			'deleteAuthors',
+			'deleteAuthor',
 			'deleteComments',
 			'deletePosts',
 			'getPost',
 			'listAuthors',
 			'listComments',
 			'listPosts',
-			'readAuthors',
-			'updateAuthors',
+			'readAuthor',
+			'updateAuthor',
 			'updatePosts',
 		]);
 	},
@@ -92,3 +92,13 @@ it.each([
 	},
 	30_000,
 );
+
+it('refuses two resources of one item, named alike', async () => {
+	const program = await checked('shared-item');
+	expect(program.diagnostics.map(({ message }) => message)).toEqual(
+		['readAuthor', 'createAuthor', 'updateAuthor', 'deleteAuthor'].map(
+			(id) =>
+				`Two operations are named ${id}: an OpenAPI operation id must be unique.`,
+		),
+	);
+}, 30_000);

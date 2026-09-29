@@ -23,8 +23,9 @@ model SortParameters<Field extends string> {
  * The five operations of a resource, at `/<route>` and `/<route>/{id}`:
  * `list` pages by offset, with the `Filters` the spec writes and a sort by
  * `SortField`; `read`, `create`, `update` (a merge patch) and `delete`.
- * Extend it with `@route`; `@operationIds` names the operations after the
- * interface that extends it: `listPosts`, `readPosts`…
+ * Extend it with `@route`; `@operationIds` names `list` after the interface
+ * that extends it, and the others after `Item`: `listPosts`, `readPost`,
+ * `createPost`, `updatePost`, `deletePost`.
  *
  * @template Item The resource's model.
  * @template Filters A model of `@query` properties, spread into `list`.
@@ -43,10 +44,12 @@ interface Resource<
   list(...Filters, ...PageParameters, ...SortParameters<SortField>): Page<Item>;
 
   /** One resource. */
+  @Private.itemOperation(Item)
   @get
   read(@path id: Id): Item | NotFound;
 
   /** Creates a resource. */
+  @Private.itemOperation(Item)
   @post
   create(@body item: Create<Item>): {
     @statusCode _: 201;
@@ -54,10 +57,12 @@ interface Resource<
   } | BadRequest | Conflict;
 
   /** Updates a resource with a merge patch. */
+  @Private.itemOperation(Item)
   @patch
   update(@path id: Id, @body item: MergePatchUpdate<Item>): Item | BadRequest | NotFound | Conflict;
 
   /** Deletes a resource. */
+  @Private.itemOperation(Item)
   @delete
   delete(@path id: Id): NoContentResponse | NotFound;
 }

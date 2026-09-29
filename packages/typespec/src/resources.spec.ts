@@ -128,7 +128,7 @@ for (const version of VERSIONS) {
 	});
 }
 
-it('takes another id type, as id("identity")', async () => {
+it('takes another id type, as id("identity"), and names the item after its @friendlyName', async () => {
 	const main = fileURLToPath(
 		new URL('../test/programs/integer-resource.tsp', import.meta.url),
 	);
@@ -144,10 +144,10 @@ it('takes another id type, as id("identity")', async () => {
 		},
 	});
 	expect(ids.sort()).toEqual([
-		'createTags:-',
-		'deleteTags:integer',
+		'createLabel:-',
+		'deleteLabel:integer',
 		'listTags:-',
-		'readTags:integer',
-		'updateTags:integer',
+		'readLabel:integer',
+		'updateLabel:integer',
 	]);
 }, 30_000);

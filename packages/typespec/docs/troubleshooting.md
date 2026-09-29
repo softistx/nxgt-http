@@ -60,7 +60,10 @@ operation:
   `extends` copies it as is;
 - an `@operationId` written elsewhere takes the id `@operationIds` gives;
 - an operation declared in the service namespace is named after itself:
-  `op listPets()` takes the id of `Pets.list`.
+  `op listPets()` takes the id of `Pets.list`;
+- two interfaces extend `Resource` with one item: `Authors` and
+  `ArchivedAuthors` both give `readAuthor`, as `Resource` names `read`,
+  `create`, `update` and `delete` after the item.
 
 ```text
 error @nxgt/typespec/duplicate-operation-id: Two operations are named listPets: an OpenAPI operation id must be unique.
@@ -70,7 +73,8 @@ error @nxgt/typespec/duplicate-operation-id: Two operations are named listPets: 
 the namespace. `@typespec/openapi3` would emit both ids without a word, and
 the generator would then refuse the spec.
 
-**Fix:** give one of them its own `@operationId`. An inherited operation takes
+**Fix:** give one of them its own `@operationId`, for a `Resource` in the
+interface that extends it ([Resources](guide/resources.md#two-resources-of-one-item)). An inherited operation takes
 one by being declared again in the interface that extends:
 
 ```tsp

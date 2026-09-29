@@ -20,3 +20,11 @@ namespace Nxgt;
  * ```
  */
 extern dec operationIds(target: Interface);
+
+namespace Private {
+  /**
+   * Names the operation after `item`, `<operation><Item>`, where
+   * `@operationIds` names it. `Resource`'s alone: not public.
+   */
+  extern dec itemOperation(target: Operation, item: Model);
+}

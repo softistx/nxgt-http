@@ -33,14 +33,52 @@ interface Authors extends Resource<Author, AuthorFilters, SortField = "name" | "
 | Operation | Route | Body | Answers |
 | --- | --- | --- | --- |
 | `listAuthors` | `GET /authors` | | `Page<Author>` |
-| `readAuthors` | `GET /authors/{id}` | | `Author`, `NotFound` |
-| `createAuthors` | `POST /authors` | `Create<Author>` | 201 `Author`, `BadRequest`, `Conflict` |
-| `updateAuthors` | `PATCH /authors/{id}` | `MergePatchUpdate<Author>` | `Author`, `BadRequest`, `NotFound`, `Conflict` |
-| `deleteAuthors` | `DELETE /authors/{id}` | | 204, `NotFound` |
+| `readAuthor` | `GET /authors/{id}` | | `Author`, `NotFound` |
+| `createAuthor` | `POST /authors` | `Create<Author>` | 201 `Author`, `BadRequest`, `Conflict` |
+| `updateAuthor` | `PATCH /authors/{id}` | `MergePatchUpdate<Author>` | `Author`, `BadRequest`, `NotFound`, `Conflict` |
+| `deleteAuthor` | `DELETE /authors/{id}` | | 204, `NotFound` |
 
-The template carries `@operationIds`, so each operation is named after the
-interface that extends it. The generator's own 400 is on every operation
-that takes a parameter or a body, as always.
+The template carries `@operationIds`. `list` is named after the interface
+that extends it, which holds the many, and `read`, `create`, `update` and
+`delete` after `Item`, the one: `listAuthors`, `readAuthor`. The item's
+name is its `@friendlyName`, if it has one. The generated `operations` has
+one entry per id:
+
+```ts
+import { operations } from './generated/operations';
+
+Object.keys(operations);
+// ['listAuthors', 'createAuthor', 'readAuthor', 'updateAuthor', 'deleteAuthor']
+```
+
+The generator's own 400 is on every operation that takes a parameter or a
+body, as always.
+
+## Two resources of one item
+
+Two interfaces extending `Resource` with one `Item` share `readAuthor`,
+`createAuthor`, `updateAuthor` and `deleteAuthor`, which is an error,
+`duplicate-operation-id`. Declare the operations of the second again, each
+with its own `@operationId`, as an interface that extends overrides the
+template's:
+
+```tsp
+import "@typespec/openapi";
+
+using OpenAPI;
+
+@route("/archived-authors")
+interface ArchivedAuthors extends Resource<Author> {
+  @get @operationId("readArchivedAuthor") read(@path id: uuid): Author | NotFound;
+  @post @operationId("createArchivedAuthor") create(@body item: Create<Author>): {
+    @statusCode _: 201;
+    @body item: Author;
+  } | BadRequest | Conflict;
+  @patch @operationId("updateArchivedAuthor")
+  update(@path id: uuid, @body item: MergePatchUpdate<Author>): Author | BadRequest | NotFound | Conflict;
+  @delete @operationId("deleteArchivedAuthor") delete(@path id: uuid): NoContentResponse | NotFound;
+}
+```
 
 ## The template's arguments
 

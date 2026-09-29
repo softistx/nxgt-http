@@ -1,4 +1,5 @@
-// Resource with Id = integer, for a table whose id is id('identity').
+// Resource with Id = integer, for a table whose id is id('identity'), and an
+// item named by its @friendlyName.
 import "@typespec/http";
 import "@nxgt/typespec";
 
@@ -8,6 +9,7 @@ using Nxgt;
 @service
 namespace Shop;
 
+@friendlyName("Label")
 model Tag {
   @visibility(Lifecycle.Read)
   id: integer;

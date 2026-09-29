@@ -84,6 +84,10 @@ interface Pets extends Resource<Pet> {}     // listPets
 interface Orders extends Resource<Order> {} // listOrders
 ```
 
+The library's own `Resource` goes one step further: `list` is named after
+the interface, and `read`, `create`, `update` and `delete` after the item,
+`readPet` ([Resources](resources.md)).
+
 ## Two operations named alike
 
 An id must be unique, and four cases break that:

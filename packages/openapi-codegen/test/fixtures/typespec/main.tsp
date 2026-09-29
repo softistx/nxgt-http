@@ -2,8 +2,10 @@
 // @typespec/openapi3: the constructs an nxgt service writes, so the generator
 // is held to what TypeSpec emits for each.
 import "@typespec/http";
+import "@typespec/openapi";
 
 using Http;
+using OpenAPI;
 
 @service(#{ title: "Pet store (TypeSpec)" })
 @server("https://api.example.com", "Production")
@@ -103,6 +105,7 @@ model Invalid {
 interface Pets {
   /** Lists pets, a page at a time. */
   @get
+  @operationId("listPets")
   list(
     @query status?: Status,
     @query(#{ explode: true }) tags?: string[],

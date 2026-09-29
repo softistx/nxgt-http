@@ -7,7 +7,7 @@ tags:
 paths:
   /pets:
     get:
-      operationId: Pets_list
+      operationId: listPets
       description: Lists pets, a page at a time.
       parameters:
         - name: status

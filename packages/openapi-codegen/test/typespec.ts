@@ -15,11 +15,22 @@ export const TYPESPEC_PROJECT = fileURLToPath(
 	new URL('./fixtures/typespec/', import.meta.url),
 );
 
-/** Compiles the project into `outputDir`, failing on any warning. */
+/**
+ * Compiles the project into `outputDir`, failing on any warning with what
+ * the compiler printed. `--no-install`: without the pinned `tsp`, bunx would
+ * fetch an unrelated package of that name.
+ */
 export async function compileTypeSpec(outputDir: string): Promise<void> {
-	await $`bunx tsp compile ${TYPESPEC_PROJECT} --warn-as-error --option ${`@typespec/openapi3.emitter-output-dir=${outputDir}`}`
-		.cwd(TYPESPEC_PROJECT)
-		.quiet();
+	const result =
+		await $`bunx --no-install tsp compile ${TYPESPEC_PROJECT} --warn-as-error --option ${`@typespec/openapi3.emitter-output-dir=${outputDir}`}`
+			.cwd(TYPESPEC_PROJECT)
+			.quiet()
+			.nothrow();
+	if (result.exitCode !== 0) {
+		throw new Error(
+			`tsp compile failed with exit code ${result.exitCode}:\n${result.stdout}${result.stderr}`,
+		);
+	}
 }
 
 /** What the project emits now, compiled into a scratch directory. */

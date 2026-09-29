@@ -4326,7 +4326,7 @@ export interface Problem {
 	message: string;
 }
 
-export interface PetsListQuery {
+export interface ListPetsQuery {
 	status?: Status | undefined;
 	tags?: string[] | undefined;
 	/** @default 20 */
@@ -4334,7 +4334,7 @@ export interface PetsListQuery {
 	cursor?: string | undefined;
 }
 
-export interface PetsListHeader {
+export interface ListPetsHeader {
 	'x-request-id'?: string | undefined;
 }
 
@@ -4352,13 +4352,13 @@ export interface PetsDeleteParam {
 
 export interface Operations {
 	/** Lists pets, a page at a time. */
-	Pets_list: {
+	listPets: {
 		method: 'get';
 		path: '/pets';
 		honoPath: '/pets';
 		param: {};
-		query: PetsListQuery;
-		header: PetsListHeader;
+		query: ListPetsQuery;
+		header: ListPetsHeader;
 		responses: {
 			/** The request has succeeded. */
 			200: {
@@ -4467,7 +4467,7 @@ export interface Operations {
 /** What a client sends and gets back: \`args\` after the operationId, and each declared \`reply\`. */
 export interface ClientOperations {
 	/** Lists pets, a page at a time. */
-	Pets_list: {
+	listPets: {
 		method: 'get';
 		path: '/pets';
 		args: [input?: {
@@ -4562,7 +4562,7 @@ export interface ClientOperations {
 
 /** The operation behind each route: \`routes.put(path)\` finds it here. */
 export interface OperationsByRoute {
-	'get /pets': 'Pets_list';
+	'get /pets': 'listPets';
 	'post /pets': 'Pets_create';
 	'get /pets/{petId}': 'Pets_read';
 	'patch /pets/{petId}': 'Pets_update';
@@ -4584,7 +4584,7 @@ export interface PathsByMethod {
 
 /** The operations under each tag. */
 export interface OperationsByTag {
-	Pets: 'Pets_list' | 'Pets_create' | 'Pets_read' | 'Pets_update' | 'Pets_delete';
+	Pets: 'listPets' | 'Pets_create' | 'Pets_read' | 'Pets_update' | 'Pets_delete';
 }
 
 /** \`PathsByMethod\`, for each tag. */
@@ -4774,14 +4774,14 @@ const numeric = z
 	.regex(/^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$/)
 	.transform(Number);
 
-export const zPetsListQuery = z.object({
+export const zListPetsQuery = z.object({
 	status: zStatus.optional(),
 	tags: z.array(z.string()).optional(),
 	limit: numeric.pipe(z.int32().min(1).max(100)).default(20),
 	cursor: z.string().optional(),
 });
 
-export const zPetsListHeader = z.object({
+export const zListPetsHeader = z.object({
 	'x-request-id': z.string().optional(),
 });
 
@@ -4800,7 +4800,7 @@ export const zPetsDeleteParam = z.object({
 export const operations: {
 	readonly [K in keyof Operations]: OperationSpec<ClientOperations[K]>;
 } = {
-	Pets_list: {
+	listPets: {
 		method: 'get',
 		path: '/pets',
 		honoPath: '/pets',
@@ -4813,8 +4813,8 @@ export const operations: {
 			{ name: 'X-Request-Id', in: 'header', required: false, explode: false, list: false },
 		],
 		param: none,
-		query: zPetsListQuery,
-		header: zPetsListHeader,
+		query: zListPetsQuery,
+		header: zListPetsHeader,
 		responses: {
 			200: {
 				'application/json': { kind: 'json', schema: zPetPage },
@@ -4960,7 +4960,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Lists pets, a page at a time. */
-		get: operations['Pets_list'];
+		get: operations['listPets'];
 		put?: never;
 		post: operations['Pets_create'];
 		delete?: never;
@@ -5018,7 +5018,7 @@ export type $defs = Record<string, never>;
 
 export interface operations {
 	/** Lists pets, a page at a time. */
-	Pets_list: {
+	listPets: {
 		parameters: {
 			query?: {
 				status?: Status;
@@ -5253,7 +5253,7 @@ import type {
 /** What each operation may reply: a handler returning anything else does not compile. */
 export interface Replies {
 	/** Lists pets, a page at a time. */
-	Pets_list:
+	listPets:
 		| Hono.TypedResponse<PetPage, 200, 'json'>
 		| Hono.TypedResponse<ValidationErrorBody, 400, 'json'>;
 	Pets_create:

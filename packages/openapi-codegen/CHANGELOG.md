@@ -1,5 +1,15 @@
 # @nxgt/openapi-codegen
 
+## 0.5.0
+
+### Minor Changes
+
+- [#59](https://github.com/softistx/nxgt-http/pull/59) [`200e9be`](https://github.com/softistx/nxgt-http/commit/200e9be733f16455a581e9b4fa7cac809f416559) Thanks [@SteveGT96](https://github.com/SteveGT96)! - Read a schema-valued `unevaluatedProperties` as `additionalProperties` where the two see the same keys: no `additionalProperties` beside it, and no `$ref`, `allOf`, `anyOf`, `oneOf`, `if`/`then`/`else` or `dependentSchemas`. It is how TypeSpec's `Record<T>` reaches OpenAPI 3.1, and it was refused with `unsupported_keyword`. Beside one of those keywords it is still refused, with a message that says so.
+
+### Patch Changes
+
+- [#59](https://github.com/softistx/nxgt-http/pull/59) [`1e43da4`](https://github.com/softistx/nxgt-http/commit/1e43da41057d9e97e93972709a0f0e7a328a6613) Thanks [@SteveGT96](https://github.com/SteveGT96)! - Document authoring the spec in TypeSpec: a guide page, `docs/guide/typespec.md`, on compiling it to OpenAPI 3.1 with `@typespec/openapi3`, what each construct becomes, and how to name operations and templates; a README section with a copy-paste example. The package's `docs/` also gains a troubleshooting page and a roadmap.
+
 ## 0.4.1
 
 ### Patch Changes

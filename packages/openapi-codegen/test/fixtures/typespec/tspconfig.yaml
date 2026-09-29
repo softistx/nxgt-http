@@ -1,0 +1,10 @@
+# Compiled by src/typespec.spec.ts with the TypeSpec pinned in package.json,
+# which fails when openapi.yaml is not what this file and main.tsp emit.
+# To accept a change: bun run fixtures:typespec
+emit:
+  - '@typespec/openapi3'
+options:
+  '@typespec/openapi3':
+    openapi-versions: ['3.1.0']
+    emitter-output-dir: '{project-root}'
+    output-file: openapi.yaml

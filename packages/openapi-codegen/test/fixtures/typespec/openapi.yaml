@@ -1,0 +1,409 @@
+openapi: 3.1.0
+info:
+  title: Pet store (TypeSpec)
+  version: 0.0.0
+tags:
+  - name: Pets
+paths:
+  /pets:
+    get:
+      operationId: Pets_list
+      description: Lists pets, a page at a time.
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/Status'
+          explode: false
+        - name: tags
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+            default: 20
+          explode: false
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+          explode: false
+        - name: X-Request-Id
+          in: header
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PetPage'
+      tags:
+        - Pets
+    post:
+      operationId: Pets_create
+      parameters: []
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          headers:
+            location:
+              required: true
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+        '422':
+          description: Client error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - Pets
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePet'
+  /pets/{petId}:
+    get:
+      operationId: Pets_read
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - Pets
+    patch:
+      operationId: Pets_update
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '422':
+          description: Client error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - Pets
+      requestBody:
+        required: true
+        content:
+          application/merge-patch+json:
+            schema:
+              $ref: '#/components/schemas/PetMergePatchUpdate'
+    delete:
+      operationId: Pets_delete
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: There is no content to send for this request, but the headers may be useful.
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      tags:
+        - Pets
+components:
+  schemas:
+    Cat:
+      type: object
+      required:
+        - kind
+        - lives
+      properties:
+        kind:
+          type: string
+          enum:
+            - cat
+        lives:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 9
+      description: A cat.
+    CatMergePatchUpdateOrCreate:
+      type: object
+      required:
+        - kind
+      properties:
+        kind:
+          type: string
+          enum:
+            - cat
+        lives:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 9
+      description: A cat.
+    CreatePet:
+      type: object
+      required:
+        - name
+        - status
+        - species
+        - adoptedAt
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 64
+        status:
+          $ref: '#/components/schemas/Status'
+        size:
+          $ref: '#/components/schemas/Size'
+        species:
+          $ref: '#/components/schemas/Species'
+        tags:
+          type: array
+          items:
+            type: string
+          description: Free-form labels.
+        vaccines:
+          type: object
+          unevaluatedProperties:
+            type: integer
+            format: int32
+          description: Counts per vaccine.
+        adoptedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          description: When it was adopted, if it was.
+    Dog:
+      type: object
+      required:
+        - kind
+        - barks
+      properties:
+        kind:
+          type: string
+          enum:
+            - dog
+        barks:
+          type: boolean
+          description: Whether it barks at the post.
+      description: A dog.
+    DogMergePatchUpdateOrCreate:
+      type: object
+      required:
+        - kind
+      properties:
+        kind:
+          type: string
+          enum:
+            - dog
+        barks:
+          type: boolean
+          description: Whether it barks at the post.
+      description: A dog.
+    Pet:
+      type: object
+      required:
+        - id
+        - name
+        - status
+        - species
+        - adoptedAt
+        - createdAt
+        - serial
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          minLength: 1
+          maxLength: 64
+        status:
+          $ref: '#/components/schemas/Status'
+        size:
+          $ref: '#/components/schemas/Size'
+        species:
+          $ref: '#/components/schemas/Species'
+        tags:
+          type: array
+          items:
+            type: string
+          description: Free-form labels.
+        vaccines:
+          type: object
+          unevaluatedProperties:
+            type: integer
+            format: int32
+          description: Counts per vaccine.
+        adoptedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          description: When it was adopted, if it was.
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        serial:
+          type: integer
+          format: int64
+          description: An id wider than 2^53.
+          readOnly: true
+    PetMergePatchUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 64
+        status:
+          $ref: '#/components/schemas/Status'
+        size:
+          anyOf:
+            - $ref: '#/components/schemas/Size'
+            - type: 'null'
+        species:
+          $ref: '#/components/schemas/SpeciesMergePatchUpdate'
+        tags:
+          anyOf:
+            - type: array
+              items:
+                type: string
+            - type: 'null'
+          description: Free-form labels.
+        vaccines:
+          anyOf:
+            - type: object
+              unevaluatedProperties:
+                type: integer
+                format: int32
+            - type: 'null'
+          description: Counts per vaccine.
+        adoptedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          description: When it was adopted, if it was.
+    PetPage:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Pet'
+        nextCursor:
+          type: string
+      description: A page of items, and the cursor to the next one.
+    Problem:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+    Size:
+      type: string
+      enum:
+        - S
+        - M
+        - L
+      description: A pet's size, as the API spells it.
+    Species:
+      type: object
+      oneOf:
+        - $ref: '#/components/schemas/Dog'
+        - $ref: '#/components/schemas/Cat'
+      discriminator:
+        propertyName: kind
+        mapping:
+          dog: '#/components/schemas/Dog'
+          cat: '#/components/schemas/Cat'
+      description: What a pet is, told apart by its `kind`.
+    SpeciesMergePatchUpdate:
+      type: object
+      oneOf:
+        - $ref: '#/components/schemas/DogMergePatchUpdateOrCreate'
+        - $ref: '#/components/schemas/CatMergePatchUpdateOrCreate'
+      discriminator:
+        propertyName: kind
+        mapping:
+          dog: '#/components/schemas/DogMergePatchUpdateOrCreate'
+          cat: '#/components/schemas/CatMergePatchUpdateOrCreate'
+      description: What a pet is, told apart by its `kind`.
+    Status:
+      type: string
+      enum:
+        - available
+        - pending
+        - adopted
+      description: How far a pet has come through adoption.
+servers:
+  - url: https://api.example.com
+    description: Production
+    variables: {}

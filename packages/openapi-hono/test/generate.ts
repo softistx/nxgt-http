@@ -20,7 +20,14 @@ const TEST_DIR = fileURLToPath(new URL('./', import.meta.url));
 const FIXTURES = fileURLToPath(
 	new URL('../../openapi-codegen/test/fixtures/', import.meta.url),
 );
-const CASES = ['split', 'query', 'kitchen-sink', 'dates', 'streams'] as const;
+const CASES = [
+	'split',
+	'query',
+	'kitchen-sink',
+	'dates',
+	'streams',
+	'typespec',
+] as const;
 
 /** What a case is generated with, beside `hono`. */
 const OPTIONS: { [name: string]: { dates?: Dates } } = {

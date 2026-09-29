@@ -131,6 +131,55 @@ The generator also declares the validators' own 400, `ValidationErrorBody`,
 on every operation that takes a parameter or a body. With `BadRequest`, a
 400 reply is typed `BadRequestBody | ValidationErrorBody`.
 
+### Pagination
+
+Spread the query of a page into the operation's parameters, and answer the
+page:
+
+```tsp
+@route("/posts")
+interface Posts {
+  @get list(@query status?: PostStatus, ...PageParameters): Page<Post>;
+}
+
+@route("/posts/{postId}/comments")
+interface Comments {
+  @get list(@path postId: string, ...CursorPageParameters): CursorPage<Comment> | NotFound;
+}
+```
+
+The shapes are the ones
+[`@nxgt/drizzle`](https://www.npmjs.com/package/@nxgt/drizzle) and
+[`@nxgt/mongo`](https://www.npmjs.com/package/@nxgt/mongo) return, so a
+handler answers their page as it is:
+
+```ts
+// src/generated/types.ts (excerpt)
+export interface PostPage {
+	items: Post[];
+	total: number;
+	page: number;
+	pageSize: number;
+	pageCount: number;
+}
+
+export interface CommentCursorPage {
+	items: Comment[];
+	nextCursor: string | null;
+}
+```
+
+| Query | Default | Checked |
+| --- | --- | --- |
+| `page` | 1 | an integer, at least 1 |
+| `pageSize` | 20 | an integer, at least 1 |
+| `after` | none: the first page | a string, the previous page's `nextCursor` |
+| `limit` | 20 | an integer, at least 1 |
+
+A `pageSize` or `limit` above the server's maximum is not refused: the
+server lowers it, as `@nxgt/drizzle` does. More in
+[Pagination](docs/guide/pagination.md).
+
 ### Operation ids
 
 TypeSpec names an operation after its interface, `Posts_list`, and the
@@ -172,6 +221,10 @@ of a marked interface that has another operation's id is an error,
 | `ErrorBody<Status>` | `{ status: Status, message: string, timestamp: utcDateTime }` |
 | `BadRequestBody` | `ErrorBody<400>` and `issues?: ValidationIssue[]` |
 | `UnauthorizedBody` … `InternalServerErrorBody` | `ErrorBody<401>` … `ErrorBody<500>`, one per response above |
+| `PageParameters` | the query `page` and `pageSize`, to spread into an operation's parameters |
+| `Page<Item>` | `{ items: Item[], total, page, pageSize, pageCount }`, the schema `<Item>Page` |
+| `CursorPageParameters` | the query `after` and `limit` |
+| `CursorPage<Item>` | `{ items: Item[], nextCursor: string \| null }`, the schema `<Item>CursorPage` |
 | `ValidationIssue` | `{ target: ValidationTarget, path: (string \| integer)[], code: string, message: string }` |
 | `ValidationTarget` | `"param" \| "query" \| "header" \| "json" \| "form" \| "body" \| "response"` |
 
@@ -205,8 +258,9 @@ of a marked interface that has another operation's id is an error,
   `3.1.0/openapi.yaml` and `3.2.0/openapi.yaml`: point the generator's input
   at one of them.
 - **The library's schema names are global.** `BadRequestBody` …
-  `InternalServerErrorBody`, `ValidationIssue` and `ValidationTarget` are
-  emitted under those names, without a namespace. A model of the same name
+  `InternalServerErrorBody`, `ValidationIssue`, `ValidationTarget`, and each
+  `<Item>Page` and `<Item>CursorPage` are emitted under those names, without
+  a namespace. A model of the same name
   in your spec fails with `duplicate-type-name`
   ([troubleshooting](docs/troubleshooting.md)).
 
@@ -214,10 +268,12 @@ of a marked interface that has another operation's id is an error,
 
 - [Error replies](docs/guide/errors.md): the envelope, each response, and
   what the generator makes of them;
+- [Pagination](docs/guide/pagination.md): offset and cursor pages, and
+  what a handler answers;
 - [Operation ids](docs/guide/operation-ids.md): `@operationIds`, and what
   the generated client calls each operation;
 - [troubleshooting](docs/troubleshooting.md);
-- [the roadmap](docs/roadmap.md): pagination, auth, scalars, headers and
+- [the roadmap](docs/roadmap.md): auth, scalars, headers and
   resource templates, still to come.
 
 ## License

@@ -99,15 +99,15 @@ paths:
           schema:
             type: string
           explode: false
+        - $ref: '#/components/parameters/Nxgt.PageParameters.page'
+        - $ref: '#/components/parameters/Nxgt.PageParameters.pageSize'
       responses:
         '200':
           description: The request has succeeded.
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Post'
+                $ref: '#/components/schemas/PostPage'
       tags:
         - Posts
     post:
@@ -249,15 +249,21 @@ paths:
           schema:
             type: string
             format: uuid
+        - $ref: '#/components/parameters/Nxgt.CursorPageParameters.after'
+        - $ref: '#/components/parameters/Nxgt.CursorPageParameters.limit'
       responses:
         '200':
           description: The request has succeeded.
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Comment'
+                $ref: '#/components/schemas/CommentCursorPage'
+        '400':
+          description: The request is refused, by the validators or by a handler.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestBody'
         '404':
           description: Nothing is there.
           content:
@@ -342,6 +348,45 @@ paths:
       tags:
         - Comments
 components:
+  parameters:
+    Nxgt.CursorPageParameters.after:
+      name: after
+      in: query
+      required: false
+      description: The previous page's `nextCursor`; absent for the first page.
+      schema:
+        type: string
+      explode: false
+    Nxgt.CursorPageParameters.limit:
+      name: limit
+      in: query
+      required: false
+      description: How many items a page holds. A server lowers one above its maximum to it.
+      schema:
+        type: integer
+        minimum: 1
+        default: 20
+      explode: false
+    Nxgt.PageParameters.page:
+      name: page
+      in: query
+      required: false
+      description: 1-based.
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+      explode: false
+    Nxgt.PageParameters.pageSize:
+      name: pageSize
+      in: query
+      required: false
+      description: How many items a page holds. A server lowers one above its maximum to it.
+      schema:
+        type: integer
+        minimum: 1
+        default: 20
+      explode: false
   schemas:
     Author:
       type: object
@@ -423,6 +468,22 @@ components:
           format: date-time
           readOnly: true
       description: A reply to a post.
+    CommentCursorPage:
+      type: object
+      required:
+        - items
+        - nextCursor
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Comment'
+        nextCursor:
+          anyOf:
+            - type: string
+            - type: 'null'
+          description: Pass it as `after` for the next page; `null` on the last one.
+      description: One page of a cursor pagination, which gives no total.
     ConflictBody:
       type: object
       required:
@@ -597,6 +658,31 @@ components:
                 type: string
             - type: 'null'
       description: An article, by one author.
+    PostPage:
+      type: object
+      required:
+        - items
+        - total
+        - page
+        - pageSize
+        - pageCount
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Post'
+        total:
+          type: integer
+          description: Every item that matches, across all pages.
+        page:
+          type: integer
+          description: 1-based.
+        pageSize:
+          type: integer
+        pageCount:
+          type: integer
+          description: '`ceil(total / pageSize)`: 0 when nothing matches.'
+      description: One page of an offset pagination.
     PostStatus:
       type: string
       enum:

@@ -7,12 +7,14 @@
  * export would declare it a second time, in the global namespace.
  */
 import type { Program } from '@typespec/compiler';
+import { validateOneReplyPerStatus } from './one-reply-per-status';
 import { operationIds, validateOperationIds } from './operation-ids';
 
 export { $lib } from './lib';
 
 export function $onValidate(program: Program): void {
 	validateOperationIds(program);
+	validateOneReplyPerStatus(program);
 }
 
 export const $decorators = {

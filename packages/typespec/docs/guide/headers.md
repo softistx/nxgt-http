@@ -41,8 +41,9 @@ interface Posts {
 
 Both carry the `RateLimit-*` headers, as a route that also has a rate limit
 answers them. An operation that declares `Conflict` too, for its optimistic
-lock, gets one 409 with the description of the first: declare one of the
-two, and tell them apart by the `message` key.
+lock, gets one 409 with the description of the first, and the library warns,
+`merged-status-reply`: declare one of the two, and tell them apart by the
+`message` key ([troubleshooting](../troubleshooting.md)).
 
 ## A rate limit
 

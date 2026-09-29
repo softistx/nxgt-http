@@ -84,6 +84,61 @@ interface Drafts extends Posts {
 }
 ```
 
+## `declares a reply without a body and one with a body of status …`
+
+**When:** an operation declares, for one status, a reply without a body and
+one with a body, such as the guard's 401 and the handler's:
+
+```tsp
+@get list(): Post[] | AuthenticationRequired | Unauthorized;
+```
+
+```text
+error @nxgt/typespec/duplicate-status-reply: list declares a reply without a body and one with a body of status 401: the emitter merges them into one, and the reply without a body is lost. Declare the one the route sends.
+```
+
+**Why:** OpenAPI has one reply per status. `@typespec/openapi3` merges the two
+without a warning: the 401 keeps the envelope, and a client never learns the
+guard's reply has no body.
+
+**Fix:** declare the one the route sends. A route behind a
+`@nxgt/janus-hono` guard sends `AuthenticationRequired`; a handler that
+answers with the envelope, `Unauthorized`:
+
+```tsp
+@get list(): Post[] | AuthenticationRequired;
+```
+
+## `declares two replies with a body of status …`
+
+**When:** a warning: an operation declares two replies with a body for one
+status code, such as the idempotent write's 409 beside the optimistic
+lock's, or its 422, `IdempotencyKeyReused`, beside `UnprocessableEntity`:
+
+```tsp
+@post create(@body post: Post): Post | IdempotencyInProgress | Conflict;
+```
+
+```text
+warning @nxgt/typespec/merged-status-reply: create declares two replies with a body of status 409: the emitter merges their bodies under the first one's description. Declare the one the route sends.
+```
+
+**Why:** `@typespec/openapi3` keeps both bodies, as one reply whose body is
+either, under the first one's description: the second's is gone, and a
+header either reply declares required becomes optional.
+
+**Fix:** declare the one the route sends. Both carry the envelope, and the
+`message` key tells them apart:
+
+```tsp
+@post create(@body post: Post): Post | IdempotencyInProgress;
+```
+
+Two plain bodies, `Post | Draft`, are one reply whose body is either; two
+`@error` models without a `@statusCode` share `default`, and one
+description; bodies of different content types are negotiated. All three
+pass.
+
 ## `Unknown decorator @operationId`
 
 **When:** a spec writes `@operationId` next to `@operationIds`.

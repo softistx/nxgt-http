@@ -97,7 +97,7 @@ operation can declare the guard's 401 and the handler's 403:
 } | BadRequest | AuthenticationRequired | Forbidden;
 ```
 
-Not both replies of one status, though: an operation that declares
-`AuthenticationRequired` and `Unauthorized` gets a single 401, with the
-envelope, and the reply without a body is lost without a warning. Declare
-the one the route sends.
+Not both replies of one status, though: the emitter would merge
+`AuthenticationRequired` and `Unauthorized` into a single 401, with the
+envelope, and lose the reply without a body. The library refuses it with
+`duplicate-status-reply`: declare the one the route sends.

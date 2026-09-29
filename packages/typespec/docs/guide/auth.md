@@ -53,11 +53,13 @@ checking the session is the guard's work, not the validators'.
 
 ## The refusals, without a body
 
-The janus guards refuse a request with a status and nothing else:
+The guards of [`@nxgt/janus-hono`](https://www.npmjs.com/package/@nxgt/janus-hono)
+refuse a request with a status and nothing else:
 
 | Guard | Refuses with | Declare |
 | --- | --- | --- |
-| `requireUser()` | 401: no session, or one the server does not know | `AuthenticationRequired` |
+| `session(auth, { required: true })` | 401: no session, or one the server does not know | `AuthenticationRequired` |
+| `fresh()` | 401: no session | `AuthenticationRequired` |
 | `permission()` | 401: no session | `AuthenticationRequired` |
 | `permission()` | 404: the object does not exist | `ErrorWithoutBody<404>` |
 | `permission()` | 403: its user may not do this | `AccessDenied` |
@@ -71,6 +73,10 @@ createRoutes(app).delete('/posts/{postId}/comments/{commentId}', async (c) => {
 	return c.body(null, 204);
 });
 ```
+
+The errors `janusErrors()` answers are another shape: `fresh()`'s step-up
+403 and janus's own errors carry its `{ code }` body, which this library does
+not declare.
 
 A handler that sends one of them with a body does not type-check. With
 `validateResponses`, `@nxgt/openapi-hono` checks a reply's body only where

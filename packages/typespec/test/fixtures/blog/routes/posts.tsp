@@ -18,8 +18,8 @@ interface Posts {
     ...PageParameters,
   ): Page<Post>;
   @get @operationId("getPost") read(@path @format("uuid") postId: string): Post | NotFound;
-  // requireUser() refuses a missing session; the handler, a user who may not
-  // write, with the envelope.
+  // session({ required: true }) refuses a missing session; the handler, a user
+  // who may not write, with the envelope.
   @useAuth(JanusAuth)
   @post create(@body post: Create<Post>): {
     @statusCode _: 201;

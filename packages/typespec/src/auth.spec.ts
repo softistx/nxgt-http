@@ -10,7 +10,10 @@ import { describe, expect, it } from 'bun:test';
 import { Hono } from 'hono';
 import { VERSIONS } from '../test/generate';
 import { createRoutes as routes31 } from '../test/generated/blog/3.1.0/hono';
-import type { ForbiddenBody } from '../test/generated/blog/3.1.0/types';
+import type {
+	ForbiddenBody,
+	UnauthorizedBody,
+} from '../test/generated/blog/3.1.0/types';
 import { createRoutes as routes32 } from '../test/generated/blog/3.2.0/hono';
 
 const served = { '3.1.0': routes31, '3.2.0': routes32 };
@@ -21,7 +24,7 @@ const timestamp = '2026-09-29T08:00:00.000Z';
 function app(createRoutes: typeof routes31): Hono {
 	const hono = new Hono();
 	createRoutes(hono, { validateResponses: true })
-		// As requireUser() and a handler's own check.
+		// As session(auth, { required: true }) and a handler's own check.
 		.post('/posts', (c) => {
 			if (c.req.header('authorization') === undefined) {
 				return c.body(null, 401);
@@ -94,9 +97,14 @@ for (const version of VERSIONS) {
 
 		it('types a 401 with a body as an error', () => {
 			const routes = createRoutes(new Hono());
-			// @ts-expect-error: the guard's 401 declares no body
+			const body: UnauthorizedBody = {
+				status: 401,
+				message: 'errors.unauthorized',
+				timestamp,
+			};
+			// @ts-expect-error: the guard's 401 declares no body, not even the envelope
 			routes.delete('/posts/{postId}/comments/{commentId}', (c) =>
-				c.json({ status: 401 }, 401),
+				c.json(body, 401),
 			);
 		});
 	});

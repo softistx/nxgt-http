@@ -205,7 +205,8 @@ reads a session token, and any one of them is enough:
 | `SessionTokenAuth` | the `X-Session-Token` header |
 | `SessionCookieAuth` | the `janus-session` cookie |
 
-The janus guards, `requireUser()` and `permission()`, refuse without a body:
+The guards of [`@nxgt/janus-hono`](https://www.npmjs.com/package/@nxgt/janus-hono),
+`session(auth, { required: true })` and `permission()`, refuse without a body:
 `AuthenticationRequired` is their 401 and `AccessDenied` their 403, and
 `ErrorWithoutBody<404>` the 404 of `permission()`. A handler's own refusal,
 with the envelope, stays `Unauthorized` or `Forbidden`. The generated

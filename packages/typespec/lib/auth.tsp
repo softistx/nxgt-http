@@ -24,7 +24,8 @@ model SessionCookieAuth is ApiKeyAuth<ApiKeyLocation.cookie, "janus-session">;
 alias JanusAuth = BearerAuth | SessionTokenAuth | SessionCookieAuth;
 
 // An error reply without a body, as the @nxgt/janus guards send one:
-// requireUser() and permission() answer 401, 403 or 404 with no body.
+// session(auth, { required: true }) and permission() answer 401, 403 or 404
+// with no body.
 /** The request was refused; the reply has no body. */
 @error
 model ErrorWithoutBody<Status extends integer> {

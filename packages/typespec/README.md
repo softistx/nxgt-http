@@ -297,8 +297,7 @@ interface Posts extends Resource<Post, PostFilters, SortField = "createdAt" | "t
 | `updatePost` | `PATCH /posts/{id}`, `MergePatchUpdate<Post>` | `Post \| BadRequest \| NotFound \| Conflict` |
 | `deletePost` | `DELETE /posts/{id}` | 204, `NotFound` |
 
-`list` is named after the interface, the four others after the item:
-`readPost`, not `readPosts`. Two resources of one item then share their ids,
+`list` is named after the interface, the four others after the item. Two resources of one item then share their ids,
 which is an error, `duplicate-operation-id`: give the second its own
 `@operationId`s ([troubleshooting](docs/troubleshooting.md)).
 

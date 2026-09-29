@@ -69,8 +69,9 @@ operation:
 error @nxgt/typespec/duplicate-operation-id: Two operations are named listPets: an OpenAPI operation id must be unique.
 ```
 
-**Why:** `@operationIds` names each operation `<operation><Interface>`, without
-the namespace. `@typespec/openapi3` would emit both ids without a word, and
+**Why:** `@operationIds` names each operation `<operation><Interface>`
+(`<operation><Item>` for `Resource`'s `read`, `create`, `update` and
+`delete`), without the namespace. `@typespec/openapi3` would emit both ids without a word, and
 the generator would then refuse the spec.
 
 **Fix:** give one of them its own `@operationId`, for a `Resource` in the

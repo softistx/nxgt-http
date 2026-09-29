@@ -41,7 +41,10 @@ interface Authors extends Resource<Author, AuthorFilters, SortField = "name" | "
 The template carries `@operationIds`. `list` is named after the interface
 that extends it, which holds the many, and `read`, `create`, `update` and
 `delete` after `Item`, the one: `listAuthors`, `readAuthor`. The item's
-name is its `@friendlyName`, if it has one. The generated `operations` has
+name is its `@friendlyName`, if it has one. An item without a name of its
+own, an anonymous model or an instance such as `Draft<Author>`, falls back to
+the interface: `readDrafts`. An operation the extending interface declares
+again is named after the interface too, unless it has its own `@operationId`. The generated `operations` has
 one entry per id:
 
 ```ts
@@ -60,7 +63,7 @@ Two interfaces extending `Resource` with one `Item` share `readAuthor`,
 `createAuthor`, `updateAuthor` and `deleteAuthor`, which is an error,
 `duplicate-operation-id`. Declare the operations of the second again, each
 with its own `@operationId`, as an interface that extends overrides the
-template's:
+template's. Use the resource's `Id` in place of `uuid`, if it names one:
 
 ```tsp
 import "@typespec/openapi";

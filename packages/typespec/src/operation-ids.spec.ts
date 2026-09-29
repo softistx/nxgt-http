@@ -102,3 +102,36 @@ it('refuses two resources of one item, named alike', async () => {
 		),
 	);
 }, 30_000);
+
+it('names an item operation after the interface, declared again or with an unnamed item', async () => {
+	const program = await checked('item-names');
+	expect(program.diagnostics).toEqual([]);
+	const ids: string[] = [];
+	navigateProgram(program, {
+		operation(operation) {
+			if (operation.interface?.name === 'Resource') return;
+			ids.push(`${getOperationId(program, operation)}`);
+		},
+	});
+	expect(ids.sort()).toEqual(
+		[
+			[
+				'listAuthors',
+				'readAuthors',
+				'createAuthor',
+				'renameAuthor',
+				'deleteAuthor',
+			],
+			[
+				'listDrafts',
+				'readDrafts',
+				'createDrafts',
+				'updateDrafts',
+				'deleteDrafts',
+			],
+			['listNotes', 'readNotes', 'createNotes', 'updateNotes', 'deleteNotes'],
+		]
+			.flat()
+			.sort(),
+	);
+}, 30_000);

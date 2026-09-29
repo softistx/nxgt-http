@@ -45,13 +45,21 @@ export function itemOperation(
 	context.program.stateMap($lib.stateKeys.itemOperations).set(target, item);
 }
 
-/** The name `@operationIds` puts after the operation's: its item's, or its interface's. */
+/**
+ * The name `@operationIds` puts after the operation's: its item's, or its
+ * interface's. An item without a name of its own, anonymous or an instance
+ * such as `Versioned<Author>`, whose name would be `Versioned` alone, falls
+ * back to the interface.
+ */
 function nounOf(program: Program, operation: Operation): string | undefined {
 	const item: Model | undefined = program
 		.stateMap($lib.stateKeys.itemOperations)
 		.get(operation);
-	if (item === undefined) return operation.interface?.name;
-	return getFriendlyName(program, item) ?? item.name;
+	const named =
+		item &&
+		(getFriendlyName(program, item) ??
+			(item.name !== '' && !isTemplateInstance(item) ? item.name : undefined));
+	return named ?? operation.interface?.name;
 }
 
 /** Marked itself, or extending a marked interface: an instance of a marked template included. */

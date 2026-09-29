@@ -1,16 +1,19 @@
 import "@typespec/http";
 import "@nxgt/typespec";
+import "@typespec/openapi";
 
 using Http;
 using Nxgt;
+using OpenAPI;
 
 namespace Blog;
 
 @route("/posts")
 @tag("Posts")
+@operationIds
 interface Posts {
   @get list(@query status?: PostStatus, @query authorId?: string): Post[];
-  @get read(@path @format("uuid") postId: string): Post | NotFound;
+  @get @operationId("getPost") read(@path @format("uuid") postId: string): Post | NotFound;
   @post create(@body post: Create<Post>): {
     @statusCode _: 201;
     @body post: Post;

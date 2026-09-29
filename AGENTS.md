@@ -79,7 +79,8 @@ no relative import into one.
   Nuxt app its specs build with `nuxi` under Node, serve and call over HTTP.
   That is why CI sets up Node 22 beside Bun. Its `typecheck` runs
   `nuxi prepare`, then checks the app's `.ts` with the app's own tsconfig.
-- `@nxgt/typespec` has `@typespec/compiler` and `@typespec/http` as peers:
+- `@nxgt/typespec` has `@typespec/compiler`, `@typespec/http` and
+  `@typespec/openapi` as peers:
   its conventions are `.tsp` files under `lib/`, reached through `tspMain` and
   the `typespec` export condition. `lib/main.tsp` imports `../dist/index.js`,
   the build of `src/`: the library's `$lib` and its decorators, which the
@@ -93,7 +94,13 @@ no relative import into one.
   `<case>/3.2.0/openapi.yaml`, generated and served both ways; both are
   committed, and a spec fails when it is not what the `.tsp`
   compiles to (`bun run fixtures:typespec` accepts a change), as the
-  generator's own `typespec` fixture does.
+  generator's own `typespec` fixture does. A decorator is exported only
+  through `$decorators`, under `Nxgt`: a top-level `$name` export declares it
+  a second time in the global namespace, and every use becomes
+  `ambiguous-symbol`. `@operationIds` sets its ids in `$onValidate`, after
+  every decorator, so an operation's own `@operationId` wins whatever the
+  order. A spec the library must refuse is a `.tsp` under `test/invalid/`,
+  compiled in memory by its spec.
 - `@nxgt/openapi-hono` has the generator as a devDependency, for its
   fixtures. The one `paths` entry left is its own name, so that the
   generated `hono.ts` in its fixtures runs the engine the specs import from
@@ -244,8 +251,8 @@ publishes to npm.
 
 ## Known state
 
-`bun run test` is **450 pass, 0 fail** on 2026-09-29: datasource-rest 26, httpyz 90, httpyz-query 14,
-openapi-codegen 164, openapi-hono 31, openapi-httpyz 28, openapi-msw 21, openapi-nuxt 36, typespec 16,
+`bun run test` is **454 pass, 0 fail** on 2026-09-29: datasource-rest 26, httpyz 90, httpyz-query 14,
+openapi-codegen 164, openapi-hono 31, openapi-httpyz 28, openapi-msw 21, openapi-nuxt 36, typespec 20,
 scripts 24. It runs one process per package, and each
 package's `test` script writes the generated fixtures its specs import first;
 then `bun test scripts` runs the repository scripts' own specs.

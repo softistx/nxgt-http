@@ -9,7 +9,7 @@ tags:
 paths:
   /authors:
     get:
-      operationId: Authors_list
+      operationId: listAuthors
       parameters: []
       responses:
         '200':
@@ -29,7 +29,7 @@ paths:
       tags:
         - Authors
     post:
-      operationId: Authors_create
+      operationId: createAuthors
       parameters: []
       responses:
         '201':
@@ -60,7 +60,7 @@ paths:
               $ref: '#/components/schemas/CreateAuthor'
   /authors/{authorId}:
     get:
-      operationId: Authors_read
+      operationId: readAuthors
       parameters:
         - name: authorId
           in: path
@@ -85,7 +85,7 @@ paths:
         - Authors
   /posts:
     get:
-      operationId: Posts_list
+      operationId: listPosts
       parameters:
         - name: status
           in: query
@@ -111,7 +111,7 @@ paths:
       tags:
         - Posts
     post:
-      operationId: Posts_create
+      operationId: createPosts
       parameters: []
       responses:
         '201':
@@ -148,7 +148,7 @@ paths:
               $ref: '#/components/schemas/CreatePost'
   /posts/{postId}:
     get:
-      operationId: Posts_read
+      operationId: getPost
       parameters:
         - name: postId
           in: path
@@ -172,7 +172,7 @@ paths:
       tags:
         - Posts
     patch:
-      operationId: Posts_update
+      operationId: updatePosts
       parameters:
         - name: postId
           in: path
@@ -214,7 +214,7 @@ paths:
             schema:
               $ref: '#/components/schemas/PostMergePatchUpdate'
     delete:
-      operationId: Posts_delete
+      operationId: deletePosts
       parameters:
         - name: postId
           in: path
@@ -241,7 +241,7 @@ paths:
         - Posts
   /posts/{postId}/comments:
     get:
-      operationId: Comments_list
+      operationId: listComments
       parameters:
         - name: postId
           in: path
@@ -267,7 +267,7 @@ paths:
       tags:
         - Comments
     post:
-      operationId: Comments_create
+      operationId: createComments
       parameters:
         - name: postId
           in: path
@@ -310,7 +310,7 @@ paths:
               $ref: '#/components/schemas/CreateComment'
   /posts/{postId}/comments/{commentId}:
     delete:
-      operationId: Comments_delete
+      operationId: deleteComments
       parameters:
         - name: postId
           in: path

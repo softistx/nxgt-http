@@ -48,6 +48,33 @@ namespace, so they share the spec's schema names.
 @get read(@path postId: string): Post | NotFound;
 ```
 
+## `Two operations of @operationIds interfaces are named listPets`
+
+**When:** two operations of `@operationIds` interfaces end up with one id:
+two interfaces of one name in two namespaces share an operation name, or an
+interface `extends` another whose operation has an `@operationId`, which is
+copied as is.
+
+```text
+error @nxgt/typespec/duplicate-operation-id: Two operations of @operationIds interfaces are named listPets. Give one of them its own @operationId.
+```
+
+**Why:** `@operationIds` names each operation `<operation><Interface>`, without
+the namespace, and an OpenAPI operation id must be unique. `@typespec/openapi3`
+would emit both without a word.
+
+**Fix:** give one of them its own id:
+
+```tsp
+namespace Shelter {
+  @route("/shelter/pets")
+  @operationIds
+  interface Pets {
+    @get @operationId("listShelterPets") list(): Pet[];
+  }
+}
+```
+
 ## `unsupported_version` from the generator
 
 **When:** you generate from what `tsp compile` emitted.

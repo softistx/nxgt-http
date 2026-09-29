@@ -9,10 +9,11 @@ Each shape here is one the `@nxgt/*` packages already send on the wire.
 ## Install
 
 ```sh
-bun add -d @nxgt/typespec @typespec/compiler @typespec/http @typespec/openapi3 @nxgt/openapi-codegen
+bun add -d @nxgt/typespec @typespec/compiler @typespec/http @typespec/openapi @typespec/openapi3 @nxgt/openapi-codegen
 ```
 
-`@typespec/compiler` and `@typespec/http` 1.16 or later are peer dependencies,
+`@typespec/compiler`, `@typespec/http` and `@typespec/openapi` 1.16 or later
+are peer dependencies,
 and `typescript` 6 too, as for every `@nxgt` package. `@typespec/openapi3`
 compiles the spec, and `@nxgt/openapi-codegen` generates the code from it.
 Emit OpenAPI 3.1 or 3.2 in `tspconfig.yaml`: `@typespec/openapi3` emits 3.0
@@ -130,7 +131,33 @@ The generator also declares the validators' own 400, `ValidationErrorBody`,
 on every operation that takes a parameter or a body. With `BadRequest`, a
 400 reply is typed `BadRequestBody | ValidationErrorBody`.
 
+### Operation ids
+
+TypeSpec names an operation after its interface, `Posts_list`, and the
+generator turns that id into the client's method and its types' prefix. Put
+`@operationIds` on the interface to name each operation after its method and
+the interface instead:
+
+```tsp
+@route("/posts")
+@operationIds
+interface Posts {
+  @get list(): Post[];                                     // listPosts
+  @get @operationId("getPost") read(@path postId: string): Post | NotFound; // getPost
+}
+```
+
+An operation's own `@operationId` wins. Two operations named alike are an
+error, `duplicate-operation-id`. More in
+[Operation ids](docs/guide/operation-ids.md).
+
 ## API
+
+### Decorators
+
+| Decorator | On | What it does |
+| --- | --- | --- |
+| `@operationIds` | an interface | names each operation `<operation><Interface>`, unless it has an `@operationId` |
 
 ### Models
 
@@ -181,6 +208,8 @@ on every operation that takes a parameter or a body. With `BadRequest`, a
 
 - [Error replies](docs/guide/errors.md): the envelope, each response, and
   what the generator makes of them;
+- [Operation ids](docs/guide/operation-ids.md): `@operationIds`, and what
+  the generated client calls each operation;
 - [troubleshooting](docs/troubleshooting.md);
 - [the roadmap](docs/roadmap.md): pagination, auth, scalars, headers and
   resource templates, still to come.

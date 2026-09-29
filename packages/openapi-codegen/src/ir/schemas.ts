@@ -4,6 +4,7 @@ import { child, type Location, locationId } from '../loader/location';
 import type { Resolved, Resolver } from '../loader/resolver';
 import { asNumber, asString, isObject } from '../util';
 import { refsOf, stronglyConnected } from './graph';
+import { extraKeys, settledByAdditional } from './keywords';
 import { nameFromLocation, pascalCase } from './naming';
 import type {
 	Additional,
@@ -320,7 +321,7 @@ export class SchemaBuilder {
 		if ('$ref' in value) return this.#reference(value, at);
 		this.#refuseUnsupported(value, at);
 		const node = this.#annotate(this.#structure(value, at), value, at);
-		if ('unevaluatedProperties' in value) {
+		if ('unevaluatedProperties' in value && !settledByAdditional(value)) {
 			this.#seal(
 				node,
 				value.unevaluatedProperties,
@@ -343,7 +344,7 @@ export class SchemaBuilder {
 		if (value !== false) {
 			this.#diagnostics.error(
 				'unsupported_keyword',
-				'`unevaluatedProperties` other than `false` or `true` is not supported',
+				'`unevaluatedProperties` with a schema is supported only where it reads the keys `additionalProperties` would: not next to `$ref`, `allOf`, `anyOf` or `oneOf`. Write `additionalProperties` beside it instead',
 				at,
 			);
 			return;
@@ -543,7 +544,7 @@ export class SchemaBuilder {
 				at,
 			);
 		}
-		if ('unevaluatedProperties' in s) {
+		if ('unevaluatedProperties' in s && !settledByAdditional(s)) {
 			this.#seal(
 				node,
 				s.unevaluatedProperties,
@@ -665,7 +666,7 @@ export class SchemaBuilder {
 	/** A schema with no `type`: what its other keywords say it is. */
 	#inferred(s: Record<string, unknown>, at: Location): SchemaNode {
 		const has = (...keys: string[]) => keys.some((key) => key in s);
-		if (has('properties', 'additionalProperties', 'required')) {
+		if (has('properties', extraKeys(s), 'required')) {
 			return this.#object(s, at);
 		}
 		if (has('items')) return this.#array(s, at);
@@ -850,10 +851,8 @@ export class SchemaBuilder {
 				child(at, 'properties'),
 			);
 		}
-		const additional = this.#additional(
-			s.additionalProperties,
-			child(at, 'additionalProperties'),
-		);
+		const extra = extraKeys(s);
+		const additional = this.#additional(s[extra], child(at, extra));
 		for (const key of ['minProperties', 'maxProperties']) {
 			if (key in s) {
 				this.#diagnostics.warning(
@@ -1047,6 +1046,8 @@ export class SchemaBuilder {
 			(k) =>
 				k === 'allOf' ||
 				k === 'type' ||
+				// Sealed by `node()`, over the members and these keywords alike.
+				k === 'unevaluatedProperties' ||
 				ANNOTATION_KEYS.has(k) ||
 				k.startsWith('x-'),
 		);

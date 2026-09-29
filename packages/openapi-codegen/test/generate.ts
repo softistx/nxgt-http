@@ -24,6 +24,8 @@ export const CASES = [
 	'kitchen-sink',
 	'dates',
 	'streams',
+	// Authored in TypeSpec: `openapi.yaml` is what `main.tsp` compiles to.
+	'typespec',
 ] as const;
 
 /** Real, public specs under `fixtures/conformance/`: generated and type-checked, not snapshotted. */

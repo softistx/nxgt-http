@@ -168,6 +168,57 @@ const { drifted } = await generate({
 if (drifted.length > 0) process.exit(1);
 ```
 
+### Author the spec in TypeSpec
+
+Write the spec in [TypeSpec](https://typespec.io), compile it to OpenAPI 3.1
+with `@typespec/openapi3`, and generate from the file it emits:
+
+```sh
+bun add -d @typespec/compiler @typespec/http @typespec/openapi3
+```
+
+```yaml
+# api/tspconfig.yaml
+emit:
+  - '@typespec/openapi3'
+options:
+  '@typespec/openapi3':
+    openapi-versions: ['3.1.0'] # it emits 3.0 by default, which is refused
+    emitter-output-dir: '{project-root}/../openapi'
+    output-file: openapi.yaml
+```
+
+```tsp
+// api/main.tsp
+import "@typespec/http";
+
+using Http;
+
+@service(#{ title: "Pet store" })
+namespace PetStore;
+
+model Pet {
+  @visibility(Lifecycle.Read) id: string;
+  name: string;
+}
+
+@route("/pets")
+interface Pets {
+  @get list(): Pet[];
+  // Create<Pet> leaves out `id`: `readOnly` has no effect on the generated code.
+  @post create(@body pet: Create<Pet>): { @statusCode _: 201; @body pet: Pet };
+}
+```
+
+```sh
+bunx --no-install tsp compile api && bunx nxgt-openapi generate -i openapi/openapi.yaml -o src/generated
+```
+
+`Create<Pet>` becomes `CreatePet`, `Pets_list` and `Pets_create` are the
+operation ids, and everything downstream reads the spec as it reads any
+other. [Authoring the spec in TypeSpec](docs/guide/typespec.md) has what each
+construct becomes, and how to name operations and templates.
+
 ### Report what cannot be generated
 
 ```ts
@@ -1212,6 +1263,11 @@ The package ships a `docs/` folder:
 - [how schemas map](docs/guide/schema-mapping.md): each JSON Schema keyword,
   and what is refused;
 - [diagnostics](docs/guide/diagnostics.md): every diagnostic code;
+- [authoring the spec in TypeSpec](docs/guide/typespec.md): compiling it to
+  OpenAPI 3.1, and what each construct becomes;
+- [troubleshooting](docs/troubleshooting.md): each trap, by the message you
+  see;
+- [the roadmap](docs/roadmap.md): what is coming, and what is not planned;
 - [typed Hono routes](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-hono/docs/guide.md), in
   `@nxgt/openapi-hono`: routes, validation errors, modules, reply checks;
 - [the architecture](docs/architecture/overview.md), for working on the

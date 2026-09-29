@@ -131,8 +131,16 @@ A key that no part of the schema evaluates is refused:
 | on an `anyOf` | refused: a value may match several variants and use keys from each |
 | next to a `$ref`, or over `$ref` members | the referenced schema must refuse unknown keys itself (`additionalProperties: false`, or `unknownKeys: 'strict'`); otherwise a `not_enforced` warning, since its unknown keys are dropped, not refused |
 
-`unevaluatedProperties: true` changes nothing, and a schema as its value is
-refused.
+`unevaluatedProperties: true` changes nothing.
+
+A schema as its value is read as `additionalProperties` when the two see the
+same keys: no `additionalProperties` beside it, and no `$ref`, `allOf`,
+`anyOf`, `oneOf`, `if`/`then`/`else` or `dependentSchemas`. It is how
+TypeSpec's `Record<T>` reaches OpenAPI 3.1: `{ type: object,
+unevaluatedProperties: { type: integer } }` is `{ [key: string]: number }`.
+Beside `additionalProperties` it changes nothing, since every key is evaluated
+already. Next to one of the other keywords, without `additionalProperties`, it is refused: those evaluate keys
+the object does not declare, and no Zod object says which.
 
 ## Refused
 
@@ -144,7 +152,7 @@ together:
 | `not`, `if` / `then` / `else` | no faithful type |
 | `dependentSchemas`, `dependentRequired` | no faithful type |
 | `patternProperties`, `propertyNames` | no faithful type |
-| `unevaluatedItems`; `unevaluatedProperties` with a schema, or over `anyOf` | no faithful type |
+| `unevaluatedItems`; `unevaluatedProperties` with a schema next to `$ref`, `allOf`, `anyOf` or `oneOf` and without `additionalProperties`, or `false` over `anyOf` | no faithful type |
 | `prefixItems`, `items` as a list (tuples) | not supported yet |
 | `contains`, `minContains`, `maxContains` | no faithful type |
 | `$dynamicRef`, `$dynamicAnchor`, `$recursiveRef` | not supported |

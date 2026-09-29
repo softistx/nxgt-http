@@ -81,8 +81,10 @@ no relative import into one.
   `nuxi prepare`, then checks the app's `.ts` with the app's own tsconfig.
 - `@nxgt/typespec` has `@typespec/compiler` and `@typespec/http` as peers:
   its conventions are `.tsp` files under `lib/`, reached through `tspMain` and
-  the `typespec` export condition, and `src/index.ts` only declares the
-  library (`$lib`) for the compiler. The generator and `@nxgt/openapi-hono`
+  the `typespec` export condition. `lib/main.tsp` imports `../dist/index.js`,
+  the build of `src/`: the library's `$lib` and its decorators, which the
+  compiler loads only through that import. So a fixture compiles only once the
+  package is built, as CI does. The generator and `@nxgt/openapi-hono`
   are devDependencies: `test/generate.ts` compiles each fixture's `.tsp`,
   generates it, and its specs serve it. A fixture imports the package by its
   own name, `import "@nxgt/typespec"`, as an app does; TypeSpec resolves the
@@ -216,6 +218,7 @@ publishes to npm.
 | `LICENSE`, at the root and in each `packages/*/` | npm ships only the `LICENSE` in the package's own directory. `verify:artifacts` fails a tarball without one. Change them all together |
 | `scripts/verify-artifacts.ts` and `scripts/artifacts/`, beside nxgt-janus, nxgt-data and nxgt-core | each repository releases on its own, so the skeleton is copied, not shared. All four are split module for module and hold the same three checks: the test-code check, the guard that reports an unbuilt package as `no dist/`, and `missingFiles`, whose spec holds that a `files` entry `dis` is not covered by `dist/`. This copy lacks nxgt-core's `browser.ts`, a check for the `browser` export condition, which no package here declares. It also reads a sibling's version from the packed manifests, where nxgt-janus and nxgt-data read it from the workspace. Outside `scripts/artifacts/`, `check-changesets.ts` is nxgt-janus's alone, and `check-nxgt-versions.ts` with its weekly `nxgt versions` workflow is nxgt-janus's, copied into nxgt-data and nxgt-core by softistx/nxgt-data#139 and softistx/nxgt-core#158, but not here: it tracks `@nxgt/*` devDependencies from outside the repository, and every `@nxgt/*` package here depends only on its siblings, by `workspace:^`. A package that takes one from outside brings the check with it. A check added to one copy is a check to port to the others |
 | How a request is read and refused, in `openapi-hono/src/engine.ts` and `openapi-msw/src/request/read-request.ts` | the mock answers with the server's 400, with the same issues in the same order. The engine reads through Hono's `Context`, which the mock has no use for, and the mock depending on the runtime would pull in Hono. Change both together |
+| The pinned `tsp compile` and its drift check, in `openapi-codegen/test/typespec.ts` and `typespec/test/generate.ts` | neither can import the other: `@nxgt/typespec` reaching into the generator's `test/` is a relative import into a sibling, and the generator depending on `@nxgt/typespec` is a cycle. Change both together |
 | `openapi-codegen/test/fixtures/shared-components/` | a copy of the `openapi/components/` that nxgt-core's `@nxgt/shared-openapi` publishes: real split fragments for the loader and the `split` fixture. It is a fixture, not a dependency |
 
 ## Conventions
@@ -241,8 +244,8 @@ publishes to npm.
 
 ## Known state
 
-`bun run test` is **443 pass, 0 fail** on 2026-09-29: datasource-rest 26, httpyz 90, httpyz-query 14,
-openapi-codegen 164, openapi-hono 31, openapi-httpyz 28, openapi-msw 21, openapi-nuxt 36, typespec 9,
+`bun run test` is **450 pass, 0 fail** on 2026-09-29: datasource-rest 26, httpyz 90, httpyz-query 14,
+openapi-codegen 164, openapi-hono 31, openapi-httpyz 28, openapi-msw 21, openapi-nuxt 36, typespec 16,
 scripts 24. It runs one process per package, and each
 package's `test` script writes the generated fixtures its specs import first;
 then `bun test scripts` runs the repository scripts' own specs.

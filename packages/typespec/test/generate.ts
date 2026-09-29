@@ -2,7 +2,7 @@
  * Compiles each fixture under `fixtures/` with the TypeSpec pinned in
  * package.json, to OpenAPI 3.1 and 3.2 alike, and writes the code generated
  * from each under `generated/<case>/<version>/`, which git ignores.
- * `fixtures/<case>/<version>/openapi.yaml` is committed: each case's spec
+ * `fixtures/<case>/<version>/openapi.yaml` is committed: `src/fixtures.spec.ts`
  * fails when it is not what the `.tsp` compiles to, and
  * `bun run fixtures:typespec` rewrites it. The `test` and `typecheck`
  * scripts run this first.
@@ -17,7 +17,7 @@ import { $ } from 'bun';
 const TEST_DIR = fileURLToPath(new URL('./', import.meta.url));
 
 /** One per convention: each `.tsp` imports `@nxgt/typespec` as an app does. */
-export const CASES = ['errors'] as const;
+export const CASES = ['errors', 'blog'] as const;
 
 /** Every fixture's `tspconfig.yaml` emits both, each in its own folder. */
 export const VERSIONS = ['3.1.0', '3.2.0'] as const;

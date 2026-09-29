@@ -1,6 +1,7 @@
 /**
- * The JavaScript side of the `@nxgt/typespec` library: the TypeSpec compiler
- * loads it beside `lib/main.tsp`. The conventions themselves are in `lib/`.
+ * The JavaScript side of the `@nxgt/typespec` library, which `lib/main.tsp`
+ * imports from `dist/`: its name and diagnostics, and the decorators a
+ * template cannot express. The conventions themselves are in `lib/`.
  */
 import { createTypeSpecLibrary } from '@typespec/compiler';
 

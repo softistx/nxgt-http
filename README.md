@@ -38,7 +38,7 @@ every function, method, class and type it exports in its **API** section.
                      and the openapi-httpyz client as useApi()
 
  @nxgt/typespec: upstream of it all, a TypeSpec library the spec is
-                 written with, compiled to OpenAPI 3.1 first
+                 written with, compiled to OpenAPI 3.1 or 3.2 first
 ```
 
 The server and the client read the same generated schemas, so a request the

@@ -4,10 +4,8 @@
  * what the engine and a handler send must be what the library declares.
  */
 import { describe, expect, it } from 'bun:test';
-import { readFile } from 'node:fs/promises';
-import { generateFiles } from '@nxgt/openapi-codegen';
 import { Hono } from 'hono';
-import { emitted, spec, VERSIONS } from '../test/generate';
+import { VERSIONS } from '../test/generate';
 import { createRoutes as routes31 } from '../test/generated/errors/3.1.0/hono';
 import type {
 	BadRequestBody,
@@ -62,26 +60,9 @@ const put = (createRoutes: typeof routes31, body: unknown) =>
 		headers: { 'content-type': 'application/json' },
 	});
 
-it('errors/main.tsp compiles to the committed 3.1 and 3.2 specs: `bun run fixtures:typespec` accepts a change', async () => {
-	const now = await emitted('errors');
-	for (const version of VERSIONS) {
-		expect(now[version]).toBe(await readFile(spec('errors', version), 'utf8'));
-	}
-}, 30_000);
-
 for (const version of VERSIONS) {
 	describe(`error replies, from OpenAPI ${version}`, () => {
 		const { createRoutes, zBadRequestBody } = served[version];
-		const yaml = spec('errors', version);
-
-		it('generates with no warning', async () => {
-			const { warnings } = await generateFiles({
-				input: yaml,
-				output: '/unused',
-				hono: true,
-			});
-			expect(warnings).toEqual([]);
-		});
 
 		it('declares the envelope a handler sends, and refuses one that breaks it', async () => {
 			const found = await app(createRoutes).request('/articles/1');

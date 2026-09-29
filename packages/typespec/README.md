@@ -4,15 +4,17 @@ nxgt's HTTP conventions as a [TypeSpec](https://typespec.io) library, so an
 API spec states them in one word instead of rewriting them. Compile the spec to
 OpenAPI 3.1 or 3.2 with `@typespec/openapi3`, then generate the code with
 [`@nxgt/openapi-codegen`](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-codegen/README.md).
-Each shape here is the one the `@nxgt/*` packages actually send on the wire.
+Each shape here is one the `@nxgt/*` packages already send on the wire.
 
 ## Install
 
 ```sh
-bun add -d @nxgt/typespec @typespec/compiler @typespec/http @typespec/openapi3
+bun add -d @nxgt/typespec @typespec/compiler @typespec/http @typespec/openapi3 @nxgt/openapi-codegen
 ```
 
-`@typespec/compiler` and `@typespec/http` 1.16 or later are peer dependencies.
+`@typespec/compiler` and `@typespec/http` 1.16 or later are peer dependencies,
+and `typescript` 6 too, as for every `@nxgt` package. `@typespec/openapi3`
+compiles the spec, and `@nxgt/openapi-codegen` generates the code from it.
 Emit OpenAPI 3.1 or 3.2 in `tspconfig.yaml`: `@typespec/openapi3` emits 3.0
 by default, and the generator refuses it. Every convention here is compiled
 to both in CI, and generates the same code from either.
@@ -30,34 +32,67 @@ options:
 
 ## Usage
 
-### Error replies
+### A spec split across files
 
-Import the library and name the errors an operation can answer:
+A spec that grows is split by role: one file per resource's models, one per
+resource's routes, and a `main.tsp` that only assembles them. Each file opens
+the service's namespace again:
+
+```text
+api/
+  main.tsp            imports every file below, and declares the service
+  tspconfig.yaml
+  models/
+    author.tsp  post.tsp  comment.tsp
+  routes/
+    authors.tsp  posts.tsp  comments.tsp
+```
 
 ```tsp
 // api/main.tsp
+import "@typespec/http";
+import "./models/post.tsp";
+import "./routes/posts.tsp";
+
+using Http;
+
+@service(#{ title: "Blog" })
+namespace Blog;
+```
+
+```tsp
+// api/models/post.tsp
+namespace Blog;
+
+model Post {
+  @visibility(Lifecycle.Read) id: string;
+  @minLength(1) title: string;
+  body: string;
+}
+```
+
+### Error replies
+
+Import the library where the routes are, and name the errors each operation
+can answer:
+
+```tsp
+// api/routes/posts.tsp
 import "@typespec/http";
 import "@nxgt/typespec";
 
 using Http;
 using Nxgt;
 
-@service(#{ title: "Articles" })
-namespace Articles;
+namespace Blog;
 
-model Article {
-  id: string;
-  title: string;
-}
-
-@route("/articles/{id}")
-interface Items {
-  @get read(@path id: string): Article | NotFound | Unauthorized;
-  @put update(@path id: string, @body article: Article):
-    | Article
-    | BadRequest
-    | Conflict
-    | ErrorResponse<503>;
+@route("/posts")
+interface Posts {
+  @get read(@path postId: string): Post | NotFound | Unauthorized;
+  @post create(@body post: Create<Post>): {
+    @statusCode _: 201;
+    @body post: Post;
+  } | BadRequest | Conflict | ErrorResponse<503>;
 }
 ```
 
@@ -65,8 +100,10 @@ interface Items {
 bunx --no-install tsp compile api && bunx nxgt-openapi generate -i openapi/openapi.yaml -o src/generated
 ```
 
-Every error body is what `@nxgt/openapi-hono` sends, `message` being an i18n
-key, not a sentence:
+Every error body has the envelope of `@nxgt/openapi-hono`'s own replies, its
+400 and its 500, and a handler answers with the same envelope: `status`,
+`message`, an i18n key rather than a sentence, and `timestamp`. The generated
+types require all three:
 
 ```ts
 // src/generated/types.ts (excerpt)
@@ -130,9 +167,14 @@ on every operation that takes a parameter or a body. With `BadRequest`, a
     @body body: ServiceUnavailableBody;
   }
   ```
-- **OpenAPI 3.1 or 3.2, not 3.0.** Set `openapi-versions: ['3.1.0']` or
-  `['3.2.0']`. With both, the emitter writes `3.1.0/openapi.yaml` and
-  `3.2.0/openapi.yaml`, each in its own folder.
+- **Both versions at once write two folders.** With
+  `openapi-versions: ['3.1.0', '3.2.0']`, the emitter writes
+  `3.1.0/openapi.yaml` and `3.2.0/openapi.yaml`: point the generator's input
+  at one of them.
+- **The library's schema names are global.** `ErrorBody`,
+  `BadRequestBody` … `InternalServerErrorBody`, `ValidationIssue` and
+  `ValidationTarget` are emitted under those names, without a namespace. A
+  model of the same name in your spec collides with them.
 
 ## Documentation
 

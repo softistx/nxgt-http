@@ -79,8 +79,8 @@ paths:
                 $ref: '#/components/schemas/TooManyRequestsBody'
         '500':
           description: |-
-            The server failed. `@nxgt/openapi-hono` answers it too when a reply
-            breaks the spec, with `errors.response-validation-failed`.
+            The server failed. With `validateResponses`, `@nxgt/openapi-hono` answers
+            it too when a reply breaks the spec, with `errors.response-validation-failed`.
           content:
             application/json:
               schema:

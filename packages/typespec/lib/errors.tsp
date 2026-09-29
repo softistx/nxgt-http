@@ -129,8 +129,8 @@ model TooManyRequests {
 }
 
 /**
- * The server failed. `@nxgt/openapi-hono` answers it too when a reply
- * breaks the spec, with `errors.response-validation-failed`.
+ * The server failed. With `validateResponses`, `@nxgt/openapi-hono` answers
+ * it too when a reply breaks the spec, with `errors.response-validation-failed`.
  */
 @error
 model InternalServerError {

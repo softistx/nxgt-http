@@ -3,10 +3,98 @@
 `@nxgt/typespec` declares the error replies the `@nxgt/*` packages send, so a
 spec names them instead of describing them again.
 
+## A whole spec
+
+```yaml
+# api/tspconfig.yaml
+emit:
+  - '@typespec/openapi3'
+options:
+  '@typespec/openapi3':
+    openapi-versions: ['3.1.0']
+    emitter-output-dir: '{project-root}/../openapi'
+    output-file: openapi.yaml
+```
+
+The spec is split by role, as it grows: `main.tsp` assembles, `models/`
+holds the shapes and `routes/` the operations and their errors.
+
+```tsp
+// api/main.tsp
+import "@typespec/http";
+import "./models/post.tsp";
+import "./routes/posts.tsp";
+
+using Http;
+
+@service(#{ title: "Blog" })
+namespace Blog;
+```
+
+```tsp
+// api/models/post.tsp
+namespace Blog;
+
+model Post {
+  @visibility(Lifecycle.Read) id: string;
+  @minLength(1) title: string;
+  body: string;
+}
+```
+
+```tsp
+// api/routes/posts.tsp
+import "@typespec/http";
+import "@nxgt/typespec";
+
+using Http;
+using Nxgt;
+
+namespace Blog;
+
+@route("/posts")
+interface Posts {
+  @get read(@path postId: string): Post | NotFound;
+}
+```
+
+```ts
+// openapi-codegen.config.ts
+import { defineConfig } from '@nxgt/openapi-codegen';
+
+export default defineConfig({
+	input: 'openapi/openapi.yaml',
+	output: 'src/generated',
+	hono: true,
+});
+```
+
+```sh
+bunx --no-install tsp compile api && bunx nxgt-openapi generate
+```
+
+A Hono handler then answers the 404 with the generated type:
+
+```ts
+import { Hono } from 'hono';
+import { createRoutes } from './generated/hono';
+import type { NotFoundBody } from './generated/types';
+
+const app = new Hono();
+createRoutes(app).get('/posts/{postId}', (c) => {
+	const body: NotFoundBody = {
+		status: 404,
+		message: 'errors.not-found',
+		timestamp: new Date().toISOString(),
+	};
+	return c.json(body, 404);
+});
+```
+
 ## The envelope
 
-Every error body is `ErrorBody<Status>`, what `@nxgt/openapi-hono` answers
-with:
+Every error body is `ErrorBody<Status>`, the envelope of
+`@nxgt/openapi-hono`'s own replies, which a handler answers with too:
 
 ```tsp
 model ErrorBody<Status extends integer> {
@@ -53,7 +141,9 @@ describes both, with `issues` optional:
 The generator declares the validators' 400 itself, as `ValidationErrorBody`,
 on every operation that takes a parameter or a body, whether the spec says
 so or not. Beside `BadRequest`, the 400 is typed
-`BadRequestBody | ValidationErrorBody`.
+`BadRequestBody | ValidationErrorBody`. An app that answers a refused request
+its own way, through `onValidationError`, turns that off with the generator's
+[`validationErrors: false`](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-codegen/docs/guide/options.md#validationerrors).
 
 ## Each response
 
@@ -66,7 +156,7 @@ so or not. Beside `BadRequest`, the 400 is typed
 | `Conflict` | 409 | `ConflictBody` | the request conflicts with the resource's state, such as a stale `version` |
 | `UnprocessableEntity` | 422 | `UnprocessableEntityBody` | well-formed, but not something the server can act on |
 | `TooManyRequests` | 429 | `TooManyRequestsBody` | too many requests |
-| `InternalServerError` | 500 | `InternalServerErrorBody` | the server failed; `@nxgt/openapi-hono` sends it with `errors.response-validation-failed` when a reply breaks the spec |
+| `InternalServerError` | 500 | `InternalServerErrorBody` | the server failed; with `validateResponses`, `@nxgt/openapi-hono` sends it with `errors.response-validation-failed` when a reply breaks the spec |
 | `ErrorResponse<Status>` | any | `ErrorBody<Status>` | any other status |
 
 Name them in an operation's return type, beside the success:

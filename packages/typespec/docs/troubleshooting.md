@@ -26,7 +26,7 @@ no `package.json` to resolve it from.
 **Fix:** install it next to the spec's project, as a devDependency:
 
 ```sh
-bun add -d @nxgt/typespec @typespec/compiler @typespec/http @typespec/openapi3
+bun add -d @nxgt/typespec @typespec/compiler @typespec/http @typespec/openapi3 @nxgt/openapi-codegen
 ```
 
 ## `unsupported_version` from the generator

@@ -144,7 +144,7 @@ interface Posts {
 
 @route("/posts/{postId}/comments")
 interface Comments {
-  @get list(@path postId: string, ...CursorPageParameters): CursorPage<Comment> | NotFound;
+  @get list(@path postId: string, ...CursorPageParameters): CursorPage<Comment> | BadRequest | NotFound;
 }
 ```
 
@@ -177,8 +177,10 @@ export interface CommentCursorPage {
 | `limit` | 20 | an integer, at least 1 |
 
 A `pageSize` or `limit` above the server's maximum is not refused: the
-server lowers it, as `@nxgt/drizzle` does. More in
-[Pagination](docs/guide/pagination.md).
+server lowers it, as `@nxgt/drizzle` does. A cursor the server did not write
+makes `@nxgt/drizzle` throw `InvalidCursorError`: answer it with the
+`BadRequest` declared above
+([Serving it](docs/guide/pagination.md#serving-it)).
 
 ### Operation ids
 

@@ -125,3 +125,14 @@ after the item's model: `PostPage`, `CommentCursorPage`. Those names are
 global, as the library's other schemas are: a model named `PostPage` in the
 spec collides with `Page<Post>`
 ([troubleshooting](../troubleshooting.md)).
+
+Give the item a name: a page of an anonymous type is named after what
+TypeSpec calls it, `Page<Post[]>` gives `ArrayPage` and
+`CursorPage<Cat | Dog>` gives `undefinedCursorPage`. Name the union, and the
+page follows:
+
+```tsp
+union Pet { cat: Cat, dog: Dog }
+
+@get list(...PageParameters): Page<Pet>; // PetPage
+```

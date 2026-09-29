@@ -65,6 +65,16 @@ for (const version of VERSIONS) {
 			});
 		});
 
+		it('takes a pageSize or a limit of any size: the server lowers it', async () => {
+			const large = await app(createRoutes).request('/posts?pageSize=1000');
+			expect(large.status).toBe(200);
+			expect(await large.json()).toMatchObject({ pageSize: 1000 });
+			const many = await app(createRoutes).request(
+				`/posts/${post}/comments?limit=1000`,
+			);
+			expect(many.status).toBe(200);
+		});
+
 		it('refuses a page or a pageSize below 1', async () => {
 			for (const query of ['page=0', 'pageSize=0']) {
 				const refused = await app(createRoutes).request(`/posts?${query}`);

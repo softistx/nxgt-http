@@ -9,6 +9,7 @@ The [package README](../README.md) is the short version.
 | [Authentication](guide/auth.md) | protecting an operation with a `@nxgt/janus` session |
 | [Scalars and columns](guide/columns.md) | typing ids and addresses, and the columns a row carries |
 | [Headers](guide/headers.md) | making a write idempotent, or declaring a rate limit |
+| [Resources](guide/resources.md) | declaring a resource's five operations at once |
 | [Operation ids](guide/operation-ids.md) | naming the generated client's methods after the spec's |
 | [Troubleshooting](troubleshooting.md) | the compiler or the generator refused the spec |
 | [Roadmap](roadmap.md) | wondering what is coming |

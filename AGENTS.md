@@ -255,8 +255,8 @@ publishes to npm.
 
 ## Known state
 
-`bun run test` is **486 pass, 0 fail** on 2026-09-29: datasource-rest 26, httpyz 90, httpyz-query 14,
-openapi-codegen 164, openapi-hono 31, openapi-httpyz 28, openapi-msw 21, openapi-nuxt 36, typespec 52,
+`bun run test` is **493 pass, 0 fail** on 2026-09-29: datasource-rest 26, httpyz 90, httpyz-query 14,
+openapi-codegen 164, openapi-hono 31, openapi-httpyz 28, openapi-msw 21, openapi-nuxt 36, typespec 59,
 scripts 24. It runs one process per package, and each
 package's `test` script writes the generated fixtures its specs import first;
 then `bun test scripts` runs the repository scripts' own specs.

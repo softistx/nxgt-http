@@ -275,6 +275,33 @@ operation and its replies:
 generator checks the request's `Idempotency-Key`; a reply's headers are
 documented, not checked. More in [Headers](docs/guide/headers.md).
 
+### Resources
+
+One line gives a resource its five operations, with `@operationIds` names:
+
+```tsp
+model PostFilters {
+  @query status?: PostStatus;
+  @query authorId?: uuid;
+}
+
+@route("/posts")
+interface Posts extends Resource<Post, PostFilters, SortField = "createdAt" | "title"> {}
+```
+
+| Operation | Route | Answers |
+| --- | --- | --- |
+| `listPosts` | `GET /posts`, with the filters, `page`, `pageSize`, `orderBy`, `direction` | `Page<Post>` |
+| `readPosts` | `GET /posts/{id}` | `Post \| NotFound` |
+| `createPosts` | `POST /posts`, `Create<Post>` | 201 `Post \| BadRequest \| Conflict` |
+| `updatePosts` | `PATCH /posts/{id}`, `MergePatchUpdate<Post>` | `Post \| BadRequest \| NotFound \| Conflict` |
+| `deletePosts` | `DELETE /posts/{id}` | 204, `NotFound` |
+
+`orderBy` takes one of the `SortField`s (`SortField` is `"id"` by default), and `direction`
+`asc` (the default) or `desc`, as `@nxgt/drizzle` sorts a page. `{id}`
+is a `uuid`, or the `Id` you name. More in
+[Resources](docs/guide/resources.md).
+
 ### Operation ids
 
 TypeSpec names an operation after its interface, `Posts_list`, and the
@@ -351,6 +378,13 @@ of a marked interface that has another operation's id is an error,
 | `RateLimitHeaders` | `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset`, integers, optional |
 | `RetryAfterHeader` | `Retry-After`, seconds, optional |
 
+### Resources
+
+| Name | What it is |
+| --- | --- |
+| `Resource<Item, Filters = {}, SortField = "id", Id = uuid>` | an interface template: `list`, `read`, `create`, `update`, `delete` |
+| `SortParameters<Field>` | the query `orderBy?: Field` and `direction?: "asc" \| "desc" = "asc"` |
+
 ### Responses
 
 `AuthenticationRequired` (401) and `AccessDenied` (403), without a body, and
@@ -412,10 +446,12 @@ envelope and the rate limit's headers.
   columns `@nxgt/drizzle` stamps;
 - [Headers](docs/guide/headers.md): `Idempotency-Key`, the rate limit and
   `Retry-After`;
+- [Resources](docs/guide/resources.md): the five operations of a resource
+  in one line, with its filters and sort;
 - [Operation ids](docs/guide/operation-ids.md): `@operationIds`, and what
   the generated client calls each operation;
 - [troubleshooting](docs/troubleshooting.md);
-- [the roadmap](docs/roadmap.md): resource templates, still to come.
+- [the roadmap](docs/roadmap.md): what is coming.
 
 ## License
 

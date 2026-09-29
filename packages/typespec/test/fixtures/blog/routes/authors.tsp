@@ -6,14 +6,14 @@ using Nxgt;
 
 namespace Blog;
 
+/** What the author list filters on. */
+model AuthorFilters {
+  /** Authors of this name. */
+  @query
+  name?: string;
+}
+
 @route("/authors")
 @tag("Authors")
-@operationIds
-interface Authors {
-  @get list(): Author[] | Unauthorized;
-  @get read(@path authorId: uuid): Author | NotFound;
-  @post create(@body author: Create<Author>): {
-    @statusCode _: 201;
-    @body author: Author;
-  } | BadRequest | Conflict;
-}
+interface Authors
+  extends Resource<Author, AuthorFilters, SortField = "name" | "createdAt"> {}

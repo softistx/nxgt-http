@@ -10,10 +10,7 @@ import { describe, expect, it } from 'bun:test';
 import { Hono } from 'hono';
 import { VERSIONS } from '../test/generate';
 import { createRoutes as routes31 } from '../test/generated/blog/3.1.0/hono';
-import type {
-	ForbiddenBody,
-	UnauthorizedBody,
-} from '../test/generated/blog/3.1.0/types';
+import type { ForbiddenBody } from '../test/generated/blog/3.1.0/types';
 import { createRoutes as routes32 } from '../test/generated/blog/3.2.0/hono';
 
 const served = { '3.1.0': routes31, '3.2.0': routes32 };
@@ -97,8 +94,9 @@ for (const version of VERSIONS) {
 
 		it('types a 401 with a body as an error', () => {
 			const routes = createRoutes(new Hono());
-			const body: UnauthorizedBody = {
-				status: 401,
+			// The envelope `Unauthorized` would declare.
+			const body = {
+				status: 401 as const,
 				message: 'errors.unauthorized',
 				timestamp,
 			};

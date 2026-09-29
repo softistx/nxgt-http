@@ -163,7 +163,7 @@ its own way, through `onValidationError`, turns that off with the generator's
 | `NotFound` | 404 | `NotFoundBody` | nothing is there |
 | `Conflict` | 409 | `ConflictBody` | the request conflicts with the resource's state, such as a stale `version` |
 | `UnprocessableEntity` | 422 | `UnprocessableEntityBody` | well-formed, but not something the server can act on |
-| `TooManyRequests` | 429 | `TooManyRequestsBody` | too many requests |
+| `TooManyRequests` | 429 | `TooManyRequestsBody` | too many requests; with the `RateLimit-*` headers and `Retry-After` ([Headers](headers.md)) |
 | `InternalServerError` | 500 | `InternalServerErrorBody` | the server failed; with `validateResponses`, `@nxgt/openapi-hono` sends it with `errors.response-validation-failed` when a reply breaks the spec |
 | `ErrorResponse<Status>` | any | `ErrorBody<Status>` | any other status |
 

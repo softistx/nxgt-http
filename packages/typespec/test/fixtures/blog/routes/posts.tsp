@@ -21,10 +21,12 @@ interface Posts {
   // session({ required: true }) refuses a missing session; the handler, a user
   // who may not write, with the envelope.
   @useAuth(JanusAuth)
-  @post create(@body post: Create<Post>): {
+  @post create(...IdempotencyKeyHeader, @body post: Create<Post>): {
     @statusCode _: 201;
+    ...IdempotentReplayedHeader;
+    ...RateLimitHeaders;
     @body post: Post;
-  } | BadRequest | AuthenticationRequired | Forbidden;
+  } | BadRequest | AuthenticationRequired | Forbidden | IdempotencyInProgress | IdempotencyKeyReused | TooManyRequests;
   @patch update(
     @path postId: uuid,
     @body post: MergePatchUpdate<Post>,

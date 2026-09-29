@@ -123,7 +123,7 @@ export interface NotFoundBody {
 | `NotFound` | 404 | `NotFoundBody` |
 | `Conflict` | 409 | `ConflictBody` |
 | `UnprocessableEntity` | 422 | `UnprocessableEntityBody` |
-| `TooManyRequests` | 429 | `TooManyRequestsBody` |
+| `TooManyRequests` | 429 | `TooManyRequestsBody`, with the `RateLimit-*` headers and `Retry-After` |
 | `InternalServerError` | 500 | `InternalServerErrorBody` |
 | `ErrorResponse<Status>` | any | `ErrorBody<Status>` |
 
@@ -248,6 +248,33 @@ model Post {
 TypeSpec's own `url` is the address of a page, `format: uri`, generated as
 `z.url()`. More in [Scalars and columns](docs/guide/columns.md).
 
+### Headers
+
+Spread the headers of an idempotent write and of a rate limit into an
+operation and its replies:
+
+```tsp
+@post create(...IdempotencyKeyHeader, @body post: Create<Post>): {
+  @statusCode _: 201;
+  ...IdempotentReplayedHeader;
+  ...RateLimitHeaders;
+  @body post: Post;
+} | BadRequest | IdempotencyInProgress | IdempotencyKeyReused | TooManyRequests;
+```
+
+| Name | Header | Where |
+| --- | --- | --- |
+| `IdempotencyKeyHeader` | `Idempotency-Key`, 1 to 255 characters, optional | the request: checked |
+| `IdempotentReplayedHeader` | `Idempotent-Replayed: true` | a reply that replays an earlier one |
+| `RateLimitHeaders` | `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset` | a rate-limited route's replies |
+| `RetryAfterHeader` | `Retry-After`, in seconds | a 409 or a 429 |
+| `IdempotencyInProgress` | 409, `ConflictBody`, `Retry-After` | the key's first request still runs |
+| `IdempotencyKeyReused` | 422, `UnprocessableEntityBody` | the key was used with another body |
+
+`TooManyRequests` carries the `RateLimit-*` headers and `Retry-After`. The
+generator checks the request's `Idempotency-Key`; a reply's headers are
+documented, not checked. More in [Headers](docs/guide/headers.md).
+
 ### Operation ids
 
 TypeSpec names an operation after its interface, `Posts_list`, and the
@@ -368,11 +395,12 @@ of a marked interface that has another operation's id is an error,
   replies without a body;
 - [Scalars and columns](docs/guide/columns.md): `uuid`, `email`, and the
   columns `@nxgt/drizzle` stamps;
+- [Headers](docs/guide/headers.md): `Idempotency-Key`, the rate limit and
+  `Retry-After`;
 - [Operation ids](docs/guide/operation-ids.md): `@operationIds`, and what
   the generated client calls each operation;
 - [troubleshooting](docs/troubleshooting.md);
-- [the roadmap](docs/roadmap.md): headers and
-  resource templates, still to come.
+- [the roadmap](docs/roadmap.md): resource templates, still to come.
 
 ## License
 

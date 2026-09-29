@@ -121,10 +121,12 @@ model UnprocessableEntity {
   @body body: UnprocessableEntityBody;
 }
 
-/** Too many requests. */
+/** Too many requests. Retry after `Retry-After`. */
 @error
 model TooManyRequests {
   @statusCode _: 429;
+  ...RateLimitHeaders;
+  ...RetryAfterHeader;
   @body body: TooManyRequestsBody;
 }
 

@@ -111,10 +111,36 @@ paths:
         - Posts
     post:
       operationId: createPosts
-      parameters: []
+      parameters:
+        - $ref: '#/components/parameters/Nxgt.IdempotencyKeyHeader'
       responses:
         '201':
           description: The request has succeeded and a new resource has been created as a result.
+          headers:
+            Idempotent-Replayed:
+              required: false
+              description: |-
+                `true` when this answer is the one an earlier request with the same
+                `Idempotency-Key` got, and nothing was written this time.
+              schema:
+                type: string
+                enum:
+                  - 'true'
+            RateLimit-Limit:
+              required: false
+              description: How many requests a full window allows.
+              schema:
+                type: integer
+            RateLimit-Remaining:
+              required: false
+              description: How many more requests are allowed now, after this one.
+              schema:
+                type: integer
+            RateLimit-Reset:
+              required: false
+              description: Seconds until the window is full again, rounded up.
+              schema:
+                type: integer
           content:
             application/json:
               schema:
@@ -133,6 +159,55 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ForbiddenBody'
+        '409':
+          description: |-
+            A request with this `Idempotency-Key` is still running. Retry it as it is,
+            after `Retry-After`.
+          headers:
+            Retry-After:
+              required: false
+              description: 'Seconds to wait before trying again, rounded up: a delay, never a date.'
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictBody'
+        '422':
+          description: |-
+            This `Idempotency-Key` was already used for a request with another body. A
+            new request takes a new key.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnprocessableEntityBody'
+        '429':
+          description: Too many requests. Retry after `Retry-After`.
+          headers:
+            RateLimit-Limit:
+              required: false
+              description: How many requests a full window allows.
+              schema:
+                type: integer
+            RateLimit-Remaining:
+              required: false
+              description: How many more requests are allowed now, after this one.
+              schema:
+                type: integer
+            RateLimit-Reset:
+              required: false
+              description: Seconds until the window is full again, rounded up.
+              schema:
+                type: integer
+            Retry-After:
+              required: false
+              description: 'Seconds to wait before trying again, rounded up: a delay, never a date.'
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TooManyRequestsBody'
       tags:
         - Posts
       requestBody:
@@ -295,7 +370,28 @@ paths:
               schema:
                 $ref: '#/components/schemas/NotFoundBody'
         '429':
-          description: Too many requests.
+          description: Too many requests. Retry after `Retry-After`.
+          headers:
+            RateLimit-Limit:
+              required: false
+              description: How many requests a full window allows.
+              schema:
+                type: integer
+            RateLimit-Remaining:
+              required: false
+              description: How many more requests are allowed now, after this one.
+              schema:
+                type: integer
+            RateLimit-Reset:
+              required: false
+              description: Seconds until the window is full again, rounded up.
+              schema:
+                type: integer
+            Retry-After:
+              required: false
+              description: 'Seconds to wait before trying again, rounded up: a delay, never a date.'
+              schema:
+                type: integer
           content:
             application/json:
               schema:
@@ -357,6 +453,18 @@ components:
         minimum: 1
         default: 20
       explode: false
+    Nxgt.IdempotencyKeyHeader:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: |-
+        Made up by the client, once per write it means, and sent again with every
+        retry of that write: the write happens once, and a retry gets the first
+        answer back. Without it, every request writes.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
     Nxgt.PageParameters.page:
       name: page
       in: query
@@ -751,6 +859,26 @@ components:
           type: number
           enum:
             - 401
+          description: The reply's status, repeated in the body.
+        message:
+          type: string
+          description: An i18n key, such as `errors.not-found`, not a sentence.
+        timestamp:
+          type: string
+          format: date-time
+          description: When the error was answered.
+      description: The body of an error reply, as `@nxgt/openapi-hono` sends it.
+    UnprocessableEntityBody:
+      type: object
+      required:
+        - status
+        - message
+        - timestamp
+      properties:
+        status:
+          type: number
+          enum:
+            - 422
           description: The reply's status, repeated in the body.
         message:
           type: string

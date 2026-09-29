@@ -182,6 +182,37 @@ makes `@nxgt/drizzle` throw `InvalidCursorError`: answer it with the
 `BadRequest` declared above
 ([Serving it](docs/guide/pagination.md#serving-it)).
 
+### Authentication
+
+Name how a request authenticates with `@useAuth`, and the guards' refusals
+beside the success:
+
+```tsp
+@route("/posts/{postId}/comments/{commentId}")
+interface Comments {
+  @useAuth(JanusAuth)
+  @delete delete(@path postId: string, @path commentId: string):
+    NoContentResponse | AuthenticationRequired | AccessDenied | ErrorWithoutBody<404>;
+}
+```
+
+`JanusAuth` is every way [`@nxgt/janus`](https://www.npmjs.com/package/@nxgt/janus)
+reads a session token, and any one of them is enough:
+
+| Scheme | Where the token is |
+| --- | --- |
+| `BearerAuth` | `Authorization: Bearer <token>` |
+| `SessionTokenAuth` | the `X-Session-Token` header |
+| `SessionCookieAuth` | the `janus-session` cookie |
+
+The guards of [`@nxgt/janus-hono`](https://www.npmjs.com/package/@nxgt/janus-hono),
+`session(auth, { required: true })` and `permission()`, refuse without a body:
+`AuthenticationRequired` is their 401 and `AccessDenied` their 403, and
+`ErrorWithoutBody<404>` the 404 of `permission()`. A handler's own refusal,
+with the envelope, stays `Unauthorized` or `Forbidden`. The generated
+`hono.ts` types the guards' replies as `c.body(null, 401)`. More in
+[Authentication](docs/guide/auth.md).
+
 ### Operation ids
 
 TypeSpec names an operation after its interface, `Posts_list`, and the
@@ -230,7 +261,18 @@ of a marked interface that has another operation's id is an error,
 | `ValidationIssue` | `{ target: ValidationTarget, path: (string \| integer)[], code: string, message: string }` |
 | `ValidationTarget` | `"param" \| "query" \| "header" \| "json" \| "form" \| "body" \| "response"` |
 
+### Authentication
+
+| Name | What it is |
+| --- | --- |
+| `JanusAuth` | `BearerAuth \| SessionTokenAuth \| SessionCookieAuth`, for `@useAuth` |
+| `SessionTokenAuth` | an API key in the `X-Session-Token` header |
+| `SessionCookieAuth` | an API key in the `janus-session` cookie |
+
 ### Responses
+
+`AuthenticationRequired` (401) and `AccessDenied` (403), without a body, and
+`ErrorWithoutBody<Status>` for any other status without a body.
 
 `BadRequest`, `Unauthorized`, `Forbidden`, `NotFound`, `Conflict`,
 `UnprocessableEntity`, `TooManyRequests`, `InternalServerError`, each an
@@ -255,6 +297,10 @@ of a marked interface that has another operation's id is an error,
     @body body: ServiceUnavailableBody;
   }
   ```
+- **One status, one reply.** An operation that declares both
+  `AuthenticationRequired` and `Unauthorized` gets a single 401, with the
+  envelope: the reply without a body is lost, without a warning. Declare the
+  one the route sends: the guard's, or the handler's.
 - **Both versions at once write two folders.** With
   `openapi-versions: ['3.1.0', '3.2.0']`, the emitter writes
   `3.1.0/openapi.yaml` and `3.2.0/openapi.yaml`: point the generator's input
@@ -272,10 +318,12 @@ of a marked interface that has another operation's id is an error,
   what the generator makes of them;
 - [Pagination](docs/guide/pagination.md): offset and cursor pages, and
   what a handler answers;
+- [Authentication](docs/guide/auth.md): `JanusAuth`, and the guards'
+  replies without a body;
 - [Operation ids](docs/guide/operation-ids.md): `@operationIds`, and what
   the generated client calls each operation;
 - [troubleshooting](docs/troubleshooting.md);
-- [the roadmap](docs/roadmap.md): auth, scalars, headers and
+- [the roadmap](docs/roadmap.md): scalars, headers and
   resource templates, still to come.
 
 ## License

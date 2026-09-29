@@ -1,0 +1,63 @@
+{
+	"name": "@nxgt/typespec",
+	"version": "0.0.0",
+	"license": "MIT",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"tspMain": "./lib/main.tsp",
+	"files": [
+		"dist",
+		"lib",
+		"docs",
+		"README.md",
+		"package.json",
+		"LICENSE"
+	],
+	"exports": {
+		".": {
+			"typespec": "./lib/main.tsp",
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"default": "./dist/index.js"
+		},
+		"./package.json": "./package.json"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/softistx/nxgt-http.git",
+		"directory": "packages/typespec"
+	},
+	"publishConfig": {
+		"registry": "https://registry.npmjs.org",
+		"access": "public"
+	},
+	"scripts": {
+		"build": "bun run ../../build.ts",
+		"fixtures": "bun run test/generate.ts",
+		"test": "bun run fixtures && bun test src",
+		"typecheck": "bun run fixtures && tsc --noEmit",
+		"fixtures:typespec": "bun run test/generate.ts --accept"
+	},
+	"nxgt": {
+		"entrypoints": [
+			"src/index.ts"
+		]
+	},
+	"peerDependencies": {
+		"@typespec/compiler": "^1.16.0",
+		"@typespec/http": "^1.16.0",
+		"typescript": "^6.0.3"
+	},
+	"devDependencies": {
+		"@nxgt/openapi-codegen": "workspace:^",
+		"@nxgt/openapi-hono": "workspace:^",
+		"@types/bun": "^1.4.0",
+		"@typespec/compiler": "1.16.0",
+		"@typespec/http": "1.16.0",
+		"@typespec/openapi": "1.16.0",
+		"@typespec/openapi3": "1.16.0",
+		"hono": "^4.13.4",
+		"zod": "^4.5.4"
+	}
+}

@@ -1,0 +1,689 @@
+openapi: 3.2.0
+info:
+  title: Blog
+  version: 0.0.0
+tags:
+  - name: Authors
+  - name: Posts
+  - name: Comments
+paths:
+  /authors:
+    get:
+      operationId: Authors_list
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Author'
+        '401':
+          description: No credentials, or credentials that are not valid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedBody'
+      tags:
+        - Authors
+    post:
+      operationId: Authors_create
+      parameters: []
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Author'
+        '400':
+          description: The request is refused, by the validators or by a handler.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestBody'
+        '409':
+          description: The request conflicts with the resource's state, such as a version that moved on.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictBody'
+      tags:
+        - Authors
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAuthor'
+  /authors/{authorId}:
+    get:
+      operationId: Authors_read
+      parameters:
+        - name: authorId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Author'
+        '404':
+          description: Nothing is there.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundBody'
+      tags:
+        - Authors
+  /posts:
+    get:
+      operationId: Posts_list
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/PostStatus'
+          explode: false
+        - name: authorId
+          in: query
+          required: false
+          schema:
+            type: string
+          explode: false
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Post'
+      tags:
+        - Posts
+    post:
+      operationId: Posts_create
+      parameters: []
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          description: The request is refused, by the validators or by a handler.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestBody'
+        '401':
+          description: No credentials, or credentials that are not valid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedBody'
+        '403':
+          description: Authenticated, but not allowed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenBody'
+      tags:
+        - Posts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePost'
+  /posts/{postId}:
+    get:
+      operationId: Posts_read
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '404':
+          description: Nothing is there.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundBody'
+      tags:
+        - Posts
+    patch:
+      operationId: Posts_update
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          description: The request is refused, by the validators or by a handler.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestBody'
+        '404':
+          description: Nothing is there.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundBody'
+        '409':
+          description: The request conflicts with the resource's state, such as a version that moved on.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictBody'
+      tags:
+        - Posts
+      requestBody:
+        required: true
+        content:
+          application/merge-patch+json:
+            schema:
+              $ref: '#/components/schemas/PostMergePatchUpdate'
+    delete:
+      operationId: Posts_delete
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: There is no content to send for this request, but the headers may be useful.
+        '403':
+          description: Authenticated, but not allowed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenBody'
+        '404':
+          description: Nothing is there.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundBody'
+      tags:
+        - Posts
+  /posts/{postId}/comments:
+    get:
+      operationId: Comments_list
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Comment'
+        '404':
+          description: Nothing is there.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundBody'
+      tags:
+        - Comments
+    post:
+      operationId: Comments_create
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        '400':
+          description: The request is refused, by the validators or by a handler.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestBody'
+        '404':
+          description: Nothing is there.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundBody'
+        '429':
+          description: Too many requests.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TooManyRequestsBody'
+      tags:
+        - Comments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateComment'
+  /posts/{postId}/comments/{commentId}:
+    delete:
+      operationId: Comments_delete
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: There is no content to send for this request, but the headers may be useful.
+        '403':
+          description: Authenticated, but not allowed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenBody'
+        '404':
+          description: Nothing is there.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundBody'
+      tags:
+        - Comments
+components:
+  schemas:
+    Author:
+      type: object
+      required:
+        - id
+        - name
+        - email
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        email:
+          type: string
+          format: email
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+      description: Someone who writes posts and comments.
+    BadRequestBody:
+      type: object
+      required:
+        - status
+        - message
+        - timestamp
+      properties:
+        status:
+          type: number
+          enum:
+            - 400
+          description: The reply's status, repeated in the body.
+        message:
+          type: string
+          description: An i18n key, such as `errors.not-found`, not a sentence.
+        timestamp:
+          type: string
+          format: date-time
+          description: When the error was answered.
+        issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationIssue'
+          description: Every value the validators refused, from every target at once.
+      description: |-
+        The 400. `@nxgt/openapi-hono` sends it with the `issues` when its
+        validators refuse a request; a handler sends it without them.
+    Comment:
+      type: object
+      required:
+        - id
+        - postId
+        - authorId
+        - body
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        postId:
+          type: string
+          format: uuid
+          readOnly: true
+        authorId:
+          type: string
+          format: uuid
+        body:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+      description: A reply to a post.
+    ConflictBody:
+      type: object
+      required:
+        - status
+        - message
+        - timestamp
+      properties:
+        status:
+          type: number
+          enum:
+            - 409
+          description: The reply's status, repeated in the body.
+        message:
+          type: string
+          description: An i18n key, such as `errors.not-found`, not a sentence.
+        timestamp:
+          type: string
+          format: date-time
+          description: When the error was answered.
+      description: The body of an error reply, as `@nxgt/openapi-hono` sends it.
+    CreateAuthor:
+      type: object
+      required:
+        - name
+        - email
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        email:
+          type: string
+          format: email
+      description: Someone who writes posts and comments.
+    CreateComment:
+      type: object
+      required:
+        - authorId
+        - body
+      properties:
+        authorId:
+          type: string
+          format: uuid
+        body:
+          type: string
+          minLength: 1
+          maxLength: 2000
+      description: A reply to a post.
+    CreatePost:
+      type: object
+      required:
+        - authorId
+        - title
+        - body
+        - status
+      properties:
+        authorId:
+          type: string
+          format: uuid
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        body:
+          type: string
+        status:
+          $ref: '#/components/schemas/PostStatus'
+        tags:
+          type: array
+          items:
+            type: string
+      description: An article, by one author.
+    ForbiddenBody:
+      type: object
+      required:
+        - status
+        - message
+        - timestamp
+      properties:
+        status:
+          type: number
+          enum:
+            - 403
+          description: The reply's status, repeated in the body.
+        message:
+          type: string
+          description: An i18n key, such as `errors.not-found`, not a sentence.
+        timestamp:
+          type: string
+          format: date-time
+          description: When the error was answered.
+      description: The body of an error reply, as `@nxgt/openapi-hono` sends it.
+    NotFoundBody:
+      type: object
+      required:
+        - status
+        - message
+        - timestamp
+      properties:
+        status:
+          type: number
+          enum:
+            - 404
+          description: The reply's status, repeated in the body.
+        message:
+          type: string
+          description: An i18n key, such as `errors.not-found`, not a sentence.
+        timestamp:
+          type: string
+          format: date-time
+          description: When the error was answered.
+      description: The body of an error reply, as `@nxgt/openapi-hono` sends it.
+    Post:
+      type: object
+      required:
+        - id
+        - authorId
+        - title
+        - body
+        - status
+        - publishedAt
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        authorId:
+          type: string
+          format: uuid
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        body:
+          type: string
+        status:
+          $ref: '#/components/schemas/PostStatus'
+        tags:
+          type: array
+          items:
+            type: string
+        publishedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          readOnly: true
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+      description: An article, by one author.
+    PostMergePatchUpdate:
+      type: object
+      properties:
+        authorId:
+          type: string
+          format: uuid
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        body:
+          type: string
+        status:
+          $ref: '#/components/schemas/PostStatus'
+        tags:
+          anyOf:
+            - type: array
+              items:
+                type: string
+            - type: 'null'
+      description: An article, by one author.
+    PostStatus:
+      type: string
+      enum:
+        - draft
+        - published
+        - archived
+      description: Where a post stands.
+    TooManyRequestsBody:
+      type: object
+      required:
+        - status
+        - message
+        - timestamp
+      properties:
+        status:
+          type: number
+          enum:
+            - 429
+          description: The reply's status, repeated in the body.
+        message:
+          type: string
+          description: An i18n key, such as `errors.not-found`, not a sentence.
+        timestamp:
+          type: string
+          format: date-time
+          description: When the error was answered.
+      description: The body of an error reply, as `@nxgt/openapi-hono` sends it.
+    UnauthorizedBody:
+      type: object
+      required:
+        - status
+        - message
+        - timestamp
+      properties:
+        status:
+          type: number
+          enum:
+            - 401
+          description: The reply's status, repeated in the body.
+        message:
+          type: string
+          description: An i18n key, such as `errors.not-found`, not a sentence.
+        timestamp:
+          type: string
+          format: date-time
+          description: When the error was answered.
+      description: The body of an error reply, as `@nxgt/openapi-hono` sends it.
+    ValidationIssue:
+      type: object
+      required:
+        - target
+        - path
+        - code
+        - message
+      properties:
+        target:
+          $ref: '#/components/schemas/ValidationTarget'
+        path:
+          type: array
+          items:
+            anyOf:
+              - type: string
+              - type: integer
+          description: 'Inside the target: `["items", 0, "name"]`, or `[]` for the whole of it.'
+        code:
+          type: string
+          description: |-
+            Zod's issue code, or one of the engine's own: `invalid_json`,
+            `invalid_form`, `invalid_content_type`, `missing_body`,
+            `repeated_parameter`, `undeclared_status`.
+        message:
+          type: string
+      description: One value `@nxgt/openapi-hono` refused, and why.
+    ValidationTarget:
+      type: string
+      enum:
+        - param
+        - query
+        - header
+        - json
+        - form
+        - body
+        - response
+      description: |-
+        Where `@nxgt/openapi-hono` found a request value wrong: a request location,
+        or `response` for a reply the spec does not declare.
+servers:
+  - url: https://api.example.com
+    description: Production
+    variables: {}

@@ -56,8 +56,8 @@ operation:
 - an interface `extends` another, whose operation has an `@operationId`:
   `extends` copies it as is;
 - an `@operationId` written elsewhere takes the id `@operationIds` gives;
-- an operation outside an interface is named after itself: `op listPets()`
-  takes the id of `Pets.list`.
+- an operation declared in the service namespace is named after itself:
+  `op listPets()` takes the id of `Pets.list`.
 
 ```text
 error @nxgt/typespec/duplicate-operation-id: Two operations are named listPets: an OpenAPI operation id must be unique.

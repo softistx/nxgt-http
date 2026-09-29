@@ -94,7 +94,7 @@ An id must be unique, and four cases break that:
   have a second `getPost`;
 - an `@operationId` written on another operation, in any interface, takes
   the id `@operationIds` gives;
-- an operation outside an interface is named after itself, so
+- an operation declared in the service namespace is named after itself, so
   `op listPets()` takes the id of `Pets.list`.
 
 `@operationIds` refuses each with `duplicate-operation-id`, where
@@ -107,3 +107,7 @@ the interface that extends ([troubleshooting](../troubleshooting.md)).
 The emitter's own option, `operation-id-strategy`, only chooses between
 `parent-container` (`Posts_list`, the default), `fqn` (with the namespace)
 and `explicit-only`. None of them gives `listPosts`.
+
+`@operationIds` only names the operations of the interfaces it marks: the
+strategy still names every other one. The check for two operations named
+alike reads their ids as the default strategy gives them.

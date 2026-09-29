@@ -56,7 +56,7 @@ function isNamed(program: Program, operation: Operation): boolean {
  * `@operationIds` in the source does not matter. Two operations with one id,
  * one of them in a marked interface, are an error: two interfaces of one name
  * in two namespaces, an `@operationId` that `extends` copied, one written
- * elsewhere, or an operation outside an interface, named after itself. `@typespec/openapi3` would emit both without a word.
+ * elsewhere, or an operation in the service namespace, named after itself. `@typespec/openapi3` would emit both without a word.
  */
 export function validateOperationIds(program: Program): void {
 	const seen = new Map<string, boolean>();
@@ -64,8 +64,9 @@ export function validateOperationIds(program: Program): void {
 		operation(operation) {
 			const named = isNamed(program, operation);
 			const own = getOperationId(program, operation);
-			// Elsewhere, the id `@typespec/openapi3` gives by default: an
-			// operation outside an interface is named after itself.
+			// Elsewhere, only checked: the id `@typespec/openapi3` gives under its
+			// default strategy; an operation in the service namespace is named
+			// after itself.
 			const id =
 				own ??
 				(named
@@ -79,7 +80,9 @@ export function validateOperationIds(program: Program): void {
 				});
 			}
 			seen.set(id, named || (seen.get(id) ?? false));
-			if (own === undefined) setOperationId(program, operation, id);
+			// Only the ids it gives: an explicit id on any other operation would
+			// override the emitter's `operation-id-strategy`.
+			if (named && own === undefined) setOperationId(program, operation, id);
 		},
 	});
 }

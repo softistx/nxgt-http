@@ -3,7 +3,7 @@
  * named `<operation><Interface>`, except `Posts.read`, whose own
  * `@operationId("getPost")` wins, and the generated client's methods follow.
  * The programs in `test/programs/` are compiled without emitting: a template,
- * and the ids it must refuse.
+ * a spec that does not use it, and the ids it must refuse.
  */
 import { expect, it } from 'bun:test';
 import { fileURLToPath } from 'node:url';
@@ -56,6 +56,18 @@ it('names the operations of a template after each interface extending it', async
 	});
 	expect(program.diagnostics).toEqual([]);
 	expect(ids.sort()).toEqual(['listOrders', 'listPets']);
+}, 30_000);
+
+it('sets no id outside the interfaces it marks', async () => {
+	const program = await checked('unmarked');
+	const ids: (string | undefined)[] = [];
+	navigateProgram(program, {
+		operation(operation) {
+			ids.push(getOperationId(program, operation));
+		},
+	});
+	expect(program.diagnostics).toEqual([]);
+	expect(ids).toEqual([undefined, undefined]);
 }, 30_000);
 
 it.each([

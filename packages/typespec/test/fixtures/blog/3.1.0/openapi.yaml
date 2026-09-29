@@ -1,0 +1,1090 @@
+openapi: 3.1.0
+info:
+  title: Blog
+  version: 0.0.0
+tags:
+  - name: Authors
+  - name: Posts
+  - name: Comments
+paths:
+  /authors:
+    get:
+      operationId: listAuthors
+      description: One page of the resources, filtered and sorted.
+      parameters:
+        - $ref: '#/components/parameters/AuthorFilters'
+        - $ref: '#/components/parameters/Nxgt.PageParameters.page'
+        - $ref: '#/components/parameters/Nxgt.PageParameters.pageSize'
+        - name: orderBy
+          in: query
+          required: false
+          description: The field to sort by.
+          schema:
+            type: string
+            enum:
+              - name
+              - createdAt
+          explode: false
+        - name: direction
+          in: query
+          required: false
+          description: '`asc` or `desc`.'
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: asc
+          explode: false
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthorPage'
+      tags:
+        - Authors
+    post:
+      operationId: createAuthors
+      description: Creates a resource.
+      parameters: []
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Author'
+        '400':
+          description: The request is refused, by the validators or by a handler.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestBody'
+        '409':
+          description: The request conflicts with the resource's state, such as a version that moved on.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictBody'
+      tags:
+        - Authors
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAuthor'
+  /authors/{id}:
+    get:
+      operationId: readAuthors
+      description: One resource.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/Uuid'
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Author'
+        '404':
+          description: Nothing is there.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundBody'
+      tags:
+        - Authors
+    patch:
+      operationId: updateAuthors
+      description: Updates a resource with a merge patch.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/Uuid'
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Author'
+        '400':
+          description: The request is refused, by the validators or by a handler.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestBody'
+        '404':
+          description: Nothing is there.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundBody'
+        '409':
+          description: The request conflicts with the resource's state, such as a version that moved on.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictBody'
+      tags:
+        - Authors
+      requestBody:
+        required: true
+        content:
+          application/merge-patch+json:
+            schema:
+              $ref: '#/components/schemas/AuthorMergePatchUpdate'
+    delete:
+      operationId: deleteAuthors
+      description: Deletes a resource.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/Uuid'
+      responses:
+        '204':
+          description: There is no content to send for this request, but the headers may be useful.
+        '404':
+          description: Nothing is there.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundBody'
+      tags:
+        - Authors
+  /posts:
+    get:
+      operationId: listPosts
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/PostStatus'
+          explode: false
+        - name: authorId
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/Uuid'
+          explode: false
+        - $ref: '#/components/parameters/Nxgt.PageParameters.page'
+        - $ref: '#/components/parameters/Nxgt.PageParameters.pageSize'
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostPage'
+      tags:
+        - Posts
+    post:
+      operationId: createPosts
+      parameters:
+        - $ref: '#/components/parameters/Nxgt.IdempotencyKeyHeader'
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          headers:
+            Idempotent-Replayed:
+              required: false
+              description: |-
+                `true` when this answer is the one an earlier request with the same
+                `Idempotency-Key` got, and nothing was written this time.
+              schema:
+                type: string
+                enum:
+                  - 'true'
+            RateLimit-Limit:
+              required: false
+              description: How many requests a full window allows.
+              schema:
+                type: integer
+            RateLimit-Remaining:
+              required: false
+              description: How many more requests are allowed now, after this one.
+              schema:
+                type: integer
+            RateLimit-Reset:
+              required: false
+              description: Seconds until the window is full again, rounded up.
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          description: The request is refused, by the validators or by a handler.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestBody'
+        '401':
+          description: The request carries no session, or one the server does not know.
+        '403':
+          description: Authenticated, but not allowed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenBody'
+        '409':
+          description: |-
+            A request with this `Idempotency-Key` is still running. Retry it as it is,
+            after `Retry-After`.
+          headers:
+            RateLimit-Limit:
+              required: false
+              description: How many requests a full window allows.
+              schema:
+                type: integer
+            RateLimit-Remaining:
+              required: false
+              description: How many more requests are allowed now, after this one.
+              schema:
+                type: integer
+            RateLimit-Reset:
+              required: false
+              description: Seconds until the window is full again, rounded up.
+              schema:
+                type: integer
+            Retry-After:
+              required: false
+              description: 'Seconds to wait before trying again, rounded up: a delay, never a date.'
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictBody'
+        '422':
+          description: |-
+            This `Idempotency-Key` was already used for a request with another body. A
+            new request takes a new key.
+          headers:
+            RateLimit-Limit:
+              required: false
+              description: How many requests a full window allows.
+              schema:
+                type: integer
+            RateLimit-Remaining:
+              required: false
+              description: How many more requests are allowed now, after this one.
+              schema:
+                type: integer
+            RateLimit-Reset:
+              required: false
+              description: Seconds until the window is full again, rounded up.
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnprocessableEntityBody'
+        '429':
+          description: Too many requests. Retry after `Retry-After`.
+          headers:
+            RateLimit-Limit:
+              required: false
+              description: How many requests a full window allows.
+              schema:
+                type: integer
+            RateLimit-Remaining:
+              required: false
+              description: How many more requests are allowed now, after this one.
+              schema:
+                type: integer
+            RateLimit-Reset:
+              required: false
+              description: Seconds until the window is full again, rounded up.
+              schema:
+                type: integer
+            Retry-After:
+              required: false
+              description: 'Seconds to wait before trying again, rounded up: a delay, never a date.'
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TooManyRequestsBody'
+      tags:
+        - Posts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePost'
+      security:
+        - BearerAuth: []
+        - SessionTokenAuth: []
+        - SessionCookieAuth: []
+  /posts/{postId}:
+    get:
+      operationId: getPost
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/Uuid'
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '404':
+          description: Nothing is there.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundBody'
+      tags:
+        - Posts
+    patch:
+      operationId: updatePosts
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/Uuid'
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          description: The request is refused, by the validators or by a handler.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestBody'
+        '404':
+          description: Nothing is there.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundBody'
+        '409':
+          description: The request conflicts with the resource's state, such as a version that moved on.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictBody'
+      tags:
+        - Posts
+      requestBody:
+        required: true
+        content:
+          application/merge-patch+json:
+            schema:
+              $ref: '#/components/schemas/PostMergePatchUpdate'
+    delete:
+      operationId: deletePosts
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/Uuid'
+      responses:
+        '204':
+          description: There is no content to send for this request, but the headers may be useful.
+        '403':
+          description: Authenticated, but not allowed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenBody'
+        '404':
+          description: Nothing is there.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundBody'
+      tags:
+        - Posts
+  /posts/{postId}/comments:
+    get:
+      operationId: listComments
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/Uuid'
+        - $ref: '#/components/parameters/Nxgt.CursorPageParameters.after'
+        - $ref: '#/components/parameters/Nxgt.CursorPageParameters.limit'
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommentCursorPage'
+        '400':
+          description: The request is refused, by the validators or by a handler.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestBody'
+        '404':
+          description: Nothing is there.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundBody'
+      tags:
+        - Comments
+    post:
+      operationId: createComments
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/Uuid'
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        '400':
+          description: The request is refused, by the validators or by a handler.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestBody'
+        '404':
+          description: Nothing is there.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundBody'
+        '429':
+          description: Too many requests. Retry after `Retry-After`.
+          headers:
+            RateLimit-Limit:
+              required: false
+              description: How many requests a full window allows.
+              schema:
+                type: integer
+            RateLimit-Remaining:
+              required: false
+              description: How many more requests are allowed now, after this one.
+              schema:
+                type: integer
+            RateLimit-Reset:
+              required: false
+              description: Seconds until the window is full again, rounded up.
+              schema:
+                type: integer
+            Retry-After:
+              required: false
+              description: 'Seconds to wait before trying again, rounded up: a delay, never a date.'
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TooManyRequestsBody'
+      tags:
+        - Comments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateComment'
+  /posts/{postId}/comments/{commentId}:
+    delete:
+      operationId: deleteComments
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/Uuid'
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/Uuid'
+      responses:
+        '204':
+          description: There is no content to send for this request, but the headers may be useful.
+        '401':
+          description: The request carries no session, or one the server does not know.
+        '403':
+          description: The session's user may not do this.
+        '404':
+          description: The request was refused; the reply has no body.
+      tags:
+        - Comments
+      security:
+        - BearerAuth: []
+        - SessionTokenAuth: []
+        - SessionCookieAuth: []
+components:
+  parameters:
+    AuthorFilters:
+      name: name
+      in: query
+      required: false
+      description: Authors of this name.
+      schema:
+        type: string
+      explode: false
+    Nxgt.CursorPageParameters.after:
+      name: after
+      in: query
+      required: false
+      description: The previous page's `nextCursor`; absent for the first page.
+      schema:
+        type: string
+      explode: false
+    Nxgt.CursorPageParameters.limit:
+      name: limit
+      in: query
+      required: false
+      description: How many items a page holds. A server lowers one above its maximum to it.
+      schema:
+        type: integer
+        minimum: 1
+        default: 20
+      explode: false
+    Nxgt.IdempotencyKeyHeader:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: |-
+        Made up by the client, once per write it means, and sent again with every
+        retry of that write: the write happens once, and a retry gets the first
+        answer back. Without it, every request writes.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+    Nxgt.PageParameters.page:
+      name: page
+      in: query
+      required: false
+      description: 1-based.
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+      explode: false
+    Nxgt.PageParameters.pageSize:
+      name: pageSize
+      in: query
+      required: false
+      description: How many items a page holds. A server lowers one above its maximum to it.
+      schema:
+        type: integer
+        minimum: 1
+        default: 20
+      explode: false
+  schemas:
+    Author:
+      type: object
+      required:
+        - id
+        - name
+        - email
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+          readOnly: true
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        email:
+          $ref: '#/components/schemas/Email'
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+      description: Someone who writes posts and comments.
+    AuthorMergePatchUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        email:
+          $ref: '#/components/schemas/Email'
+      description: Someone who writes posts and comments.
+    AuthorPage:
+      type: object
+      required:
+        - items
+        - total
+        - page
+        - pageSize
+        - pageCount
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Author'
+        total:
+          type: integer
+          description: Every item that matches, across all pages.
+        page:
+          type: integer
+          description: 1-based.
+        pageSize:
+          type: integer
+        pageCount:
+          type: integer
+          description: '`ceil(total / pageSize)`: 0 when nothing matches.'
+      description: One page of an offset pagination.
+    BadRequestBody:
+      type: object
+      required:
+        - status
+        - message
+        - timestamp
+      properties:
+        status:
+          type: number
+          enum:
+            - 400
+          description: The reply's status, repeated in the body.
+        message:
+          type: string
+          description: An i18n key, such as `errors.not-found`, not a sentence.
+        timestamp:
+          type: string
+          format: date-time
+          description: When the error was answered.
+        issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationIssue'
+          description: Every value the validators refused, from every target at once.
+      description: |-
+        The 400. `@nxgt/openapi-hono` sends it with the `issues` when its
+        validators refuse a request; a handler sends it without them.
+    Comment:
+      type: object
+      required:
+        - id
+        - postId
+        - authorId
+        - body
+        - createdAt
+        - updatedAt
+        - deletedAt
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+          readOnly: true
+        postId:
+          $ref: '#/components/schemas/Uuid'
+          readOnly: true
+        authorId:
+          $ref: '#/components/schemas/Uuid'
+        body:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        deletedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          readOnly: true
+      description: A reply to a post.
+    CommentCursorPage:
+      type: object
+      required:
+        - items
+        - nextCursor
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Comment'
+        nextCursor:
+          anyOf:
+            - type: string
+            - type: 'null'
+          description: Pass it as `after` for the next page; `null` on the last one.
+      description: One page of a cursor pagination, which gives no total.
+    ConflictBody:
+      type: object
+      required:
+        - status
+        - message
+        - timestamp
+      properties:
+        status:
+          type: number
+          enum:
+            - 409
+          description: The reply's status, repeated in the body.
+        message:
+          type: string
+          description: An i18n key, such as `errors.not-found`, not a sentence.
+        timestamp:
+          type: string
+          format: date-time
+          description: When the error was answered.
+      description: The body of an error reply, as `@nxgt/openapi-hono` sends it.
+    CreateAuthor:
+      type: object
+      required:
+        - name
+        - email
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        email:
+          $ref: '#/components/schemas/Email'
+      description: Someone who writes posts and comments.
+    CreateComment:
+      type: object
+      required:
+        - authorId
+        - body
+      properties:
+        authorId:
+          $ref: '#/components/schemas/Uuid'
+        body:
+          type: string
+          minLength: 1
+          maxLength: 2000
+      description: A reply to a post.
+    CreatePost:
+      type: object
+      required:
+        - authorId
+        - title
+        - body
+        - status
+      properties:
+        authorId:
+          $ref: '#/components/schemas/Uuid'
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        body:
+          type: string
+        status:
+          $ref: '#/components/schemas/PostStatus'
+        tags:
+          type: array
+          items:
+            type: string
+      description: An article, by one author.
+    Email:
+      type: string
+      format: email
+      description: An e-mail address.
+    ForbiddenBody:
+      type: object
+      required:
+        - status
+        - message
+        - timestamp
+      properties:
+        status:
+          type: number
+          enum:
+            - 403
+          description: The reply's status, repeated in the body.
+        message:
+          type: string
+          description: An i18n key, such as `errors.not-found`, not a sentence.
+        timestamp:
+          type: string
+          format: date-time
+          description: When the error was answered.
+      description: The body of an error reply, as `@nxgt/openapi-hono` sends it.
+    NotFoundBody:
+      type: object
+      required:
+        - status
+        - message
+        - timestamp
+      properties:
+        status:
+          type: number
+          enum:
+            - 404
+          description: The reply's status, repeated in the body.
+        message:
+          type: string
+          description: An i18n key, such as `errors.not-found`, not a sentence.
+        timestamp:
+          type: string
+          format: date-time
+          description: When the error was answered.
+      description: The body of an error reply, as `@nxgt/openapi-hono` sends it.
+    Post:
+      type: object
+      required:
+        - id
+        - authorId
+        - title
+        - body
+        - status
+        - publishedAt
+        - createdAt
+        - updatedAt
+        - version
+        - createdBy
+        - updatedBy
+        - deletedBy
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+          readOnly: true
+        authorId:
+          $ref: '#/components/schemas/Uuid'
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        body:
+          type: string
+        status:
+          $ref: '#/components/schemas/PostStatus'
+        tags:
+          type: array
+          items:
+            type: string
+        publishedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          readOnly: true
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        version:
+          type: integer
+          minimum: 0
+        createdBy:
+          anyOf:
+            - $ref: '#/components/schemas/Uuid'
+            - type: 'null'
+          readOnly: true
+        updatedBy:
+          anyOf:
+            - $ref: '#/components/schemas/Uuid'
+            - type: 'null'
+          readOnly: true
+        deletedBy:
+          anyOf:
+            - $ref: '#/components/schemas/Uuid'
+            - type: 'null'
+          readOnly: true
+      description: An article, by one author.
+    PostMergePatchUpdate:
+      type: object
+      properties:
+        authorId:
+          $ref: '#/components/schemas/Uuid'
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        body:
+          type: string
+        status:
+          $ref: '#/components/schemas/PostStatus'
+        tags:
+          anyOf:
+            - type: array
+              items:
+                type: string
+            - type: 'null'
+        version:
+          type: integer
+          minimum: 0
+      description: An article, by one author.
+    PostPage:
+      type: object
+      required:
+        - items
+        - total
+        - page
+        - pageSize
+        - pageCount
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Post'
+        total:
+          type: integer
+          description: Every item that matches, across all pages.
+        page:
+          type: integer
+          description: 1-based.
+        pageSize:
+          type: integer
+        pageCount:
+          type: integer
+          description: '`ceil(total / pageSize)`: 0 when nothing matches.'
+      description: One page of an offset pagination.
+    PostStatus:
+      type: string
+      enum:
+        - draft
+        - published
+        - archived
+      description: Where a post stands.
+    TooManyRequestsBody:
+      type: object
+      required:
+        - status
+        - message
+        - timestamp
+      properties:
+        status:
+          type: number
+          enum:
+            - 429
+          description: The reply's status, repeated in the body.
+        message:
+          type: string
+          description: An i18n key, such as `errors.not-found`, not a sentence.
+        timestamp:
+          type: string
+          format: date-time
+          description: When the error was answered.
+      description: The body of an error reply, as `@nxgt/openapi-hono` sends it.
+    UnprocessableEntityBody:
+      type: object
+      required:
+        - status
+        - message
+        - timestamp
+      properties:
+        status:
+          type: number
+          enum:
+            - 422
+          description: The reply's status, repeated in the body.
+        message:
+          type: string
+          description: An i18n key, such as `errors.not-found`, not a sentence.
+        timestamp:
+          type: string
+          format: date-time
+          description: When the error was answered.
+      description: The body of an error reply, as `@nxgt/openapi-hono` sends it.
+    Uuid:
+      type: string
+      format: uuid
+      description: A UUID, such as `0b8e5c1e-2f4a-4c3b-9d6e-7f8a9b0c1d2e`.
+    ValidationIssue:
+      type: object
+      required:
+        - target
+        - path
+        - code
+        - message
+      properties:
+        target:
+          $ref: '#/components/schemas/ValidationTarget'
+        path:
+          type: array
+          items:
+            anyOf:
+              - type: string
+              - type: integer
+          description: 'Inside the target: `["items", 0, "name"]`, or `[]` for the whole of it.'
+        code:
+          type: string
+          description: |-
+            Zod's issue code, or one of the engine's own: `invalid_json`,
+            `invalid_form`, `invalid_content_type`, `missing_body`,
+            `repeated_parameter`, `undeclared_status`.
+        message:
+          type: string
+      description: One value `@nxgt/openapi-hono` refused, and why.
+    ValidationTarget:
+      type: string
+      enum:
+        - param
+        - query
+        - header
+        - json
+        - form
+        - body
+        - response
+      description: |-
+        Where `@nxgt/openapi-hono` found a request value wrong: a request location,
+        or `response` for a reply the spec does not declare.
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: Bearer
+    SessionTokenAuth:
+      type: apiKey
+      in: header
+      name: X-Session-Token
+      description: |-
+        A session token in the `X-Session-Token` header, as `@nxgt/janus` reads it
+        after `Authorization: Bearer`.
+    SessionCookieAuth:
+      type: apiKey
+      in: cookie
+      name: janus-session
+      description: |-
+        A session token in the `janus-session` cookie, as `@nxgt/janus` sets it for
+        a browser.
+servers:
+  - url: https://api.example.com
+    description: Production
+    variables: {}

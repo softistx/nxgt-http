@@ -295,9 +295,9 @@ interface Posts extends Resource<Post, PostFilters, SortField = "createdAt" | "t
 | `readPosts` | `GET /posts/{id}` | `Post \| NotFound` |
 | `createPosts` | `POST /posts`, `Create<Post>` | 201 `Post \| BadRequest \| Conflict` |
 | `updatePosts` | `PATCH /posts/{id}`, `MergePatchUpdate<Post>` | `Post \| BadRequest \| NotFound \| Conflict` |
-| `deletePosts` | `DELETE /posts/{id}` | 204 `\| NotFound` |
+| `deletePosts` | `DELETE /posts/{id}` | 204, `NotFound` |
 
-`orderBy` takes one of the `SortField`s, `id` by default, and `direction`
+`orderBy` takes one of the `SortField`s (`SortField` is `"id"` by default), and `direction`
 `asc` (the default) or `desc`, as `@nxgt/drizzle` sorts a page. `{id}`
 is a `uuid`, or the `Id` you name. More in
 [Resources](docs/guide/resources.md).

@@ -151,3 +151,7 @@ interface Comments extends Resource<Comment> {
 Add `@useAuth(JanusAuth)` on the interface to protect all five, and name the
 guards' replies in the operations you declare again
 ([Authentication](auth.md)).
+
+A `read`, `create`, `update` or `delete` declared again is named after the
+interface, `readComments`, not after the item: give it
+`@operationId("readComment")` to keep the item's name.

@@ -108,6 +108,34 @@ const NAMED_KINDS = new Set<SchemaNode['kind']>([
 	'record',
 ]);
 
+/** Keywords that evaluate an object's keys in place, beside its own. */
+const IN_PLACE = [
+	'$ref',
+	'allOf',
+	'anyOf',
+	'oneOf',
+	'if',
+	'then',
+	'else',
+	'dependentSchemas',
+];
+
+/**
+ * The keyword a schema's extra keys are read from. With no
+ * `additionalProperties` and no keyword that evaluates keys in place, a
+ * schema-valued `unevaluatedProperties` sees exactly the keys
+ * `additionalProperties` would: it is how TypeSpec's `Record<T>` reaches
+ * OpenAPI 3.1.
+ */
+const extraKeys = (
+	s: Record<string, unknown>,
+): 'additionalProperties' | 'unevaluatedProperties' =>
+	!('additionalProperties' in s) &&
+	isObject(s.unevaluatedProperties) &&
+	!IN_PLACE.some((key) => key in s)
+		? 'unevaluatedProperties'
+		: 'additionalProperties';
+
 const without = (
 	object: Record<string, unknown>,
 	drop: (key: string) => boolean,
@@ -320,7 +348,12 @@ export class SchemaBuilder {
 		if ('$ref' in value) return this.#reference(value, at);
 		this.#refuseUnsupported(value, at);
 		const node = this.#annotate(this.#structure(value, at), value, at);
-		if ('unevaluatedProperties' in value) {
+		// Read as `additionalProperties`, or moot beside it.
+		const extra =
+			isObject(value.unevaluatedProperties) &&
+			('additionalProperties' in value ||
+				extraKeys(value) === 'unevaluatedProperties');
+		if ('unevaluatedProperties' in value && !extra) {
 			this.#seal(
 				node,
 				value.unevaluatedProperties,
@@ -343,7 +376,7 @@ export class SchemaBuilder {
 		if (value !== false) {
 			this.#diagnostics.error(
 				'unsupported_keyword',
-				'`unevaluatedProperties` other than `false` or `true` is not supported',
+				'`unevaluatedProperties` with a schema is supported only where it reads the keys `additionalProperties` would: not next to `$ref`, `allOf`, `anyOf` or `oneOf`. Write `additionalProperties` in each member',
 				at,
 			);
 			return;
@@ -665,7 +698,7 @@ export class SchemaBuilder {
 	/** A schema with no `type`: what its other keywords say it is. */
 	#inferred(s: Record<string, unknown>, at: Location): SchemaNode {
 		const has = (...keys: string[]) => keys.some((key) => key in s);
-		if (has('properties', 'additionalProperties', 'required')) {
+		if (has('properties', extraKeys(s), 'required')) {
 			return this.#object(s, at);
 		}
 		if (has('items')) return this.#array(s, at);
@@ -850,10 +883,8 @@ export class SchemaBuilder {
 				child(at, 'properties'),
 			);
 		}
-		const additional = this.#additional(
-			s.additionalProperties,
-			child(at, 'additionalProperties'),
-		);
+		const extra = extraKeys(s);
+		const additional = this.#additional(s[extra], child(at, extra));
 		for (const key of ['minProperties', 'maxProperties']) {
 			if (key in s) {
 				this.#diagnostics.warning(

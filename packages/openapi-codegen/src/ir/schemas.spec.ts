@@ -395,12 +395,42 @@ describe('buildIR — unevaluatedProperties', () => {
 		expect(node('Open')).toMatchObject({ kind: 'record' });
 	});
 
-	it('refuses unevaluatedProperties with a schema, or over anyOf', async () => {
+	it('reads unevaluatedProperties with a schema as additionalProperties, as TypeSpec emits Record<T>', async () => {
+		const { node } = await components({
+			R: { type: 'object', unevaluatedProperties: { type: 'integer' } },
+			S: { ...card, unevaluatedProperties: { type: 'string' } },
+			// Every key is evaluated by `additionalProperties` already.
+			M: {
+				...card,
+				additionalProperties: false,
+				unevaluatedProperties: { type: 'string' },
+			},
+		});
+		expect(node('R')).toMatchObject({
+			kind: 'record',
+			values: { kind: 'number', integer: true },
+		});
+		expect(node('S')).toMatchObject({
+			kind: 'object',
+			properties: [{ name: 'number' }],
+			additional: { schema: { kind: 'string' } },
+		});
+		expect(node('M')).toMatchObject({ kind: 'object', additional: 'strict' });
+	});
+
+	it('refuses unevaluatedProperties with a schema next to a keyword that evaluates keys, or false over anyOf', async () => {
 		for (const [name, schema] of [
-			['S', { ...card, unevaluatedProperties: { type: 'string' } }],
+			['O', { oneOf: [card, card], unevaluatedProperties: { type: 'string' } }],
+			[
+				'R',
+				{
+					$ref: '#/components/schemas/Card',
+					unevaluatedProperties: { type: 'string' },
+				},
+			],
 			['A', { unevaluatedProperties: false, anyOf: [card, card] }],
 		] as const) {
-			const error = await build({ [name]: schema }).catch(
+			const error = await build({ Card: card, [name]: schema }).catch(
 				(caught: unknown) => caught,
 			);
 			expect(error).toBeInstanceOf(CodegenError);

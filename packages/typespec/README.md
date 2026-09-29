@@ -171,10 +171,11 @@ on every operation that takes a parameter or a body. With `BadRequest`, a
   `openapi-versions: ['3.1.0', '3.2.0']`, the emitter writes
   `3.1.0/openapi.yaml` and `3.2.0/openapi.yaml`: point the generator's input
   at one of them.
-- **The library's schema names are global.** `ErrorBody`,
-  `BadRequestBody` … `InternalServerErrorBody`, `ValidationIssue` and
-  `ValidationTarget` are emitted under those names, without a namespace. A
-  model of the same name in your spec collides with them.
+- **The library's schema names are global.** `BadRequestBody` …
+  `InternalServerErrorBody`, `ValidationIssue` and `ValidationTarget` are
+  emitted under those names, without a namespace. A model of the same name
+  in your spec fails with `duplicate-type-name`
+  ([troubleshooting](docs/troubleshooting.md)).
 
 ## Documentation
 

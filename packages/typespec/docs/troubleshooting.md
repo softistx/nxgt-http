@@ -13,7 +13,7 @@ one name with `name_collision`.
 optional, and the generator adds its own 400 beside it.
 
 ```tsp
-@put update(@path id: string, @body article: Article): Article | BadRequest;
+@patch update(@path postId: string, @body post: MergePatchUpdate<Post>): Post | BadRequest;
 ```
 
 ## `Couldn't resolve import "@nxgt/typespec"`
@@ -27,6 +27,25 @@ no `package.json` to resolve it from.
 
 ```sh
 bun add -d @nxgt/typespec @typespec/compiler @typespec/http @typespec/openapi3 @nxgt/openapi-codegen
+```
+
+## `Duplicate type name: 'NotFoundBody'`
+
+**When:** `tsp compile` runs on a spec that declares its own model named like
+one of the library's: `BadRequestBody` … `InternalServerErrorBody`,
+`ValidationIssue` or `ValidationTarget`.
+
+```text
+error @typespec/openapi/duplicate-type-name: Duplicate type name: 'NotFoundBody'. Check @friendlyName decorators and overlap with types in TypeSpec or service namespace.
+```
+
+**Why:** the library names its schemas with `@friendlyName`, without a
+namespace, so they share the spec's schema names.
+
+**Fix:** reuse the library's model, or rename yours:
+
+```tsp
+@get read(@path postId: string): Post | NotFound;
 ```
 
 ## `unsupported_version` from the generator

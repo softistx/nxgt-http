@@ -73,7 +73,15 @@ export default defineConfig({
 bunx --no-install tsp compile api && bunx nxgt-openapi generate
 ```
 
-A Hono handler then answers the 404 with the generated type:
+A Hono handler then answers the 404 with the generated type. The generated
+`hono.ts` imports
+[`@nxgt/openapi-hono`](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-hono/README.md),
+and its validators `zod`: install them with `hono`.
+
+```sh
+bun add @nxgt/openapi-hono hono zod
+```
+
 
 ```ts
 import { Hono } from 'hono';
@@ -135,7 +143,7 @@ A handler may send a 400 of its own, without `issues`. `BadRequestBody`
 describes both, with `issues` optional:
 
 ```tsp
-@put update(@path id: string, @body article: Article): Article | BadRequest;
+@patch update(@path postId: string, @body post: MergePatchUpdate<Post>): Post | BadRequest;
 ```
 
 The generator declares the validators' 400 itself, as `ValidationErrorBody`,
@@ -162,7 +170,7 @@ its own way, through `onValidationError`, turns that off with the generator's
 Name them in an operation's return type, beside the success:
 
 ```tsp
-@get read(@path id: string): Article | NotFound | Unauthorized | Forbidden;
+@get read(@path postId: string): Post | NotFound | Unauthorized | Forbidden;
 ```
 
 ## Another status, named

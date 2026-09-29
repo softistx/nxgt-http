@@ -80,7 +80,7 @@ createRoutes(app).get('/authors', async (c) => {
 		page,
 		pageSize,
 		// paginate takes the sort as an object of directions by field
-		orderBy: orderBy === undefined ? undefined : { [orderBy]: direction },
+		...(orderBy === undefined ? {} : { orderBy: { [orderBy]: direction } }),
 	});
 	return c.json(found, 200);
 });

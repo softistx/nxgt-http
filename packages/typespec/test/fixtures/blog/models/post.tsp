@@ -1,3 +1,7 @@
+import "@nxgt/typespec";
+
+using Nxgt;
+
 namespace Blog;
 
 /** Where a post stands. */
@@ -10,11 +14,9 @@ enum PostStatus {
 /** An article, by one author. */
 model Post {
   @visibility(Lifecycle.Read)
-  @format("uuid")
-  id: string;
+  id: uuid;
 
-  @format("uuid")
-  authorId: string;
+  authorId: uuid;
 
   @minLength(1)
   @maxLength(200)
@@ -27,6 +29,7 @@ model Post {
   @visibility(Lifecycle.Read)
   publishedAt: utcDateTime | null;
 
-  @visibility(Lifecycle.Read)
-  createdAt: utcDateTime;
+  ...Timestamps;
+  ...Versioned;
+  ...Actors;
 }

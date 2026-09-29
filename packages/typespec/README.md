@@ -213,6 +213,41 @@ with the envelope, stays `Unauthorized` or `Forbidden`. The generated
 `hono.ts` types the guards' replies as `c.body(null, 401)`. More in
 [Authentication](docs/guide/auth.md).
 
+### Scalars and columns
+
+Type an id or an address with a scalar, and spread the columns
+[`@nxgt/drizzle`](https://www.npmjs.com/package/@nxgt/drizzle) stamps a row
+with:
+
+```tsp
+import "@nxgt/typespec";
+
+using Nxgt;
+
+namespace Blog;
+
+model Post {
+  @visibility(Lifecycle.Read) id: uuid;
+  title: string;
+  contact?: email;
+  ...Timestamps;   // createdAt, updatedAt: read-only
+  ...Versioned;    // version: read, and sent back in an update
+  ...Actors;       // createdBy, updatedBy, deletedBy: read-only
+}
+```
+
+| Name | Emitted as | Generated | drizzle |
+| --- | --- | --- | --- |
+| `uuid` | the schema `Uuid`, `format: uuid` | `Uuid`, `z.guid()` | `id()` |
+| `email` | the schema `Email`, `format: email` | `Email`, `z.email()` | |
+| `...Timestamps` | `createdAt`, `updatedAt`, read-only | left out of `Create<T>` and updates | `timestamps()` |
+| `...SoftDelete` | `deletedAt: utcDateTime \| null`, read-only | | `softDelete()` |
+| `...Versioned` | `version: integer`, read and update | kept in `MergePatchUpdate<T>` | `version()` |
+| `...Actors<Id = uuid>` | `createdBy`, `updatedBy`, `deletedBy`, `Id \| null`, read-only | | `actors()` |
+
+TypeSpec's own `url` is the address of a page, `format: uri`, generated as
+`z.url()`. More in [Scalars and columns](docs/guide/columns.md).
+
 ### Operation ids
 
 TypeSpec names an operation after its interface, `Posts_list`, and the
@@ -269,6 +304,17 @@ of a marked interface that has another operation's id is an error,
 | `SessionTokenAuth` | an API key in the `X-Session-Token` header |
 | `SessionCookieAuth` | an API key in the `janus-session` cookie |
 
+### Scalars and columns
+
+| Name | What it is |
+| --- | --- |
+| `uuid` | a string, `format: uuid`; the schema `Uuid` |
+| `email` | a string, `format: email`; the schema `Email` |
+| `Timestamps` | `createdAt`, `updatedAt: utcDateTime`, read-only |
+| `SoftDelete` | `deletedAt: utcDateTime \| null`, read-only |
+| `Versioned` | `version: integer`, read and update |
+| `Actors<Id = uuid>` | `createdBy`, `updatedBy`, `deletedBy: Id \| null`, read-only |
+
 ### Responses
 
 `AuthenticationRequired` (401) and `AccessDenied` (403), without a body, and
@@ -306,7 +352,8 @@ of a marked interface that has another operation's id is an error,
   `3.1.0/openapi.yaml` and `3.2.0/openapi.yaml`: point the generator's input
   at one of them.
 - **The library's schema names are global.** `BadRequestBody` …
-  `InternalServerErrorBody`, `ValidationIssue`, `ValidationTarget`, and each
+  `InternalServerErrorBody`, `ValidationIssue`, `ValidationTarget`, `Uuid`,
+  `Email`, and each
   `<Item>Page` and `<Item>CursorPage` are emitted under those names, without
   a namespace. A model of the same name
   in your spec fails with `duplicate-type-name`
@@ -320,10 +367,12 @@ of a marked interface that has another operation's id is an error,
   what a handler answers;
 - [Authentication](docs/guide/auth.md): `JanusAuth`, and the guards'
   replies without a body;
+- [Scalars and columns](docs/guide/columns.md): `uuid`, `email`, and the
+  columns `@nxgt/drizzle` stamps;
 - [Operation ids](docs/guide/operation-ids.md): `@operationIds`, and what
   the generated client calls each operation;
 - [troubleshooting](docs/troubleshooting.md);
-- [the roadmap](docs/roadmap.md): scalars, headers and
+- [the roadmap](docs/roadmap.md): headers and
   resource templates, still to come.
 
 ## License

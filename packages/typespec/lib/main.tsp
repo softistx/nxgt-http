@@ -3,3 +3,4 @@
 import "../dist/index.js";
 import "./errors.tsp";
 import "./operation-ids.tsp";
+import "./pagination.tsp";

@@ -11,7 +11,10 @@ namespace Blog;
 @tag("Comments")
 @operationIds
 interface Comments {
-  @get list(@path @format("uuid") postId: string): Comment[] | NotFound;
+  @get list(
+    @path @format("uuid") postId: string,
+    ...CursorPageParameters,
+  ): CursorPage<Comment> | BadRequest | NotFound;
   @post create(
     @path @format("uuid") postId: string,
     @body comment: Create<Comment>,

@@ -31,7 +31,9 @@ devDependencies, with the command in the
 
 **When:** `tsp compile` runs on a spec that declares its own model named like
 one of the library's: `BadRequestBody` … `InternalServerErrorBody`,
-`ValidationIssue` or `ValidationTarget`.
+`ValidationIssue`, `ValidationTarget`, or the page of one of its models,
+such as `PostPage` beside `Page<Post>`, or `CommentCursorPage` beside
+`CursorPage<Comment>`.
 
 ```text
 error @typespec/openapi/duplicate-type-name: Duplicate type name: 'NotFoundBody'. Check @friendlyName decorators and overlap with types in TypeSpec or service namespace.

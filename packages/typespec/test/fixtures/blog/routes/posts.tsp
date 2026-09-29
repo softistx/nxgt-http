@@ -12,7 +12,11 @@ namespace Blog;
 @tag("Posts")
 @operationIds
 interface Posts {
-  @get list(@query status?: PostStatus, @query authorId?: string): Post[];
+  @get list(
+    @query status?: PostStatus,
+    @query authorId?: string,
+    ...PageParameters,
+  ): Page<Post>;
   @get @operationId("getPost") read(@path @format("uuid") postId: string): Post | NotFound;
   @post create(@body post: Create<Post>): {
     @statusCode _: 201;

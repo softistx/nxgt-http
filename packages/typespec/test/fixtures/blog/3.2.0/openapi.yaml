@@ -10,26 +10,44 @@ paths:
   /authors:
     get:
       operationId: listAuthors
-      parameters: []
+      description: One page of the resources, filtered and sorted.
+      parameters:
+        - $ref: '#/components/parameters/AuthorFilters'
+        - $ref: '#/components/parameters/Nxgt.PageParameters.page'
+        - $ref: '#/components/parameters/Nxgt.PageParameters.pageSize'
+        - name: orderBy
+          in: query
+          required: false
+          description: The field to sort by.
+          schema:
+            type: string
+            enum:
+              - name
+              - createdAt
+          explode: false
+        - name: direction
+          in: query
+          required: false
+          description: '`asc` or `desc`.'
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: asc
+          explode: false
       responses:
         '200':
           description: The request has succeeded.
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Author'
-        '401':
-          description: No credentials, or credentials that are not valid.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UnauthorizedBody'
+                $ref: '#/components/schemas/AuthorPage'
       tags:
         - Authors
     post:
       operationId: createAuthors
+      description: Creates a resource.
       parameters: []
       responses:
         '201':
@@ -58,11 +76,12 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/CreateAuthor'
-  /authors/{authorId}:
+  /authors/{id}:
     get:
       operationId: readAuthors
+      description: One resource.
       parameters:
-        - name: authorId
+        - name: id
           in: path
           required: true
           schema:
@@ -74,6 +93,68 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Author'
+        '404':
+          description: Nothing is there.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundBody'
+      tags:
+        - Authors
+    patch:
+      operationId: updateAuthors
+      description: Updates a resource with a merge patch.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/Uuid'
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Author'
+        '400':
+          description: The request is refused, by the validators or by a handler.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestBody'
+        '404':
+          description: Nothing is there.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundBody'
+        '409':
+          description: The request conflicts with the resource's state, such as a version that moved on.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictBody'
+      tags:
+        - Authors
+      requestBody:
+        required: true
+        content:
+          application/merge-patch+json:
+            schema:
+              $ref: '#/components/schemas/AuthorMergePatchUpdate'
+    delete:
+      operationId: deleteAuthors
+      description: Deletes a resource.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/Uuid'
+      responses:
+        '204':
+          description: There is no content to send for this request, but the headers may be useful.
         '404':
           description: Nothing is there.
           content:
@@ -466,6 +547,14 @@ paths:
         - SessionCookieAuth: []
 components:
   parameters:
+    AuthorFilters:
+      name: name
+      in: query
+      required: false
+      description: Authors of this name.
+      schema:
+        type: string
+      explode: false
     Nxgt.CursorPageParameters.after:
       name: after
       in: query
@@ -544,6 +633,41 @@ components:
           format: date-time
           readOnly: true
       description: Someone who writes posts and comments.
+    AuthorMergePatchUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        email:
+          $ref: '#/components/schemas/Email'
+      description: Someone who writes posts and comments.
+    AuthorPage:
+      type: object
+      required:
+        - items
+        - total
+        - page
+        - pageSize
+        - pageCount
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Author'
+        total:
+          type: integer
+          description: Every item that matches, across all pages.
+        page:
+          type: integer
+          description: 1-based.
+        pageSize:
+          type: integer
+        pageCount:
+          type: integer
+          description: '`ceil(total / pageSize)`: 0 when nothing matches.'
+      description: One page of an offset pagination.
     BadRequestBody:
       type: object
       required:
@@ -870,26 +994,6 @@ components:
           type: number
           enum:
             - 429
-          description: The reply's status, repeated in the body.
-        message:
-          type: string
-          description: An i18n key, such as `errors.not-found`, not a sentence.
-        timestamp:
-          type: string
-          format: date-time
-          description: When the error was answered.
-      description: The body of an error reply, as `@nxgt/openapi-hono` sends it.
-    UnauthorizedBody:
-      type: object
-      required:
-        - status
-        - message
-        - timestamp
-      properties:
-        status:
-          type: number
-          enum:
-            - 401
           description: The reply's status, repeated in the body.
         message:
           type: string

@@ -34,6 +34,7 @@ it.each([
 			'createAuthors',
 			'createComments',
 			'createPosts',
+			'deleteAuthors',
 			'deleteComments',
 			'deletePosts',
 			'getPost',
@@ -41,6 +42,7 @@ it.each([
 			'listComments',
 			'listPosts',
 			'readAuthors',
+			'updateAuthors',
 			'updatePosts',
 		]);
 	},

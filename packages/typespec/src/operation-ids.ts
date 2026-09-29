@@ -10,7 +10,11 @@ import {
 	type Operation,
 	type Program,
 } from '@typespec/compiler';
-import { getOperationId, setOperationId } from '@typespec/openapi';
+import {
+	getOperationId,
+	resolveOperationId,
+	setOperationId,
+} from '@typespec/openapi';
 import { $lib } from './lib';
 
 /**
@@ -51,8 +55,8 @@ function isNamed(program: Program, operation: Operation): boolean {
  * Sets the ids, after every decorator, so the order of `@operationId` and
  * `@operationIds` in the source does not matter. Two operations with one id,
  * one of them in a marked interface, are an error: two interfaces of one name
- * in two namespaces, an `@operationId` that `extends` copied, or one written
- * elsewhere. `@typespec/openapi3` would emit both without a word.
+ * in two namespaces, an `@operationId` that `extends` copied, one written
+ * elsewhere, or an operation outside an interface, named after itself. `@typespec/openapi3` would emit both without a word.
  */
 export function validateOperationIds(program: Program): void {
 	const seen = new Map<string, boolean>();
@@ -60,10 +64,13 @@ export function validateOperationIds(program: Program): void {
 		operation(operation) {
 			const named = isNamed(program, operation);
 			const own = getOperationId(program, operation);
+			// Elsewhere, the id `@typespec/openapi3` gives by default: an
+			// operation outside an interface is named after itself.
 			const id =
 				own ??
-				(named ? `${operation.name}${operation.interface?.name}` : undefined);
-			if (id === undefined) return;
+				(named
+					? `${operation.name}${operation.interface?.name}`
+					: resolveOperationId(program, operation));
 			if (seen.has(id) && (named || seen.get(id))) {
 				$lib.reportDiagnostic(program, {
 					code: 'duplicate-operation-id',

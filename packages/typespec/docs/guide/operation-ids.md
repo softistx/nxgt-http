@@ -86,14 +86,16 @@ interface Orders extends Resource<Order> {} // listOrders
 
 ## Two operations named alike
 
-An id must be unique, and three cases break that:
+An id must be unique, and four cases break that:
 
 - the namespace is not part of the id, so `Store.Pets` and `Shelter.Pets`
   would both name their `list` `listPets`;
 - an `@operationId` is copied by `extends`, so `Drafts extends Posts` would
   have a second `getPost`;
 - an `@operationId` written on another operation, in any interface, takes
-  the id `@operationIds` gives.
+  the id `@operationIds` gives;
+- an operation outside an interface is named after itself, so
+  `op listPets()` takes the id of `Pets.list`.
 
 `@operationIds` refuses each with `duplicate-operation-id`, where
 `@typespec/openapi3` would emit both without a word. Give one of them its own

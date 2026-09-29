@@ -62,6 +62,7 @@ it.each([
 	['duplicate-operation-ids', 'listPets'],
 	['inherited-operation-id', 'getPost'],
 	['unmarked-operation-id', 'listPets'],
+	['namespace-operation', 'listPets'],
 ])(
 	'refuses %s: two operations named %s',
 	async (name, id) => {

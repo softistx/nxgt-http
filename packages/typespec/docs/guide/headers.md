@@ -39,6 +39,11 @@ interface Posts {
 - `IdempotencyKeyReused` is the 422 of a key sent again with another body,
   with the `UnprocessableEntityBody` envelope. The client takes a new key.
 
+Both carry the `RateLimit-*` headers, as a route that also has a rate limit
+answers them. An operation that declares `Conflict` too, for its optimistic
+lock, gets one 409 with the description of the first: declare one of the
+two, and tell them apart by the `message` key.
+
 ## A rate limit
 
 ```tsp
@@ -56,8 +61,9 @@ interface Posts {
 | `RateLimit-Reset` | seconds until the window is full again, rounded up |
 | `Retry-After` | seconds to wait before trying again: a delay, never a date |
 
-`TooManyRequests` carries the three `RateLimit-*` headers and `Retry-After`
-already. `...RateLimitHeaders` adds them to the other replies of the route.
+`TooManyRequests`, `IdempotencyInProgress` and `IdempotencyKeyReused`
+carry the three `RateLimit-*` headers already. `...RateLimitHeaders` adds
+them to a reply the spec declares inline, such as the 201 above.
 
 ## What is checked
 
@@ -67,9 +73,14 @@ a reply's headers: they are in the spec for a client to read, and the
 handler sets them:
 
 ```ts
+import { Hono } from 'hono';
+import { createRoutes } from './generated/hono';
+
+const app = new Hono();
 createRoutes(app).post('/posts', async (c) => {
 	const key = c.req.valid('header')['idempotency-key'];
-	// … look the key up; on a replay:
+	// … look the key up; on a replay, answer the post it wrote:
+	const post = await replayed(key);
 	c.header('Idempotent-Replayed', 'true');
 	return c.json(post, 201);
 });

@@ -164,6 +164,21 @@ paths:
             A request with this `Idempotency-Key` is still running. Retry it as it is,
             after `Retry-After`.
           headers:
+            RateLimit-Limit:
+              required: false
+              description: How many requests a full window allows.
+              schema:
+                type: integer
+            RateLimit-Remaining:
+              required: false
+              description: How many more requests are allowed now, after this one.
+              schema:
+                type: integer
+            RateLimit-Reset:
+              required: false
+              description: Seconds until the window is full again, rounded up.
+              schema:
+                type: integer
             Retry-After:
               required: false
               description: 'Seconds to wait before trying again, rounded up: a delay, never a date.'
@@ -177,6 +192,22 @@ paths:
           description: |-
             This `Idempotency-Key` was already used for a request with another body. A
             new request takes a new key.
+          headers:
+            RateLimit-Limit:
+              required: false
+              description: How many requests a full window allows.
+              schema:
+                type: integer
+            RateLimit-Remaining:
+              required: false
+              description: How many more requests are allowed now, after this one.
+              schema:
+                type: integer
+            RateLimit-Reset:
+              required: false
+              description: Seconds until the window is full again, rounded up.
+              schema:
+                type: integer
           content:
             application/json:
               schema:

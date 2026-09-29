@@ -59,6 +59,7 @@ model RetryAfterHeader {
 @error
 model IdempotencyInProgress {
   @statusCode _: 409;
+  ...RateLimitHeaders;
   ...RetryAfterHeader;
   @body body: ConflictBody;
 }
@@ -70,5 +71,6 @@ model IdempotencyInProgress {
 @error
 model IdempotencyKeyReused {
   @statusCode _: 422;
+  ...RateLimitHeaders;
   @body body: UnprocessableEntityBody;
 }

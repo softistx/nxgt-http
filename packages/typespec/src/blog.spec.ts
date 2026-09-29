@@ -31,6 +31,8 @@ function app(createRoutes: typeof routes31): Hono {
 				id: '9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d',
 				postId: c.req.valid('param').postId,
 				createdAt: timestamp,
+				updatedAt: timestamp,
+				deletedAt: null,
 			};
 			return c.json(comment, 201);
 		});

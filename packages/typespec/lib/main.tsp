@@ -5,3 +5,5 @@ import "./errors.tsp";
 import "./operation-ids.tsp";
 import "./pagination.tsp";
 import "./auth.tsp";
+import "./scalars.tsp";
+import "./columns.tsp";

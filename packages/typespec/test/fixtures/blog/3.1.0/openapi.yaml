@@ -66,8 +66,7 @@ paths:
           in: path
           required: true
           schema:
-            type: string
-            format: uuid
+            $ref: '#/components/schemas/Uuid'
       responses:
         '200':
           description: The request has succeeded.
@@ -97,7 +96,7 @@ paths:
           in: query
           required: false
           schema:
-            type: string
+            $ref: '#/components/schemas/Uuid'
           explode: false
         - $ref: '#/components/parameters/Nxgt.PageParameters.page'
         - $ref: '#/components/parameters/Nxgt.PageParameters.pageSize'
@@ -154,8 +153,7 @@ paths:
           in: path
           required: true
           schema:
-            type: string
-            format: uuid
+            $ref: '#/components/schemas/Uuid'
       responses:
         '200':
           description: The request has succeeded.
@@ -178,8 +176,7 @@ paths:
           in: path
           required: true
           schema:
-            type: string
-            format: uuid
+            $ref: '#/components/schemas/Uuid'
       responses:
         '200':
           description: The request has succeeded.
@@ -220,8 +217,7 @@ paths:
           in: path
           required: true
           schema:
-            type: string
-            format: uuid
+            $ref: '#/components/schemas/Uuid'
       responses:
         '204':
           description: There is no content to send for this request, but the headers may be useful.
@@ -247,8 +243,7 @@ paths:
           in: path
           required: true
           schema:
-            type: string
-            format: uuid
+            $ref: '#/components/schemas/Uuid'
         - $ref: '#/components/parameters/Nxgt.CursorPageParameters.after'
         - $ref: '#/components/parameters/Nxgt.CursorPageParameters.limit'
       responses:
@@ -279,8 +274,7 @@ paths:
           in: path
           required: true
           schema:
-            type: string
-            format: uuid
+            $ref: '#/components/schemas/Uuid'
       responses:
         '201':
           description: The request has succeeded and a new resource has been created as a result.
@@ -322,14 +316,12 @@ paths:
           in: path
           required: true
           schema:
-            type: string
-            format: uuid
+            $ref: '#/components/schemas/Uuid'
         - name: commentId
           in: path
           required: true
           schema:
-            type: string
-            format: uuid
+            $ref: '#/components/schemas/Uuid'
       responses:
         '204':
           description: There is no content to send for this request, but the headers may be useful.
@@ -393,19 +385,22 @@ components:
         - name
         - email
         - createdAt
+        - updatedAt
       properties:
         id:
-          type: string
-          format: uuid
+          $ref: '#/components/schemas/Uuid'
           readOnly: true
         name:
           type: string
           minLength: 1
           maxLength: 80
         email:
-          type: string
-          format: email
+          $ref: '#/components/schemas/Email'
         createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
           type: string
           format: date-time
           readOnly: true
@@ -445,18 +440,17 @@ components:
         - authorId
         - body
         - createdAt
+        - updatedAt
+        - deletedAt
       properties:
         id:
-          type: string
-          format: uuid
+          $ref: '#/components/schemas/Uuid'
           readOnly: true
         postId:
-          type: string
-          format: uuid
+          $ref: '#/components/schemas/Uuid'
           readOnly: true
         authorId:
-          type: string
-          format: uuid
+          $ref: '#/components/schemas/Uuid'
         body:
           type: string
           minLength: 1
@@ -464,6 +458,16 @@ components:
         createdAt:
           type: string
           format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        deletedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
           readOnly: true
       description: A reply to a post.
     CommentCursorPage:
@@ -513,8 +517,7 @@ components:
           minLength: 1
           maxLength: 80
         email:
-          type: string
-          format: email
+          $ref: '#/components/schemas/Email'
       description: Someone who writes posts and comments.
     CreateComment:
       type: object
@@ -523,8 +526,7 @@ components:
         - body
       properties:
         authorId:
-          type: string
-          format: uuid
+          $ref: '#/components/schemas/Uuid'
         body:
           type: string
           minLength: 1
@@ -539,8 +541,7 @@ components:
         - status
       properties:
         authorId:
-          type: string
-          format: uuid
+          $ref: '#/components/schemas/Uuid'
         title:
           type: string
           minLength: 1
@@ -554,6 +555,10 @@ components:
           items:
             type: string
       description: An article, by one author.
+    Email:
+      type: string
+      format: email
+      description: An e-mail address.
     ForbiddenBody:
       type: object
       required:
@@ -604,14 +609,17 @@ components:
         - status
         - publishedAt
         - createdAt
+        - updatedAt
+        - version
+        - createdBy
+        - updatedBy
+        - deletedBy
       properties:
         id:
-          type: string
-          format: uuid
+          $ref: '#/components/schemas/Uuid'
           readOnly: true
         authorId:
-          type: string
-          format: uuid
+          $ref: '#/components/schemas/Uuid'
         title:
           type: string
           minLength: 1
@@ -634,13 +642,34 @@ components:
           type: string
           format: date-time
           readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        version:
+          type: integer
+          minimum: 0
+        createdBy:
+          anyOf:
+            - $ref: '#/components/schemas/Uuid'
+            - type: 'null'
+          readOnly: true
+        updatedBy:
+          anyOf:
+            - $ref: '#/components/schemas/Uuid'
+            - type: 'null'
+          readOnly: true
+        deletedBy:
+          anyOf:
+            - $ref: '#/components/schemas/Uuid'
+            - type: 'null'
+          readOnly: true
       description: An article, by one author.
     PostMergePatchUpdate:
       type: object
       properties:
         authorId:
-          type: string
-          format: uuid
+          $ref: '#/components/schemas/Uuid'
         title:
           type: string
           minLength: 1
@@ -655,6 +684,9 @@ components:
               items:
                 type: string
             - type: 'null'
+        version:
+          type: integer
+          minimum: 0
       description: An article, by one author.
     PostPage:
       type: object
@@ -728,6 +760,10 @@ components:
           format: date-time
           description: When the error was answered.
       description: The body of an error reply, as `@nxgt/openapi-hono` sends it.
+    Uuid:
+      type: string
+      format: uuid
+      description: A UUID, such as `0b8e5c1e-2f4a-4c3b-9d6e-7f8a9b0c1d2e`.
     ValidationIssue:
       type: object
       required:

@@ -1,22 +1,23 @@
+import "@nxgt/typespec";
+
+using Nxgt;
+
 namespace Blog;
 
 /** A reply to a post. */
 model Comment {
   @visibility(Lifecycle.Read)
-  @format("uuid")
-  id: string;
+  id: uuid;
 
   @visibility(Lifecycle.Read)
-  @format("uuid")
-  postId: string;
+  postId: uuid;
 
-  @format("uuid")
-  authorId: string;
+  authorId: uuid;
 
   @minLength(1)
   @maxLength(2000)
   body: string;
 
-  @visibility(Lifecycle.Read)
-  createdAt: utcDateTime;
+  ...Timestamps;
+  ...SoftDelete;
 }

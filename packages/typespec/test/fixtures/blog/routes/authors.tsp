@@ -11,7 +11,7 @@ namespace Blog;
 @operationIds
 interface Authors {
   @get list(): Author[] | Unauthorized;
-  @get read(@path @format("uuid") authorId: string): Author | NotFound;
+  @get read(@path authorId: uuid): Author | NotFound;
   @post create(@body author: Create<Author>): {
     @statusCode _: 201;
     @body author: Author;

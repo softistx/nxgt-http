@@ -14,10 +14,10 @@ namespace Blog;
 interface Posts {
   @get list(
     @query status?: PostStatus,
-    @query authorId?: string,
+    @query authorId?: uuid,
     ...PageParameters,
   ): Page<Post>;
-  @get @operationId("getPost") read(@path @format("uuid") postId: string): Post | NotFound;
+  @get @operationId("getPost") read(@path postId: uuid): Post | NotFound;
   // session({ required: true }) refuses a missing session; the handler, a user
   // who may not write, with the envelope.
   @useAuth(JanusAuth)
@@ -26,8 +26,8 @@ interface Posts {
     @body post: Post;
   } | BadRequest | AuthenticationRequired | Forbidden;
   @patch update(
-    @path @format("uuid") postId: string,
+    @path postId: uuid,
     @body post: MergePatchUpdate<Post>,
   ): Post | BadRequest | NotFound | Conflict;
-  @delete delete(@path @format("uuid") postId: string): NoContentResponse | NotFound | Forbidden;
+  @delete delete(@path postId: uuid): NoContentResponse | NotFound | Forbidden;
 }

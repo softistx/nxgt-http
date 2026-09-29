@@ -1,18 +1,19 @@
+import "@nxgt/typespec";
+
+using Nxgt;
+
 namespace Blog;
 
 /** Someone who writes posts and comments. */
 model Author {
   @visibility(Lifecycle.Read)
-  @format("uuid")
-  id: string;
+  id: uuid;
 
   @minLength(1)
   @maxLength(80)
   name: string;
 
-  @format("email")
-  email: string;
+  email: email;
 
-  @visibility(Lifecycle.Read)
-  createdAt: utcDateTime;
+  ...Timestamps;
 }

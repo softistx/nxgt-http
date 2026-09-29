@@ -416,11 +416,26 @@ describe('buildIR — unevaluatedProperties', () => {
 			additional: { schema: { kind: 'string' } },
 		});
 		expect(node('M')).toMatchObject({ kind: 'object', additional: 'strict' });
+		// Beside a $ref too: every key is evaluated already.
+		const { node: beside } = await components({
+			Card: card,
+			B: {
+				$ref: '#/components/schemas/Card',
+				additionalProperties: false,
+				unevaluatedProperties: { type: 'string' },
+			},
+		});
+		expect(beside('B')).toMatchObject({
+			kind: 'object',
+			additional: 'strict',
+			extends: [id('Card')],
+		});
 	});
 
 	it('refuses unevaluatedProperties with a schema next to a keyword that evaluates keys, or false over anyOf', async () => {
 		for (const [name, schema] of [
 			['O', { oneOf: [card, card], unevaluatedProperties: { type: 'string' } }],
+			['L', { allOf: [card], unevaluatedProperties: { type: 'string' } }],
 			[
 				'R',
 				{

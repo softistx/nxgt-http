@@ -4,6 +4,7 @@ import { child, type Location, locationId } from '../loader/location';
 import type { Resolved, Resolver } from '../loader/resolver';
 import { asNumber, asString, isObject } from '../util';
 import { refsOf, stronglyConnected } from './graph';
+import { extraKeys, settledByAdditional } from './keywords';
 import { nameFromLocation, pascalCase } from './naming';
 import type {
 	Additional,
@@ -107,34 +108,6 @@ const NAMED_KINDS = new Set<SchemaNode['kind']>([
 	'intersection',
 	'record',
 ]);
-
-/** Keywords that evaluate an object's keys in place, beside its own. */
-const IN_PLACE = [
-	'$ref',
-	'allOf',
-	'anyOf',
-	'oneOf',
-	'if',
-	'then',
-	'else',
-	'dependentSchemas',
-];
-
-/**
- * The keyword a schema's extra keys are read from. With no
- * `additionalProperties` and no keyword that evaluates keys in place, a
- * schema-valued `unevaluatedProperties` sees exactly the keys
- * `additionalProperties` would: it is how TypeSpec's `Record<T>` reaches
- * OpenAPI 3.1.
- */
-const extraKeys = (
-	s: Record<string, unknown>,
-): 'additionalProperties' | 'unevaluatedProperties' =>
-	!('additionalProperties' in s) &&
-	isObject(s.unevaluatedProperties) &&
-	!IN_PLACE.some((key) => key in s)
-		? 'unevaluatedProperties'
-		: 'additionalProperties';
 
 const without = (
 	object: Record<string, unknown>,
@@ -348,12 +321,7 @@ export class SchemaBuilder {
 		if ('$ref' in value) return this.#reference(value, at);
 		this.#refuseUnsupported(value, at);
 		const node = this.#annotate(this.#structure(value, at), value, at);
-		// Read as `additionalProperties`, or moot beside it.
-		const extra =
-			isObject(value.unevaluatedProperties) &&
-			('additionalProperties' in value ||
-				extraKeys(value) === 'unevaluatedProperties');
-		if ('unevaluatedProperties' in value && !extra) {
+		if ('unevaluatedProperties' in value && !settledByAdditional(value)) {
 			this.#seal(
 				node,
 				value.unevaluatedProperties,
@@ -376,7 +344,7 @@ export class SchemaBuilder {
 		if (value !== false) {
 			this.#diagnostics.error(
 				'unsupported_keyword',
-				'`unevaluatedProperties` with a schema is supported only where it reads the keys `additionalProperties` would: not next to `$ref`, `allOf`, `anyOf` or `oneOf`. Write `additionalProperties` in each member',
+				'`unevaluatedProperties` with a schema is supported only where it reads the keys `additionalProperties` would: not next to `$ref`, `allOf`, `anyOf` or `oneOf`. Write `additionalProperties` beside it instead',
 				at,
 			);
 			return;
@@ -576,7 +544,7 @@ export class SchemaBuilder {
 				at,
 			);
 		}
-		if ('unevaluatedProperties' in s) {
+		if ('unevaluatedProperties' in s && !settledByAdditional(s)) {
 			this.#seal(
 				node,
 				s.unevaluatedProperties,
@@ -1078,6 +1046,8 @@ export class SchemaBuilder {
 			(k) =>
 				k === 'allOf' ||
 				k === 'type' ||
+				// Sealed by `node()`, over the members and these keywords alike.
+				k === 'unevaluatedProperties' ||
 				ANNOTATION_KEYS.has(k) ||
 				k.startsWith('x-'),
 		);

@@ -31,8 +31,7 @@ function app(createRoutes: typeof routes31): Hono {
 	createRoutes(hono, { validateResponses: true })
 		.get('/authors', (c) => {
 			const { name, orderBy, direction, page, pageSize } = c.req.valid('query');
-			const items =
-				name === undefined || name === ada.name ? [ada] : [];
+			const items = name === undefined || name === ada.name ? [ada] : [];
 			const body: AuthorPage = {
 				items,
 				total: items.length,

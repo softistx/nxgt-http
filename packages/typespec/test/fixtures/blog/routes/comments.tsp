@@ -22,8 +22,10 @@ interface Comments {
     @statusCode _: 201;
     @body comment: Comment;
   } | BadRequest | NotFound | TooManyRequests;
+  // permission() answers each refusal without a body.
+  @useAuth(JanusAuth)
   @delete delete(
     @path @format("uuid") postId: string,
     @path @format("uuid") commentId: string,
-  ): NoContentResponse | NotFound | Forbidden;
+  ): NoContentResponse | AuthenticationRequired | AccessDenied | ErrorWithoutBody<404>;
 }

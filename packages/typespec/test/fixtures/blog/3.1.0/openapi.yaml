@@ -127,11 +127,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/BadRequestBody'
         '401':
-          description: No credentials, or credentials that are not valid.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UnauthorizedBody'
+          description: The request carries no session, or one the server does not know.
         '403':
           description: Authenticated, but not allowed.
           content:
@@ -146,6 +142,10 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/CreatePost'
+      security:
+        - BearerAuth: []
+        - SessionTokenAuth: []
+        - SessionCookieAuth: []
   /posts/{postId}:
     get:
       operationId: getPost
@@ -333,20 +333,18 @@ paths:
       responses:
         '204':
           description: There is no content to send for this request, but the headers may be useful.
+        '401':
+          description: The request carries no session, or one the server does not know.
         '403':
-          description: Authenticated, but not allowed.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ForbiddenBody'
+          description: The session's user may not do this.
         '404':
-          description: Nothing is there.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NotFoundBody'
+          description: The request was refused; the reply has no body.
       tags:
         - Comments
+      security:
+        - BearerAuth: []
+        - SessionTokenAuth: []
+        - SessionCookieAuth: []
 components:
   parameters:
     Nxgt.CursorPageParameters.after:
@@ -769,6 +767,24 @@ components:
       description: |-
         Where `@nxgt/openapi-hono` found a request value wrong: a request location,
         or `response` for a reply the spec does not declare.
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: Bearer
+    SessionTokenAuth:
+      type: apiKey
+      in: header
+      name: X-Session-Token
+      description: |-
+        A session token in the `X-Session-Token` header, as `@nxgt/janus` reads it
+        after `Authorization: Bearer`.
+    SessionCookieAuth:
+      type: apiKey
+      in: cookie
+      name: janus-session
+      description: |-
+        A session token in the `janus-session` cookie, as `@nxgt/janus` sets it for
+        a browser.
 servers:
   - url: https://api.example.com
     description: Production

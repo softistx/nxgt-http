@@ -1,5 +1,11 @@
 # @nxgt/typespec
 
+## 0.4.1
+
+### Patch Changes
+
+- [#75](https://github.com/softistx/nxgt-http/pull/75) [`a04c9bc`](https://github.com/softistx/nxgt-http/commit/a04c9bc55deb5b56c64480634cc87f8405a4f4b0) Thanks [@SteveGT96](https://github.com/SteveGT96)! - The roadmap lists operation ids as written and the removal of `Resource` under Shipped, in 0.4.0.
+
 ## 0.4.0
 
 ### Minor Changes

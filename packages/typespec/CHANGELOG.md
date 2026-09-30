@@ -1,5 +1,11 @@
 # @nxgt/typespec
 
+## 0.6.1
+
+### Patch Changes
+
+- [#83](https://github.com/softistx/nxgt-http/pull/83) [`75a4f29`](https://github.com/softistx/nxgt-http/commit/75a4f29a48884d1313085eed12cef53a846c54aa) Thanks [@SteveGT96](https://github.com/SteveGT96)! - The roadmap lists the verb methods and the `query` verb under Shipped, in 0.6.0.
+
 ## 0.6.0
 
 ### Minor Changes

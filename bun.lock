@@ -176,7 +176,7 @@
     },
     "packages/typespec": {
       "name": "@nxgt/typespec",
-      "version": "0.4.1",
+      "version": "0.5.0",
       "devDependencies": {
         "@nxgt/openapi-codegen": "workspace:^",
         "@nxgt/openapi-hono": "workspace:^",

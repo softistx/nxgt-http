@@ -1,6 +1,6 @@
 /** The English rule `@operationIds` takes a resource's singular by, and the verbs it completes. */
 import { expect, it } from 'bun:test';
-import { idWithVerb, singularOf, VERBS } from './verbs';
+import { idWithVerb, METHODS, singularOf, VERBS, verbIn } from './verbs';
 
 it.each([
 	['Users', 'User'],
@@ -35,6 +35,7 @@ const users = () => ({ singular: 'User', plural: 'Users' });
 
 it.each([
 	['list', 'listUsers'],
+	['query', 'queryUsers'],
 	['delete', 'deleteUser'],
 	['deleteMany', 'deleteManyUsers'],
 	['findById', 'findUserById'],
@@ -60,4 +61,18 @@ it('takes the resource only for a verb', () => {
 	};
 	idWithVerb('findPostComments', counted, VERBS);
 	expect(taken).toBe(0);
+});
+
+it.each([
+	['list', { verb: 'list', rest: '' }],
+	['findById', { verb: 'find', rest: 'ById' }],
+	['deleteManyByTeam', { verb: 'deleteMany', rest: 'ByTeam' }],
+	['findPostComments', undefined],
+	['ById', undefined],
+])('finds the verb in %s', (name, found) => {
+	expect(verbIn(name, VERBS)).toEqual(found);
+});
+
+it('gives every verb of the library its methods', () => {
+	expect(Object.keys(METHODS).sort()).toEqual(Object.keys(VERBS).sort());
 });

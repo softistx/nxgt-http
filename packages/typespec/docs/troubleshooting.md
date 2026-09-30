@@ -182,6 +182,55 @@ singular, `archiveUser`, or the plural, `archiveUsers`.
 namespace Shop;
 ```
 
+## `findById is sent with POST, where its verb find is sent with GET or HEAD`
+
+**When:** a warning: an operation `@operationIds` names after one of the
+library's verbs, in an interface, alone or before `By…`, is sent with a
+method that verb does not name. The method may be implicit: an operation
+without `@get` or `@post` that has a body is a `POST`.
+
+```tsp
+@route("/users")
+interface Users {
+  @route("/find") findById(@body id: uuid): User;
+}
+```
+
+```text
+warning @nxgt/typespec/verb-method-mismatch: findById is sent with POST, where its verb find is sent with GET or HEAD. Give it that method, or a name that is not a verb.
+```
+
+**Why:** the verb and the method say the same thing twice, and here they
+disagree: `find` is a read, and a `POST` tells a cache, a proxy or a retry
+it is not safe. Each verb's methods are in
+[Operation ids](guide/operation-ids.md#verbs-and-methods).
+
+**Fix:** give it the verb's method:
+
+```tsp
+@get @route("/{id}") findById(@path id: uuid): User; // findUserById
+```
+
+Or a name that is not a verb, which is its id as written:
+
+```tsp
+@post @route("/find") lookUpUser(@body id: uuid): User; // lookUpUser
+```
+
+Or, when the route cannot change, its own `@operationId`, which keeps the
+id it had and is not checked:
+
+```tsp
+@post @route("/find") @operationId("findById") findById(@body id: uuid): User;
+```
+
+Or silence that one operation with a reason:
+
+```tsp
+#suppress "@nxgt/typespec/verb-method-mismatch" "an older client posts its lookups"
+@post @route("/find") findById(@body id: uuid): User;
+```
+
 ## `declares a reply without a body and one with a body of status …`
 
 **When:** an operation declares, for one status, a reply without a body and

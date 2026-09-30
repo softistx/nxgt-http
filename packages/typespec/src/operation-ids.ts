@@ -72,7 +72,7 @@ function isMarkedInterface(program: Program, target: Interface): boolean {
  * interface or one of its namespaces is marked. An interface template's
  * instance is never emitted; only the interfaces extending it are.
  */
-function isNamed(program: Program, operation: Operation): boolean {
+export function isNamed(program: Program, operation: Operation): boolean {
 	const container = operation.interface;
 	if (container === undefined) {
 		return isMarkedNamespace(program, operation.namespace);

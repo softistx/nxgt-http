@@ -9,10 +9,14 @@
 import type { Program } from '@typespec/compiler';
 import { validateOneReplyPerStatus } from './one-reply-per-status';
 import { operationIds, validateOperationIds } from './operation-ids';
+import { validateVerbMethods } from './verb-methods';
 
 export { $lib } from './lib';
 
 export function $onValidate(program: Program): void {
+	// Before the ids are set: only an `@operationId` written in the spec is
+	// one then, and the operation it names is not checked.
+	validateVerbMethods(program);
 	validateOperationIds(program);
 	validateOneReplyPerStatus(program);
 }

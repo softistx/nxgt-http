@@ -55,11 +55,14 @@ namespace, so they share the spec's schema names.
 `@operationIds` names has the id of another operation of the same service
 (two `@service` namespaces are two documents, and may reuse a name):
 
-- one name is in two interfaces: `Store.Pets` and `Shelter.Pets` both
-  declare `listPets`;
-- an interface `extends` another, and so copies its operations and their
-  names: `Drafts extends Posts` gives a second `getPost`, and two interfaces
-  extending one template share every operation;
+- a verb and the id it gives are both in one interface: `list` and
+  `listUsers` in `Users` are both `listUsers`;
+- one name is in two interfaces of one name, or a name that is not a verb in
+  two interfaces: `Store.Pets` and `Shelter.Pets` both give `listPets`,
+  whether they declare `list` or `listPets`;
+- an interface `extends` another, and so copies names that are not verbs:
+  `Drafts extends Posts` gives a second `getPost`, and two interfaces
+  extending one template share every such name;
 - an `@operationId` written on another operation is a name `@operationIds`
   gives;
 - an unmarked operation declared in the service namespace, which the
@@ -70,12 +73,25 @@ namespace, so they share the spec's schema names.
 error @nxgt/typespec/duplicate-operation-id: Two operations are named listPets: an OpenAPI operation id must be unique.
 ```
 
-**Why:** `@operationIds` makes each operation's id its name, as written,
-without its interface or its namespace. `@typespec/openapi3` would emit both
+**Why:** `@operationIds` makes each operation's id its name, as written, or
+a verb with its interface's resource, without its namespace. `@typespec/openapi3` would emit both
 ids without a word, and the generator would then refuse the spec.
 
-**Fix:** give each operation a name of its own. Declare distinct operations
-rather than extending:
+**Fix:** give each operation a name of its own. In one interface, keep the
+verb or the full name, not both:
+
+```tsp
+@route("/users")
+interface Users {
+  @get list(): User[]; // listUsers
+  @get @route("/active") findActiveUsers(): User[]; // findActiveUsers
+}
+```
+
+Name the operations of an interface others extend with verbs, so each takes
+its own resource (`get` is `getPost` in `Posts`, `getDraft` in
+`Drafts extends Posts`), or declare distinct operations rather than
+extending:
 
 ```tsp
 @route("/posts")
@@ -101,6 +117,41 @@ using OpenAPI;
 @route("/drafts")
 interface Drafts extends Posts {
   @get @operationId("getDraft") getPost(@path postId: uuid): Post | NotFound;
+}
+```
+
+## `` `singular` and `plural` name an interface's resource: a namespace has none ``
+
+**When:** `tsp compile` runs on a spec that gives `@operationIds` on a
+namespace a `singular` or a `plural`:
+
+```tsp
+@service
+@operationIds(#{ singular: "User" })
+namespace Shop;
+```
+
+```text
+error @nxgt/typespec/resource-name-on-namespace: `singular` and `plural` name an interface's resource: a namespace has none. Put them on the interface.
+```
+
+**Why:** the resource a verb takes is an interface's: `list` in `Users` is
+`listUsers`. A namespace holds many interfaces, so one name for all of them
+would give each the same ids.
+
+**Fix:** keep the namespace's `verbs`, and name the resource on the
+interface whose name the rule gets wrong
+([Operation ids](guide/operation-ids.md#the-resource)):
+
+```tsp
+@service
+@operationIds
+namespace Shop;
+
+@route("/staff")
+@operationIds(#{ singular: "Member" })
+interface Staff {
+  @post create(): Member; // createMember
 }
 ```
 

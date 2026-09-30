@@ -1,7 +1,9 @@
 # Operation ids
 
-`@operationIds` makes each operation's OpenAPI id its name, exactly as
-written, so the generated client's methods are the names in your spec.
+`@operationIds` gives each operation the OpenAPI id the generated client
+should call it by: a known verb in an interface takes the interface's
+resource, `list` in `Posts` is `listPosts`, and any other name is the id
+exactly as written.
 
 An operation id is what `@nxgt/openapi-codegen` names everything after: the
 client's method, the `operations` entry, and the prefix of the operation's
@@ -9,7 +11,7 @@ types (`ListPostsQuery`, `zGetPostParam`).
 
 ## On the service namespace
 
-Mark the namespace once, and every operation in it is named as written:
+Mark the namespace once, and every operation in it is named:
 
 ```tsp
 import "@typespec/http";
@@ -34,9 +36,10 @@ model Comment {
 
 @route("/posts")
 interface Posts {
-  @get listPosts(...PageParameters): Page<Post>;                       // listPosts
-  @get getPost(@path postId: uuid): Post | NotFound;                   // getPost
-  @delete deletePost(@path postId: uuid): NoContentResponse | NotFound; // deletePost
+  @get list(...PageParameters): Page<Post>;                                       // listPosts
+  @get @route("/{postId}") get(@path postId: uuid): Post | NotFound;              // getPost
+  @get @route("/by-slug/{slug}") findBySlug(@path slug: string): Post | NotFound; // findPostBySlug
+  @delete @route("/{postId}") delete(@path postId: uuid): NoContentResponse | NotFound; // deletePost
 }
 
 @route("/posts/{postId}/comments")
@@ -45,7 +48,7 @@ interface Comments {
 }
 ```
 
-Alone, `@typespec/openapi3` would write `Posts_listPosts` and
+Alone, `@typespec/openapi3` would write `Posts_list` and
 `Comments_findPostComments`. The generated `operations` has one entry per
 id:
 
@@ -53,20 +56,167 @@ id:
 import { operations } from './generated/operations';
 
 Object.keys(operations);
-// ['listPosts', 'getPost', 'deletePost', 'findPostComments']
+// ['listPosts', 'getPost', 'findPostBySlug', 'deletePost', 'findPostComments']
 ```
 
-Name each operation as the client should call it: `listPosts`, not `list`.
-An operation named `list` gets the id `list`, and a second `list` in another
-interface is an error ([below](#two-operations-named-alike)).
+## Verbs
+
+In an interface, an operation named exactly one of these verbs is completed
+with the interface's resource:
+
+| Verb | Takes | In `Users` | In `Categories` |
+| --- | --- | --- | --- |
+| `list` | the plural | `listUsers` | `listCategories` |
+| `read` | the plural | `readUsers` | `readCategories` |
+| `find` | the plural | `findUsers` | `findCategories` |
+| `search` | the plural | `searchUsers` | `searchCategories` |
+| `count` | the plural | `countUsers` | `countCategories` |
+| `createMany` | the plural | `createManyUsers` | `createManyCategories` |
+| `updateMany` | the plural | `updateManyUsers` | `updateManyCategories` |
+| `deleteMany` | the plural | `deleteManyUsers` | `deleteManyCategories` |
+| `get` | the singular | `getUser` | `getCategory` |
+| `create` | the singular | `createUser` | `createCategory` |
+| `update` | the singular | `updateUser` | `updateCategory` |
+| `patch` | the singular | `patchUser` | `patchCategory` |
+| `replace` | the singular | `replaceUser` | `replaceCategory` |
+| `upsert` | the singular | `upsertUser` | `upsertCategory` |
+| `delete` | the singular | `deleteUser` | `deleteCategory` |
+
+A verb followed by `By` and a capital letter takes the singular before
+`By`, whichever form the verb takes alone, except a `*Many` verb, which
+takes the plural:
+
+```tsp
+@route("/users")
+interface Users {
+  @get @route("/{id}") findById(@path id: uuid): User | NotFound;                    // findUserById
+  @get @route("/by-email/{email}") getByEmail(@path email: email): User | NotFound;  // getUserByEmail
+  @delete @route("/by-team/{teamId}") deleteManyByTeam(@path teamId: uuid): void;    // deleteManyUsersByTeam
+}
+```
+
+Any other name is the id as written: `findActiveUsers` is
+`findActiveUsers`, and so is `listUsers`. The verb must be the whole name,
+or the whole part before `By`: `listAll` and `listing` are not verbs.
+
+Outside an interface, the id is always the name as written, even a verb:
+
+```tsp
+@route("/health") @get op list(): void; // list
+```
+
+## The resource
+
+The plural is the interface's name. The singular comes from a short English
+rule on its last word, so `BlogPosts` is `BlogPost`:
+
+| Interface | Singular |
+| --- | --- |
+| `Users`, `BlogPosts`, `APIKeys` | `User`, `BlogPost`, `APIKey` |
+| `Categories` | `Category` |
+| `Addresses`, `Boxes`, `Matches`, `Branches`, `Wishes` | `Address`, `Box`, `Match`, `Branch`, `Wish` |
+| `Statuses`, `Buses` | `Status`, `Bus` |
+| `Houses`, `Caches`, `Pies` | `House`, `Cache`, `Pie` |
+| `People`, `Children`, `Movies` | `Person`, `Child`, `Movie` |
+| `Series`, `Status`, `Access`, `Staff` | unchanged |
+
+The rule is short, not a dictionary: a name it does not know stays as it
+is, so `create` in `Staff` is `createStaff`. Name the resource yourself:
+
+```tsp
+@route("/staff")
+@operationIds(#{ singular: "Member" })
+interface Staff {
+  @get list(): Member[];  // listStaff
+  @post create(): Member; // createMember
+}
+```
+
+## Options
+
+```tsp
+model OperationIdsOptions {
+  singular?: string;
+  plural?: string;
+  verbs?: Record<"singular" | "plural">;
+}
+
+extern dec operationIds(
+  target: Interface | Namespace,
+  options?: valueof OperationIdsOptions
+);
+```
+
+| Option | Type | Default | Effect |
+| --- | --- | --- | --- |
+| `singular` | `string` | the plural, by the English rule | the resource's singular; on an interface only |
+| `plural` | `string` | the interface's name | the resource's plural, and the source of the singular when `singular` is not given; on an interface only |
+| `verbs` | `Record<"singular" \| "plural">` | the verbs above | more verbs, or a verb that takes the other form; on a namespace or an interface |
+
+`plural` alone renames both, the singular following by the rule:
+
+```tsp
+@route("/team")
+@operationIds(#{ plural: "People" })
+interface Team {
+  @get list(): Person[];  // listPeople
+  @post create(): Person; // createPerson
+}
+```
+
+`verbs` adds a verb, or changes the form one takes:
+
+```tsp
+@service
+@operationIds(#{ verbs: #{ archive: "singular", export: "plural" } })
+namespace Shop;
+
+@route("/users")
+interface Users {
+  @post @route("/{id}/archive") archive(@path id: uuid): void; // archiveUser
+  @get @route("/export") export(): User[];                     // exportUsers
+}
+```
+
+On a namespace, `verbs` reaches every interface in it, however deep. On an
+interface, its `verbs` override the namespace's, verb by verb:
+
+```tsp
+@route("/staff")
+@operationIds(#{ singular: "Member", verbs: #{ export: "singular" } })
+interface Staff {
+  @get export(): Member; // exportMember, where the namespace alone gives exportStaff
+}
+```
+
+`singular` and `plural` on a namespace are an error: a namespace holds many
+interfaces, and has no resource of its own
+([troubleshooting](../troubleshooting.md#singular-and-plural-name-an-interfaces-resource-a-namespace-has-none)).
+
+```text
+error @nxgt/typespec/resource-name-on-namespace: `singular` and `plural` name an interface's resource: a namespace has none. Put them on the interface.
+```
+
+## Precedence
+
+For each operation `@operationIds` names, the first that applies gives the
+id:
+
+1. its own `@operationId`, written before or after `@operationIds`;
+2. outside an interface: its name, as written;
+3. a verb, or a verb followed by `By…`: the verb with the interface's
+   resource;
+4. its name, as written.
+
+The verbs are the library's, overridden by each marked namespace's around
+the interface from the outermost in, then by the interfaces it extends,
+then by its own. The resource is the interface's own `singular` and
+`plural`, else its name and that name's singular: an interface never takes
+the names of one it extends, or two extending it would collide.
 
 ## Where it goes
 
-```tsp
-extern dec operationIds(target: Interface | Namespace);
-```
-
-| Marked | Named as written |
+| Marked | Named |
 | --- | --- |
 | a namespace | every operation in it, however deep: in its interfaces, in the namespaces it contains, and declared in it with `op` |
 | an interface | its operations, and those of each interface that `extends` it |
@@ -81,12 +231,12 @@ namespace Blog;
 @route("/posts")
 @operationIds
 interface Posts {
-  @get listPosts(): Post[]; // listPosts
+  @get list(): Post[]; // listPosts
 }
 
 @route("/drafts")
 interface Drafts {
-  @get listDrafts(): Post[]; // Drafts_listDrafts
+  @get list(): Post[]; // Drafts_list
 }
 ```
 
@@ -95,8 +245,7 @@ does not reach a `namespace Legacy` declared next to it.
 
 ## An operation's own `@operationId`
 
-An operation with its own `@operationId` keeps it, whether it is written
-before or after `@operationIds`:
+An operation with its own `@operationId` keeps it, verb or not:
 
 ```tsp
 import "@typespec/openapi";
@@ -105,31 +254,52 @@ using OpenAPI;
 
 @route("/posts")
 interface Posts {
-  @get @operationId("fetchPost") getPost(@path postId: uuid): Post | NotFound; // fetchPost
+  @get @route("/{postId}") @operationId("fetchPost") get(@path postId: uuid): Post | NotFound; // fetchPost
 }
 ```
 
 `import "@typespec/openapi"` and `using OpenAPI` are only needed for
 `@operationId` ([troubleshooting](../troubleshooting.md#unknown-decorator-operationid)).
 
+### Upgrading from 0.4
+
+Before 0.5.0, every name was the id as written. An operation of a marked
+interface named exactly a verb, such as `list` or `create`, now gets a new
+id, and the generated client's method changes with it. Give it an
+`@operationId` to keep the old one:
+
+```tsp
+@route("/users")
+interface Users {
+  @get @operationId("list") list(): User[]; // list, as before
+}
+```
+
+A name that already carried its resource, `listUsers`, is unchanged.
+
 ## On a template
 
 An interface template is never emitted, only the interfaces that extend one
 of its instances. When the template is marked, or the interface that extends
-it is in a marked namespace, those are named as written:
+it is in a marked namespace, those are named, and a verb takes the resource
+of the interface that extends it:
 
 ```tsp
-@operationIds
 interface Listable<Item> {
-  @get listAll(): Item[];
+  @get list(): Item[];
 }
 
 @route("/pets")
-interface Pets extends Listable<Pet> {} // listAll
+interface Pets extends Listable<Pet> {} // listPets
+
+@route("/toys")
+interface Toys extends Listable<Toy> {} // listToys
 ```
 
-A second interface extending `Listable` would name its operation `listAll`
-too, which is an error: see below.
+A name that is not a verb, `listAll`, would be `listAll` in both, which is
+an error: see below. So is a `singular` or `plural` on the template, or on
+any interface others extend: the interfaces extending it share it, and
+`create` in each is `createMember`.
 
 An operation template is never emitted either, only the operations declared
 from it. In a marked namespace, each is named as written:
@@ -154,32 +324,37 @@ error @nxgt/typespec/duplicate-operation-id: Two operations are named listPets: 
 
 It happens when:
 
-- one name is in two interfaces: neither the namespace nor the interface is
-  part of the id, so `Store.Pets` and `Shelter.Pets` both give `listPets`;
-- an interface `extends` another: it copies its operations and their
-  names, so `Drafts extends Posts` gives a second `getPost`, and two
-  interfaces extending one template share every operation;
-- an `@operationId` written on another operation is a name
-  `@operationIds` gives;
+- a verb and the id it gives are both in one interface: `list` and
+  `listUsers` in `Users` are both `listUsers`;
+- one name is in two interfaces of one name, or a name that is not a verb in
+  two interfaces: neither the namespace nor the interface is part of it, so
+  `Store.Pets` and `Shelter.Pets` both give `listPets`, whether they declare
+  `list` or `listPets`;
+- an interface `extends` another and copies a name that is not a verb:
+  `Drafts extends Posts` gives a second `getPost`, where `get` would give
+  `getDraft`;
+- interfaces extend one that has a `singular` or a `plural`, and so share
+  its resource;
+- an `@operationId` written on another operation is an id `@operationIds`
+  gives;
 - an unmarked operation declared in the service namespace, which the
-  emitter names after itself, has a marked operation's name: `op listPets()`
-  beside `Pets.listPets`.
+  emitter names after itself, has a marked operation's id: `op listPets()`
+  beside a marked `Pets.list`.
 
-Declare distinct operations rather than extending:
+Name the operations with verbs, and each interface extending them gets its
+own ids:
 
 ```tsp
 @route("/posts")
 interface Posts {
-  @get getPost(@path postId: uuid): Post | NotFound;
+  @get @route("/{postId}") get(@path postId: uuid): Post | NotFound; // getPost
 }
 
 @route("/drafts")
-interface Drafts {
-  @get getDraft(@path draftId: uuid): Post | NotFound;
-}
+interface Drafts extends Posts {} // getDraft
 ```
 
-Or keep `extends`, and declare each copied operation again with its own
+Or keep the names, and declare each copied operation again with its own
 `@operationId`:
 
 ```tsp

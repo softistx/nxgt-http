@@ -7,6 +7,12 @@
 /** Whether a verb takes the resource's singular or its plural. */
 export type Grammar = 'singular' | 'plural';
 
+/** A resource's two names: `User` and `Users`. */
+export interface Resource {
+	readonly singular: string;
+	readonly plural: string;
+}
+
 /** The library's own verbs. */
 export const VERBS: Readonly<Record<string, Grammar>> = {
 	list: 'plural',
@@ -52,12 +58,13 @@ const SIBILANT_ES = /(ss|x|zz|sh|tch|nch|rch|oach)es$/i;
 /**
  * The singular of a plural name, by a short English rule on its last word:
  * `Users`, `BlogPosts`, `Categories`, `Addresses`, `Statuses`, `People`. A
- * name the rule does not know stays as it is; `singular` names it.
+ * guess: it misses some (`Heroes`, `Analysis`), which `singular` names.
  */
 export function singularOf(plural: string): string {
 	const word = /[A-Z]?[a-z0-9]*$/.exec(plural)?.[0] ?? '';
 	const head = plural.slice(0, plural.length - word.length);
-	const irregular = IRREGULAR[word.toLowerCase()];
+	const key = word.toLowerCase();
+	const irregular = Object.hasOwn(IRREGULAR, key) ? IRREGULAR[key] : undefined;
 	if (irregular !== undefined) {
 		const cased = word[0] === word[0]?.toUpperCase();
 		return `${head}${cased ? irregular[0]?.toUpperCase() + irregular.slice(1) : irregular}`;
@@ -73,23 +80,25 @@ export function singularOf(plural: string): string {
 
 /**
  * The id of an operation of a resource: the verb and the resource's singular
- * or plural, or the verb, the singular and the rest of a `By` name,
- * `findById` to `findUserById`. `undefined` when the name is none of them.
+ * or plural, or the verb, the resource and the rest of a `By` name:
+ * `findById` to `findUserById`, the singular, but `deleteManyByTeam` to
+ * `deleteManyUsersByTeam`, the plural of a `*Many` verb. `undefined` when
+ * the name is none of them. The resource is taken only then.
  */
 export function idWithVerb(
 	name: string,
-	resource: { singular: string; plural: string },
+	resource: () => Resource,
 	verbs: Readonly<Record<string, Grammar>>,
 ): string | undefined {
-	const grammar = Object.hasOwn(verbs, name) ? verbs[name] : undefined;
-	if (grammar !== undefined) return `${name}${resource[grammar]}`;
-	const by = /^(.+?)(By[A-Z].*)$/.exec(name);
-	if (
-		by?.[1] !== undefined &&
-		by[2] !== undefined &&
-		Object.hasOwn(verbs, by[1])
-	) {
-		return `${by[1]}${resource.singular}${by[2]}`;
+	if (Object.hasOwn(verbs, name)) {
+		return `${name}${resource()[verbs[name] as Grammar]}`;
+	}
+	for (const by of name.matchAll(/By[A-Z]/g)) {
+		const verb = name.slice(0, by.index);
+		if (verb === '' || !Object.hasOwn(verbs, verb)) continue;
+		const names = resource();
+		const noun = verb.endsWith('Many') ? names.plural : names.singular;
+		return `${verb}${noun}${name.slice(by.index)}`;
 	}
 	return undefined;
 }

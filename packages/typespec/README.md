@@ -302,8 +302,8 @@ with the handler, in [Sorting](docs/guide/sorting.md).
 
 TypeSpec names an operation after its interface, `Posts_listPosts`, and the
 generator turns that id into the client's method and its types' prefix. Put
-`@operationIds` on the service namespace, and each operation's id is its
-name, as written:
+`@operationIds` on the service namespace: in an interface, a known verb takes
+the interface's resource, and any other name is the id as written:
 
 ```tsp
 @service(#{ title: "Blog" })
@@ -312,15 +312,31 @@ namespace Blog;
 
 @route("/posts")
 interface Posts {
-  @get listPosts(...PageParameters): Page<Post>;     // listPosts
-  @get getPost(@path postId: uuid): Post | NotFound; // getPost
+  @get list(...PageParameters): Page<Post>;                          // listPosts
+  @get @route("/{postId}") get(@path postId: uuid): Post | NotFound; // getPost
+  @get @route("/by-slug/{slug}") findBySlug(@path slug: string): Post | NotFound; // findPostBySlug
+}
+
+@route("/posts/{postId}/comments")
+interface Comments {
+  @get findPostComments(@path postId: uuid, ...CursorPageParameters): CursorPage<Comment>; // findPostComments
 }
 ```
 
-On an interface, it names that interface's operations, and those of the
+| Verbs | Take | In `Users` |
+| --- | --- | --- |
+| `list`, `read`, `find`, `search`, `count`, `createMany`, `updateMany`, `deleteMany` | the plural: the interface's name | `listUsers`, `deleteManyUsers` |
+| `get`, `create`, `update`, `patch`, `replace`, `upsert`, `delete` | the singular, by a short English rule | `createUser` |
+| a verb, then `By…` | the singular before `By`; the plural after a `*Many` verb | `findUserById`, `deleteManyUsersByTeam` |
+
+The singular rule knows `Categories`, `Addresses`, `Statuses` and `People`;
+name the others with `@operationIds(#{ singular: "Member" })` on the
+interface, and add verbs with `#{ verbs: #{ archive: "singular" } }`. An
+operation outside an interface keeps its name, even `list`. On an interface,
+`@operationIds` names that interface's operations, and those of the
 interfaces extending it. An operation's own `@operationId` wins; the others
-keep the emitter's names. Two operations of one name in one service, in two
-interfaces or copied by `extends`, are an error, `duplicate-operation-id`. More in
+keep the emitter's names. Two operations of one id in one service are an
+error, `duplicate-operation-id`. More in
 [Operation ids](docs/guide/operation-ids.md).
 
 ## API
@@ -329,13 +345,18 @@ interfaces or copied by `extends`, are an error, `duplicate-operation-id`. More 
 
 | Decorator | On | What it does |
 | --- | --- | --- |
-| `@operationIds` | a namespace or an interface | makes each operation's id its name, as written, in the namespace however deep or in the interface, unless it has an `@operationId` |
+| `@operationIds(options?: OperationIdsOptions)` | a namespace or an interface | makes each operation's id its name, as written, or a known verb with the interface's resource (`list` in `Users` is `listUsers`), in the namespace however deep or in the interface, unless it has an `@operationId` |
+
+`OperationIdsOptions` is `#{ singular?: string, plural?: string, verbs?: Record<"singular" | "plural"> }`:
+`singular` and `plural` name an interface's resource, and `verbs` adds or
+overrides verbs, on a namespace or an interface.
 
 ### Diagnostics
 
 | Code | Reported when |
 | --- | --- |
 | `duplicate-operation-id` | error: an operation `@operationIds` names has the id of another operation in its service's document |
+| `resource-name-on-namespace` | error: `@operationIds` on a namespace is given `singular` or `plural`, which name an interface's resource |
 | `duplicate-status-reply` | error: an operation declares a reply without a body and one with a body of one status, which the emitter merges, losing the one without a body |
 | `merged-status-reply` | warning: an operation declares two replies with a body of one status code, which the emitter merges under the first one's description |
 
@@ -428,6 +449,14 @@ envelope and the rate limit's headers.
   Two plain bodies, `Post | Draft`, bodies of different content types, and
   two `@error` models without a `@statusCode` pass
   ([troubleshooting](docs/troubleshooting.md)).
+- **An operation named exactly a verb changes id on upgrade.** Before
+  0.5.0, `list` in a marked `Users` was `list`; it is now `listUsers`, and
+  the generated client's method follows. Keep the old one with its own
+  `@operationId` (from `@typespec/openapi`):
+
+  ```tsp
+  @get @operationId("list") list(): User[];
+  ```
 - **Both versions at once write two folders.** With
   `openapi-versions: ['3.1.0', '3.2.0']`, the emitter writes
   `3.1.0/openapi.yaml` and `3.2.0/openapi.yaml`: point the generator's input
@@ -454,7 +483,8 @@ envelope and the rate limit's headers.
 - [Sorting](docs/guide/sorting.md): `orderBy` and `direction` beside a
   list's filters, and the `@nxgt/drizzle` call they map to;
 - [Operation ids](docs/guide/operation-ids.md): `@operationIds`, each
-  operation named as written, and the ids it refuses;
+  operation named as written or a verb with its resource, the options, and
+  the ids it refuses;
 - [troubleshooting](docs/troubleshooting.md);
 - [the roadmap](docs/roadmap.md): what is coming.
 

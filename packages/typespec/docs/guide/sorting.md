@@ -34,20 +34,20 @@ model AuthorFilters {
 
 @route("/authors")
 interface Authors {
-  @get listAuthors(
+  @get list(
     ...AuthorFilters,
     ...PageParameters,
     ...SortParameters<"name" | "createdAt">,
-  ): Page<Author>;
+  ): Page<Author>; // listAuthors
 
-  @get getAuthor(@path id: uuid): Author | NotFound;
+  @get @route("/{id}") get(@path id: uuid): Author | NotFound; // getAuthor
 }
 ```
 
 `GET /authors?name=Ada&orderBy=name&direction=desc` is one page of the
 authors named Ada, by name, descending. The list is an operation like any
-other, and `@operationIds` gives it the id `listAuthors`
-([Operation ids](operation-ids.md)).
+other: `@operationIds` completes the verb `list` with the interface's name,
+and gives it the id `listAuthors` ([Operation ids](operation-ids.md#verbs)).
 
 ## The query
 

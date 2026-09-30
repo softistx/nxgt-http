@@ -21,14 +21,7 @@ import {
 	setOperationId,
 } from '@typespec/openapi';
 import { $lib } from './lib';
-import { type Grammar, idWithVerb, singularOf, VERBS } from './verbs';
-
-/** `@operationIds`' options, as `OperationIdsOptions` declares them. */
-export interface OperationIdsOptions {
-	readonly singular?: string;
-	readonly plural?: string;
-	readonly verbs?: Readonly<Record<string, Grammar>>;
-}
+import { idOf, type OperationIdsOptions } from './resource';
 
 /**
  * Marks the interface or the namespace; its ids are set once the program is
@@ -53,66 +46,6 @@ export function operationIds(
 			target: context.decoratorTarget,
 		});
 	}
-}
-
-function optionsOf(
-	program: Program,
-	target: Interface | Namespace,
-): OperationIdsOptions | undefined {
-	return program.stateMap($lib.stateKeys.operationIdsOptions).get(target);
-}
-
-/** The interface, then those it extends, however deep. */
-function lineageOf(target: Interface): Interface[] {
-	return [target, ...target.sourceInterfaces.flatMap(lineageOf)];
-}
-
-/**
- * The verbs an interface's operations take: the library's, then each marked
- * namespace's around it, outermost first, then its own lineage's, its own
- * last, each overriding the one before.
- */
-function verbsOf(program: Program, target: Interface): Record<string, Grammar> {
-	const namespaces: Namespace[] = [];
-	for (let at = target.namespace; at !== undefined; at = at.namespace) {
-		namespaces.unshift(at);
-	}
-	const layers = [...namespaces, ...lineageOf(target).reverse()];
-	return Object.assign(
-		{},
-		VERBS,
-		...layers.map((layer) => optionsOf(program, layer)?.verbs ?? {}),
-	);
-}
-
-/**
- * An interface's resource: `plural` or the interface's name, and `singular`
- * or the plural's singular, from its own options or those it extends.
- */
-function resourceOf(
-	program: Program,
-	target: Interface,
-): { singular: string; plural: string } {
-	const lineage = lineageOf(target).map((at) => optionsOf(program, at));
-	const plural =
-		lineage.find((options) => options?.plural)?.plural ?? target.name;
-	const singular =
-		lineage.find((options) => options?.singular)?.singular ??
-		singularOf(plural);
-	return { singular, plural };
-}
-
-/** The id `@operationIds` gives: the name as written, or a verb with its resource. */
-function idOf(program: Program, operation: Operation): string {
-	const container = operation.interface;
-	if (container === undefined) return operation.name;
-	return (
-		idWithVerb(
-			operation.name,
-			resourceOf(program, container),
-			verbsOf(program, container),
-		) ?? operation.name
-	);
 }
 
 /** Marked itself, or in a marked namespace, however deep. */

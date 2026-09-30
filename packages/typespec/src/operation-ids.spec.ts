@@ -162,3 +162,39 @@ it('refuses a resource name on a namespace', async () => {
 		'@nxgt/typespec/resource-name-on-namespace',
 	]);
 }, 30_000);
+
+it('inherits verbs, inner over outer, but names only its own resource', async () => {
+	const program = await checked('verbs-lineage');
+	expect(
+		program.diagnostics.map(({ code, message }) => ({ code, message })),
+	).toEqual([
+		{
+			code: '@nxgt/typespec/duplicate-operation-id',
+			message:
+				'Two operations are named listUsers: an OpenAPI operation id must be unique.',
+		},
+	]);
+	const ids: string[] = [];
+	navigateProgram(program, {
+		operation(operation) {
+			const id = getOperationId(program, operation);
+			if (id !== undefined)
+				ids.push(`${operation.interface?.name}.${operation.name}=${id}`);
+		},
+	});
+	expect(ids.sort()).toEqual([
+		'Pets.archive=archivePet',
+		'Pets.findById=findPetById',
+		'Staff.archive=archiveStaff',
+		'Users.archive=archiveUser',
+		'Users.list=listUsers',
+		'Users.listUsers=listUsers',
+	]);
+}, 30_000);
+
+it('refuses a verb of another grammar', async () => {
+	const program = await checked('verbs-invalid');
+	expect(program.diagnostics.map(({ code }) => code)).toEqual([
+		'invalid-argument',
+	]);
+}, 30_000);

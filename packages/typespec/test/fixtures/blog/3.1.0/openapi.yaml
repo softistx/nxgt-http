@@ -46,7 +46,7 @@ paths:
       tags:
         - Authors
     post:
-      operationId: createAuthors
+      operationId: createAuthor
       description: Creates a resource.
       parameters: []
       responses:
@@ -78,7 +78,7 @@ paths:
               $ref: '#/components/schemas/CreateAuthor'
   /authors/{id}:
     get:
-      operationId: readAuthors
+      operationId: readAuthor
       description: One resource.
       parameters:
         - name: id
@@ -102,7 +102,7 @@ paths:
       tags:
         - Authors
     patch:
-      operationId: updateAuthors
+      operationId: updateAuthor
       description: Updates a resource with a merge patch.
       parameters:
         - name: id
@@ -144,7 +144,7 @@ paths:
             schema:
               $ref: '#/components/schemas/AuthorMergePatchUpdate'
     delete:
-      operationId: deleteAuthors
+      operationId: deleteAuthor
       description: Deletes a resource.
       parameters:
         - name: id

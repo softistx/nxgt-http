@@ -292,10 +292,14 @@ interface Posts extends Resource<Post, PostFilters, SortField = "createdAt" | "t
 | Operation | Route | Answers |
 | --- | --- | --- |
 | `listPosts` | `GET /posts`, with the filters, `page`, `pageSize`, `orderBy`, `direction` | `Page<Post>` |
-| `readPosts` | `GET /posts/{id}` | `Post \| NotFound` |
-| `createPosts` | `POST /posts`, `Create<Post>` | 201 `Post \| BadRequest \| Conflict` |
-| `updatePosts` | `PATCH /posts/{id}`, `MergePatchUpdate<Post>` | `Post \| BadRequest \| NotFound \| Conflict` |
-| `deletePosts` | `DELETE /posts/{id}` | 204, `NotFound` |
+| `readPost` | `GET /posts/{id}` | `Post \| NotFound` |
+| `createPost` | `POST /posts`, `Create<Post>` | 201 `Post \| BadRequest \| Conflict` |
+| `updatePost` | `PATCH /posts/{id}`, `MergePatchUpdate<Post>` | `Post \| BadRequest \| NotFound \| Conflict` |
+| `deletePost` | `DELETE /posts/{id}` | 204, `NotFound` |
+
+`list` is named after the interface, the four others after the item. Two resources of one item then share their ids,
+which is an error, `duplicate-operation-id`: give the second its own
+`@operationId`s ([troubleshooting](docs/troubleshooting.md)).
 
 `orderBy` takes one of the `SortField`s (`SortField` is `"id"` by default), and `direction`
 `asc` (the default) or `desc`, as `@nxgt/drizzle` sorts a page. `{id}`

@@ -84,9 +84,13 @@ interface Pets extends Resource<Pet> {}     // listPets
 interface Orders extends Resource<Order> {} // listOrders
 ```
 
+The library's own `Resource` goes one step further: `list` is named after
+the interface, and `read`, `create`, `update` and `delete` after the item,
+`readPet` ([Resources](resources.md)).
+
 ## Two operations named alike
 
-An id must be unique, and four cases break that:
+An id must be unique, and five cases break that:
 
 - the namespace is not part of the id, so `Store.Pets` and `Shelter.Pets`
   would both name their `list` `listPets`;
@@ -95,7 +99,10 @@ An id must be unique, and four cases break that:
 - an `@operationId` written on another operation, in any interface, takes
   the id `@operationIds` gives;
 - an operation declared in the service namespace is named after itself, so
-  `op listPets()` takes the id of `Pets.list`.
+  `op listPets()` takes the id of `Pets.list`;
+- two interfaces extend `Resource` with one item, so `Authors` and
+  `ArchivedAuthors` would both name their `read` `readAuthor`
+  ([Resources](resources.md#two-resources-of-one-item)).
 
 `@operationIds` refuses each with `duplicate-operation-id`, where
 `@typespec/openapi3` would emit both without a word. Give one of them its own

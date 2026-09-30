@@ -1,5 +1,5 @@
 // Legacy is not marked, but its @operationId takes the id @operationIds gives
-// Pets.list.
+// Pets.listPets.
 import "@typespec/http";
 import "@typespec/openapi";
 import "@nxgt/typespec";
@@ -19,5 +19,5 @@ interface Legacy {
 @route("/pets")
 @operationIds
 interface Pets {
-  @get list(): string[];
+  @get listPets(): string[];
 }

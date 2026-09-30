@@ -8,4 +8,4 @@ import "./auth.tsp";
 import "./scalars.tsp";
 import "./columns.tsp";
 import "./headers.tsp";
-import "./resources.tsp";
+import "./sorting.tsp";

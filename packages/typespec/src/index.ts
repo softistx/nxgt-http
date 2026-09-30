@@ -8,11 +8,7 @@
  */
 import type { Program } from '@typespec/compiler';
 import { validateOneReplyPerStatus } from './one-reply-per-status';
-import {
-	itemOperation,
-	operationIds,
-	validateOperationIds,
-} from './operation-ids';
+import { operationIds, validateOperationIds } from './operation-ids';
 
 export { $lib } from './lib';
 
@@ -23,5 +19,4 @@ export function $onValidate(program: Program): void {
 
 export const $decorators = {
 	Nxgt: { operationIds },
-	'Nxgt.Private': { itemOperation },
 };

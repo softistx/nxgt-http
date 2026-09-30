@@ -1,5 +1,5 @@
-// An operation outside an interface is named after itself, listPets: the id
-// @operationIds gives Pets.list.
+// An unmarked operation in the service namespace is named after itself by the
+// emitter, listPets: the id @operationIds gives Pets.listPets.
 import "@typespec/http";
 import "@nxgt/typespec";
 
@@ -16,5 +16,5 @@ op listPets(): string[];
 @route("/pets")
 @operationIds
 interface Pets {
-  @get list(): string[];
+  @get listPets(): string[];
 }

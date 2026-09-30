@@ -9,13 +9,12 @@ namespace Blog;
 /** Comments live under their post. */
 @route("/posts/{postId}/comments")
 @tag("Comments")
-@operationIds
 interface Comments {
-  @get list(
+  @get findPostComments(
     @path postId: uuid,
     ...CursorPageParameters,
   ): CursorPage<Comment> | BadRequest | NotFound;
-  @post create(
+  @post createPostComment(
     @path postId: uuid,
     @body comment: Create<Comment>,
   ): {
@@ -24,7 +23,7 @@ interface Comments {
   } | BadRequest | NotFound | TooManyRequests;
   // permission() answers each refusal without a body.
   @useAuth(JanusAuth)
-  @delete delete(
+  @delete deletePostComment(
     @path postId: uuid,
     @path commentId: uuid,
   ): NoContentResponse | AuthenticationRequired | AccessDenied | ErrorWithoutBody<404>;

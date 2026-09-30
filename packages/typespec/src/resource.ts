@@ -16,6 +16,7 @@ import {
 	type Resource,
 	singularOf,
 	VERBS,
+	verbIn,
 } from './verbs';
 
 /** `@operationIds`' options, as `OperationIdsOptions` declares them. */
@@ -77,4 +78,14 @@ export function idOf(program: Program, operation: Operation): string {
 			verbsOf(program, container),
 		) ?? operation.name
 	);
+}
+
+/** The verb an operation of an interface is named with, `find` in `findById`. */
+export function verbOf(
+	program: Program,
+	operation: Operation,
+): string | undefined {
+	const container = operation.interface;
+	if (container === undefined) return undefined;
+	return verbIn(operation.name, verbsOf(program, container))?.verb;
 }

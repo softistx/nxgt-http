@@ -17,6 +17,12 @@ export const $lib = createTypeSpecLibrary({
 					"`singular` and `plural` name an interface's resource: a namespace has none. Put them on the interface.",
 			},
 		},
+		'verb-method-mismatch': {
+			severity: 'warning',
+			messages: {
+				default: paramMessage`${'operation'} is sent with ${'method'}, where its verb ${'verb'} is sent with ${'expected'}. Give it that method, or a name that is not a verb.`,
+			},
+		},
 		'duplicate-status-reply': {
 			severity: 'error',
 			messages: {

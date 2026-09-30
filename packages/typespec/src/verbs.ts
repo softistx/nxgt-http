@@ -19,6 +19,7 @@ export const VERBS: Readonly<Record<string, Grammar>> = {
 	read: 'plural',
 	find: 'plural',
 	search: 'plural',
+	query: 'plural',
 	count: 'plural',
 	createMany: 'plural',
 	updateMany: 'plural',
@@ -30,6 +31,31 @@ export const VERBS: Readonly<Record<string, Grammar>> = {
 	replace: 'singular',
 	upsert: 'singular',
 	delete: 'singular',
+};
+
+/**
+ * The HTTP methods each of the library's verbs is sent with: a read is a
+ * `GET` (or a `HEAD`), a search may carry its criteria in a `POST` body, a
+ * bulk delete its ids. `QUERY` joins `search` and `query` once
+ * `@typespec/http` declares it.
+ */
+export const METHODS: Readonly<Record<string, readonly string[]>> = {
+	list: ['get', 'head'],
+	read: ['get', 'head'],
+	find: ['get', 'head'],
+	count: ['get', 'head'],
+	get: ['get', 'head'],
+	search: ['get', 'post'],
+	query: ['get', 'post'],
+	create: ['post'],
+	createMany: ['post'],
+	update: ['put', 'patch'],
+	updateMany: ['put', 'patch'],
+	patch: ['patch'],
+	replace: ['put'],
+	upsert: ['put'],
+	delete: ['delete'],
+	deleteMany: ['delete', 'post'],
 };
 
 /** Plurals the rules below get wrong, by their singular. */
@@ -79,6 +105,24 @@ export function singularOf(plural: string): string {
 }
 
 /**
+ * The verb a name starts with, and the rest: the whole name, `list`, or the
+ * verb before a `By`, `findById`. `undefined` when the name is neither.
+ */
+export function verbIn(
+	name: string,
+	verbs: Readonly<Record<string, Grammar>>,
+): { readonly verb: string; readonly rest: string } | undefined {
+	if (Object.hasOwn(verbs, name)) return { verb: name, rest: '' };
+	for (const by of name.matchAll(/By[A-Z]/g)) {
+		const verb = name.slice(0, by.index);
+		if (verb !== '' && Object.hasOwn(verbs, verb)) {
+			return { verb, rest: name.slice(by.index) };
+		}
+	}
+	return undefined;
+}
+
+/**
  * The id of an operation of a resource: the verb and the resource's singular
  * or plural, or the verb, the resource and the rest of a `By` name:
  * `findById` to `findUserById`, the singular, but `deleteManyByTeam` to
@@ -90,15 +134,15 @@ export function idWithVerb(
 	resource: () => Resource,
 	verbs: Readonly<Record<string, Grammar>>,
 ): string | undefined {
-	if (Object.hasOwn(verbs, name)) {
-		return `${name}${resource()[verbs[name] as Grammar]}`;
-	}
-	for (const by of name.matchAll(/By[A-Z]/g)) {
-		const verb = name.slice(0, by.index);
-		if (verb === '' || !Object.hasOwn(verbs, verb)) continue;
-		const names = resource();
-		const noun = verb.endsWith('Many') ? names.plural : names.singular;
-		return `${verb}${noun}${name.slice(by.index)}`;
-	}
-	return undefined;
+	const found = verbIn(name, verbs);
+	if (found === undefined) return undefined;
+	const { verb, rest } = found;
+	const names = resource();
+	const noun =
+		rest === ''
+			? names[verbs[verb] as Grammar]
+			: verb.endsWith('Many')
+				? names.plural
+				: names.singular;
+	return `${verb}${noun}${rest}`;
 }

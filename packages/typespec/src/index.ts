@@ -9,12 +9,14 @@
 import type { Program } from '@typespec/compiler';
 import { validateOneReplyPerStatus } from './one-reply-per-status';
 import { operationIds, validateOperationIds } from './operation-ids';
+import { validateVerbMethods } from './verb-methods';
 
 export { $lib } from './lib';
 
 export function $onValidate(program: Program): void {
 	validateOperationIds(program);
 	validateOneReplyPerStatus(program);
+	validateVerbMethods(program);
 }
 
 export const $decorators = {

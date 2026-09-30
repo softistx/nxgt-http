@@ -10,6 +10,13 @@ export const $lib = createTypeSpecLibrary({
 				default: paramMessage`Two operations are named ${'id'}: an OpenAPI operation id must be unique.`,
 			},
 		},
+		'resource-name-on-namespace': {
+			severity: 'error',
+			messages: {
+				default:
+					"`singular` and `plural` name an interface's resource: a namespace has none. Put them on the interface.",
+			},
+		},
 		'duplicate-status-reply': {
 			severity: 'error',
 			messages: {
@@ -26,6 +33,10 @@ export const $lib = createTypeSpecLibrary({
 	state: {
 		operationIds: {
 			description: 'The interfaces and namespaces marked with @operationIds',
+		},
+		operationIdsOptions: {
+			description:
+				"Each marked interface's or namespace's @operationIds options",
 		},
 	},
 });

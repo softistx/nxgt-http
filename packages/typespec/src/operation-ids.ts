@@ -1,7 +1,8 @@
 /**
  * `@operationIds`: the id of each operation is its name, as written:
  * `@get findPostComments()` is `findPostComments`, where `@typespec/openapi3`
- * would write `Posts_findPostComments`.
+ * would write `Posts_findPostComments`. In an interface, a known verb takes
+ * the interface's resource: `create` in `Users` is `createUser` (`verbs.ts`).
  */
 import {
 	type DecoratorContext,
@@ -20,17 +21,98 @@ import {
 	setOperationId,
 } from '@typespec/openapi';
 import { $lib } from './lib';
+import { type Grammar, idWithVerb, singularOf, VERBS } from './verbs';
+
+/** `@operationIds`' options, as `OperationIdsOptions` declares them. */
+export interface OperationIdsOptions {
+	readonly singular?: string;
+	readonly plural?: string;
+	readonly verbs?: Readonly<Record<string, Grammar>>;
+}
 
 /**
  * Marks the interface or the namespace; its ids are set once the program is
  * checked. On a template, TypeSpec runs it on each instance, which
- * `isMarkedInterface` follows to the interfaces extending it.
+ * `isMarkedInterface` follows to the interfaces extending it. A namespace
+ * has no resource to name: `singular` and `plural` are an interface's.
  */
 export function operationIds(
 	context: DecoratorContext,
 	target: Interface | Namespace,
+	options: OperationIdsOptions = {},
 ): void {
-	context.program.stateSet($lib.stateKeys.operationIds).add(target);
+	const { program } = context;
+	program.stateSet($lib.stateKeys.operationIds).add(target);
+	program.stateMap($lib.stateKeys.operationIdsOptions).set(target, options);
+	if (
+		target.kind === 'Namespace' &&
+		(options.singular !== undefined || options.plural !== undefined)
+	) {
+		$lib.reportDiagnostic(program, {
+			code: 'resource-name-on-namespace',
+			target: context.decoratorTarget,
+		});
+	}
+}
+
+function optionsOf(
+	program: Program,
+	target: Interface | Namespace,
+): OperationIdsOptions | undefined {
+	return program.stateMap($lib.stateKeys.operationIdsOptions).get(target);
+}
+
+/** The interface, then those it extends, however deep. */
+function lineageOf(target: Interface): Interface[] {
+	return [target, ...target.sourceInterfaces.flatMap(lineageOf)];
+}
+
+/**
+ * The verbs an interface's operations take: the library's, then each marked
+ * namespace's around it, outermost first, then its own lineage's, its own
+ * last, each overriding the one before.
+ */
+function verbsOf(program: Program, target: Interface): Record<string, Grammar> {
+	const namespaces: Namespace[] = [];
+	for (let at = target.namespace; at !== undefined; at = at.namespace) {
+		namespaces.unshift(at);
+	}
+	const layers = [...namespaces, ...lineageOf(target).reverse()];
+	return Object.assign(
+		{},
+		VERBS,
+		...layers.map((layer) => optionsOf(program, layer)?.verbs ?? {}),
+	);
+}
+
+/**
+ * An interface's resource: `plural` or the interface's name, and `singular`
+ * or the plural's singular, from its own options or those it extends.
+ */
+function resourceOf(
+	program: Program,
+	target: Interface,
+): { singular: string; plural: string } {
+	const lineage = lineageOf(target).map((at) => optionsOf(program, at));
+	const plural =
+		lineage.find((options) => options?.plural)?.plural ?? target.name;
+	const singular =
+		lineage.find((options) => options?.singular)?.singular ??
+		singularOf(plural);
+	return { singular, plural };
+}
+
+/** The id `@operationIds` gives: the name as written, or a verb with its resource. */
+function idOf(program: Program, operation: Operation): string {
+	const container = operation.interface;
+	if (container === undefined) return operation.name;
+	return (
+		idWithVerb(
+			operation.name,
+			resourceOf(program, container),
+			verbsOf(program, container),
+		) ?? operation.name
+	);
 }
 
 /** Marked itself, or in a marked namespace, however deep. */
@@ -121,7 +203,9 @@ export function validateOperationIds(program: Program): void {
 			// default strategy.
 			const id =
 				own ??
-				(named ? operation.name : resolveOperationId(program, operation));
+				(named
+					? idOf(program, operation)
+					: resolveOperationId(program, operation));
 			const services = servicesOf(program, operation);
 			// Outside every service of a program that has one: in no document.
 			const emitted = services.length > 0 || !hasServices;

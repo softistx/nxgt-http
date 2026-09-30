@@ -13,12 +13,13 @@ model AuthorFilters {
   name?: string;
 }
 
+// Verbs @operationIds completes: list is listAuthors, get is getAuthor.
 @route("/authors")
 @tag("Authors")
 interface Authors {
   /** One page of the authors, filtered and sorted. */
   @get
-  listAuthors(
+  list(
     ...AuthorFilters,
     ...PageParameters,
     ...SortParameters<"name" | "createdAt">,
@@ -26,23 +27,23 @@ interface Authors {
 
   /** One author. */
   @get
-  getAuthor(@path id: uuid): Author | NotFound;
+  get(@path id: uuid): Author | NotFound;
 
   /** Creates an author. */
   @post
-  createAuthor(@body author: Create<Author>): {
+  create(@body author: Create<Author>): {
     @statusCode _: 201;
     @body author: Author;
   } | BadRequest | Conflict;
 
   /** Updates an author with a merge patch. */
   @patch
-  updateAuthor(
+  update(
     @path id: uuid,
     @body author: MergePatchUpdate<Author>,
   ): Author | BadRequest | NotFound | Conflict;
 
   /** Deletes an author. */
   @delete
-  deleteAuthor(@path id: uuid): NoContentResponse | NotFound;
+  delete(@path id: uuid): NoContentResponse | NotFound;
 }

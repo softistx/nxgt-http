@@ -52,7 +52,8 @@ namespace, so they share the spec's schema names.
 ## `Two operations are named listPets: an OpenAPI operation id must be unique`
 
 **When:** `tsp compile` runs on a spec where an operation that
-`@operationIds` names has the id of another operation:
+`@operationIds` names has the id of another operation of the same service
+(two `@service` namespaces are two documents, and may reuse a name):
 
 - one name is in two interfaces: `Store.Pets` and `Shelter.Pets` both
   declare `listPets`;

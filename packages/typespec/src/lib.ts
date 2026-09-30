@@ -24,6 +24,8 @@ export const $lib = createTypeSpecLibrary({
 		},
 	},
 	state: {
-		operationIds: { description: 'The interfaces marked with @operationIds' },
+		operationIds: {
+			description: 'The interfaces and namespaces marked with @operationIds',
+		},
 	},
 });

@@ -6,6 +6,7 @@
 import {
 	type DecoratorContext,
 	type Interface,
+	isService,
 	isTemplateInstance,
 	type Namespace,
 	navigateProgram,
@@ -68,17 +69,48 @@ function isNamed(program: Program, operation: Operation): boolean {
 }
 
 /**
+ * Whether the emitter writes the operation: not an instance of an operation
+ * template, `Read<Pet>`, nor an operation of an interface template's
+ * instance. An interface extending an instance copies its operations, which
+ * are instances too, and emitted.
+ */
+function isEmitted(operation: Operation): boolean {
+	const container = operation.interface;
+	if (container === undefined) return !isTemplateInstance(operation);
+	return !isTemplateInstance(container);
+}
+
+/**
+ * The services whose document the operation is in: each `@service`
+ * namespace around it, a nested one and the one outside it both, or none.
+ */
+function servicesOf(program: Program, operation: Operation): Namespace[] {
+	const services: Namespace[] = [];
+	for (
+		let at = operation.interface?.namespace ?? operation.namespace;
+		at !== undefined;
+		at = at.namespace
+	) {
+		if (isService(program, at)) services.push(at);
+	}
+	return services;
+}
+
+/**
  * Sets the ids, after every decorator, so the order of `@operationId` and
- * `@operationIds` in the source does not matter. Two operations with one id,
- * one of them named by `@operationIds`, are an error: one name in two
- * interfaces, an interface that `extends` another and so copies its
- * operations, or an `@operationId` written elsewhere. `@typespec/openapi3`
- * would emit both without a word.
+ * `@operationIds` in the source does not matter. Two operations with one id
+ * in one service's document, one of them named by `@operationIds`, are an
+ * error: one name in two interfaces, an interface that `extends` another and
+ * so copies its operations, or an `@operationId` written elsewhere.
+ * `@typespec/openapi3` would emit both without a word. An operation
+ * template's instance, such as `Read<Pet>`, is never emitted; only the
+ * operations declared from it (`op readPet is Read<Pet>`) are.
  */
 export function validateOperationIds(program: Program): void {
-	const seen = new Map<string, boolean>();
+	const seen = new Map<Namespace | undefined, Map<string, boolean>>();
 	navigateProgram(program, {
 		operation(operation) {
+			if (!isEmitted(operation)) return;
 			const named = isNamed(program, operation);
 			const own = getOperationId(program, operation);
 			// Elsewhere, only checked: the id `@typespec/openapi3` gives under its
@@ -86,14 +118,21 @@ export function validateOperationIds(program: Program): void {
 			const id =
 				own ??
 				(named ? operation.name : resolveOperationId(program, operation));
-			if (seen.has(id) && (named || seen.get(id))) {
+			const services = servicesOf(program, operation);
+			let duplicate = false;
+			for (const service of services.length > 0 ? services : [undefined]) {
+				const ids = seen.get(service) ?? new Map<string, boolean>();
+				seen.set(service, ids);
+				if (ids.has(id) && (named || ids.get(id))) duplicate = true;
+				ids.set(id, named || (ids.get(id) ?? false));
+			}
+			if (duplicate) {
 				$lib.reportDiagnostic(program, {
 					code: 'duplicate-operation-id',
 					format: { id },
 					target: operation,
 				});
 			}
-			seen.set(id, named || (seen.get(id) ?? false));
 			// Only the ids it gives: an explicit id on any other operation would
 			// override the emitter's `operation-id-strategy`.
 			if (named && own === undefined) setOperationId(program, operation, id);

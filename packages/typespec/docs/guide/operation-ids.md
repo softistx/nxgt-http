@@ -115,8 +115,8 @@ interface Posts {
 ## On a template
 
 An interface template is never emitted, only the interfaces that extend one
-of its instances. When the template is marked, or in a marked namespace,
-those are named as written:
+of its instances. When the template is marked, or the interface that extends
+it is in a marked namespace, those are named as written:
 
 ```tsp
 @operationIds
@@ -131,9 +131,20 @@ interface Pets extends Listable<Pet> {} // listAll
 A second interface extending `Listable` would name its operation `listAll`
 too, which is an error: see below.
 
+An operation template is never emitted either, only the operations declared
+from it, each named as written:
+
+```tsp
+op Read<Item>(): Item;
+
+@route("/pets/first") @get op readFirstPet is Read<Pet>; // readFirstPet
+@route("/toys/first") @get op readFirstToy is Read<Toy>; // readFirstToy
+```
+
 ## Two operations named alike
 
-An id must be unique. `@operationIds` refuses two operations of one id, one
+An id must be unique in its service's document. Two `@service` namespaces
+are two documents, and may each have a `health`. `@operationIds` refuses two operations of one id, one
 of them named by it, with `duplicate-operation-id`, where `@typespec/openapi3`
 would emit both without a word:
 

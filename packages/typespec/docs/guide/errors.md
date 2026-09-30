@@ -54,7 +54,7 @@ namespace Blog;
 
 @route("/posts")
 interface Posts {
-  @get read(@path postId: string): Post | NotFound;
+  @get getPost(@path postId: string): Post | NotFound;
 }
 ```
 
@@ -170,7 +170,7 @@ its own way, through `onValidationError`, turns that off with the generator's
 Name them in an operation's return type, beside the success:
 
 ```tsp
-@get read(@path postId: string): Post | NotFound | Unauthorized | Forbidden;
+@get getPost(@path postId: string): Post | NotFound | Unauthorized | Forbidden;
 ```
 
 ## Another status, named

@@ -1,6 +1,8 @@
 // @operationIds on the service namespace: every operation in it, however
-// deep, is named as written; an interface extending a template instance too.
-// An operation's own @operationId wins. A namespace beside it is not marked.
+// deep, is named as written; an interface extending a template instance, and
+// an operation declared from an operation template, too, never the template's
+// instances. An operation's own @operationId wins. A namespace beside it is
+// not marked, and another service may reuse a name.
 import "@typespec/http";
 import "@typespec/openapi";
 import "@nxgt/typespec";
@@ -39,6 +41,24 @@ namespace Shop {
 
   @route("/toys")
   interface Toys extends Listable<Toy> {}
+
+  op Read<T>(): T;
+
+  @route("/toys/first")
+  @get
+  op readFirstToy is Read<Toy>;
+
+  @route("/toys/last")
+  @get
+  op readLastToy is Read<Toy>;
+}
+
+@service
+@operationIds
+namespace Backoffice {
+  @route("/backoffice/health")
+  @get
+  op health(): void;
 }
 
 namespace Elsewhere {

@@ -89,8 +89,8 @@ namespace Blog;
 
 @route("/posts")
 interface Posts {
-  @get read(@path postId: string): Post | NotFound | Unauthorized;
-  @post create(@body post: Create<Post>): {
+  @get getPost(@path postId: string): Post | NotFound | Unauthorized;
+  @post createPost(@body post: Create<Post>): {
     @statusCode _: 201;
     @body post: Post;
   } | BadRequest | Conflict | ErrorResponse<503>;
@@ -191,7 +191,7 @@ beside the success:
 @route("/posts/{postId}/comments/{commentId}")
 interface Comments {
   @useAuth(JanusAuth)
-  @delete delete(@path postId: string, @path commentId: string):
+  @delete deletePostComment(@path postId: string, @path commentId: string):
     NoContentResponse | AuthenticationRequired | AccessDenied | ErrorWithoutBody<404>;
 }
 ```
@@ -254,7 +254,7 @@ Spread the headers of an idempotent write and of a rate limit into an
 operation and its replies:
 
 ```tsp
-@post create(...IdempotencyKeyHeader, @body post: Create<Post>): {
+@post createPost(...IdempotencyKeyHeader, @body post: Create<Post>): {
   @statusCode _: 201;
   ...IdempotentReplayedHeader;
   ...RateLimitHeaders;
@@ -317,10 +317,10 @@ interface Posts {
 }
 ```
 
-On an interface, it names that interface's operations only. An operation's
-own `@operationId` wins; the others keep the emitter's names. Two operations
-of one name, in two interfaces or copied by `extends`, are an error,
-`duplicate-operation-id`. More in
+On an interface, it names that interface's operations, and those of the
+interfaces extending it. An operation's own `@operationId` wins; the others
+keep the emitter's names. Two operations of one name in one service, in two
+interfaces or copied by `extends`, are an error, `duplicate-operation-id`. More in
 [Operation ids](docs/guide/operation-ids.md).
 
 ## API

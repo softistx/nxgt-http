@@ -16,10 +16,10 @@ namespace Blog;
 
 @route("/posts/{postId}/comments")
 interface Comments {
-  @get list(@path postId: string): Comment[];
+  @get findPostComments(@path postId: string): Comment[];
 
   @useAuth(JanusAuth)
-  @delete delete(@path postId: string, @path commentId: string):
+  @delete deletePostComment(@path postId: string, @path commentId: string):
     NoContentResponse | AuthenticationRequired | AccessDenied | ErrorWithoutBody<404>;
 }
 ```
@@ -91,7 +91,7 @@ operation can declare the guard's 401 and the handler's 403:
 
 ```tsp
 @useAuth(JanusAuth)
-@post create(@body post: Create<Post>): {
+@post createPost(@body post: Create<Post>): {
   @statusCode _: 201;
   @body post: Post;
 } | BadRequest | AuthenticationRequired | Forbidden;

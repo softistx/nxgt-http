@@ -57,10 +57,25 @@ it('names every operation of a marked namespace as written, however deep', async
 		'fetchPet',
 		'findPetToys',
 		'health',
+		'health',
 		'listAll',
 		'listOrders',
+		'readFirstToy',
+		'readLastToy',
 		undefined,
 	]);
+}, 30_000);
+
+it('names the operations of a marked template in each interface extending it', async () => {
+	const program = await checked('template-marked');
+	const ids: (string | undefined)[] = [];
+	navigateProgram(program, {
+		operation(operation) {
+			ids.push(getOperationId(program, operation));
+		},
+	});
+	expect(program.diagnostics).toEqual([]);
+	expect(ids).toEqual(['listAll']);
 }, 30_000);
 
 it('sets no id outside the interfaces it marks', async () => {

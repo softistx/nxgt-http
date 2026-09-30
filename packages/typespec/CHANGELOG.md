@@ -1,5 +1,11 @@
 # @nxgt/typespec
 
+## 0.5.1
+
+### Patch Changes
+
+- [#79](https://github.com/softistx/nxgt-http/pull/79) [`929e181`](https://github.com/softistx/nxgt-http/commit/929e181589a10c019771b60b538cbbf0b284dd29) Thanks [@SteveGT96](https://github.com/SteveGT96)! - The roadmap lists verbs in operation ids under Shipped, in 0.5.0.
+
 ## 0.5.0
 
 ### Minor Changes

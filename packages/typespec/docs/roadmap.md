@@ -19,9 +19,9 @@ Nothing in progress.
 ### 0.4.0
 
 - **Operation ids as written.** `@operationIds` names each operation
-  exactly as the spec writes it, `findPostComments`, on an interface or on
-  the whole service namespace, instead of `<operation><Interface>`. Ids are
-  unique per service document.
+  exactly as the spec writes it, `findPostComments`, on an interface, or on a
+  namespace to cover every operation in it, instead of
+  `<operation><Interface>`. Ids are unique per service document.
 - **No `Resource` template.** A resource's operations are written by hand,
   each with the name it has in the client; `SortParameters` stays, for the
   sort of a list.

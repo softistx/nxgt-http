@@ -70,6 +70,7 @@ with the interface's resource:
 | `read` | the plural | `readUsers` | `readCategories` |
 | `find` | the plural | `findUsers` | `findCategories` |
 | `search` | the plural | `searchUsers` | `searchCategories` |
+| `query` | the plural | `queryUsers` | `queryCategories` |
 | `count` | the plural | `countUsers` | `countCategories` |
 | `createMany` | the plural | `createManyUsers` | `createManyCategories` |
 | `updateMany` | the plural | `updateManyUsers` | `updateManyCategories` |
@@ -104,6 +105,72 @@ Outside an interface, the id is always the name as written, even a verb:
 ```tsp
 @route("/health") @get op list(): void; // list
 ```
+
+## Verbs and methods
+
+A verb names what an operation does, and so does its HTTP method: a `GET`
+tells a cache, a proxy or a retry that the request is safe. An operation
+`@operationIds` names after one of the library's verbs, alone or before
+`By…`, is sent with one of that verb's methods, or the compiler warns:
+
+| Verb | Sent with |
+| --- | --- |
+| `list`, `read`, `find`, `count`, `get` | `GET` or `HEAD` |
+| `search`, `query` | `GET` or `POST`, for criteria too large for a query string |
+| `create`, `createMany` | `POST` |
+| `update`, `updateMany` | `PUT` or `PATCH` |
+| `patch` | `PATCH` |
+| `replace`, `upsert` | `PUT` |
+| `delete` | `DELETE` |
+| `deleteMany` | `DELETE` or `POST`, for ids in a body |
+
+The method is the one `@typespec/http` gives the operation, the implicit one
+included: an operation without `@get` or `@post` is a `GET`, or a `POST`
+when it has a body.
+
+```tsp
+@route("/users")
+interface Users {
+  @get list(...PageParameters): Page<User>;                               // GET: fine
+  @post @route("/search") search(@body criteria: string): User[];         // POST: fine
+  @post @route("/{id}") update(@path id: uuid, @body user: User): User;   // warning
+  @route("/find") findById(@body id: uuid): User;                         // warning: a body makes it a POST
+}
+```
+
+```text
+warning @nxgt/typespec/verb-method-mismatch: update is sent with POST, where its verb update is sent with PUT or PATCH. Give it that method, or a name that is not a verb.
+warning @nxgt/typespec/verb-method-mismatch: findById is sent with POST, where its verb find is sent with GET or HEAD. Give it that method, or a name that is not a verb.
+```
+
+Give the operation its verb's method, or a name that is not a verb, which
+is then its id as written:
+
+```tsp
+@patch @route("/{id}") update(@path id: uuid, @body user: User): User;  // updateUser
+@post @route("/lookup") lookUpUser(@body id: uuid): User;                // lookUpUser
+```
+
+When the route cannot change, silence that one operation with `#suppress`
+and a reason; the id is unchanged:
+
+```tsp
+#suppress "@nxgt/typespec/verb-method-mismatch" "an older client posts its lookups"
+@post @route("/lookup") getByEmail(@body email: email): User; // getUserByEmail
+```
+
+Not checked:
+
+- a verb the `verbs` option adds, `archive` in
+  `#{ verbs: #{ archive: "singular" } }`: it has no method of its own;
+- a name that is not a verb, `listActive` or `findPostComments`;
+- an operation outside an interface, whose name is its id, even `list`;
+- an operation `@operationIds` does not name.
+
+`QUERY`, the HTTP method for a safe request with a body, is not one of
+`search` and `query`'s methods yet: `@typespec/http` 1.16 declares only
+`GET`, `PUT`, `POST`, `PATCH`, `DELETE` and `HEAD`
+([roadmap](../roadmap.md#later)).
 
 ## The resource
 
@@ -280,6 +347,24 @@ A name that already carried its resource, `listUsers`, is unchanged. An
 interface that declared both `list` and `listUsers` now names two operations
 `listUsers`, which is an error: rename one, or give `list` its
 `@operationId`.
+
+### Upgrading from 0.5
+
+`query` is a verb since 0.6.0. An operation named `query` in a marked
+interface was `query`, and is now `queryUsers` in `Users`; `queryByTeam` is
+now `queryUserByTeam`. Keep the old id with an `@operationId`:
+
+```tsp
+@route("/users")
+interface Users {
+  @get @operationId("query") query(): User[]; // query, as before
+}
+```
+
+An operation named after a verb and sent with another method now warns,
+`verb-method-mismatch`: see [Verbs and methods](#verbs-and-methods). It is a
+warning, so the spec still compiles, unless `tsp compile` runs with
+`--warn-as-error`.
 
 ## On a template
 

@@ -325,7 +325,7 @@ interface Comments {
 
 | Verbs | Take | In `Users` |
 | --- | --- | --- |
-| `list`, `read`, `find`, `search`, `count`, `createMany`, `updateMany`, `deleteMany` | the plural: the interface's name | `listUsers`, `deleteManyUsers` |
+| `list`, `read`, `find`, `search`, `query`, `count`, `createMany`, `updateMany`, `deleteMany` | the plural: the interface's name | `listUsers`, `deleteManyUsers` |
 | `get`, `create`, `update`, `patch`, `replace`, `upsert`, `delete` | the singular, by a short English rule | `createUser` |
 | a verb, then `By…` | the singular before `By`; the plural after a `*Many` verb | `findUserById`, `deleteManyUsersByTeam` |
 
@@ -338,7 +338,28 @@ operation outside an interface keeps its name, even `list`. On an interface,
 `@operationIds` names that interface's operations, and those of the
 interfaces extending it. An operation's own `@operationId` wins; the others
 keep the emitter's names. Two operations of one id in one service are an
-error, `duplicate-operation-id`. More in
+error, `duplicate-operation-id`.
+
+A verb also names the method: an operation named after one of the library's
+verbs, alone or before `By…`, and sent with another method is a warning,
+`verb-method-mismatch`. A read is a `GET`, so a cache or a retry may treat
+it as safe:
+
+```tsp
+@route("/users")
+interface Users {
+  @post @route("/search") search(@body criteria: string): User[]; // fine: GET or POST
+  @post @route("/find") findById(@body id: uuid): User;             // warning: find is GET or HEAD
+}
+```
+
+```text
+warning @nxgt/typespec/verb-method-mismatch: findById is sent with POST, where its verb find is sent with GET or HEAD. Give it that method, or a name that is not a verb.
+```
+
+Give it the method, a name that is not a verb, or a
+`#suppress "@nxgt/typespec/verb-method-mismatch" "<reason>"` line above it.
+The verbs `verbs` adds are not checked. More, with each verb's methods, in
 [Operation ids](docs/guide/operation-ids.md).
 
 ## API
@@ -361,6 +382,7 @@ overrides verbs, on a namespace or an interface.
 | `resource-name-on-namespace` | error: `@operationIds` on a namespace is given `singular` or `plural`, which name an interface's resource |
 | `duplicate-status-reply` | error: an operation declares a reply without a body and one with a body of one status, which the emitter merges, losing the one without a body |
 | `merged-status-reply` | warning: an operation declares two replies with a body of one status code, which the emitter merges under the first one's description |
+| `verb-method-mismatch` | warning: an operation `@operationIds` names after one of the library's verbs, in an interface, is sent with a method that verb does not name: `create` with a `GET` |
 
 ### Models
 
@@ -461,6 +483,9 @@ envelope and the rate limit's headers.
   ```tsp
   @get @operationId("list") list(): User[];
   ```
+
+  Since 0.6.0, `query` is a verb too: `query` in `Users` was `query` and is
+  now `queryUsers`. `@operationId("query")` keeps it.
 - **Both versions at once write two folders.** With
   `openapi-versions: ['3.1.0', '3.2.0']`, the emitter writes
   `3.1.0/openapi.yaml` and `3.2.0/openapi.yaml`: point the generator's input
@@ -487,8 +512,8 @@ envelope and the rate limit's headers.
 - [Sorting](docs/guide/sorting.md): `orderBy` and `direction` beside a
   list's filters, and the `@nxgt/drizzle` call they map to;
 - [Operation ids](docs/guide/operation-ids.md): `@operationIds`, each
-  operation named as written or a verb with its resource, the options, and
-  the ids it refuses;
+  operation named as written or a verb with its resource, the method each
+  verb is sent with, the options, and the ids it refuses;
 - [troubleshooting](docs/troubleshooting.md);
 - [the roadmap](docs/roadmap.md): what is coming.
 

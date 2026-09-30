@@ -155,6 +155,33 @@ interface Staff {
 }
 ```
 
+## `Argument of type '{ verbs: … }' is not assignable to parameter of type 'Nxgt.OperationIdsOptions'`
+
+**When:** `tsp compile` runs on a spec whose `@operationIds` gives a verb
+something other than `"singular"` or `"plural"`:
+
+```tsp
+@service
+@operationIds(#{ verbs: #{ archive: "bogus" } })
+namespace Shop;
+```
+
+```text
+error invalid-argument: Argument of type '{ verbs: { archive: "bogus" } }' is not assignable to parameter of type 'Nxgt.OperationIdsOptions'
+```
+
+**Why:** a verb only says which name of the resource follows it: the
+singular, `archiveUser`, or the plural, `archiveUsers`.
+
+**Fix:** give each verb `"singular"` or `"plural"`
+([Operation ids](guide/operation-ids.md)):
+
+```tsp
+@service
+@operationIds(#{ verbs: #{ archive: "singular" } })
+namespace Shop;
+```
+
 ## `declares a reply without a body and one with a body of status …`
 
 **When:** an operation declares, for one status, a reply without a body and

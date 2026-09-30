@@ -264,8 +264,9 @@ interface Posts {
 ### Upgrading from 0.4
 
 Before 0.5.0, every name was the id as written. An operation of a marked
-interface named exactly a verb, such as `list` or `create`, now gets a new
-id, and the generated client's method changes with it. Give it an
+interface named exactly a verb, such as `list` or `create`, or a verb
+followed by `By…`, such as `findById` (now `findUserById`), gets a new id,
+and the generated client's method changes with it. Give it an
 `@operationId` to keep the old one:
 
 ```tsp
@@ -275,7 +276,10 @@ interface Users {
 }
 ```
 
-A name that already carried its resource, `listUsers`, is unchanged.
+A name that already carried its resource, `listUsers`, is unchanged. An
+interface that declared both `list` and `listUsers` now names two operations
+`listUsers`, which is an error: rename one, or give `list` its
+`@operationId`.
 
 ## On a template
 
@@ -297,9 +301,9 @@ interface Toys extends Listable<Toy> {} // listToys
 ```
 
 A name that is not a verb, `listAll`, would be `listAll` in both, which is
-an error: see below. So is a `singular` or `plural` on the template, or on
-any interface others extend: the interfaces extending it share it, and
-`create` in each is `createMember`.
+an error: see below. A `singular` or `plural` names only the interface that
+carries it: on a template, or on an interface others extend, it has no
+effect on the interfaces extending it, which each take their own name.
 
 An operation template is never emitted either, only the operations declared
 from it. In a marked namespace, each is named as written:
@@ -333,8 +337,6 @@ It happens when:
 - an interface `extends` another and copies a name that is not a verb:
   `Drafts extends Posts` gives a second `getPost`, where `get` would give
   `getDraft`;
-- interfaces extend one that has a `singular` or a `plural`, and so share
-  its resource;
 - an `@operationId` written on another operation is an id `@operationIds`
   gives;
 - an unmarked operation declared in the service namespace, which the

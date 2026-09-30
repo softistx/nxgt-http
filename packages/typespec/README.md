@@ -331,7 +331,9 @@ interface Comments {
 
 The singular rule knows `Categories`, `Addresses`, `Statuses` and `People`;
 name the others with `@operationIds(#{ singular: "Member" })` on the
-interface, and add verbs with `#{ verbs: #{ archive: "singular" } }`. An
+interface, and add verbs with `#{ verbs: #{ archive: "singular" } }`. Verbs
+carry down: an interface has those of its namespaces, outermost first, then
+those of the interfaces it extends, then its own, and the last one wins. An
 operation outside an interface keeps its name, even `list`. On an interface,
 `@operationIds` names that interface's operations, and those of the
 interfaces extending it. An operation's own `@operationId` wins; the others
@@ -449,9 +451,11 @@ envelope and the rate limit's headers.
   Two plain bodies, `Post | Draft`, bodies of different content types, and
   two `@error` models without a `@statusCode` pass
   ([troubleshooting](docs/troubleshooting.md)).
-- **An operation named exactly a verb changes id on upgrade.** Before
-  0.5.0, `list` in a marked `Users` was `list`; it is now `listUsers`, and
-  the generated client's method follows. Keep the old one with its own
+- **An operation named exactly a verb, or a verb followed by `By…`,
+  changes id on upgrade.** Before 0.5.0, `list` in a marked `Users` was
+  `list` and `findById` was `findById`; they are now `listUsers` and
+  `findUserById`, and the generated client's methods follow. A `list`
+  beside a `listUsers` now collides with it. Keep the old id with its own
   `@operationId` (from `@typespec/openapi`):
 
   ```tsp

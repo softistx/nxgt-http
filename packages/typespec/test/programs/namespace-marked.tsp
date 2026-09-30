@@ -2,7 +2,8 @@
 // deep, is named as written; an interface extending a template instance, and
 // an operation declared from an operation template, too, never the template's
 // instances. An operation's own @operationId wins. A namespace beside it is
-// not marked, and another service may reuse a name.
+// not marked, and another service may reuse a name. A marked namespace
+// outside every service is in no document: its names never collide.
 import "@typespec/http";
 import "@typespec/openapi";
 import "@nxgt/typespec";
@@ -15,6 +16,10 @@ using Nxgt;
 @operationIds
 namespace Shop {
   model Toy {
+    name: string;
+  }
+
+  model Pet {
     name: string;
   }
 
@@ -48,9 +53,9 @@ namespace Shop {
   @get
   op readFirstToy is Read<Toy>;
 
-  @route("/toys/last")
+  @route("/pets/first")
   @get
-  op readLastToy is Read<Toy>;
+  op readFirstPet is Read<Pet>;
 }
 
 @service
@@ -65,4 +70,18 @@ namespace Elsewhere {
   interface Legacy {
     @get all(): string[];
   }
+}
+
+@operationIds
+namespace Scratch {
+  @route("/scratch/one")
+  @get
+  op health(): void;
+}
+
+@operationIds
+namespace Draft {
+  @route("/draft/one")
+  @get
+  op health(): void;
 }

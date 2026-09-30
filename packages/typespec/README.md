@@ -335,7 +335,7 @@ interfaces or copied by `extends`, are an error, `duplicate-operation-id`. More 
 
 | Code | Reported when |
 | --- | --- |
-| `duplicate-operation-id` | error: an operation `@operationIds` names has another operation's id |
+| `duplicate-operation-id` | error: an operation `@operationIds` names has the id of another operation in its service's document |
 | `duplicate-status-reply` | error: an operation declares a reply without a body and one with a body of one status, which the emitter merges, losing the one without a body |
 | `merged-status-reply` | warning: an operation declares two replies with a body of one status code, which the emitter merges under the first one's description |
 

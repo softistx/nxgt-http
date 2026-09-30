@@ -58,10 +58,12 @@ it('names every operation of a marked namespace as written, however deep', async
 		'findPetToys',
 		'health',
 		'health',
+		'health',
+		'health',
 		'listAll',
 		'listOrders',
+		'readFirstPet',
 		'readFirstToy',
-		'readLastToy',
 		undefined,
 	]);
 }, 30_000);
@@ -95,6 +97,7 @@ it.each([
 	['inherited-operation-id', 'readPost'],
 	['unmarked-operation-id', 'listPets'],
 	['namespace-operation', 'listPets'],
+	['nested-services', 'health'],
 ])(
 	'refuses %s: two operations named %s',
 	async (name, id) => {

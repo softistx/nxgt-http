@@ -8,6 +8,7 @@ import {
 	type Interface,
 	isService,
 	isTemplateInstance,
+	listServices,
 	type Namespace,
 	navigateProgram,
 	type Operation,
@@ -82,7 +83,9 @@ function isEmitted(operation: Operation): boolean {
 
 /**
  * The services whose document the operation is in: each `@service`
- * namespace around it, a nested one and the one outside it both, or none.
+ * namespace around it, a nested one and the one outside it both. None, in a
+ * program without a service, is the one document the emitter writes; in a
+ * program with one, no document at all.
  */
 function servicesOf(program: Program, operation: Operation): Namespace[] {
 	const services: Namespace[] = [];
@@ -108,6 +111,7 @@ function servicesOf(program: Program, operation: Operation): Namespace[] {
  */
 export function validateOperationIds(program: Program): void {
 	const seen = new Map<Namespace | undefined, Map<string, boolean>>();
+	const hasServices = listServices(program).length > 0;
 	navigateProgram(program, {
 		operation(operation) {
 			if (!isEmitted(operation)) return;
@@ -119,11 +123,13 @@ export function validateOperationIds(program: Program): void {
 				own ??
 				(named ? operation.name : resolveOperationId(program, operation));
 			const services = servicesOf(program, operation);
+			// Outside every service of a program that has one: in no document.
+			const emitted = services.length > 0 || !hasServices;
 			let duplicate = false;
 			for (const service of services.length > 0 ? services : [undefined]) {
 				const ids = seen.get(service) ?? new Map<string, boolean>();
 				seen.set(service, ids);
-				if (ids.has(id) && (named || ids.get(id))) duplicate = true;
+				if (emitted && ids.has(id) && (named || ids.get(id))) duplicate = true;
 				ids.set(id, named || (ids.get(id) ?? false));
 			}
 			if (duplicate) {

@@ -13,7 +13,7 @@ one name with `name_collision`.
 optional, and the generator adds its own 400 beside it.
 
 ```tsp
-@patch update(@path postId: string, @body post: MergePatchUpdate<Post>): Post | BadRequest;
+@patch updatePost(@path postId: string, @body post: MergePatchUpdate<Post>): Post | BadRequest;
 ```
 
 ## `Couldn't resolve import "@nxgt/typespec"`
@@ -46,7 +46,7 @@ namespace, so they share the spec's schema names.
 **Fix:** reuse the library's model, or rename yours:
 
 ```tsp
-@get read(@path postId: string): Post | NotFound;
+@get getPost(@path postId: string): Post | NotFound;
 ```
 
 ## `Two operations are named listPets: an OpenAPI operation id must be unique`
@@ -110,11 +110,11 @@ interface Drafts extends Posts {
 one with a body, such as the guard's 401 and the handler's:
 
 ```tsp
-@get list(): Post[] | AuthenticationRequired | Unauthorized;
+@get listPosts(): Post[] | AuthenticationRequired | Unauthorized;
 ```
 
 ```text
-error @nxgt/typespec/duplicate-status-reply: list declares a reply without a body and one with a body of status 401: the emitter merges them into one, and the reply without a body is lost. Declare the one the route sends.
+error @nxgt/typespec/duplicate-status-reply: listPosts declares a reply without a body and one with a body of status 401: the emitter merges them into one, and the reply without a body is lost. Declare the one the route sends.
 ```
 
 **Why:** OpenAPI has one reply per status. `@typespec/openapi3` merges the two
@@ -126,7 +126,7 @@ guard's reply has no body.
 answers with the envelope, `Unauthorized`:
 
 ```tsp
-@get list(): Post[] | AuthenticationRequired;
+@get listPosts(): Post[] | AuthenticationRequired;
 ```
 
 ## `declares two replies with a body of status …`
@@ -136,11 +136,11 @@ status code, such as the idempotent write's 409 beside the optimistic
 lock's, or its 422, `IdempotencyKeyReused`, beside `UnprocessableEntity`:
 
 ```tsp
-@post create(@body post: Post): Post | IdempotencyInProgress | Conflict;
+@post createPost(@body post: Post): Post | IdempotencyInProgress | Conflict;
 ```
 
 ```text
-warning @nxgt/typespec/merged-status-reply: create declares two replies with a body of status 409: the emitter merges their bodies under the first one's description. Declare the one the route sends.
+warning @nxgt/typespec/merged-status-reply: createPost declares two replies with a body of status 409: the emitter merges their bodies under the first one's description. Declare the one the route sends.
 ```
 
 **Why:** `@typespec/openapi3` keeps both bodies, as one reply whose body is
@@ -151,7 +151,7 @@ header either reply declares required becomes optional.
 `message` key tells them apart:
 
 ```tsp
-@post create(@body post: Post): Post | IdempotencyInProgress;
+@post createPost(@body post: Post): Post | IdempotencyInProgress;
 ```
 
 Two plain bodies, `Post | Draft`, are one reply whose body is either; two

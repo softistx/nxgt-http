@@ -143,7 +143,7 @@ A handler may send a 400 of its own, without `issues`. `BadRequestBody`
 describes both, with `issues` optional:
 
 ```tsp
-@patch update(@path postId: string, @body post: MergePatchUpdate<Post>): Post | BadRequest;
+@patch updatePost(@path postId: string, @body post: MergePatchUpdate<Post>): Post | BadRequest;
 ```
 
 The generator declares the validators' 400 itself, as `ValidationErrorBody`,

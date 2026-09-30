@@ -132,7 +132,7 @@ A second interface extending `Listable` would name its operation `listAll`
 too, which is an error: see below.
 
 An operation template is never emitted either, only the operations declared
-from it, each named as written:
+from it. In a marked namespace, each is named as written:
 
 ```tsp
 op Read<Item>(): Item;
@@ -144,9 +144,9 @@ op Read<Item>(): Item;
 ## Two operations named alike
 
 An id must be unique in its service's document. Two `@service` namespaces
-are two documents, and may each have a `health`. `@operationIds` refuses two operations of one id, one
-of them named by it, with `duplicate-operation-id`, where `@typespec/openapi3`
-would emit both without a word:
+are two documents, and may each have a `health`. `@operationIds` refuses two
+operations of one id, one of them named by it, with `duplicate-operation-id`,
+where `@typespec/openapi3` would emit both without a word:
 
 ```text
 error @nxgt/typespec/duplicate-operation-id: Two operations are named listPets: an OpenAPI operation id must be unique.

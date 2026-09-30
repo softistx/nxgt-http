@@ -1,10 +1,13 @@
 // Each verb sent with a method it names passes; a verb sent with another is
-// warned of. A verb `verbs` adds, a name that is not a verb, and an
-// operation outside an interface are not checked. `#suppress` silences one.
+// warned of. A verb `verbs` adds, a name that is not a verb, an operation
+// with its own `@operationId`, one outside an interface, and one of an
+// unmarked interface are not checked. `#suppress` silences one.
 import "@typespec/http";
+import "@typespec/openapi";
 import "@nxgt/typespec";
 
 using Http;
+using OpenAPI;
 using Nxgt;
 
 @service
@@ -25,6 +28,7 @@ namespace Shop {
     @post @route("/{id}/replace") replace(@path id: string): string;
     @put @route("/{id}") patch(@path id: string): string;
     @post @route("/active") listActive(): string[];
+    @operationId("legacyLookup") @post @route("/lookup") find(@body id: string): string;
     #suppress "@nxgt/typespec/verb-method-mismatch" "a legacy route"
     @post @route("/legacy") get(): string;
   }
@@ -32,4 +36,12 @@ namespace Shop {
   @route("/health")
   @post
   op list(): void;
+}
+
+@service
+namespace Other {
+  @route("/others")
+  interface Others {
+    @post list(): string[];
+  }
 }

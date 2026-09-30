@@ -167,6 +167,7 @@ Not checked:
   keeps its methods and is checked;
 - a name that is not a verb, `listActive` or `findPostComments`;
 - an operation outside an interface, whose name is its id, even `list`;
+- an operation with its own `@operationId`, whose id is not a verb;
 - an operation `@operationIds` does not name.
 
 `QUERY`, the HTTP method for a safe request with a body, is not one of

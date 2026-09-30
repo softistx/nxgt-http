@@ -162,7 +162,9 @@ and a reason; the id is unchanged:
 Not checked:
 
 - a verb the `verbs` option adds, `archive` in
-  `#{ verbs: #{ archive: "singular" } }`: it has no method of its own;
+  `#{ verbs: #{ archive: "singular" } }`: it has no method of its own. A
+  library verb the option only changes, `#{ verbs: #{ query: "singular" } }`,
+  keeps its methods and is checked;
 - a name that is not a verb, `listActive` or `findPostComments`;
 - an operation outside an interface, whose name is its id, even `list`;
 - an operation `@operationIds` does not name.

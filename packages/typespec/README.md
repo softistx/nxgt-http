@@ -485,7 +485,10 @@ envelope and the rate limit's headers.
   ```
 
   Since 0.6.0, `query` is a verb too: `query` in `Users` was `query` and is
-  now `queryUsers`. `@operationId("query")` keeps it.
+  now `queryUsers`, and `queryByTeam` is `queryUserByTeam`.
+  `@operationId("query")` keeps the old one. A verb sent with a method it
+  does not name is now a warning, which fails a build run with
+  `--warn-as-error`.
 - **Both versions at once write two folders.** With
   `openapi-versions: ['3.1.0', '3.2.0']`, the emitter writes
   `3.1.0/openapi.yaml` and `3.2.0/openapi.yaml`: point the generator's input

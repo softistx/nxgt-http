@@ -54,7 +54,7 @@ namespace Blog;
 
 @route("/posts")
 interface Posts {
-  @get read(@path postId: string): Post | NotFound;
+  @get getPost(@path postId: string): Post | NotFound;
 }
 ```
 
@@ -143,7 +143,7 @@ A handler may send a 400 of its own, without `issues`. `BadRequestBody`
 describes both, with `issues` optional:
 
 ```tsp
-@patch update(@path postId: string, @body post: MergePatchUpdate<Post>): Post | BadRequest;
+@patch updatePost(@path postId: string, @body post: MergePatchUpdate<Post>): Post | BadRequest;
 ```
 
 The generator declares the validators' 400 itself, as `ValidationErrorBody`,
@@ -170,7 +170,7 @@ its own way, through `onValidationError`, turns that off with the generator's
 Name them in an operation's return type, beside the success:
 
 ```tsp
-@get read(@path postId: string): Post | NotFound | Unauthorized | Forbidden;
+@get getPost(@path postId: string): Post | NotFound | Unauthorized | Forbidden;
 ```
 
 ## Another status, named

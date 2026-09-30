@@ -80,7 +80,7 @@ that version, and throws `OptimisticLockError` otherwise. Declare the
 `Conflict` it becomes:
 
 ```tsp
-@patch update(@path postId: uuid, @body post: MergePatchUpdate<Post>):
+@patch updatePost(@path postId: uuid, @body post: MergePatchUpdate<Post>):
   Post | BadRequest | NotFound | Conflict;
 ```
 

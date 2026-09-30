@@ -1,22 +1,19 @@
-// Drafts extends Posts, whose read has its own @operationId: extends copies
-// it, and both would be getPost.
+// Drafts extends Posts: extends copies each operation, and its name, so both
+// would be readPost.
 import "@typespec/http";
-import "@typespec/openapi";
 import "@nxgt/typespec";
 
 using Http;
-using OpenAPI;
 using Nxgt;
 
 @service
+@operationIds
 namespace Blog;
 
 @route("/posts")
-@operationIds
 interface Posts {
-  @get @operationId("getPost") read(@path postId: string): string;
+  @get readPost(@path postId: string): string;
 }
 
 @route("/drafts")
-@operationIds
 interface Drafts extends Posts {}

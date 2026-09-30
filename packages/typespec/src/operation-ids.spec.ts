@@ -1,9 +1,8 @@
 /**
- * `@operationIds`: on the blog fixture's three interfaces, every operation is
- * named `<operation><Interface>`, except `Posts.read`, whose own
- * `@operationId("getPost")` wins, and the generated client's methods follow.
- * The programs in `test/programs/` are compiled without emitting: a template,
- * a spec that does not use it, and the ids it must refuse.
+ * `@operationIds`: the blog fixture marks its namespace, so every operation's
+ * id is its name, as written, and the generated client's methods follow.
+ * The programs in `test/programs/` are compiled without emitting: a marked
+ * namespace, a spec that does not use it, and the ids it must refuse.
  */
 import { expect, it } from 'bun:test';
 import { fileURLToPath } from 'node:url';
@@ -27,37 +26,58 @@ function checked(name: string): Promise<Program> {
 it.each([
 	['3.1.0', operations31],
 	['3.2.0', operations32],
-])(
-	'names the operations from OpenAPI %s after their method and interface',
-	(_, operations) => {
-		expect(Object.keys(operations).sort()).toEqual([
-			'createAuthor',
-			'createComments',
-			'createPosts',
-			'deleteAuthor',
-			'deleteComments',
-			'deletePosts',
-			'getPost',
-			'listAuthors',
-			'listComments',
-			'listPosts',
-			'readAuthor',
-			'updateAuthor',
-			'updatePosts',
-		]);
-	},
-);
+])('names the operations from OpenAPI %s as written', (_, operations) => {
+	expect(Object.keys(operations).sort()).toEqual([
+		'createAuthor',
+		'createPost',
+		'createPostComment',
+		'deleteAuthor',
+		'deletePost',
+		'deletePostComment',
+		'findPostComments',
+		'getAuthor',
+		'getPost',
+		'listAuthors',
+		'listPosts',
+		'updateAuthor',
+		'updatePost',
+	]);
+});
 
-it('names the operations of a template after each interface extending it', async () => {
-	const program = await checked('resource-template');
-	const ids: string[] = [];
+it('names every operation of a marked namespace as written, however deep', async () => {
+	const program = await checked('namespace-marked');
+	const ids: (string | undefined)[] = [];
 	navigateProgram(program, {
 		operation(operation) {
-			ids.push(`${getOperationId(program, operation)}`);
+			ids.push(getOperationId(program, operation));
 		},
 	});
 	expect(program.diagnostics).toEqual([]);
-	expect(ids.sort()).toEqual(['listOrders', 'listPets']);
+	expect(ids.sort()).toEqual([
+		'fetchPet',
+		'findPetToys',
+		'health',
+		'health',
+		'health',
+		'health',
+		'listAll',
+		'listOrders',
+		'readFirstPet',
+		'readFirstToy',
+		undefined,
+	]);
+}, 30_000);
+
+it('names the operations of a marked template in each interface extending it', async () => {
+	const program = await checked('template-marked');
+	const ids: (string | undefined)[] = [];
+	navigateProgram(program, {
+		operation(operation) {
+			ids.push(getOperationId(program, operation));
+		},
+	});
+	expect(program.diagnostics).toEqual([]);
+	expect(ids).toEqual(['listAll']);
 }, 30_000);
 
 it('sets no id outside the interfaces it marks', async () => {
@@ -74,9 +94,10 @@ it('sets no id outside the interfaces it marks', async () => {
 
 it.each([
 	['duplicate-operation-ids', 'listPets'],
-	['inherited-operation-id', 'getPost'],
+	['inherited-operation-id', 'readPost'],
 	['unmarked-operation-id', 'listPets'],
 	['namespace-operation', 'listPets'],
+	['nested-services', 'health'],
 ])(
 	'refuses %s: two operations named %s',
 	async (name, id) => {
@@ -92,46 +113,3 @@ it.each([
 	},
 	30_000,
 );
-
-it('refuses two resources of one item, named alike', async () => {
-	const program = await checked('shared-item');
-	expect(program.diagnostics.map(({ message }) => message)).toEqual(
-		['readAuthor', 'createAuthor', 'updateAuthor', 'deleteAuthor'].map(
-			(id) =>
-				`Two operations are named ${id}: an OpenAPI operation id must be unique.`,
-		),
-	);
-}, 30_000);
-
-it('names an item operation after the interface, declared again or with an unnamed item', async () => {
-	const program = await checked('item-names');
-	expect(program.diagnostics).toEqual([]);
-	const ids: string[] = [];
-	navigateProgram(program, {
-		operation(operation) {
-			if (operation.interface?.name === 'Resource') return;
-			ids.push(`${getOperationId(program, operation)}`);
-		},
-	});
-	expect(ids.sort()).toEqual(
-		[
-			[
-				'listAuthors',
-				'readAuthors',
-				'createAuthor',
-				'renameAuthor',
-				'deleteAuthor',
-			],
-			[
-				'listDrafts',
-				'readDrafts',
-				'createDrafts',
-				'updateDrafts',
-				'deleteDrafts',
-			],
-			['listNotes', 'readNotes', 'createNotes', 'updateNotes', 'deleteNotes'],
-		]
-			.flat()
-			.sort(),
-	);
-}, 30_000);

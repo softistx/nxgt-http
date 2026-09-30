@@ -1,14 +1,10 @@
 /**
- * `Resource` and `SortParameters`, from `lib/resources.tsp`, on the blog
- * fixture's authors, served by `@nxgt/openapi-hono` with its checks on: the
- * five operations, the filters the spec writes, and a sort by one of the
- * fields it names. `test/programs/integer-resource.tsp` is compiled without
- * emitting.
+ * `SortParameters`, from `lib/sorting.tsp`, on the blog fixture's authors,
+ * served by `@nxgt/openapi-hono` with its checks on: the filters the spec
+ * writes, a sort by one of the fields it names, and the author's other
+ * operations.
  */
 import { describe, expect, it } from 'bun:test';
-import { fileURLToPath } from 'node:url';
-import { compile, NodeHost, navigateProgram } from '@typespec/compiler';
-import { getOperationId } from '@typespec/openapi';
 import { Hono } from 'hono';
 import { VERSIONS } from '../test/generate';
 import { createRoutes as routes31 } from '../test/generated/blog/3.1.0/hono';
@@ -79,7 +75,7 @@ const call = (
 	});
 
 for (const version of VERSIONS) {
-	describe(`resources, from OpenAPI ${version}`, () => {
+	describe(`sorting, from OpenAPI ${version}`, () => {
 		const createRoutes = served[version];
 
 		it('lists with the filters the spec writes, and a sort by a field it names', async () => {
@@ -127,27 +123,3 @@ for (const version of VERSIONS) {
 		});
 	});
 }
-
-it('takes another id type, as id("identity"), and names the item after its @friendlyName', async () => {
-	const main = fileURLToPath(
-		new URL('../test/programs/integer-resource.tsp', import.meta.url),
-	);
-	const program = await compile(NodeHost, main, { noEmit: true });
-	expect(program.diagnostics).toEqual([]);
-	const ids: string[] = [];
-	navigateProgram(program, {
-		operation(operation) {
-			const path = operation.parameters.properties.get('id')?.type;
-			ids.push(
-				`${getOperationId(program, operation)}:${path?.kind === 'Scalar' ? path.name : '-'}`,
-			);
-		},
-	});
-	expect(ids.sort()).toEqual([
-		'createLabel:-',
-		'deleteLabel:integer',
-		'listTags:-',
-		'readLabel:integer',
-		'updateLabel:integer',
-	]);
-}, 30_000);

@@ -10,7 +10,7 @@ paths:
   /authors:
     get:
       operationId: listAuthors
-      description: One page of the resources, filtered and sorted.
+      description: One page of the authors, filtered and sorted.
       parameters:
         - $ref: '#/components/parameters/AuthorFilters'
         - $ref: '#/components/parameters/Nxgt.PageParameters.page'
@@ -47,7 +47,7 @@ paths:
         - Authors
     post:
       operationId: createAuthor
-      description: Creates a resource.
+      description: Creates an author.
       parameters: []
       responses:
         '201':
@@ -78,8 +78,8 @@ paths:
               $ref: '#/components/schemas/CreateAuthor'
   /authors/{id}:
     get:
-      operationId: readAuthor
-      description: One resource.
+      operationId: getAuthor
+      description: One author.
       parameters:
         - name: id
           in: path
@@ -103,7 +103,7 @@ paths:
         - Authors
     patch:
       operationId: updateAuthor
-      description: Updates a resource with a merge patch.
+      description: Updates an author with a merge patch.
       parameters:
         - name: id
           in: path
@@ -145,7 +145,7 @@ paths:
               $ref: '#/components/schemas/AuthorMergePatchUpdate'
     delete:
       operationId: deleteAuthor
-      description: Deletes a resource.
+      description: Deletes an author.
       parameters:
         - name: id
           in: path
@@ -191,7 +191,7 @@ paths:
       tags:
         - Posts
     post:
-      operationId: createPosts
+      operationId: createPost
       parameters:
         - $ref: '#/components/parameters/Nxgt.IdempotencyKeyHeader'
       responses:
@@ -357,7 +357,7 @@ paths:
       tags:
         - Posts
     patch:
-      operationId: updatePosts
+      operationId: updatePost
       parameters:
         - name: postId
           in: path
@@ -398,7 +398,7 @@ paths:
             schema:
               $ref: '#/components/schemas/PostMergePatchUpdate'
     delete:
-      operationId: deletePosts
+      operationId: deletePost
       parameters:
         - name: postId
           in: path
@@ -424,7 +424,7 @@ paths:
         - Posts
   /posts/{postId}/comments:
     get:
-      operationId: listComments
+      operationId: findPostComments
       parameters:
         - name: postId
           in: path
@@ -455,7 +455,7 @@ paths:
       tags:
         - Comments
     post:
-      operationId: createComments
+      operationId: createPostComment
       parameters:
         - name: postId
           in: path
@@ -518,7 +518,7 @@ paths:
               $ref: '#/components/schemas/CreateComment'
   /posts/{postId}/comments/{commentId}:
     delete:
-      operationId: deleteComments
+      operationId: deletePostComment
       parameters:
         - name: postId
           in: path

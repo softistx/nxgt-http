@@ -13,7 +13,7 @@ one name with `name_collision`.
 optional, and the generator adds its own 400 beside it.
 
 ```tsp
-@patch update(@path postId: string, @body post: MergePatchUpdate<Post>): Post | BadRequest;
+@patch updatePost(@path postId: string, @body post: MergePatchUpdate<Post>): Post | BadRequest;
 ```
 
 ## `Couldn't resolve import "@nxgt/typespec"`
@@ -46,37 +46,52 @@ namespace, so they share the spec's schema names.
 **Fix:** reuse the library's model, or rename yours:
 
 ```tsp
-@get read(@path postId: string): Post | NotFound;
+@get getPost(@path postId: string): Post | NotFound;
 ```
 
 ## `Two operations are named listPets: an OpenAPI operation id must be unique`
 
-**When:** an operation of an `@operationIds` interface has the id of another
-operation:
+**When:** `tsp compile` runs on a spec where an operation that
+`@operationIds` names has the id of another operation of the same service
+(two `@service` namespaces are two documents, and may reuse a name):
 
-- two interfaces of one name, in two namespaces, share an operation name:
-  `Store.Pets` and `Shelter.Pets` both give `listPets`;
-- an interface `extends` another, whose operation has an `@operationId`:
-  `extends` copies it as is;
-- an `@operationId` written elsewhere takes the id `@operationIds` gives;
-- an operation declared in the service namespace is named after itself:
-  `op listPets()` takes the id of `Pets.list`;
-- two interfaces extend `Resource` with one item: `Authors` and
-  `ArchivedAuthors` both give `readAuthor`, as `Resource` names `read`,
-  `create`, `update` and `delete` after the item.
+- one name is in two interfaces: `Store.Pets` and `Shelter.Pets` both
+  declare `listPets`;
+- an interface `extends` another, and so copies its operations and their
+  names: `Drafts extends Posts` gives a second `getPost`, and two interfaces
+  extending one template share every operation;
+- an `@operationId` written on another operation is a name `@operationIds`
+  gives;
+- an unmarked operation declared in the service namespace, which the
+  emitter names after itself, has a marked operation's name: `op listPets()`
+  beside `Pets.listPets`.
 
 ```text
 error @nxgt/typespec/duplicate-operation-id: Two operations are named listPets: an OpenAPI operation id must be unique.
 ```
 
-**Why:** `@operationIds` names each operation `<operation><Interface>`
-(`<operation><Item>` for `Resource`'s `read`, `create`, `update` and
-`delete`), without the namespace. `@typespec/openapi3` would emit both ids without a word, and
-the generator would then refuse the spec.
+**Why:** `@operationIds` makes each operation's id its name, as written,
+without its interface or its namespace. `@typespec/openapi3` would emit both
+ids without a word, and the generator would then refuse the spec.
 
-**Fix:** give one of them its own `@operationId`, for a `Resource` in the
-interface that extends it ([Resources](guide/resources.md#two-resources-of-one-item)). An inherited operation takes
-one by being declared again in the interface that extends:
+**Fix:** give each operation a name of its own. Declare distinct operations
+rather than extending:
+
+```tsp
+@route("/posts")
+interface Posts {
+  @get getPost(@path postId: uuid): Post | NotFound;
+}
+
+@route("/drafts")
+interface Drafts {
+  @get getDraft(@path draftId: uuid): Post | NotFound;
+}
+```
+
+Or give one of them its own `@operationId`; an inherited operation takes one
+by being declared again in the interface that extends
+([Operation ids](guide/operation-ids.md#two-operations-named-alike)):
 
 ```tsp
 import "@typespec/openapi";
@@ -85,7 +100,7 @@ using OpenAPI;
 
 @route("/drafts")
 interface Drafts extends Posts {
-  @get @operationId("getDraft") read(@path postId: string): Post | NotFound;
+  @get @operationId("getDraft") getPost(@path postId: uuid): Post | NotFound;
 }
 ```
 
@@ -95,11 +110,11 @@ interface Drafts extends Posts {
 one with a body, such as the guard's 401 and the handler's:
 
 ```tsp
-@get list(): Post[] | AuthenticationRequired | Unauthorized;
+@get listPosts(): Post[] | AuthenticationRequired | Unauthorized;
 ```
 
 ```text
-error @nxgt/typespec/duplicate-status-reply: list declares a reply without a body and one with a body of status 401: the emitter merges them into one, and the reply without a body is lost. Declare the one the route sends.
+error @nxgt/typespec/duplicate-status-reply: listPosts declares a reply without a body and one with a body of status 401: the emitter merges them into one, and the reply without a body is lost. Declare the one the route sends.
 ```
 
 **Why:** OpenAPI has one reply per status. `@typespec/openapi3` merges the two
@@ -111,7 +126,7 @@ guard's reply has no body.
 answers with the envelope, `Unauthorized`:
 
 ```tsp
-@get list(): Post[] | AuthenticationRequired;
+@get listPosts(): Post[] | AuthenticationRequired;
 ```
 
 ## `declares two replies with a body of status …`
@@ -121,11 +136,11 @@ status code, such as the idempotent write's 409 beside the optimistic
 lock's, or its 422, `IdempotencyKeyReused`, beside `UnprocessableEntity`:
 
 ```tsp
-@post create(@body post: Post): Post | IdempotencyInProgress | Conflict;
+@post createPost(@body post: Post): Post | IdempotencyInProgress | Conflict;
 ```
 
 ```text
-warning @nxgt/typespec/merged-status-reply: create declares two replies with a body of status 409: the emitter merges their bodies under the first one's description. Declare the one the route sends.
+warning @nxgt/typespec/merged-status-reply: createPost declares two replies with a body of status 409: the emitter merges their bodies under the first one's description. Declare the one the route sends.
 ```
 
 **Why:** `@typespec/openapi3` keeps both bodies, as one reply whose body is
@@ -136,7 +151,7 @@ header either reply declares required becomes optional.
 `message` key tells them apart:
 
 ```tsp
-@post create(@body post: Post): Post | IdempotencyInProgress;
+@post createPost(@body post: Post): Post | IdempotencyInProgress;
 ```
 
 Two plain bodies, `Post | Draft`, are one reply whose body is either; two

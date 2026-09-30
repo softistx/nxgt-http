@@ -1,7 +1,8 @@
 /**
  * `@operationIds`: the id of each operation is its name, as written:
  * `@get findPostComments()` is `findPostComments`, where `@typespec/openapi3`
- * would write `Posts_findPostComments`.
+ * would write `Posts_findPostComments`. In an interface, a known verb takes
+ * the interface's resource: `create` in `Users` is `createUser` (`verbs.ts`).
  */
 import {
 	type DecoratorContext,
@@ -20,17 +21,31 @@ import {
 	setOperationId,
 } from '@typespec/openapi';
 import { $lib } from './lib';
+import { idOf, type OperationIdsOptions } from './resource';
 
 /**
  * Marks the interface or the namespace; its ids are set once the program is
  * checked. On a template, TypeSpec runs it on each instance, which
- * `isMarkedInterface` follows to the interfaces extending it.
+ * `isMarkedInterface` follows to the interfaces extending it. A namespace
+ * has no resource to name: `singular` and `plural` are an interface's.
  */
 export function operationIds(
 	context: DecoratorContext,
 	target: Interface | Namespace,
+	options: OperationIdsOptions = {},
 ): void {
-	context.program.stateSet($lib.stateKeys.operationIds).add(target);
+	const { program } = context;
+	program.stateSet($lib.stateKeys.operationIds).add(target);
+	program.stateMap($lib.stateKeys.operationIdsOptions).set(target, options);
+	if (
+		target.kind === 'Namespace' &&
+		(options.singular !== undefined || options.plural !== undefined)
+	) {
+		$lib.reportDiagnostic(program, {
+			code: 'resource-name-on-namespace',
+			target: context.decoratorTarget,
+		});
+	}
 }
 
 /** Marked itself, or in a marked namespace, however deep. */
@@ -121,7 +136,9 @@ export function validateOperationIds(program: Program): void {
 			// default strategy.
 			const id =
 				own ??
-				(named ? operation.name : resolveOperationId(program, operation));
+				(named
+					? idOf(program, operation)
+					: resolveOperationId(program, operation));
 			const services = servicesOf(program, operation);
 			// Outside every service of a program that has one: in no document.
 			const emitted = services.length > 0 || !hasServices;

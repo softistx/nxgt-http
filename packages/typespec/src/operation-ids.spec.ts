@@ -113,3 +113,88 @@ it.each([
 	},
 	30_000,
 );
+
+it("completes a known verb with the interface's resource, and leaves any other name as written", async () => {
+	const program = await checked('verbs');
+	expect(program.diagnostics).toEqual([]);
+	const ids: string[] = [];
+	navigateProgram(program, {
+		operation(operation) {
+			ids.push(
+				`${operation.interface?.name ?? '-'}.${operation.name}=${getOperationId(program, operation)}`,
+			);
+		},
+	});
+	expect(ids).toEqual([
+		'-.list=list',
+		'Users.list=listUsers',
+		'Users.read=readUsers',
+		'Users.find=findUsers',
+		'Users.search=searchUsers',
+		'Users.count=countUsers',
+		'Users.createMany=createManyUsers',
+		'Users.updateMany=updateManyUsers',
+		'Users.deleteMany=deleteManyUsers',
+		'Users.get=getUser',
+		'Users.create=createUser',
+		'Users.update=updateUser',
+		'Users.patch=patchUser',
+		'Users.replace=replaceUser',
+		'Users.upsert=upsertUser',
+		'Users.delete=deleteUser',
+		'Users.findById=findUserById',
+		'Users.getByEmail=getUserByEmail',
+		'Users.archive=archiveUser',
+		'Users.export=exportUsers',
+		'Users.findActiveUsers=findActiveUsers',
+		'Categories.create=createCategory',
+		'Addresses.create=createAddress',
+		'Statuses.create=createStatus',
+		'People.create=createPerson',
+		'Staff.create=createMember',
+		'Staff.export=exportMember',
+	]);
+}, 30_000);
+
+it('refuses a resource name on a namespace', async () => {
+	const program = await checked('namespace-resource');
+	expect(program.diagnostics.map(({ code }) => code)).toEqual([
+		'@nxgt/typespec/resource-name-on-namespace',
+	]);
+}, 30_000);
+
+it('inherits verbs, inner over outer, but names only its own resource', async () => {
+	const program = await checked('verbs-lineage');
+	expect(
+		program.diagnostics.map(({ code, message }) => ({ code, message })),
+	).toEqual([
+		{
+			code: '@nxgt/typespec/duplicate-operation-id',
+			message:
+				'Two operations are named listUsers: an OpenAPI operation id must be unique.',
+		},
+	]);
+	const ids: string[] = [];
+	navigateProgram(program, {
+		operation(operation) {
+			const id = getOperationId(program, operation);
+			if (id !== undefined)
+				ids.push(`${operation.interface?.name}.${operation.name}=${id}`);
+		},
+	});
+	expect(ids.sort()).toEqual([
+		'Pets.archive=archivePet',
+		'Pets.findById=findPetById',
+		'Staff.archive=archiveStaff',
+		'Users.archive=archiveUser',
+		'Users.list=listUsers',
+		'Users.listUsers=listUsers',
+	]);
+}, 30_000);
+
+it('refuses a verb of another grammar', async () => {
+	const program = await checked('verbs-invalid');
+	expect(program.diagnostics.map(({ code }) => code)).toEqual([
+		'invalid-argument',
+	]);
+}, 30_000);

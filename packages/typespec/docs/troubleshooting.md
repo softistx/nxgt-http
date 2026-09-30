@@ -217,7 +217,14 @@ Or a name that is not a verb, which is its id as written:
 @post @route("/find") lookUpUser(@body id: uuid): User; // lookUpUser
 ```
 
-Or, when the route cannot change, silence that one operation with a reason:
+Or, when the route cannot change, its own `@operationId`, which keeps the
+id it had and is not checked:
+
+```tsp
+@post @route("/find") @operationId("findById") findById(@body id: uuid): User;
+```
+
+Or silence that one operation with a reason:
 
 ```tsp
 #suppress "@nxgt/typespec/verb-method-mismatch" "an older client posts its lookups"

@@ -359,7 +359,8 @@ warning @nxgt/typespec/verb-method-mismatch: findById is sent with POST, where i
 
 Give it the method, a name that is not a verb, or a
 `#suppress "@nxgt/typespec/verb-method-mismatch" "<reason>"` line above it.
-The verbs `verbs` adds are not checked. More, with each verb's methods, in
+The verbs `verbs` adds are not checked, nor an operation with its own
+`@operationId`. More, with each verb's methods, in
 [Operation ids](docs/guide/operation-ids.md).
 
 ## API

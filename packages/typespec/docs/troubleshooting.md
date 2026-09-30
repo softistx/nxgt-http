@@ -51,32 +51,46 @@ namespace, so they share the spec's schema names.
 
 ## `Two operations are named listPets: an OpenAPI operation id must be unique`
 
-**When:** an operation of an `@operationIds` interface has the id of another
-operation:
+**When:** `tsp compile` runs on a spec where an operation that
+`@operationIds` names has the id of another operation:
 
-- two interfaces of one name, in two namespaces, share an operation name:
-  `Store.Pets` and `Shelter.Pets` both give `listPets`;
-- an interface `extends` another, whose operation has an `@operationId`:
-  `extends` copies it as is;
-- an `@operationId` written elsewhere takes the id `@operationIds` gives;
-- an operation declared in the service namespace is named after itself:
-  `op listPets()` takes the id of `Pets.list`;
-- two interfaces extend `Resource` with one item: `Authors` and
-  `ArchivedAuthors` both give `readAuthor`, as `Resource` names `read`,
-  `create`, `update` and `delete` after the item.
+- one name is in two interfaces: `Store.Pets` and `Shelter.Pets` both
+  declare `listPets`;
+- an interface `extends` another, and so copies its operations and their
+  names: `Drafts extends Posts` gives a second `getPost`, and two interfaces
+  extending one template share every operation;
+- an `@operationId` written on another operation is a name `@operationIds`
+  gives;
+- an unmarked operation declared in the service namespace, which the
+  emitter names after itself, has a marked operation's name: `op listPets()`
+  beside `Pets.listPets`.
 
 ```text
 error @nxgt/typespec/duplicate-operation-id: Two operations are named listPets: an OpenAPI operation id must be unique.
 ```
 
-**Why:** `@operationIds` names each operation `<operation><Interface>`
-(`<operation><Item>` for `Resource`'s `read`, `create`, `update` and
-`delete`), without the namespace. `@typespec/openapi3` would emit both ids without a word, and
-the generator would then refuse the spec.
+**Why:** `@operationIds` makes each operation's id its name, as written,
+without its interface or its namespace. `@typespec/openapi3` would emit both
+ids without a word, and the generator would then refuse the spec.
 
-**Fix:** give one of them its own `@operationId`, for a `Resource` in the
-interface that extends it ([Resources](guide/resources.md#two-resources-of-one-item)). An inherited operation takes
-one by being declared again in the interface that extends:
+**Fix:** give each operation a name of its own. Declare distinct operations
+rather than extending:
+
+```tsp
+@route("/posts")
+interface Posts {
+  @get getPost(@path postId: uuid): Post | NotFound;
+}
+
+@route("/drafts")
+interface Drafts {
+  @get getDraft(@path draftId: uuid): Post | NotFound;
+}
+```
+
+Or give one of them its own `@operationId`; an inherited operation takes one
+by being declared again in the interface that extends
+([Operation ids](guide/operation-ids.md#two-operations-named-alike)):
 
 ```tsp
 import "@typespec/openapi";
@@ -85,7 +99,7 @@ using OpenAPI;
 
 @route("/drafts")
 interface Drafts extends Posts {
-  @get @operationId("getDraft") read(@path postId: string): Post | NotFound;
+  @get @operationId("getDraft") getPost(@path postId: uuid): Post | NotFound;
 }
 ```
 

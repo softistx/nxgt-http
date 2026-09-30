@@ -22,7 +22,7 @@ namespace Blog;
 
 @route("/posts")
 interface Posts {
-  @get list(@query status?: PostStatus, ...PageParameters): Page<Post>;
+  @get listPosts(@query status?: PostStatus, ...PageParameters): Page<Post>;
 }
 ```
 
@@ -46,7 +46,7 @@ the last one has no items and the same `total`.
 ```tsp
 @route("/posts/{postId}/comments")
 interface Comments {
-  @get list(
+  @get findPostComments(
     @path postId: string,
     ...CursorPageParameters,
   ): CursorPage<Comment> | BadRequest | NotFound;
@@ -134,5 +134,5 @@ page follows:
 ```tsp
 union Pet { cat: Cat, dog: Dog }
 
-@get list(...PageParameters): Page<Pet>; // PetPage
+@get listPets(...PageParameters): Page<Pet>; // PetPage
 ```

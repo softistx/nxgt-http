@@ -139,12 +139,12 @@ page:
 ```tsp
 @route("/posts")
 interface Posts {
-  @get list(@query status?: PostStatus, ...PageParameters): Page<Post>;
+  @get listPosts(@query status?: PostStatus, ...PageParameters): Page<Post>;
 }
 
 @route("/posts/{postId}/comments")
 interface Comments {
-  @get list(@path postId: string, ...CursorPageParameters): CursorPage<Comment> | BadRequest | NotFound;
+  @get findPostComments(@path postId: string, ...CursorPageParameters): CursorPage<Comment> | BadRequest | NotFound;
 }
 ```
 
@@ -275,60 +275,51 @@ operation and its replies:
 generator checks the request's `Idempotency-Key`; a reply's headers are
 documented, not checked. More in [Headers](docs/guide/headers.md).
 
-### Resources
+### Sorting
 
-One line gives a resource its five operations, with `@operationIds` names:
+Spread the sort into a list, beside its filters and its page:
 
 ```tsp
-model PostFilters {
-  @query status?: PostStatus;
-  @query authorId?: uuid;
+model AuthorFilters {
+  @query name?: string;
 }
 
-@route("/posts")
-interface Posts extends Resource<Post, PostFilters, SortField = "createdAt" | "title"> {}
+@route("/authors")
+interface Authors {
+  @get listAuthors(
+    ...AuthorFilters,
+    ...PageParameters,
+    ...SortParameters<"name" | "createdAt">,
+  ): Page<Author>;
+}
 ```
 
-| Operation | Route | Answers |
-| --- | --- | --- |
-| `listPosts` | `GET /posts`, with the filters, `page`, `pageSize`, `orderBy`, `direction` | `Page<Post>` |
-| `readPost` | `GET /posts/{id}` | `Post \| NotFound` |
-| `createPost` | `POST /posts`, `Create<Post>` | 201 `Post \| BadRequest \| Conflict` |
-| `updatePost` | `PATCH /posts/{id}`, `MergePatchUpdate<Post>` | `Post \| BadRequest \| NotFound \| Conflict` |
-| `deletePost` | `DELETE /posts/{id}` | 204, `NotFound` |
-
-`list` is named after the interface, the four others after the item. Two resources of one item then share their ids,
-which is an error, `duplicate-operation-id`: give the second its own
-`@operationId`s ([troubleshooting](docs/troubleshooting.md)).
-
-`orderBy` takes one of the `SortField`s (`SortField` is `"id"` by default), and `direction`
-`asc` (the default) or `desc`, as `@nxgt/drizzle` sorts a page. `{id}`
-is a `uuid`, or the `Id` you name. More in
-[Resources](docs/guide/resources.md).
+`orderBy` takes one of the fields named, and `direction` `asc` (the default)
+or `desc`, as `@nxgt/drizzle` sorts a page: `?orderBy=email` is a 400. More,
+with the handler, in [Sorting](docs/guide/sorting.md).
 
 ### Operation ids
 
-TypeSpec names an operation after its interface, `Posts_list`, and the
+TypeSpec names an operation after its interface, `Posts_listPosts`, and the
 generator turns that id into the client's method and its types' prefix. Put
-`@operationIds` on the interface to name each operation after its method and
-the interface instead:
+`@operationIds` on the service namespace, and each operation's id is its
+name, as written:
 
 ```tsp
-import "@typespec/openapi"; // for @operationId
-
-using OpenAPI;
+@service(#{ title: "Blog" })
+@operationIds
+namespace Blog;
 
 @route("/posts")
-@operationIds
 interface Posts {
-  @get list(): Post[];                                     // listPosts
-  @get @operationId("getPost") read(@path postId: string): Post | NotFound; // getPost
+  @get listPosts(...PageParameters): Page<Post>;     // listPosts
+  @get getPost(@path postId: uuid): Post | NotFound; // getPost
 }
 ```
 
-An operation's own `@operationId` wins. An interface that extends a marked
-one, or an instance of a marked template, is named after itself. An operation
-of a marked interface that has another operation's id is an error,
+On an interface, it names that interface's operations only. An operation's
+own `@operationId` wins; the others keep the emitter's names. Two operations
+of one name, in two interfaces or copied by `extends`, are an error,
 `duplicate-operation-id`. More in
 [Operation ids](docs/guide/operation-ids.md).
 
@@ -338,13 +329,13 @@ of a marked interface that has another operation's id is an error,
 
 | Decorator | On | What it does |
 | --- | --- | --- |
-| `@operationIds` | an interface | names each operation `<operation><Interface>`, unless it has an `@operationId` |
+| `@operationIds` | a namespace or an interface | makes each operation's id its name, as written, in the namespace however deep or in the interface, unless it has an `@operationId` |
 
 ### Diagnostics
 
 | Code | Reported when |
 | --- | --- |
-| `duplicate-operation-id` | error: an operation of an `@operationIds` interface has another operation's id |
+| `duplicate-operation-id` | error: an operation `@operationIds` names has another operation's id |
 | `duplicate-status-reply` | error: an operation declares a reply without a body and one with a body of one status, which the emitter merges, losing the one without a body |
 | `merged-status-reply` | warning: an operation declares two replies with a body of one status code, which the emitter merges under the first one's description |
 
@@ -390,11 +381,10 @@ of a marked interface that has another operation's id is an error,
 | `RateLimitHeaders` | `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset`, integers, optional |
 | `RetryAfterHeader` | `Retry-After`, seconds, optional |
 
-### Resources
+### Sorting
 
-| Name | What it is |
+| Model | What it is |
 | --- | --- |
-| `Resource<Item, Filters = {}, SortField = "id", Id = uuid>` | an interface template: `list`, `read`, `create`, `update`, `delete` |
 | `SortParameters<Field>` | the query `orderBy?: Field` and `direction?: "asc" \| "desc" = "asc"` |
 
 ### Responses
@@ -461,10 +451,10 @@ envelope and the rate limit's headers.
   columns `@nxgt/drizzle` stamps;
 - [Headers](docs/guide/headers.md): `Idempotency-Key`, the rate limit and
   `Retry-After`;
-- [Resources](docs/guide/resources.md): the five operations of a resource
-  in one line, with its filters and sort;
-- [Operation ids](docs/guide/operation-ids.md): `@operationIds`, and what
-  the generated client calls each operation;
+- [Sorting](docs/guide/sorting.md): `orderBy` and `direction` beside a
+  list's filters, and the `@nxgt/drizzle` call they map to;
+- [Operation ids](docs/guide/operation-ids.md): `@operationIds`, each
+  operation named as written, and the ids it refuses;
 - [troubleshooting](docs/troubleshooting.md);
 - [the roadmap](docs/roadmap.md): what is coming.
 

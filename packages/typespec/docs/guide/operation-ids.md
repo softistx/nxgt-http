@@ -1,120 +1,191 @@
 # Operation ids
 
-An OpenAPI operation id is what `@nxgt/openapi-codegen` names everything
-after: the client's method, the `operations` entry, and the prefix of the
-operation's types (`ListPostsQuery`, `zGetPostParam`).
+`@operationIds` makes each operation's OpenAPI id its name, exactly as
+written, so the generated client's methods are the names in your spec.
 
-## What TypeSpec does alone
+An operation id is what `@nxgt/openapi-codegen` names everything after: the
+client's method, the `operations` entry, and the prefix of the operation's
+types (`ListPostsQuery`, `zGetPostParam`).
 
-Without an `@operationId`, `@typespec/openapi3` names an operation after its
-interface and its method, joined by `_`:
+## On the service namespace
 
-```tsp
-@route("/posts")
-interface Posts {
-  @get list(@query status?: PostStatus): Post[]; // Posts_list
-  @post create(@body post: Create<Post>): Post;  // Posts_create
-}
-```
-
-The client then calls `Posts_list`, and its types are `PostsListQuery`.
-Writing an `@operationId` on each operation fixes that, one line per
-operation.
-
-## `@operationIds`
-
-Put it on the interface, once:
+Mark the namespace once, and every operation in it is named as written:
 
 ```tsp
 import "@typespec/http";
-import "@typespec/openapi";
 import "@nxgt/typespec";
 
 using Http;
-using OpenAPI;
 using Nxgt;
 
+@service(#{ title: "Blog" })
+@operationIds
 namespace Blog;
 
+model Post {
+  @visibility(Lifecycle.Read) id: uuid;
+  title: string;
+}
+
+model Comment {
+  @visibility(Lifecycle.Read) id: uuid;
+  body: string;
+}
+
 @route("/posts")
-@operationIds
 interface Posts {
-  @get list(@query status?: PostStatus): Post[];                  // listPosts
-  @get @operationId("getPost") read(@path postId: string): Post | NotFound; // getPost
-  @post create(@body post: Create<Post>): Post | BadRequest;      // createPosts
-  @patch update(@path postId: string, @body post: MergePatchUpdate<Post>): Post | NotFound; // updatePosts
-  @delete delete(@path postId: string): NoContentResponse | NotFound; // deletePosts
+  @get listPosts(...PageParameters): Page<Post>;                       // listPosts
+  @get getPost(@path postId: uuid): Post | NotFound;                   // getPost
+  @delete deletePost(@path postId: uuid): NoContentResponse | NotFound; // deletePost
+}
+
+@route("/posts/{postId}/comments")
+interface Comments {
+  @get findPostComments(@path postId: uuid, ...CursorPageParameters): CursorPage<Comment>; // findPostComments
 }
 ```
 
-- Each operation is named `<operation><Interface>`: the method's name, then
-  the interface's, as written.
-- An operation with its own `@operationId` keeps it, whether it is written
-  before or after `@operationIds`. `import "@typespec/openapi"` and
-  `using OpenAPI` are only needed for that `@operationId`.
-- An interface that `extends` a marked one is marked too, and names the
-  operations it inherits after itself: `interface Drafts extends Posts {}`
-  gives `listDrafts`. An inherited `@operationId` is copied as is, though,
-  so `Drafts` would name its `read` `getPost` too: see below.
-
-The generated `operations` then has one entry per id:
+Alone, `@typespec/openapi3` would write `Posts_listPosts` and
+`Comments_findPostComments`. The generated `operations` has one entry per
+id:
 
 ```ts
 import { operations } from './generated/operations';
 
 Object.keys(operations);
-// ['listPosts', 'createPosts', 'getPost', 'updatePosts', 'deletePosts']
+// ['listPosts', 'getPost', 'deletePost', 'findPostComments']
 ```
+
+Name each operation as the client should call it: `listPosts`, not `list`.
+An operation named `list` gets the id `list`, and a second `list` in another
+interface is an error ([below](#two-operations-named-alike)).
+
+## Where it goes
+
+```tsp
+extern dec operationIds(target: Interface | Namespace);
+```
+
+| Marked | Named as written |
+| --- | --- |
+| a namespace | every operation in it, however deep: in its interfaces, in the namespaces it contains, and declared in it with `op` |
+| an interface | its operations, and those of each interface that `extends` it |
+| neither | nothing: the emitter's `operation-id-strategy` names the operation |
+
+On one interface, the others keep the emitter's names:
+
+```tsp
+@service
+namespace Blog;
+
+@route("/posts")
+@operationIds
+interface Posts {
+  @get listPosts(): Post[]; // listPosts
+}
+
+@route("/drafts")
+interface Drafts {
+  @get listDrafts(): Post[]; // Drafts_listDrafts
+}
+```
+
+A namespace beside the marked one is not marked: `@operationIds` on `Blog`
+does not reach a `namespace Legacy` declared next to it.
+
+## An operation's own `@operationId`
+
+An operation with its own `@operationId` keeps it, whether it is written
+before or after `@operationIds`:
+
+```tsp
+import "@typespec/openapi";
+
+using OpenAPI;
+
+@route("/posts")
+interface Posts {
+  @get @operationId("fetchPost") getPost(@path postId: uuid): Post | NotFound; // fetchPost
+}
+```
+
+`import "@typespec/openapi"` and `using OpenAPI` are only needed for
+`@operationId` ([troubleshooting](../troubleshooting.md#unknown-decorator-operationid)).
 
 ## On a template
 
-On an interface template, `@operationIds` names the operations of each
-interface that extends an instance, after that interface:
+An interface template is never emitted, only the interfaces that extend one
+of its instances. When the template is marked, or in a marked namespace,
+those are named as written:
 
 ```tsp
 @operationIds
-interface Resource<Item> {
-  @get list(): Item[];
+interface Listable<Item> {
+  @get listAll(): Item[];
 }
 
 @route("/pets")
-interface Pets extends Resource<Pet> {}     // listPets
-
-@route("/orders")
-interface Orders extends Resource<Order> {} // listOrders
+interface Pets extends Listable<Pet> {} // listAll
 ```
 
-The library's own `Resource` goes one step further: `list` is named after
-the interface, and `read`, `create`, `update` and `delete` after the item,
-`readPet` ([Resources](resources.md)).
+A second interface extending `Listable` would name its operation `listAll`
+too, which is an error: see below.
 
 ## Two operations named alike
 
-An id must be unique, and five cases break that:
+An id must be unique. `@operationIds` refuses two operations of one id, one
+of them named by it, with `duplicate-operation-id`, where `@typespec/openapi3`
+would emit both without a word:
 
-- the namespace is not part of the id, so `Store.Pets` and `Shelter.Pets`
-  would both name their `list` `listPets`;
-- an `@operationId` is copied by `extends`, so `Drafts extends Posts` would
-  have a second `getPost`;
-- an `@operationId` written on another operation, in any interface, takes
-  the id `@operationIds` gives;
-- an operation declared in the service namespace is named after itself, so
-  `op listPets()` takes the id of `Pets.list`;
-- two interfaces extend `Resource` with one item, so `Authors` and
-  `ArchivedAuthors` would both name their `read` `readAuthor`
-  ([Resources](resources.md#two-resources-of-one-item)).
+```text
+error @nxgt/typespec/duplicate-operation-id: Two operations are named listPets: an OpenAPI operation id must be unique.
+```
 
-`@operationIds` refuses each with `duplicate-operation-id`, where
-`@typespec/openapi3` would emit both without a word. Give one of them its own
-`@operationId`; an inherited operation takes one by being declared again in
-the interface that extends ([troubleshooting](../troubleshooting.md)).
+It happens when:
+
+- one name is in two interfaces: neither the namespace nor the interface is
+  part of the id, so `Store.Pets` and `Shelter.Pets` both give `listPets`;
+- an interface `extends` another: it copies its operations and their
+  names, so `Drafts extends Posts` gives a second `getPost`, and two
+  interfaces extending one template share every operation;
+- an `@operationId` written on another operation is a name
+  `@operationIds` gives;
+- an unmarked operation declared in the service namespace, which the
+  emitter names after itself, has a marked operation's name: `op listPets()`
+  beside `Pets.listPets`.
+
+Declare distinct operations rather than extending:
+
+```tsp
+@route("/posts")
+interface Posts {
+  @get getPost(@path postId: uuid): Post | NotFound;
+}
+
+@route("/drafts")
+interface Drafts {
+  @get getDraft(@path draftId: uuid): Post | NotFound;
+}
+```
+
+Or keep `extends`, and declare each copied operation again with its own
+`@operationId`:
+
+```tsp
+@route("/drafts")
+interface Drafts extends Posts {
+  @get @operationId("getDraft") getPost(@path postId: uuid): Post | NotFound;
+}
+```
+
+More in [troubleshooting](../troubleshooting.md#two-operations-are-named-listpets-an-openapi-operation-id-must-be-unique).
 
 ## Without the library
 
 The emitter's own option, `operation-id-strategy`, only chooses between
-`parent-container` (`Posts_list`, the default), `fqn` (with the namespace)
-and `explicit-only`. None of them gives `listPosts`.
+`parent-container` (`Posts_listPosts`, the default), `fqn` (with the
+namespace) and `explicit-only`. None of them gives `listPosts`.
 
-`@operationIds` only names the operations of the interfaces it marks: the
-strategy still names every other one. The check for two operations named
-alike reads their ids as the default strategy gives them.
+The operations `@operationIds` does not name keep that strategy. They are
+checked against the ones it names by the id the default strategy gives
+them.

@@ -1,5 +1,11 @@
 # @nxgt/typespec
 
+## 0.3.0
+
+### Minor Changes
+
+- [#71](https://github.com/softistx/nxgt-http/pull/71) [`70ee218`](https://github.com/softistx/nxgt-http/commit/70ee21898b1cae9ecdcd9026183304a113207b13) Thanks [@SteveGT96](https://github.com/SteveGT96)! - Name `Resource`'s item operations after the item: `readPost`, `createPost`, `updatePost` and `deletePost`, with `list` still named after the interface, `listPosts`. The item's name is its `@friendlyName`, if it has one. An item without a name of its own, anonymous or a template instance such as `Draft<Author>`, and an operation the extending interface declares again, keep the interface's name: `readDrafts`. This renames the generated client's methods and their types' prefix, from `readPosts` to `readPost`. Two resources of one item now share those ids, which is a `duplicate-operation-id` error: give the second its own `@operationId`s.
+
 ## 0.2.0
 
 ### Minor Changes

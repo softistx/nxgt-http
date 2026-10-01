@@ -191,3 +191,47 @@ describe('graphql', () => {
 		expectTypeOf<keyof RoutesOf<typeof custom>>().toEqualTypeOf<'/gql'>();
 	});
 });
+
+describe('ide', () => {
+	test('apollo-sandbox: a browser gets the Sandbox, at the URL it asked', async () => {
+		const sandboxed = alxia({ prefix: '/api' })
+			.decorate({ users })
+			.derive(() => ({ viewer: null as string | null }))
+			.use((app) =>
+				graphql(app, {
+					schema,
+					ide: 'apollo-sandbox',
+					sandbox: { title: 'Users </title>', initialDocument: '{ me }' },
+					logging: false,
+				}),
+			);
+		const page = await sandboxed.fetch(
+			new Request('https://api.example.com/api/graphql', {
+				headers: { accept: 'text/html' },
+			}),
+		);
+		const text = await page.text();
+		expect(page.headers.get('content-type')).toContain('text/html');
+		expect(page.headers.get('content-security-policy')).toContain(
+			'sandbox.embed.apollographql.com',
+		);
+		expect(text).toContain(
+			'"initialEndpoint":"https://api.example.com/api/graphql"',
+		);
+		expect(text).toContain('Users &#60;/title&#62;');
+		expect(text).not.toContain('graphiql');
+		const query = await post(sandboxed, '/api/graphql', '{ me }');
+		expect(await query.json()).toEqual({ data: { me: null } });
+	});
+
+	test('false: no IDE at all', async () => {
+		const bare = alxia()
+			.decorate({ users })
+			.derive(() => ({ viewer: null as string | null }))
+			.use((app) => graphql(app, { schema, ide: false, logging: false }));
+		const page = await bare.request('/graphql', {
+			headers: { accept: 'text/html' },
+		});
+		expect(page.headers.get('content-type') ?? '').not.toContain('text/html');
+	});
+});

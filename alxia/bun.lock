@@ -39,6 +39,19 @@
         "typescript": "^6.0.3",
       },
     },
+    "packages/context-storage": {
+      "name": "@alxia/context-storage",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@alxia/core": "workspace:^",
+        "@types/bun": "^1.3.0",
+        "zod": "^4.6.5",
+      },
+      "peerDependencies": {
+        "@alxia/core": "workspace:^",
+        "typescript": "^6.0.3",
+      },
+    },
     "packages/core": {
       "name": "@alxia/core",
       "version": "0.0.0",
@@ -253,6 +266,8 @@
     "@alxia/client": ["@alxia/client@workspace:packages/client"],
 
     "@alxia/compress": ["@alxia/compress@workspace:packages/compress"],
+
+    "@alxia/context-storage": ["@alxia/context-storage@workspace:packages/context-storage"],
 
     "@alxia/core": ["@alxia/core@workspace:packages/core"],
 

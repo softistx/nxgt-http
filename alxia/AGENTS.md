@@ -16,6 +16,7 @@ A type-safe HTTP framework for Bun, published as `@alxia/*`:
 | `@alxia/cors`, `@alxia/secure-headers`, `@alxia/compress` | function plugins: global hooks | core |
 | `@alxia/rate-limit`, `@alxia/jwt`, `@alxia/logger`, `@alxia/static` | app plugins: typed context, typed replies, routes | core |
 | `@alxia/env` | environment variables through any Standard Schema | — |
+| `@alxia/context-storage` | the request's context through `AsyncLocalStorage`, as nxgt-core reads Hono's with `hono/context-storage` | core |
 | `@alxia/telemetry` | a server span per request, on `@nxgt/telemetry` | core, @nxgt/telemetry |
 | `@alxia/redis` | rate-limit store, idempotency, caches and locks, on `@nxgt/redis` and `@nxgt/redis-guard` | core, @nxgt/redis, @nxgt/redis-guard, zod; rate-limit (optional) |
 | `@alxia/janus` | sessions, refusals and permissions, on `@nxgt/janus` | core, @nxgt/janus |
@@ -60,7 +61,7 @@ A check added there is a check to port here.
 
 ```
 core ◄── client, openapi, graphql, cors, secure-headers, compress, rate-limit, jwt, logger, static,
-         telemetry, janus
+         telemetry, janus, context-storage
          redis ◄── rate-limit (optional peer: the store's contract)
 zod             (peer: zod; dev: core, client, openapi for its specs)
 env             (standalone)
@@ -90,6 +91,7 @@ below records what is kept twice.
 | Kept twice | Why |
 | --- | --- |
 | The HTTP attribute names, in `telemetry/src/attributes.ts` and `@nxgt/telemetry-hono`'s | importing them would depend on Hono; a server span from either must read the same in a dashboard. Change both together |
+| The Apollo Sandbox page, in `graphql/src/sandbox.ts` and `@nxgt/shared-graphql`'s `renderSandbox` | that one is Hono's `html` and writes its host and port in; this one reads the URL it was asked at. Change both together |
 | `bodyOf`, the permission guard's option types, the device cookie, in `janus/src/` and `@nxgt/janus-hono` | the same refusals and cookies whichever server answers; importing them would depend on Hono. Change both together |
 
 ## The build

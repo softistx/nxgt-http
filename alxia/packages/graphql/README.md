@@ -61,7 +61,8 @@ the schema's resolvers read a context the app does not build: missing user
 
 ## Yoga's plugins
 
-Every Yoga option passes through, but `graphqlEndpoint`, which `path` sets:
+Every Yoga option passes through, but `graphqlEndpoint`, which `path`
+sets, and `graphiql`, which `ide` decides:
 
 ```ts
 import { useDepthLimit } from '@envelop/depth-limit';
@@ -71,7 +72,7 @@ graphql(app, {
 	schema,
 	plugins: [useDepthLimit({ maxDepth: 8 }), useResponseCache({ session: ({ request }) => ... })],
 	maskedErrors: true,            // Yoga's default: an error's message never leaks
-	graphiql: process.env.NODE_ENV !== 'production',
+	ide: process.env.NODE_ENV === 'production' ? false : 'apollo-sandbox',
 	batching: true,
 });
 ```
@@ -79,9 +80,20 @@ graphql(app, {
 - **Subscriptions** are served over server-sent events, Yoga's default:
   `async *subscribe` in a resolver, `Accept: text/event-stream` on the
   request. `@alxia/compress` never compresses an event stream.
-- **GraphiQL** answers a `GET` from a browser, with a
-  `Content-Security-Policy` that lets it load; `@alxia/secure-headers` keeps
-  it.
+- **An IDE** answers a `GET` from a browser at the endpoint, with a
+  `Content-Security-Policy` that lets it load — `@alxia/secure-headers`
+  keeps it. `ide` chooses which:
+
+  ```ts
+  graphql(app, { schema, ide: 'apollo-sandbox', sandbox: { initialDocument: '{ me }' } });
+  graphql(app, { schema, ide: Bun.env.NODE_ENV === 'production' ? false : 'graphiql' });
+  ```
+
+  | `ide` | |
+  | --- | --- |
+  | `'graphiql'` (default) | Yoga's GraphiQL; `graphiql` takes its options |
+  | `'apollo-sandbox'` | [Apollo Sandbox](https://www.apollographql.com/docs/graphos/platform/sandbox), embedded, pointed at the URL the page was asked at — a prefix, a proxy, HTTPS included. `sandbox` takes `title`, `initialDocument`, `initialHeaders`, `pollForSchemaUpdates`, `includeCookies` |
+  | `false` | none |
 - **CORS** is `@alxia/cors`'s for the whole app: Yoga's own is off unless
   `cors` is given.
 
@@ -89,6 +101,7 @@ graphql(app, {
 
 | export | |
 | --- | --- |
-| `graphql(app, options)` | the endpoint: `schema`, `path`, and every Yoga option |
+| `graphql(app, options)` | the endpoint: `schema`, `path`, `ide`, `sandbox`, and every Yoga option |
+| `renderSandbox(endpoint, options?)`, `SANDBOX_POLICY` | the Sandbox page, and the policy it loads under |
 | `GraphQLContext<App, UserContext?>` | what a resolver reads |
 | `ServerContext<Ctx>`, `GraphQLOptions`, `GraphQLRoutes` | its types |

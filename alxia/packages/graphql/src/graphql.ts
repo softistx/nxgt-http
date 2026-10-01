@@ -16,6 +16,7 @@ import {
 	type YogaServerInstance,
 	type YogaServerOptions,
 } from 'graphql-yoga';
+import { renderSandbox, SANDBOX_POLICY, type SandboxOptions } from './sandbox';
 
 /** The parts of a route's context Yoga owns, or that mean nothing to a resolver. */
 type RouteOnly =
@@ -58,8 +59,20 @@ export interface GraphQLOptions<
 	SchemaCtx = unknown,
 > extends Omit<
 		YogaServerOptions<ServerCtx, UserCtx>,
-		'graphqlEndpoint' | 'cors' | 'schema'
+		'graphqlEndpoint' | 'cors' | 'schema' | 'graphiql'
 	> {
+	/**
+	 * What a browser gets at the endpoint: Yoga's GraphiQL, Apollo Sandbox,
+	 * or nothing. GraphiQL by default; turn both off in production.
+	 */
+	readonly ide?: 'graphiql' | 'apollo-sandbox' | false;
+	/** GraphiQL's options, Yoga's own, when `ide` is `graphiql`. */
+	readonly graphiql?: Exclude<
+		YogaServerOptions<ServerCtx, UserCtx>['graphiql'],
+		boolean
+	>;
+	/** Apollo Sandbox's options, when `ide` is `apollo-sandbox`. */
+	readonly sandbox?: SandboxOptions;
 	/**
 	 * The schema, from Yoga's `createSchema`, Pothos, or any tool that types
 	 * its context. Its context must be one the app builds: a resolver that
@@ -148,7 +161,14 @@ export function graphql<
 	Prefix,
 	Shortcuts
 > {
-	const { path = '/graphql' as Path, cors = false, ...yogaOptions } = options;
+	const {
+		path = '/graphql' as Path,
+		cors = false,
+		ide = 'graphiql',
+		graphiql,
+		sandbox,
+		...yogaOptions
+	} = options;
 	// One Yoga per path it is served at: a plugin mounted under a prefix
 	// serves the same routes at a longer path, and GraphiQL must ask that one.
 	const servers = new Map<string, YogaServerInstance<YogaContext, UserCtx>>();
@@ -159,6 +179,9 @@ export function graphql<
 				...(yogaOptions as YogaServerOptions<YogaContext, UserCtx>),
 				graphqlEndpoint: endpoint,
 				cors,
+				graphiql: (ide === 'graphiql'
+					? (graphiql ?? true)
+					: false) as YogaServerOptions<YogaContext, UserCtx>['graphiql'],
 			});
 			servers.set(endpoint, yoga);
 		}
@@ -176,6 +199,20 @@ export function graphql<
 			redirect: _redirect,
 			...server
 		} = ctx;
+		if (
+			ide === 'apollo-sandbox' &&
+			ctx.request.method === 'GET' &&
+			ctx.request.headers.get('accept')?.includes('text/html') &&
+			!ctx.url.searchParams.has('query')
+		) {
+			const endpoint = new URL(ctx.route, ctx.url.origin).href;
+			return reply(200, renderSandbox(endpoint, sandbox), {
+				headers: {
+					'content-type': 'text/html;charset=utf-8',
+					'content-security-policy': SANDBOX_POLICY,
+				},
+			});
+		}
 		const response = await yogaAt(ctx.route).fetch(ctx.request, server);
 		const headers = new Headers(response.headers);
 		if (

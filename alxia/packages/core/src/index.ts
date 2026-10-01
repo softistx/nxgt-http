@@ -2,6 +2,7 @@ export {
 	Alxia,
 	type AlxiaOptions,
 	type AnyAlxia,
+	type AroundHook,
 	alxia,
 	type ContextOf,
 	type ListenOptions,

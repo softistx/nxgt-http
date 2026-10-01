@@ -163,6 +163,7 @@ Global hooks apply to the whole app, wherever they are declared:
 
 | hook | |
 | --- | --- |
+| `around(ctx, next)` | around everything else, the first declared outermost: `next()` resolves to the response, and what the hook awaits around it — a span, a transaction — holds for the whole request. `ctx.route` and `ctx.error` say what it reached and how it failed |
 | `onRequest(ctx)` | before routing, every request; a `Response` it returns is sent as it is (a CORS preflight) |
 | `onResponse(response, ctx)` | every response, 404s included; one it returns replaces it (headers, compression) |
 | `onStart(server)`, `onStop()` | with `listen` and `stop` |
@@ -205,7 +206,7 @@ global hooks become this app's.
 | export | |
 | --- | --- |
 | `alxia(options?)` | a new app: `prefix`, `validateResponses`, `ip` |
-| `Alxia` | `get` `post` `put` `patch` `delete` `options` `head` `ws`, `decorate` `derive` `onError`, `onRequest` `onResponse` `onStart` `onStop` `parser`, `group` `use`, `fetch` `request` `listen` `stop`, `routes` `sockets` `server` |
+| `Alxia` | `get` `post` `put` `patch` `delete` `options` `head` `ws`, `decorate` `derive` `onError`, `around` `onRequest` `onResponse` `onStart` `onStop` `parser`, `group` `use`, `fetch` `request` `listen` `stop`, `routes` `sockets` `server` |
 | `eventStream(schema)` | the response schema of a stream of events |
 | `Reply`, `HttpError`, `ResponseValidationError` | what a handler returns or throws |
 | `Plugin`, `AnyAlxia` | a function plugin, any app |

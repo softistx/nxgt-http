@@ -130,6 +130,14 @@ export interface RequestContext {
 	readonly server: Bun.Server<unknown> | undefined;
 	/** The client's address, as the app's `ip` option reads it. */
 	readonly ip: string | undefined;
+	/**
+	 * The route the request reached, as declared — `/users/:id` — once
+	 * routing has run; `undefined` before, and for a request that reached
+	 * none. What an `around` hook names a span after.
+	 */
+	readonly route: string | undefined;
+	/** The error a route failed with, once it has: what became its 500, or its `onError` reply. */
+	readonly error: unknown;
 }
 
 /** What a route sets on its response, whatever the status. */

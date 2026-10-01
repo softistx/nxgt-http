@@ -62,6 +62,16 @@ export type ResponseHook = (
 	response: Response,
 	ctx: RequestContext,
 ) => MaybePromise<Response | undefined | void>;
+/**
+ * Runs around every request: `next()` runs the rest — the `onRequest`
+ * hooks, the route, the `onResponse` hooks — and resolves to the response.
+ * What the hook awaits around it runs in its async context: a span, a
+ * transaction, a timer.
+ */
+export type AroundHook = (
+	ctx: RequestContext,
+	next: () => Promise<Response>,
+) => Promise<Response>;
 export type StartHook = (server: Bun.Server<unknown>) => MaybePromise<void>;
 export type StopHook = () => MaybePromise<void>;
 
@@ -90,6 +100,7 @@ type Definition =
 
 /** What is global to an app, wherever it is declared: a group's or a plugin's included. */
 interface Globals {
+	readonly around: AroundHook[];
 	readonly onRequest: RequestHook[];
 	readonly onResponse: ResponseHook[];
 	readonly onStart: StartHook[];
@@ -241,6 +252,7 @@ export class Alxia<
 	#derive: DeriveHook[] = [];
 	#onError: ErrorHook[] = [];
 	#globals: Globals = {
+		around: [],
 		onRequest: [],
 		onResponse: [],
 		onStart: [],
@@ -422,6 +434,26 @@ export class Alxia<
 		return this;
 	}
 
+	/**
+	 * A global hook around every request, the first declared outermost.
+	 * `next()` runs everything else and resolves to the response; the hook
+	 * returns it, or another. A socket's upgrade runs outside it: there is no
+	 * response to wrap.
+	 *
+	 * ```ts
+	 * app.around(async (ctx, next) => {
+	 *   const started = performance.now();
+	 *   const response = await next();
+	 *   console.log(ctx.route, performance.now() - started);
+	 *   return response;
+	 * });
+	 * ```
+	 */
+	around(hook: AroundHook): this {
+		this.#globals.around.push(hook);
+		return this;
+	}
+
 	/** Runs once `listen` has started the server. */
 	onStart(hook: StartHook): this {
 		this.#globals.onStart.push(hook);
@@ -544,6 +576,7 @@ export class Alxia<
 		this.#onError = [...plugin.#onError, ...this.#onError];
 		if (plugin.#globals !== this.#globals) {
 			const globals = plugin.#globals;
+			this.#globals.around.push(...globals.around);
 			this.#globals.onRequest.push(...globals.onRequest);
 			this.#globals.onResponse.push(...globals.onResponse);
 			this.#globals.onStart.push(...globals.onStart);
@@ -667,7 +700,31 @@ export class Alxia<
 			url,
 			server,
 			ip: this.#ip(request, server),
+			route: undefined,
+			error: undefined,
 		};
+		const around = this.#globals.around;
+		const upgrade =
+			request.headers.get('upgrade')?.toLowerCase() === 'websocket';
+		if (around.length === 0 || upgrade) return this.#pipeline(ctx, path);
+		const run = (index: number): Promise<Response> => {
+			const hook = around[index];
+			if (hook === undefined) return this.#pipeline(ctx, path);
+			return hook(ctx, () => run(index + 1));
+		};
+		try {
+			return await run(0);
+		} catch (error) {
+			console.error(error);
+			return toResponse(500, internal, new Headers());
+		}
+	}
+
+	/** The `onRequest` hooks, the route, then the `onResponse` hooks. */
+	async #pipeline(
+		ctx: RequestContext,
+		path: string | undefined,
+	): Promise<Response> {
 		let response: Response | typeof UPGRADED | undefined;
 		try {
 			for (const hook of this.#globals.onRequest) {
@@ -726,6 +783,7 @@ export class Alxia<
 				'value' in socket &&
 				socket.value.kind === 'ws'
 			) {
+				(ctx as { route: string | undefined }).route = socket.value.path;
 				return this.#upgrade(socket.value, ctx, socket.params);
 			}
 		}
@@ -749,6 +807,7 @@ export class Alxia<
 			return routingError(405, 'method_not_allowed', allowed);
 		}
 		const definition = match.value;
+		(ctx as { route: string | undefined }).route = definition.path;
 		if (definition.kind === 'ws') return routingError(426, 'upgrade_required');
 		const response = await this.#handle(definition, ctx, match.params);
 		return head
@@ -858,6 +917,7 @@ export class Alxia<
 			}
 			return await this.#send(route, reply, set, request.request.signal);
 		} catch (error) {
+			(request as { error: unknown }).error = error;
 			return this.#fail(route, error, ctx);
 		}
 	}

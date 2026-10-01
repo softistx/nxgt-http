@@ -351,3 +351,63 @@ describe('plugins typed as functions', () => {
 		expect(typeof identity).toBe('function');
 	});
 });
+
+describe('around', () => {
+	test('wraps every request, the first declared outermost, and sees the route and error', async () => {
+		const seen: string[] = [];
+		const app = alxia()
+			.around(async (ctx, next) => {
+				seen.push('outer:in');
+				const response = await next();
+				seen.push(
+					`outer:out ${ctx.route} ${response.status} ${ctx.error instanceof Error}`,
+				);
+				return response;
+			})
+			.around(async (_ctx, next) => {
+				seen.push('inner:in');
+				const response = await next();
+				response.headers.set('x-wrapped', 'yes');
+				return response;
+			})
+			.onRequest(() => {
+				seen.push('onRequest');
+			})
+			.get('/users/:id', ({ reply }) => reply(200))
+			.get('/boom', () => {
+				throw new Error('boom');
+			});
+		const response = await app.request('/users/1');
+		expect(response.headers.get('x-wrapped')).toBe('yes');
+		expect(seen).toEqual([
+			'outer:in',
+			'inner:in',
+			'onRequest',
+			'outer:out /users/:id 200 false',
+		]);
+		const original = console.error;
+		console.error = () => {};
+		try {
+			seen.length = 0;
+			await app.request('/boom');
+			expect(seen.at(-1)).toBe('outer:out /boom 500 true');
+			seen.length = 0;
+			await app.request('/nope');
+			expect(seen.at(-1)).toBe('outer:out undefined 404 false');
+		} finally {
+			console.error = original;
+		}
+	});
+
+	test('an around hook keeps its async context through the handler', async () => {
+		const { AsyncLocalStorage } = await import('node:async_hooks');
+		const storage = new AsyncLocalStorage<string>();
+		const app = alxia()
+			.around((_ctx, next) => storage.run('request-1', next))
+			.get('/', async ({ reply }) => {
+				await Bun.sleep(1);
+				return reply(200, storage.getStore() ?? 'lost');
+			});
+		expect(await (await app.request('/')).text()).toBe('request-1');
+	});
+});

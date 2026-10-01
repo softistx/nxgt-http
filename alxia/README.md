@@ -56,7 +56,7 @@ if (result.status === 200) result.data.name; // string
 
 ## Development
 
-Bun 1.3.14 or later.
+Bun 1.4.2 or later.
 
 ```sh
 bun install

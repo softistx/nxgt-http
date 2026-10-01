@@ -16,9 +16,12 @@ A type-safe HTTP framework for Bun, published as `@alxia/*`:
 | `@alxia/cors`, `@alxia/secure-headers`, `@alxia/compress` | function plugins: global hooks | core |
 | `@alxia/rate-limit`, `@alxia/jwt`, `@alxia/logger` | app plugins: typed context, typed replies, routes | core |
 | `@alxia/env` | environment variables through any Standard Schema | — |
+| `@alxia/cache` | HTTP response caching, a store contract and a memory store | core |
+| `@alxia/language` | the request's language, typed by the supported ones | core |
+| `@alxia/i18n` | translations on `@nxgt/i18n`, the language from `@alxia/language` | core, language, @nxgt/i18n |
 | `@alxia/context-storage` | the request's context through `AsyncLocalStorage`, as nxgt-core reads Hono's with `hono/context-storage` | core |
 | `@alxia/telemetry` | a server span per request, on `@nxgt/telemetry` | core, @nxgt/telemetry |
-| `@alxia/redis` | rate-limit store, idempotency, caches and locks, on `@nxgt/redis` and `@nxgt/redis-guard` | core, @nxgt/redis, @nxgt/redis-guard, zod; rate-limit (optional) |
+| `@alxia/redis` | rate-limit and response-cache stores, idempotency, caches and locks, on `@nxgt/redis` and `@nxgt/redis-guard` | core, @nxgt/redis, @nxgt/redis-guard, zod; rate-limit and cache (optional) |
 | `@alxia/janus` | sessions, refusals and permissions, on `@nxgt/janus` | core, @nxgt/janus |
 
 Its skeleton is `softistx/nxgt-http`'s: the Bun workspace, the root
@@ -36,6 +39,10 @@ A check added there is a check to port here.
   `@alxia/core` or `@alxia/openapi` names Zod. What only Zod can do goes in
   `@alxia/zod`. Specs may use Zod, a devDependency, and `core` has a spec
   with a schema written by hand to keep it honest.
+- **A store is a contract, with two answers.** What keeps state —
+  `@alxia/rate-limit`, `@alxia/cache` — defines its store's interface and
+  ships a memory store; `@alxia/redis` answers the same interface across
+  processes. The plugin never knows which it was given.
 - **Modular by plugin, not by option.** A feature that can live outside the
   core does, as a package. A plugin is either an app given to `use` — it
   adds context, routes or typed replies — or a function `Plugin` that adds
@@ -61,8 +68,9 @@ A check added there is a check to port here.
 
 ```
 core ◄── client, openapi, graphql, cors, secure-headers, compress, rate-limit, jwt, logger,
-         telemetry, janus, context-storage
-         redis ◄── rate-limit (optional peer: the store's contract)
+         telemetry, janus, context-storage, cache, language
+         i18n ◄── language
+         redis ◄── rate-limit, cache (optional peers: the stores' contracts)
 zod             (peer: zod; dev: core, client, openapi for its specs)
 env             (standalone)
 ```

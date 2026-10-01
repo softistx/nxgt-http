@@ -159,3 +159,34 @@ describe('redis', () => {
 		expect(loads).toBe(1);
 	});
 });
+
+describe('redisCacheStore', () => {
+	test('two apps share kept responses, and forget them by tag', async () => {
+		const { cache } = await import('@alxia/cache');
+		const { redisCacheStore } = await import('./cache-store');
+		let runs = 0;
+		const make = () => {
+			const products = cache({
+				ttl: 60,
+				store: redisCacheStore(db.client, { name: 'shop' }),
+				tags: () => ['products'],
+			});
+			return {
+				products,
+				app: alxia()
+					.use(products)
+					.get('/products', ({ reply }) => reply(200, { runs: ++runs })),
+			};
+		};
+		const one = make();
+		const two = make();
+		await one.app.request('/products');
+		const shared = await two.app.request('/products');
+		expect(shared.headers.get('x-cache')).toBe('HIT');
+		expect(await shared.json()).toEqual({ runs: 1 });
+		await two.products.invalidateTag('products');
+		expect(await (await one.app.request('/products')).json()).toEqual({
+			runs: 2,
+		});
+	});
+});

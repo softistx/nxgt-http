@@ -7,13 +7,15 @@ Bun's own Redis client, no driver, no dependency:
 
 - `redisStore`: a rate-limit store every process shares;
 - `idempotency`: routes that run once per `Idempotency-Key`;
+- `redisCacheStore`: an `@alxia/cache` store every process shares;
 - `redis`: the client, typed caches and a lock in the context.
 
 ```sh
 bun add @alxia/redis @nxgt/redis @nxgt/redis-guard zod
 ```
 
-They are peers, with `@alxia/rate-limit` for `redisStore`. **Bun 1.4 or
+They are peers, with `@alxia/rate-limit` for `redisStore` and `@alxia/cache`
+for `redisCacheStore`. **Bun 1.4 or
 later**: Bun's `RedisClient` is what the nxgt packages run on.
 
 ## A shared rate limit
@@ -31,6 +33,21 @@ app.use(rateLimit({ limit: 100, windowMs: 60_000, store: redisStore(connection.c
 GCRA, in one atomic script, timed by the Redis server's clock: every
 process behind the load balancer counts together, and a refused request
 counts nothing. The 429 stays typed, as `@alxia/rate-limit` types it.
+
+## A shared response cache
+
+```ts
+import { cache } from '@alxia/cache';
+import { redisCacheStore } from '@alxia/redis';
+
+const products = cache({ ttl: 60, store: redisCacheStore(connection.client, { name: 'shop' }), tags: () => ['products'] });
+app.use(products).get('/products', ...);
+await products.invalidateTag('products');   // forgotten in every process
+```
+
+Responses are `@nxgt/redis` cache records, checked by their schema when
+read: one that no longer reads as a response is a miss. A tag is a Redis
+set of the keys it names.
 
 ## Idempotent routes
 
@@ -99,6 +116,7 @@ The package's specs run against `$REDIS_URL`, or a `redis-server` on
 | export | |
 | --- | --- |
 | `redisStore(client, { name })` | an `@alxia/rate-limit` store |
+| `redisCacheStore(client, { name })` | an `@alxia/cache` store |
 | `idempotency(client, options)` | the plugin |
 | `redis(client, { caches? })` | the plugin: `redis`, `cache`, `lock` in the context |
 | `IdempotencyOptions`, `IdempotencyErrorBody`, `RedisContext`, `BoundCaches` | its types |

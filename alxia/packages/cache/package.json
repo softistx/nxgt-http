@@ -1,7 +1,7 @@
 {
-	"name": "@alxia/redis",
+	"name": "@alxia/cache",
 	"version": "0.0.0",
-	"description": "Redis for alxia on @nxgt/redis and @nxgt/redis-guard: a rate-limit store every process shares, idempotent routes, caches and locks in the context",
+	"description": "HTTP response caching for alxia: TTL, stale-while-revalidate, one load for concurrent misses, tags, ETags \u2014 in memory, or in Redis with @alxia/redis",
 	"license": "MIT",
 	"type": "module",
 	"main": "./dist/index.js",
@@ -23,7 +23,7 @@
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/softistx/alxia.git",
-		"directory": "packages/redis"
+		"directory": "packages/cache"
 	},
 	"publishConfig": {
 		"registry": "https://registry.npmjs.org",
@@ -40,30 +40,12 @@
 		]
 	},
 	"devDependencies": {
-		"@alxia/cache": "workspace:^",
 		"@alxia/client": "workspace:^",
 		"@alxia/core": "workspace:^",
-		"@alxia/rate-limit": "workspace:^",
-		"@nxgt/redis": "^0.3.1",
-		"@nxgt/redis-guard": "^0.3.1",
-		"@types/bun": "^1.3.0",
-		"zod": "^4.6.5"
+		"@types/bun": "^1.3.0"
 	},
 	"peerDependencies": {
-		"@alxia/cache": "workspace:^",
 		"@alxia/core": "workspace:^",
-		"@alxia/rate-limit": "workspace:^",
-		"@nxgt/redis": "^0.3.1",
-		"@nxgt/redis-guard": "^0.3.1",
-		"typescript": "^6.0.3",
-		"zod": "^4.6.5"
-	},
-	"peerDependenciesMeta": {
-		"@alxia/cache": {
-			"optional": true
-		},
-		"@alxia/rate-limit": {
-			"optional": true
-		}
+		"typescript": "^6.0.3"
 	}
 }

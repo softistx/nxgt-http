@@ -14,6 +14,8 @@ is a package you add, or don't.
 | [`@alxia/cors`](packages/cors) | CORS: preflights before routing, headers on every response |
 | [`@alxia/secure-headers`](packages/secure-headers) | HSTS, CSP, nosniff and the rest |
 | [`@alxia/rate-limit`](packages/rate-limit) | a rate limit whose 429 is in the client's types; pluggable stores |
+| [`@alxia/cache`](packages/cache) | HTTP response caching: TTL, stale-while-revalidate, one load per miss, tags, ETags; in memory or Redis |
+| [`@alxia/language`](packages/language) | the request's language, typed: query, cookie, path, `Accept-Language` |
 | [`@alxia/compress`](packages/compress) | zstd, Brotli, gzip, deflate: negotiated and streamed |
 | [`@alxia/jwt`](packages/jwt) | JWTs on Web Crypto, and a typed bearer guard |
 | [`@alxia/logger`](packages/logger) | a request id, structured logs, `Server-Timing` |
@@ -25,7 +27,8 @@ Adapters to the [nxgt](https://github.com/softistx) suite:
 | Package | |
 | --- | --- |
 | [`@alxia/telemetry`](packages/telemetry) | traces and logs on `@nxgt/telemetry`: a server span per request, named for its route |
-| [`@alxia/redis`](packages/redis) | on `@nxgt/redis` and `@nxgt/redis-guard`: a shared rate-limit store, idempotent routes, typed caches and locks |
+| [`@alxia/redis`](packages/redis) | on `@nxgt/redis` and `@nxgt/redis-guard`: shared rate-limit and response-cache stores, idempotent routes, typed caches and locks |
+| [`@alxia/i18n`](packages/i18n) | translations on `@nxgt/i18n`: `t()` in the request's language, typed keys, ICU |
 | [`@alxia/janus`](packages/janus) | identities, sessions and permissions on `@nxgt/janus`: the user typed, the cookie renewed, refusals typed |
 
 Not one package declares a dependency: what one needs at runtime — `zod`,

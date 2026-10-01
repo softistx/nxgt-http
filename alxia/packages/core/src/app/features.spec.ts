@@ -411,3 +411,82 @@ describe('around', () => {
 		expect(await (await app.request('/')).text()).toBe('request-1');
 	});
 });
+
+describe('wrap', () => {
+	const order: string[] = [];
+	const app = alxia()
+		.get('/before', ({ reply }) => reply(200, 'before'))
+		.wrap(async ({ request, reply }, next) => {
+			order.push('wrap:in');
+			if (request.headers.get('x-busy') === 'yes') {
+				return reply(409, { error: 'busy' as const });
+			}
+			try {
+				const response = await next();
+				order.push(`wrap:out ${response.status}`);
+				response.headers.set('x-wrapped', 'yes');
+				return response;
+			} catch (error) {
+				order.push('wrap:caught');
+				throw error;
+			}
+		})
+		.derive(({ pathParams }) => {
+			order.push(`derive ${pathParams['id'] ?? '-'}`);
+			return { seen: true };
+		})
+		.get(
+			'/items/:id',
+			{ params: z.object({ id: z.coerce.number() }) },
+			({ params, seen, reply }) => {
+				order.push('handler');
+				return reply(200, { id: params.id, seen });
+			},
+		)
+		.get('/fail', () => {
+			throw new Error('fail');
+		});
+
+	test('runs around the hooks after it, validation and the handler', async () => {
+		order.length = 0;
+		const response = await app.request('/items/7');
+		expect(await response.json()).toEqual({ id: 7, seen: true });
+		expect(response.headers.get('x-wrapped')).toBe('yes');
+		expect(order).toEqual(['wrap:in', 'derive 7', 'handler', 'wrap:out 200']);
+		order.length = 0;
+		expect((await app.request('/items/x')).status).toBe(400);
+		expect(order).toEqual(['wrap:in', 'derive x', 'wrap:out 400']);
+	});
+
+	test('only for the routes after it; its reply is in their type', async () => {
+		order.length = 0;
+		const before = await app.request('/before', {
+			headers: { 'x-busy': 'yes' },
+		});
+		expect(before.status).toBe(200);
+		expect(order).toEqual([]);
+		const busy = await app.request('/items/1', {
+			headers: { 'x-busy': 'yes' },
+		});
+		expect(busy.status).toBe(409);
+		type Routes = RoutesOf<typeof app>;
+		expectTypeOf<
+			Extract<Routes['/items/:id']['GET']['output'], { status: 409 }>['data']
+		>().toEqualTypeOf<{ error: 'busy' }>();
+		expectTypeOf<
+			Extract<Routes['/before']['GET']['output'], { status: 409 }>
+		>().toEqualTypeOf<never>();
+	});
+
+	test("the handler's error reaches it, then onError", async () => {
+		const original = console.error;
+		console.error = () => {};
+		try {
+			order.length = 0;
+			expect((await app.request('/fail')).status).toBe(500);
+			expect(order).toEqual(['wrap:in', 'derive -', 'wrap:caught']);
+		} finally {
+			console.error = original;
+		}
+	});
+});

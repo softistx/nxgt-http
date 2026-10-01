@@ -151,6 +151,11 @@ export interface ResponseSettings {
 export interface BaseContext extends RequestContext {
 	/** The route's path as declared, `/users/:id`, not as requested. */
 	readonly route: string;
+	/**
+	 * The path parameters as they arrived, before the route's `params`
+	 * schema: what a hook reads, since it runs before validation.
+	 */
+	readonly pathParams: Readonly<Record<string, string>>;
 	readonly set: ResponseSettings;
 	/** A reply that ends the request here. A hook's is added to every route after it. */
 	readonly reply: FreeReplyFunction;

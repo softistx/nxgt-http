@@ -47,6 +47,15 @@ import type {
 
 /** A hook that runs before validation, and may add to the context or end the request. */
 type DeriveHook = (ctx: Record<string, unknown>) => unknown;
+/** A hook around the rest of a route: the hooks after it, validation, the handler. */
+type WrapHook = (
+	ctx: Record<string, unknown>,
+	next: () => Promise<Response>,
+) => MaybePromise<Response | AnyReply>;
+/** A route hook, in the order declared. */
+type ChainHook =
+	| { readonly kind: 'derive'; readonly run: DeriveHook }
+	| { readonly kind: 'wrap'; readonly run: WrapHook };
 /** A hook that turns an error into a reply, or lets the next one try. */
 type ErrorHook = (
 	error: unknown,
@@ -81,7 +90,7 @@ export interface RouteDefinition {
 	readonly path: string;
 	readonly schema: RouteSchema;
 	readonly handler: (ctx: never) => MaybePromise<AnyReply>;
-	readonly derive: readonly DeriveHook[];
+	readonly derive: readonly ChainHook[];
 	readonly onError: readonly ErrorHook[];
 }
 
@@ -90,7 +99,7 @@ export interface SocketDefinition {
 	readonly path: string;
 	readonly schema: SocketSchema;
 	readonly handlers: SocketHandlers<never, never, never>;
-	readonly derive: readonly DeriveHook[];
+	readonly derive: readonly ChainHook[];
 	readonly onError: readonly ErrorHook[];
 }
 
@@ -249,7 +258,7 @@ export class Alxia<
 	readonly #router = new Router<Definition>();
 	readonly #routes: RouteDefinition[] = [];
 	readonly #sockets: SocketDefinition[] = [];
-	#derive: DeriveHook[] = [];
+	#derive: ChainHook[] = [];
 	#onError: ErrorHook[] = [];
 	#globals: Globals = {
 		around: [],
@@ -366,7 +375,7 @@ export class Alxia<
 	decorate<const Values extends object>(
 		values: Values,
 	): Alxia<Ctx & Values, Routes, Prefix, Shortcuts> {
-		this.#derive.push(() => values);
+		this.#derive.push({ kind: 'derive', run: () => values });
 		return this as never;
 	}
 
@@ -394,7 +403,29 @@ export class Alxia<
 		Prefix,
 		Shortcuts | Extract<Result, AnyReply>
 	> {
-		this.#derive.push(hook as DeriveHook);
+		this.#derive.push({ kind: 'derive', run: hook as DeriveHook });
+		return this as never;
+	}
+
+	/**
+	 * A hook around every route declared after it: `next()` runs the rest —
+	 * the hooks declared after this one, validation, the handler — and
+	 * resolves to the response. The hook returns it, another `Response`, or
+	 * a reply of its own, which is added to the type of every such route.
+	 * An error the rest throws reaches it first. A socket's upgrade skips it.
+	 *
+	 * ```ts
+	 * .wrap(async ({ request, reply }, next) =>
+	 *   (await locks.tryRun(request, next)) ?? reply(409, { error: 'busy' as const }))
+	 * ```
+	 */
+	wrap<Result extends AnyReply | Response>(
+		hook: (
+			ctx: BaseContext & Ctx,
+			next: () => Promise<Response>,
+		) => MaybePromise<Result>,
+	): Alxia<Ctx, Routes, Prefix, Shortcuts | Extract<Result, AnyReply>> {
+		this.#derive.push({ kind: 'wrap', run: hook as unknown as WrapHook });
 		return this as never;
 	}
 
@@ -819,26 +850,59 @@ export class Alxia<
 	}
 
 	/**
-	 * Runs the hooks of a route, then validates its request: the context its
-	 * handler reads, or the response that ended it before.
+	 * Runs the hooks of a route in order — a `derive` adds to the context or
+	 * ends the request, a `wrap` runs the rest inside it — then validates the
+	 * request, then `last`. A socket's upgrade skips the `wrap` hooks: it has
+	 * no response to wrap.
 	 */
-	async #prepare(
+	async #chain<Last>(
+		definition: RouteDefinition | SocketDefinition,
+		request: RequestContext,
+		rawParams: Record<string, string>,
+		set: ResponseSettings,
+		ctx: Record<string, unknown> & BaseContext,
+		last: () => Promise<Response | Last>,
+	): Promise<Response | Last> {
+		const hooks = definition.derive;
+		const socket = !('method' in definition);
+		const signal = request.request.signal;
+		const step = async (index: number): Promise<Response | Last> => {
+			const hook = hooks[index];
+			if (hook === undefined) {
+				const refused = await this.#validate(
+					definition,
+					request,
+					rawParams,
+					set,
+					ctx,
+				);
+				return refused ?? last();
+			}
+			if (hook.kind === 'wrap') {
+				if (socket) return step(index + 1);
+				let wrapped = hook.run(ctx, () => step(index + 1) as Promise<Response>);
+				if (wrapped instanceof Promise) wrapped = await wrapped;
+				return wrapped instanceof Reply ? send(wrapped, set, signal) : wrapped;
+			}
+			let added = hook.run(ctx);
+			if (added instanceof Promise) added = await added;
+			if (added instanceof Reply) return send(added, set, signal);
+			if (added !== null && typeof added === 'object') {
+				Object.assign(ctx, added);
+			}
+			return step(index + 1);
+		};
+		return step(0);
+	}
+
+	/** The request checked by the route's schemas: the 400 that refuses it, or nothing. */
+	async #validate(
 		definition: RouteDefinition | SocketDefinition,
 		request: RequestContext,
 		rawParams: Record<string, string>,
 		set: ResponseSettings,
 		ctx: Record<string, unknown> & BaseContext,
 	): Promise<Response | undefined> {
-		for (const hook of definition.derive) {
-			let added = hook(ctx);
-			if (added instanceof Promise) added = await added;
-			if (added instanceof Reply)
-				return send(added, set, request.request.signal);
-			if (added !== null && typeof added === 'object') {
-				Object.assign(ctx, added);
-			}
-		}
-
 		const { schema } = definition;
 		const issues: ValidationIssue[] = [];
 		const parts = [
@@ -878,6 +942,7 @@ export class Alxia<
 	#context(
 		definition: RouteDefinition | SocketDefinition,
 		request: RequestContext,
+		pathParams: Record<string, string>,
 	): { ctx: Record<string, unknown> & BaseContext; set: ResponseSettings } {
 		let cookies: Bun.CookieMap | undefined;
 		const set: ResponseSettings & { readonly touched: () => boolean } = {
@@ -891,6 +956,7 @@ export class Alxia<
 		const ctx: Record<string, unknown> & BaseContext = {
 			...request,
 			route: definition.path,
+			pathParams,
 			set,
 			reply: createReply,
 			redirect,
@@ -903,19 +969,26 @@ export class Alxia<
 		request: RequestContext,
 		rawParams: Record<string, string>,
 	): Promise<Response> {
-		const { ctx, set } = this.#context(route, request);
+		const { ctx, set } = this.#context(route, request, rawParams);
 		try {
-			const early = await this.#prepare(route, request, rawParams, set, ctx);
-			if (early !== undefined) return early;
-			let reply = route.handler(ctx as never);
-			if (reply instanceof Promise) reply = await reply;
-			if (!(reply instanceof Reply)) {
-				throw new TypeError(
-					`${route.method} ${route.path}: the handler returned no reply. ` +
-						'Return ctx.reply(status, body).',
-				);
-			}
-			return await this.#send(route, reply, set, request.request.signal);
+			return await this.#chain(
+				route,
+				request,
+				rawParams,
+				set,
+				ctx,
+				async () => {
+					let reply = route.handler(ctx as never);
+					if (reply instanceof Promise) reply = await reply;
+					if (!(reply instanceof Reply)) {
+						throw new TypeError(
+							`${route.method} ${route.path}: the handler returned no reply. ` +
+								'Return ctx.reply(status, body).',
+						);
+					}
+					return this.#send(route, reply, set, request.request.signal);
+				},
+			);
 		} catch (error) {
 			(request as { error: unknown }).error = error;
 			return this.#fail(route, error, ctx);
@@ -987,31 +1060,33 @@ export class Alxia<
 		request: RequestContext,
 		rawParams: Record<string, string>,
 	): Promise<Response | typeof UPGRADED> {
-		const { ctx, set } = this.#context(definition, request);
+		const { ctx, set } = this.#context(definition, request, rawParams);
+		const server = request.server;
 		try {
-			const early = await this.#prepare(
+			return await this.#chain<typeof UPGRADED>(
 				definition,
 				request,
 				rawParams,
 				set,
 				ctx,
+				async () => {
+					if (server === undefined) {
+						return routingError(426, 'upgrade_required');
+					}
+					const headers = new Headers(set.headers);
+					if ((set as { touched?: () => boolean }).touched?.()) {
+						for (const cookie of set.cookies.toSetCookieHeaders()) {
+							headers.append('set-cookie', cookie);
+						}
+					}
+					const data: SocketData = { definition, ctx };
+					const upgraded = server.upgrade(request.request, { headers, data });
+					return upgraded ? UPGRADED : routingError(426, 'upgrade_required');
+				},
 			);
-			if (early !== undefined) return early;
 		} catch (error) {
 			return this.#fail(definition, error, ctx);
 		}
-		if (request.server === undefined) {
-			return routingError(426, 'upgrade_required');
-		}
-		const headers = new Headers(set.headers);
-		if ((set as { touched?: () => boolean }).touched?.()) {
-			for (const cookie of set.cookies.toSetCookieHeaders()) {
-				headers.append('set-cookie', cookie);
-			}
-		}
-		const data: SocketData = { definition, ctx };
-		const upgraded = request.server.upgrade(request.request, { headers, data });
-		return upgraded ? UPGRADED : routingError(426, 'upgrade_required');
 	}
 
 	#websocket(): Bun.WebSocketHandler<SocketData> {

@@ -34,25 +34,29 @@ IETF draft's `RateLimit-Limit`, `-Remaining`, `-Reset` and `-Policy`.
 | `limit` | required | requests per window |
 | `windowMs` | required | the window, in milliseconds |
 | `key` | the client's address | what is counted: `(ctx) => string \| undefined`; `undefined` is not counted |
-| `store` | `MemoryStore` | where: implement `RateLimitStore` for Redis or a database |
+| `store` | `MemoryStore` | where: `redisStore` from `@alxia/redis`, or your own `RateLimitStore` |
 | `skip` | none | requests not counted |
 | `headers` | `'draft'` | `'legacy'` for `X-RateLimit-*`, or `false` |
 
 Behind a proxy, give the app an `ip` option that reads the header it sets:
 `alxia({ ip: (request) => request.headers.get('x-real-ip') ?? undefined })`.
 
-## A store of your own
+## Across processes
+
+`MemoryStore` counts in one process. Behind a load balancer, give every
+process the same store: [`@alxia/redis`](https://www.npmjs.com/package/@alxia/redis)'s
+`redisStore` counts in Redis, with GCRA timed by the Redis server's clock.
 
 ```ts
-const store: RateLimitStore = {
-	async hit(key, windowMs) {
-		const count = await redis.incr(key);
-		if (count === 1) await redis.pexpire(key, windowMs);
-		return { count, resetAt: Date.now() + (await redis.pttl(key)) };
-	},
-	reset: (key) => redis.del(key),
-};
+import { redisStore } from '@alxia/redis';
+
+app.use(rateLimit({ limit: 100, windowMs: 60_000, store: redisStore(redis, { name: 'api' }) }));
 ```
+
+A store of your own implements `RateLimitStore`: `consume(key, { limit,
+windowMs })` decides — `allowed`, `remaining`, `resetAfter` and
+`retryAfter`, delays in milliseconds — and a refused request counts
+nothing.
 
 ## API
 
@@ -60,5 +64,5 @@ const store: RateLimitStore = {
 | --- | --- |
 | `rateLimit(options)` | the plugin: an app that derives `rateLimit` |
 | `MemoryStore` | a fixed window in one process's memory |
-| `RateLimitStore`, `Hits` | a store's contract |
+| `RateLimitStore`, `Decision`, `Policy` | a store's contract |
 | `RateLimitedBody`, `RateLimitInfo`, `RateLimitOptions` | its types |

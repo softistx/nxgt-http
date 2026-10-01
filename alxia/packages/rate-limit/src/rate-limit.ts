@@ -32,7 +32,8 @@ export interface RateLimitedBody {
 export interface RateLimitInfo {
 	readonly limit: number;
 	readonly remaining: number;
-	readonly resetAt: number;
+	/** Milliseconds until the allowance is whole again. */
+	readonly resetAfter: number;
 }
 
 /**
@@ -54,12 +55,14 @@ export function rateLimit(options: RateLimitOptions) {
 			const rateLimit: RateLimitInfo | undefined = undefined;
 			return { rateLimit };
 		}
-		const hits = await store.hit(counted, options.windowMs);
-		const remaining = Math.max(0, options.limit - hits.count);
-		const reset = Math.max(0, Math.ceil((hits.resetAt - Date.now()) / 1000));
+		const decision = await store.consume(counted, {
+			limit: options.limit,
+			windowMs: options.windowMs,
+		});
+		const reset = Math.ceil(decision.resetAfter / 1000);
 		if (style === 'draft') {
 			ctx.set.headers.set('ratelimit-limit', String(options.limit));
-			ctx.set.headers.set('ratelimit-remaining', String(remaining));
+			ctx.set.headers.set('ratelimit-remaining', String(decision.remaining));
 			ctx.set.headers.set('ratelimit-reset', String(reset));
 			ctx.set.headers.set(
 				'ratelimit-policy',
@@ -67,25 +70,23 @@ export function rateLimit(options: RateLimitOptions) {
 			);
 		} else if (style === 'legacy') {
 			ctx.set.headers.set('x-ratelimit-limit', String(options.limit));
-			ctx.set.headers.set('x-ratelimit-remaining', String(remaining));
+			ctx.set.headers.set('x-ratelimit-remaining', String(decision.remaining));
 			ctx.set.headers.set(
 				'x-ratelimit-reset',
-				String(Math.ceil(hits.resetAt / 1000)),
+				String(Math.ceil((Date.now() + decision.resetAfter) / 1000)),
 			);
 		}
-		if (hits.count > options.limit) {
-			const body: RateLimitedBody = {
-				error: 'rate_limited',
-				retryAfter: reset,
-			};
+		if (!decision.allowed) {
+			const retryAfter = Math.max(1, Math.ceil(decision.retryAfter / 1000));
+			const body: RateLimitedBody = { error: 'rate_limited', retryAfter };
 			return ctx.reply(429, body, {
-				headers: { 'retry-after': String(reset) },
+				headers: { 'retry-after': String(retryAfter) },
 			});
 		}
 		const rateLimit: RateLimitInfo | undefined = {
 			limit: options.limit,
-			remaining,
-			resetAt: hits.resetAt,
+			remaining: decision.remaining,
+			resetAfter: decision.resetAfter,
 		};
 		return { rateLimit };
 	});

@@ -1,17 +1,28 @@
-/** How many hits a key has had in its current window, and when that window ends. */
-export interface Hits {
-	readonly count: number;
-	/** Milliseconds since the epoch. */
-	readonly resetAt: number;
+/** What a store decides for one request. Every duration is a delay, in milliseconds. */
+export interface Decision {
+	readonly allowed: boolean;
+	/** Requests the key may still make now, after this one. */
+	readonly remaining: number;
+	/** Until the key's allowance is whole again. */
+	readonly resetAfter: number;
+	/** Until a refused request would be allowed; 0 when this one is. */
+	readonly retryAfter: number;
+}
+
+/** The policy a store applies: `limit` requests per `windowMs`. */
+export interface Policy {
+	readonly limit: number;
+	readonly windowMs: number;
 }
 
 /**
- * Where hits are counted. The memory store counts in one process; a store
- * over Redis or a database counts across many.
+ * Where requests are counted, and what decides. The memory store counts in
+ * one process with a fixed window; `@alxia/redis`'s counts across every
+ * process sharing a Redis, with GCRA.
  */
 export interface RateLimitStore {
-	/** Counts one hit for `key`, in a window of `windowMs`. */
-	hit(key: string, windowMs: number): Hits | Promise<Hits>;
+	/** Counts one request for `key` under `policy`; a refused one counts nothing. */
+	consume(key: string, policy: Policy): Decision | Promise<Decision>;
 	/** Forgets `key`: a user who just logged in. */
 	reset(key: string): void | Promise<void>;
 }
@@ -21,16 +32,30 @@ export class MemoryStore implements RateLimitStore {
 	readonly #hits = new Map<string, { count: number; resetAt: number }>();
 	#sweeper: ReturnType<typeof setInterval> | undefined;
 
-	hit(key: string, windowMs: number): Hits {
+	consume(key: string, policy: Policy): Decision {
 		const now = Date.now();
 		let entry = this.#hits.get(key);
 		if (entry === undefined || entry.resetAt <= now) {
-			entry = { count: 0, resetAt: now + windowMs };
+			entry = { count: 0, resetAt: now + policy.windowMs };
 			this.#hits.set(key, entry);
 		}
+		this.#sweep(policy.windowMs);
+		const resetAfter = entry.resetAt - now;
+		if (entry.count >= policy.limit) {
+			return {
+				allowed: false,
+				remaining: 0,
+				resetAfter,
+				retryAfter: resetAfter,
+			};
+		}
 		entry.count++;
-		this.#sweep(windowMs);
-		return { count: entry.count, resetAt: entry.resetAt };
+		return {
+			allowed: true,
+			remaining: policy.limit - entry.count,
+			resetAfter,
+			retryAfter: 0,
+		};
 	}
 
 	reset(key: string): void {

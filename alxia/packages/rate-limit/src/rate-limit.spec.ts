@@ -40,13 +40,23 @@ describe('rateLimit', () => {
 		expectTypeOf(result.status).toEqualTypeOf<200 | 500>();
 	});
 
-	test('the memory store forgets a key, and a window', async () => {
+	test('the memory store decides, forgets a key, and a window', async () => {
 		const store = new MemoryStore();
-		expect(store.hit('a', 20).count).toBe(1);
-		expect(store.hit('a', 20).count).toBe(2);
+		const policy = { limit: 2, windowMs: 20 };
+		expect(store.consume('a', policy)).toMatchObject({
+			allowed: true,
+			remaining: 1,
+		});
+		expect(store.consume('a', policy)).toMatchObject({
+			allowed: true,
+			remaining: 0,
+		});
+		const refused = store.consume('a', policy);
+		expect(refused.allowed).toBe(false);
+		expect(refused.retryAfter).toBeGreaterThan(0);
 		store.reset('a');
-		expect(store.hit('a', 20).count).toBe(1);
+		expect(store.consume('a', policy).remaining).toBe(1);
 		await Bun.sleep(30);
-		expect(store.hit('a', 20).count).toBe(1);
+		expect(store.consume('a', policy).remaining).toBe(1);
 	});
 });

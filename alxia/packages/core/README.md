@@ -155,7 +155,20 @@ const app = alxia()
 ```
 
 A reply a hook returns ends the request, and is added to the type of every
-route after it: the client of `/me` reads the 401. `onError` turns a thrown
+route after it: the client of `/me` reads the 401.
+
+`wrap(hook)` is a route hook around the rest: `next()` runs the hooks
+declared after it, validation and the handler, and resolves to the
+response, which the hook returns — or a reply of its own, typed like a
+`derive`'s. An idempotency key, a transaction, a cookie set after the route:
+
+```ts
+.wrap(async ({ request, reply }, next) =>
+	busy(request) ? reply(409, { error: 'busy' as const }) : next())
+```
+
+Hooks run before validation: `pathParams` holds the path's parameters as
+they arrived. `onError` turns a thrown
 error into a reply the same way; an `HttpError` is answered as it says, and
 anything else is a 500 that leaks nothing.
 
@@ -206,7 +219,7 @@ global hooks become this app's.
 | export | |
 | --- | --- |
 | `alxia(options?)` | a new app: `prefix`, `validateResponses`, `ip` |
-| `Alxia` | `get` `post` `put` `patch` `delete` `options` `head` `ws`, `decorate` `derive` `onError`, `around` `onRequest` `onResponse` `onStart` `onStop` `parser`, `group` `use`, `fetch` `request` `listen` `stop`, `routes` `sockets` `server` |
+| `Alxia` | `get` `post` `put` `patch` `delete` `options` `head` `ws`, `decorate` `derive` `wrap` `onError`, `around` `onRequest` `onResponse` `onStart` `onStop` `parser`, `group` `use`, `fetch` `request` `listen` `stop`, `routes` `sockets` `server` |
 | `eventStream(schema)` | the response schema of a stream of events |
 | `Reply`, `HttpError`, `ResponseValidationError` | what a handler returns or throws |
 | `Plugin`, `AnyAlxia` | a function plugin, any app |

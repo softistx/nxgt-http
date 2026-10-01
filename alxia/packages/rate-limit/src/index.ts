@@ -4,4 +4,9 @@ export {
 	type RateLimitOptions,
 	rateLimit,
 } from './rate-limit';
-export { type Hits, MemoryStore, type RateLimitStore } from './store';
+export {
+	type Decision,
+	MemoryStore,
+	type Policy,
+	type RateLimitStore,
+} from './store';

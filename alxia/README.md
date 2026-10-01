@@ -20,8 +20,16 @@ is a package you add, or don't.
 | [`@alxia/logger`](packages/logger) | a request id, structured logs, `Server-Timing` |
 | [`@alxia/env`](packages/env) | environment variables, validated and typed at startup |
 
+Adapters to the [nxgt](https://github.com/softistx) suite:
+
+| Package | |
+| --- | --- |
+| [`@alxia/telemetry`](packages/telemetry) | traces and logs on `@nxgt/telemetry`: a server span per request, named for its route |
+| [`@alxia/redis`](packages/redis) | on `@nxgt/redis` and `@nxgt/redis-guard`: a shared rate-limit store, idempotent routes, typed caches and locks |
+| [`@alxia/janus`](packages/janus) | identities, sessions and permissions on `@nxgt/janus`: the user typed, the cookie renewed, refusals typed |
+
 Not one package declares a dependency: what one needs at runtime — `zod`,
-`graphql-yoga`, `@alxia/core` — is a peer, the app's own copy.
+`graphql-yoga`, `@nxgt/*`, `@alxia/core` — is a peer, the app's own copy.
 
 ```ts
 // server.ts
@@ -62,7 +70,7 @@ Bun 1.4.2 or later.
 bun install
 bun run build        # first, in dependency order: packages resolve each other through dist/
 bun run typecheck
-bun run test
+bun run test         # @alxia/redis needs REDIS_URL, or redis-server on PATH
 bun run verify:artifacts
 ./node_modules/.bin/biome check --write
 ```

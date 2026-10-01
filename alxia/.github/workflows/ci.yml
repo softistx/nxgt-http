@@ -24,6 +24,19 @@ jobs:
     # typecheck the longest step. Past 8 it is hung, and the six-hour default
     # would hold the runner for nothing.
     timeout-minutes: 8
+    # @alxia/redis's specs run against a real Redis.
+    services:
+      redis:
+        image: redis:7.4
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 2s
+          --health-timeout 2s
+          --health-retries 10
+    env:
+      REDIS_URL: redis://localhost:6379
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

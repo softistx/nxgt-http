@@ -12,6 +12,9 @@
 "@alxia/logger": minor
 "@alxia/env": minor
 "@alxia/graphql": minor
+"@alxia/telemetry": minor
+"@alxia/redis": minor
+"@alxia/janus": minor
 ---
 
-The first release of alxia: a zero-dependency, type-safe HTTP framework for Bun, its typed client, its OpenAPI document, its Zod and GraphQL Yoga integrations, and its plugins.
+The first release of alxia: a zero-dependency, type-safe HTTP framework for Bun, its typed client, its OpenAPI document, its Zod and GraphQL Yoga integrations, its plugins, and its adapters to the nxgt suite: telemetry, Redis and janus.

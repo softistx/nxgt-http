@@ -16,6 +16,9 @@ A type-safe HTTP framework for Bun, published as `@alxia/*`:
 | `@alxia/cors`, `@alxia/secure-headers`, `@alxia/compress` | function plugins: global hooks | core |
 | `@alxia/rate-limit`, `@alxia/jwt`, `@alxia/logger`, `@alxia/static` | app plugins: typed context, typed replies, routes | core |
 | `@alxia/env` | environment variables through any Standard Schema | — |
+| `@alxia/telemetry` | a server span per request, on `@nxgt/telemetry` | core, @nxgt/telemetry |
+| `@alxia/redis` | rate-limit store, idempotency, caches and locks, on `@nxgt/redis` and `@nxgt/redis-guard` | core, @nxgt/redis, @nxgt/redis-guard, zod; rate-limit (optional) |
+| `@alxia/janus` | sessions, refusals and permissions, on `@nxgt/janus` | core, @nxgt/janus |
 
 Its skeleton is `softistx/nxgt-http`'s: the Bun workspace, the root
 `build.ts`, Biome, changesets, `scripts/publish.ts` and `verify:artifacts`.
@@ -56,7 +59,9 @@ A check added there is a check to port here.
 ## Layering
 
 ```
-core ◄── client, openapi, graphql, cors, secure-headers, compress, rate-limit, jwt, logger, static
+core ◄── client, openapi, graphql, cors, secure-headers, compress, rate-limit, jwt, logger, static,
+         telemetry, janus
+         redis ◄── rate-limit (optional peer: the store's contract)
 zod             (peer: zod; dev: core, client, openapi for its specs)
 env             (standalone)
 ```
@@ -64,6 +69,28 @@ env             (standalone)
 A package that uses a sibling declares it by `workspace:^`, as a peer and a
 devDependency, and imports it by its published name, which resolves through
 `node_modules` to the sibling's `dist/`. **There are no cycles.**
+
+## Adapters to the nxgt suite
+
+An integration with something the nxgt suite already does — telemetry,
+Redis, identities — is an adapter over the nxgt package, never a second
+implementation: `@alxia/telemetry` is `@nxgt/telemetry`, `@alxia/redis` is
+`@nxgt/redis` and `@nxgt/redis-guard`, `@alxia/janus` is `@nxgt/janus`. The
+nxgt package is a peer. Where the suite has a Hono adapter, the alxia one
+mirrors it — `@nxgt/telemetry-hono`, `@nxgt/janus-hono` — and the table
+below records what is kept twice.
+
+- **Bun 1.4.2.** `@nxgt/redis` needs Bun 1.4's `RedisClient`; the
+  repository pins the version nxgt does.
+- **Redis in the specs.** `@alxia/redis`'s run against `$REDIS_URL`, or a
+  `redis-server` from `$PATH` they start on a free port. CI runs a Redis
+  service container and sets `REDIS_URL`. A spec never skips for want of
+  Redis: it fails, saying so.
+
+| Kept twice | Why |
+| --- | --- |
+| The HTTP attribute names, in `telemetry/src/attributes.ts` and `@nxgt/telemetry-hono`'s | importing them would depend on Hono; a server span from either must read the same in a dashboard. Change both together |
+| `bodyOf`, the permission guard's option types, the device cookie, in `janus/src/` and `@nxgt/janus-hono` | the same refusals and cookies whichever server answers; importing them would depend on Hono. Change both together |
 
 ## The build
 

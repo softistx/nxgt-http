@@ -15,6 +15,12 @@ export interface ReplyInit {
  * schema the route declares for that status.
  */
 export class Reply<Status extends number = number, Body = unknown> {
+	/**
+	 * Never set: makes a `Reply` nominal. Without it a `Response` — a
+	 * `status`, a `body`, `headers` — would pass for one, and a hook that
+	 * returns either would type its `Response` as a reply.
+	 */
+	declare readonly '~reply': true;
 	readonly status: Status;
 	readonly body: Body;
 	readonly headers: HeadersInit | undefined;

@@ -70,6 +70,16 @@ export {
 	eventStream,
 	isEventStreamSchema,
 } from './sse/event-stream';
+export {
+	type FileNotFoundBody,
+	type FileOptions,
+	type FileSource,
+	type Precompressed,
+	parseRange,
+	type RangeNotSatisfiableBody,
+	type StaticOptions,
+	type StaticReply,
+} from './static/serve';
 export type { Jsonify, Simplify } from './types/json';
 export type {
 	JoinPath,

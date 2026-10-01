@@ -6,7 +6,7 @@ is a package you add, or don't.
 
 | Package | |
 | --- | --- |
-| [`@alxia/core`](packages/core) | routes on `Bun.serve`, validated with any Standard Schema; replies typed by status; hooks, groups and plugins; cookies, server-sent events and WebSockets, typed |
+| [`@alxia/core`](packages/core) | routes on `Bun.serve`, validated with any Standard Schema; replies typed by status; hooks, groups and plugins; cookies, server-sent events and WebSockets, typed; static files and Bun's HTML bundles |
 | [`@alxia/client`](packages/client) | the typed client of an app, from `typeof app`: no spec, no codegen. Results are a union by status; events and sockets typed too |
 | [`@alxia/zod`](packages/zod) | Zod 4: coercions a client can type (`zq.int()`, `zq.array()`…), and the OpenAPI converter |
 | [`@alxia/graphql`](packages/graphql) | GraphQL with Yoga and its plugins: behind the app's hooks, resolvers reading its typed context, subscriptions over SSE, GraphiQL or Apollo Sandbox |
@@ -15,7 +15,6 @@ is a package you add, or don't.
 | [`@alxia/secure-headers`](packages/secure-headers) | HSTS, CSP, nosniff and the rest |
 | [`@alxia/rate-limit`](packages/rate-limit) | a rate limit whose 429 is in the client's types; pluggable stores |
 | [`@alxia/compress`](packages/compress) | zstd, Brotli, gzip, deflate: negotiated and streamed |
-| [`@alxia/static`](packages/static) | static files: ETags, 304s, a single-page fallback, no traversal |
 | [`@alxia/jwt`](packages/jwt) | JWTs on Web Crypto, and a typed bearer guard |
 | [`@alxia/logger`](packages/logger) | a request id, structured logs, `Server-Timing` |
 | [`@alxia/env`](packages/env) | environment variables, validated and typed at startup |

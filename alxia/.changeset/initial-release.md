@@ -7,7 +7,6 @@
 "@alxia/secure-headers": minor
 "@alxia/rate-limit": minor
 "@alxia/compress": minor
-"@alxia/static": minor
 "@alxia/jwt": minor
 "@alxia/logger": minor
 "@alxia/env": minor

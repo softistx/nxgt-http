@@ -16,6 +16,14 @@ import {
 } from '../request/read';
 import { Router } from '../router/router';
 import { check, type StandardSchemaV1 } from '../schema/standard-schema';
+import {
+	type FileOptions,
+	type FileSource,
+	fileHandler,
+	type StaticOptions,
+	type StaticReply,
+	staticHandler,
+} from '../static/serve';
 import type { JoinPath, RoutePath } from '../types/path';
 import type { RedirectStatus } from '../types/status';
 import type {
@@ -115,7 +123,12 @@ interface Globals {
 	readonly onStart: StartHook[];
 	readonly onStop: StopHook[];
 	readonly parsers: BodyParser[];
+	/** Bun's HTML bundles, by their full path: served by `Bun.serve` itself. */
+	readonly pages: Map<string, Bun.HTMLBundle>;
 }
+
+/** The route a static directory is served at: its path, then a wildcard. */
+type StaticPath<Path extends string> = Path extends '/' ? '/*' : `${Path}/*`;
 
 export interface AlxiaOptions<Prefix extends string> {
 	/** Prepended to the path of every route declared on this app. */
@@ -267,6 +280,7 @@ export class Alxia<
 		onStart: [],
 		onStop: [],
 		parsers: [],
+		pages: new Map(),
 	};
 	#server: Bun.Server<unknown> | undefined;
 
@@ -345,6 +359,100 @@ export class Alxia<
 	 * });
 	 * ```
 	 */
+	/**
+	 * A directory of files — or any `FileSource` — served under `path`: a
+	 * `GET` route at `path/*`, typed and documented like any other, every
+	 * hook around it.
+	 *
+	 * ```ts
+	 * app.static('/assets', './public', {
+	 *   cacheControl: (path) => /\.[0-9a-f]{8}\./.test(path) ? 'public, max-age=31536000, immutable' : 'no-cache',
+	 *   precompressed: ['br', 'gzip'],
+	 * });
+	 * app.static('/', './dist', { fallback: 'index.html' }); // a single-page app
+	 * ```
+	 *
+	 * A path that leaves the source, a dotfile, or no file is a 404. ETags
+	 * and `Last-Modified` answer 304s; a `Range` a 206.
+	 */
+	static<const Path extends RoutePath>(
+		path: Path,
+		source: FileSource,
+		options: StaticOptions = {},
+	): Alxia<
+		Ctx,
+		Routes &
+			RouteEntryOf<
+				'GET',
+				JoinPath<Prefix, StaticPath<Path>>,
+				Empty,
+				StaticReply,
+				Shortcuts
+			>,
+		Prefix,
+		Shortcuts
+	> {
+		const route = (path as string) === '/' ? '/*' : `${path}/*`;
+		(this.get as unknown as (path: string, handler: unknown) => unknown)(
+			route,
+			staticHandler(source, options),
+		);
+		return this as never;
+	}
+
+	/**
+	 * One file at `path`: a path on disk, read anew on each request, a `Blob`,
+	 * or a function answering one — `null` a 404. `/favicon.ico`,
+	 * `/robots.txt`, a generated sitemap.
+	 */
+	file<const Path extends RoutePath>(
+		path: Path,
+		file:
+			| string
+			| Blob
+			| ((ctx: BaseContext & Ctx) => MaybePromise<Blob | null | undefined>),
+		options: FileOptions = {},
+	): Alxia<
+		Ctx,
+		Routes &
+			RouteEntryOf<
+				'GET',
+				JoinPath<Prefix, Path>,
+				Empty,
+				StaticReply,
+				Shortcuts
+			>,
+		Prefix,
+		Shortcuts
+	> {
+		(this.get as unknown as (path: string, handler: unknown) => unknown)(
+			path,
+			fileHandler(file as Parameters<typeof fileHandler>[0], options),
+		);
+		return this as never;
+	}
+
+	/**
+	 * A page of Bun's full-stack bundling: `import index from './index.html'`,
+	 * its scripts and styles bundled by Bun — with hot reloading under
+	 * `development` — and served by `Bun.serve` itself. So it needs `listen`,
+	 * and the app's hooks do not run around it; `app.fetch` answers it 404.
+	 */
+	page<const Path extends RoutePath>(path: Path, bundle: Bun.HTMLBundle): this {
+		this.#page(this.#join(path), bundle);
+		return this;
+	}
+
+	#page(path: string, bundle: Bun.HTMLBundle): void {
+		if (
+			this.#globals.pages.has(path) ||
+			this.#router.methodsAt(path) !== undefined
+		) {
+			throw new TypeError(`page(): ${path} is already served`);
+		}
+		this.#globals.pages.set(path, bundle);
+	}
+
 	ws<const Path extends RoutePath, Schema extends SocketSchema = Empty>(
 		path: Path,
 		schema: Schema,
@@ -613,6 +721,9 @@ export class Alxia<
 			this.#globals.onStart.push(...globals.onStart);
 			this.#globals.onStop.push(...globals.onStop);
 			this.#globals.parsers.push(...globals.parsers);
+			for (const [path, bundle] of globals.pages) {
+				this.#page(this.#join(path), bundle);
+			}
 		}
 		return this;
 	}
@@ -655,11 +766,13 @@ export class Alxia<
 		const settings = typeof options === 'number' ? { port: options } : options;
 		const routes: Record<
 			string,
-			(request: Request, server: Bun.Server<unknown>) => Promise<Response>
+			| Bun.HTMLBundle
+			| ((request: Request, server: Bun.Server<unknown>) => Promise<Response>)
 		> = {};
 		for (const [path] of this.#router.paths()) {
 			routes[path] = (request, server) => this.#serve(request, server, path);
 		}
+		for (const [path, bundle] of this.#globals.pages) routes[path] = bundle;
 		const server = Bun.serve({
 			...settings,
 			routes,

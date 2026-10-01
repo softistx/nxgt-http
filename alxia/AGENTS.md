@@ -14,7 +14,7 @@ A type-safe HTTP framework for Bun, published as `@alxia/*`:
 | `@alxia/zod` | Zod coercions (`zq`) and the OpenAPI converter | zod |
 | `@alxia/graphql` | GraphQL Yoga as a route: the app's hooks and typed context, Yoga's plugins | core, graphql-yoga, graphql |
 | `@alxia/cors`, `@alxia/secure-headers`, `@alxia/compress` | function plugins: global hooks | core |
-| `@alxia/rate-limit`, `@alxia/jwt`, `@alxia/logger`, `@alxia/static` | app plugins: typed context, typed replies, routes | core |
+| `@alxia/rate-limit`, `@alxia/jwt`, `@alxia/logger` | app plugins: typed context, typed replies, routes | core |
 | `@alxia/env` | environment variables through any Standard Schema | — |
 | `@alxia/context-storage` | the request's context through `AsyncLocalStorage`, as nxgt-core reads Hono's with `hono/context-storage` | core |
 | `@alxia/telemetry` | a server span per request, on `@nxgt/telemetry` | core, @nxgt/telemetry |
@@ -60,7 +60,7 @@ A check added there is a check to port here.
 ## Layering
 
 ```
-core ◄── client, openapi, graphql, cors, secure-headers, compress, rate-limit, jwt, logger, static,
+core ◄── client, openapi, graphql, cors, secure-headers, compress, rate-limit, jwt, logger,
          telemetry, janus, context-storage
          redis ◄── rate-limit (optional peer: the store's contract)
 zod             (peer: zod; dev: core, client, openapi for its specs)

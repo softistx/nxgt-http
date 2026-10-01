@@ -20,7 +20,6 @@ Everything else is a package of its own, to take or leave:
 [`@alxia/secure-headers`](https://www.npmjs.com/package/@alxia/secure-headers),
 [`@alxia/rate-limit`](https://www.npmjs.com/package/@alxia/rate-limit),
 [`@alxia/compress`](https://www.npmjs.com/package/@alxia/compress),
-[`@alxia/static`](https://www.npmjs.com/package/@alxia/static),
 [`@alxia/jwt`](https://www.npmjs.com/package/@alxia/jwt),
 [`@alxia/logger`](https://www.npmjs.com/package/@alxia/logger),
 [`@alxia/env`](https://www.npmjs.com/package/@alxia/env).
@@ -105,6 +104,72 @@ A string is `text/plain`, a `Blob` — a `Bun.file` — a stream or a buffer
 goes as it is, an async iterable is a stream of server-sent events, anything
 else is JSON. `redirect(location, status?)` needs no schema.
 `set.headers` and `set.cookies` (a `Bun.CookieMap`) apply to every reply.
+
+## Static files
+
+Served through the app's pipeline: every hook runs around them — headers,
+compression, telemetry — and the client types them like any route.
+
+```ts
+const app = alxia()
+	.static('/assets', './public', {
+		cacheControl: (path) =>
+			/\.[0-9a-f]{8}\./.test(path) ? 'public, max-age=31536000, immutable' : 'no-cache',
+		precompressed: ['br', 'gzip'],    // app.js.br, app.js.gz beside app.js
+	})
+	.file('/favicon.ico', './static/favicon.ico')
+	.static('/', './dist', { fallback: 'index.html' }); // a single-page app
+```
+
+`static(path, source, options?)` is a `GET` route at `path/*`. `file(path,
+file, options?)` serves one file. Both answer:
+
+- **304** to a client whose copy is current: a weak `ETag` and
+  `Last-Modified`;
+- **206** to a `Range` — a video seeking — and **416** to one past the end;
+  `If-Range` honored;
+- **404** `{ error: 'not_found' }` to no file, a dotfile, or a path that
+  leaves the source — `..`, an encoded slash, a backslash;
+- `HEAD`, as every `GET` route.
+
+| option | default | |
+| --- | --- | --- |
+| `index` | `'index.html'` | the file a directory serves: one, a list tried in order, or `false` |
+| `extensions` | none | tried for a path without one: `['html']` serves `/about` from `about.html` |
+| `fallback` | none | served with a 200 for a path that matches no file: a single-page app |
+| `precompressed` | none | `br`, `zstd`, `gzip`: a file stored compressed beside itself, to a client that accepts it |
+| `cacheControl` | `public, max-age=0` | a value, `false`, or one per path |
+| `headers` | none | headers, or `(path, file) => headers` |
+| `types` | Bun's | content types by extension: `{ '.wasm': 'application/wasm' }` |
+| `etag`, `lastModified`, `ranges` | on | |
+| `dotfiles` | `false` | whether `.env` and the like are served |
+
+**Any source.** A directory, or a function from a path to a `Blob` — so
+files come from anywhere Bun reads them:
+
+```ts
+const files = new Map([['logo.svg', new File([svg], 'logo.svg', { type: 'image/svg+xml' })]]);
+app.static('/memory', (path) => files.get(path));                 // files held in memory
+
+app.static('/media', async (path) => {                             // an S3 bucket
+	const file = Bun.s3.file(`media/${path}`);
+	return (await file.exists()) ? file : null;                       // null is a 404
+});
+app.file('/sitemap.xml', async () => new Blob([await sitemap()], { type: 'application/xml' }));
+```
+
+### Bun's HTML bundles
+
+```ts
+import dashboard from './dashboard/index.html';
+
+app.page('/dashboard', dashboard).listen(3000);
+```
+
+`page(path, bundle)` hands Bun's full-stack bundling its route: the page's
+scripts and styles bundled by Bun, hot-reloaded under `development`. It is
+served by `Bun.serve` itself — so through `listen` only, and outside the
+app's hooks.
 
 ## Server-sent events
 
@@ -219,8 +284,9 @@ global hooks become this app's.
 | export | |
 | --- | --- |
 | `alxia(options?)` | a new app: `prefix`, `validateResponses`, `ip` |
-| `Alxia` | `get` `post` `put` `patch` `delete` `options` `head` `ws`, `decorate` `derive` `wrap` `onError`, `around` `onRequest` `onResponse` `onStart` `onStop` `parser`, `group` `use`, `fetch` `request` `listen` `stop`, `routes` `sockets` `server` |
+| `Alxia` | `get` `post` `put` `patch` `delete` `options` `head` `ws`, `static` `file` `page`, `decorate` `derive` `wrap` `onError`, `around` `onRequest` `onResponse` `onStart` `onStop` `parser`, `group` `use`, `fetch` `request` `listen` `stop`, `routes` `sockets` `server` |
 | `eventStream(schema)` | the response schema of a stream of events |
+| `FileSource`, `StaticOptions`, `FileOptions`, `StaticReply`, `parseRange` | static files |
 | `Reply`, `HttpError`, `ResponseValidationError` | what a handler returns or throws |
 | `Plugin`, `AnyAlxia` | a function plugin, any app |
 | `withHeaders`, `vary`, `check` | for plugins: edit a response's headers, add to `Vary`, run a schema |

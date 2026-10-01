@@ -493,7 +493,8 @@ envelope and the rate limit's headers.
 - **One status, one reply.** `@typespec/openapi3` merges two replies of one
   status into one. With `AuthenticationRequired` and `Unauthorized`, the 401
   keeps the envelope and the reply without a body is lost: the library
-  refuses it, `duplicate-status-reply`. With `Conflict` beside
+  refuses it, `duplicate-status-reply`. With `Conflict` (which
+  `CreateErrors` and `UpdateErrors` hold) beside
   `IdempotencyInProgress`, or `UnprocessableEntity` beside
   `IdempotencyKeyReused`, both bodies stay, under the first reply's
   description: the library warns, `merged-status-reply`. Declare the one the

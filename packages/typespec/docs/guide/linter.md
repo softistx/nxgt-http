@@ -46,6 +46,12 @@ followed by a capital letter (`listUsers`, `searchPosts`), with a success
 reply whose body is an array. `listing` and `queryable` are not lists, and
 are not checked. The name is checked as written, in an interface or not.
 
+Only the operations the emitter writes are checked, by this rule and
+`error-body-shape`: a template's declaration, its instance (`Read<Pet>`) and
+the operations of an interface template are not, while an interface that
+extends a template, `interface Users extends Crud<User> {}`, has its copied
+operations checked.
+
 **Why:** an array cannot grow a `total` or a `nextCursor` later without
 breaking every client. `Page<Item>` and `CursorPage<Item>` can, and they are
 the pages `@nxgt/drizzle` and `@nxgt/mongo` return.
@@ -152,7 +158,8 @@ A range is named by its bounds, `500-599`, and a reply without a status as
 `*`.
 
 Passes: one of the library's errors, `ErrorResponse<Status>`, or a body that
-spreads `ErrorBody<Status>` and adds its own fields:
+spreads or extends `ErrorBody<Status>` and adds its own fields
+(`model TeapotBody extends ErrorBody<418> { reason: string; }` passes too):
 
 ```tsp
 model TeapotBody {

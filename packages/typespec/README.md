@@ -397,7 +397,7 @@ linter:
 | --- | --- | --- |
 | `list-returns-page` | an operation named `list`, `search` or `query`, alone or before a capital letter (`listUsers`, not `listing`), answers an array | return `Page<Item>` or `CursorPage<Item>` |
 | `service-operation-ids` | a `@service` namespace has no `@operationIds`, on itself or on a namespace around it | mark the namespace with `@operationIds` |
-| `error-body-shape` | a reply of status 400 or above, or `default`, has a body without `status`, `message` and `timestamp` | declare one of the library's errors, or a body that spreads `ErrorBody<Status>` |
+| `error-body-shape` | a reply of status 400 or above, or `default`, has a body without `status`, `message` and `timestamp` | declare one of the library's errors, or a body that spreads or extends `ErrorBody<Status>` |
 
 ```text
 warning @nxgt/typespec/list-returns-page: listAll returns an array: return Page<Item> or CursorPage<Item>, which can carry a total or a next cursor.

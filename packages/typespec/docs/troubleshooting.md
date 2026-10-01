@@ -401,7 +401,7 @@ and a client reads `message` from every error. Another shape is one more
 case for each client.
 
 **Fix:** declare one of the library's errors, `ErrorResponse<Status>`, or a
-body that spreads `ErrorBody<Status>` ([Error replies](guide/errors.md)):
+body that spreads or extends `ErrorBody<Status>` ([Error replies](guide/errors.md)):
 
 ```tsp
 model TeapotBody {

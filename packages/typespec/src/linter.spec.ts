@@ -14,6 +14,18 @@ function linted(path: string) {
 	});
 }
 
+const list = (operation: string) => ({
+	code: '@nxgt/typespec/list-returns-page',
+	severity: 'warning' as const,
+	message: `${operation} returns an array: return Page<Item> or CursorPage<Item>, which can carry a total or a next cursor.`,
+});
+
+const body = (operation: string, status: string) => ({
+	code: '@nxgt/typespec/error-body-shape',
+	severity: 'warning' as const,
+	message: `${operation} answers ${status} with a body that is not the nxgt envelope: declare BadRequest, NotFound or another of the library's errors, or a body that spreads or extends ErrorBody<Status>.`,
+});
+
 it('warns of each rule the recommended set enables', async () => {
 	const program = await linted('../test/programs/linter.tsp');
 	expect(
@@ -23,18 +35,11 @@ it('warns of each rule the recommended set enables', async () => {
 			message,
 		})),
 	).toEqual([
-		{
-			code: '@nxgt/typespec/list-returns-page',
-			severity: 'warning',
-			message:
-				'listAll returns an array: return Page<Item> or CursorPage<Item>, which can carry a total or a next cursor.',
-		},
-		{
-			code: '@nxgt/typespec/error-body-shape',
-			severity: 'warning',
-			message:
-				"create answers 418 with a body that is not the nxgt envelope: declare BadRequest, NotFound or another of the library's errors, or a body that spreads ErrorBody<Status>.",
-		},
+		list('listPets'),
+		list('listAll'),
+		body('create', '418'),
+		body('fail', '500-599'),
+		body('any', '*'),
 		{
 			code: '@nxgt/typespec/service-operation-ids',
 			severity: 'warning',

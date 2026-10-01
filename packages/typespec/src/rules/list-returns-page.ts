@@ -6,6 +6,7 @@
  */
 import { createRule, isArrayModelType, paramMessage } from '@typespec/compiler';
 import { getHttpOperation } from '@typespec/http';
+import { isWritten } from './written';
 
 const LIST = /^(list|search|query)(?=[A-Z]|$)/;
 
@@ -19,11 +20,12 @@ export const listReturnsPage = createRule({
 	},
 	create: (context) => ({
 		operation(operation) {
-			if (!LIST.test(operation.name)) return;
+			if (!isWritten(operation) || !LIST.test(operation.name)) return;
 			const [http] = getHttpOperation(context.program, operation);
 			const array = http.responses.some(
 				({ statusCodes, responses }) =>
 					typeof statusCodes === 'number' &&
+					statusCodes >= 200 &&
 					statusCodes < 300 &&
 					responses.some(
 						({ body }) =>

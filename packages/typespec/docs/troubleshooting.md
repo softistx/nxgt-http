@@ -391,7 +391,7 @@ interface Users {
 ```
 
 ```text
-warning @nxgt/typespec/error-body-shape: create answers 418 with a body that is not the nxgt envelope: declare BadRequest, NotFound or another of the library's errors, or a body that spreads ErrorBody<Status>.
+warning @nxgt/typespec/error-body-shape: create answers 418 with a body that is not the nxgt envelope: declare BadRequest, NotFound or another of the library's errors, or a body that spreads or extends ErrorBody<Status>.
 ```
 
 A range is named `500-599`, and `default` `*`.

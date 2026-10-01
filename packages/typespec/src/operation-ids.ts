@@ -90,7 +90,7 @@ export function isNamed(program: Program, operation: Operation): boolean {
  * instance. An interface extending an instance copies its operations, which
  * are instances too, and emitted.
  */
-function isEmitted(operation: Operation): boolean {
+export function isEmitted(operation: Operation): boolean {
 	const container = operation.interface;
 	if (container === undefined) return !isTemplateInstance(operation);
 	return !isTemplateInstance(container);

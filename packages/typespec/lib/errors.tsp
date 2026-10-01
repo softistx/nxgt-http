@@ -146,3 +146,31 @@ model ErrorResponse<Status extends integer> {
   @statusCode _: Status;
   @body body: ErrorBody<Status>;
 }
+
+/**
+ * The errors a list declares: a query its validators refuse.
+ *
+ * ```tsp
+ * @get list(...PageParameters): Page<User> | ListErrors;
+ * ```
+ */
+alias ListErrors = BadRequest;
+
+/** The errors a read of one declares: nothing at that id. */
+alias GetErrors = NotFound;
+
+/** The errors a create declares: a body refused, or one that conflicts. */
+alias CreateErrors = BadRequest | Conflict;
+
+/** The errors an update declares: a body refused, nothing at that id, or a conflict. */
+alias UpdateErrors = BadRequest | NotFound | Conflict;
+
+/** The errors a delete declares: nothing at that id. */
+alias DeleteErrors = NotFound;
+
+/**
+ * The errors of an operation behind authentication, with the nxgt envelope.
+ * A route that answers them without a body, as Janus does, declares
+ * `AuthenticationRequired | AccessDenied` instead.
+ */
+alias AuthErrors = Unauthorized | Forbidden;

@@ -1,5 +1,11 @@
 # @nxgt/typespec
 
+## 0.9.1
+
+### Patch Changes
+
+- [#91](https://github.com/softistx/nxgt-http/pull/91) [`12c74d5`](https://github.com/softistx/nxgt-http/commit/12c74d5e5633ac28977e16d82523cb685c70d4bc) Thanks [@SteveGT96](https://github.com/SteveGT96)! - `IdempotencyInProgress` and `IdempotencyKeyReused` are declared in `lib/errors.tsp`, beside the library's other error replies, instead of `lib/headers.tsp`. Their names, namespace and emitted OpenAPI are unchanged.
+
 ## 0.9.0
 
 ### Minor Changes

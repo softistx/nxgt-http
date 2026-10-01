@@ -12,6 +12,7 @@ import { operationIds, validateOperationIds } from './operation-ids';
 import { validateVerbMethods } from './verb-methods';
 
 export { $lib } from './lib';
+export { $linter } from './linter';
 
 export function $onValidate(program: Program): void {
 	// Before the ids are set: only an `@operationId` written in the spec is

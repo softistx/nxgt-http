@@ -49,7 +49,7 @@ export function operationIds(
 }
 
 /** Marked itself, or in a marked namespace, however deep. */
-function isMarkedNamespace(
+export function isMarkedNamespace(
 	program: Program,
 	target: Namespace | undefined,
 ): boolean {

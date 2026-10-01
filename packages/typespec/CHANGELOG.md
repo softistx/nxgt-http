@@ -1,5 +1,11 @@
 # @nxgt/typespec
 
+## 0.8.0
+
+### Minor Changes
+
+- [#87](https://github.com/softistx/nxgt-http/pull/87) [`04d6b6f`](https://github.com/softistx/nxgt-http/commit/04d6b6facfe480087e877be933870fb6e534cd5b) Thanks [@SteveGT96](https://github.com/SteveGT96)! - A linter, with the ruleset `@nxgt/typespec/recommended` a spec extends in its `tspconfig.yaml` (`linter: extends: ["@nxgt/typespec/recommended"]`). Its rules are warnings, each one a spec can disable: `list-returns-page` (a `list`, `search` or `query` returns `Page<Item>` or `CursorPage<Item>`, not an array), `service-operation-ids` (a `@service` namespace has `@operationIds`), and `error-body-shape` (an error reply's body is the nxgt envelope, `status`, `message` and `timestamp`). Nothing runs unless the spec extends the set.
+
 ## 0.7.0
 
 ### Minor Changes

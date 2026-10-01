@@ -1,0 +1,37 @@
+{
+	"nxgt": {
+		"title": "nxgt REST API",
+		"description": "A REST API with the @nxgt conventions: ids as written, pages, the error envelope and the linter, generated with @nxgt/openapi-codegen.",
+		"compilerVersion": "1.16.0",
+		"libraries": [
+			"@typespec/http",
+			"@typespec/openapi",
+			"@nxgt/typespec",
+			"@nxgt/openapi-codegen"
+		],
+		"config": {
+			"linter": {
+				"extends": ["@nxgt/typespec/recommended"]
+			}
+		},
+		"emitters": {
+			"@typespec/openapi3": {
+				"selected": true,
+				"label": "OpenAPI 3.1 document",
+				"options": {
+					"emitter-output-dir": "{project-root}/openapi",
+					"openapi-versions": ["3.1.0"],
+					"output-file": "openapi.yaml"
+				}
+			}
+		},
+		"files": [
+			{ "path": "nxgt/main.tsp", "destination": "main.tsp" },
+			{
+				"path": "nxgt/openapi-codegen.config.ts",
+				"destination": "openapi-codegen.config.ts"
+			},
+			{ "path": "nxgt/README.md", "destination": "README.md" }
+		]
+	}
+}

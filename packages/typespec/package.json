@@ -9,6 +9,7 @@
 	"files": [
 		"dist",
 		"lib",
+		"templates",
 		"docs",
 		"README.md",
 		"package.json",

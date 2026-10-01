@@ -1,5 +1,11 @@
 # @nxgt/typespec
 
+## 0.9.0
+
+### Minor Changes
+
+- [#89](https://github.com/softistx/nxgt-http/pull/89) [`4eeeaa6`](https://github.com/softistx/nxgt-http/commit/4eeeaa6094aa618f18a18f42f5725c7fa68a716a) Thanks [@SteveGT96](https://github.com/SteveGT96)! - A `tsp init` template: `npx --package=@typespec/compiler tsp init https://unpkg.com/@nxgt/typespec/templates/scaffolding.json` starts a project with `@service` and `@operationIds`, a `Users` interface (a paged, sorted list, get, create, update and delete, with their error aliases), the linter's recommended rules in `tspconfig.yaml`, OpenAPI 3.1 written to `openapi/openapi.yaml`, and an `openapi-codegen.config.ts` for `nxgt-openapi generate`.
+
 ## 0.8.0
 
 ### Minor Changes

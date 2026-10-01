@@ -1,8 +1,8 @@
 /**
  * [Apollo Sandbox](https://www.apollographql.com/docs/graphos/platform/sandbox),
  * embedded: the page a browser gets at the endpoint when the IDE is
- * `apollo-sandbox`. `@nxgt/shared-graphql`'s `renderSandbox`, without its
- * host and port written in: the endpoint is the URL the page was asked at.
+ * `apollo-sandbox`. `@nxgt/shared-graphql`'s `renderSandbox`, kept twice: the
+ * endpoint is the URL the page was asked at, as there since nxgt-core#171.
  */
 
 export interface SandboxOptions {

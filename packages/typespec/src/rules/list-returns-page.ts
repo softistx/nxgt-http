@@ -7,7 +7,7 @@
 import { createRule, isArrayModelType, paramMessage } from '@typespec/compiler';
 import { getHttpOperation } from '@typespec/http';
 
-const LIST = /^(list|search|query)(?![a-z0-9])/;
+const LIST = /^(list|search|query)(?=[A-Z]|$)/;
 
 export const listReturnsPage = createRule({
 	name: 'list-returns-page',

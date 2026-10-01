@@ -3,6 +3,7 @@ export {
 	type AlxiaOptions,
 	type AnyAlxia,
 	alxia,
+	type ContextOf,
 	type ListenOptions,
 	type Plugin,
 	type RequestHook,

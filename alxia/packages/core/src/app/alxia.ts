@@ -229,6 +229,8 @@ export class Alxia<
 > {
 	/** Never set: carries the route table to `typeof app`, which the client reads. */
 	declare readonly '~routes': Routes;
+	/** Never set: carries what a route declared next reads, for `ContextOf`. */
+	declare readonly '~context': Ctx;
 
 	readonly #prefix: string;
 	readonly #validateResponses: boolean;
@@ -1120,6 +1122,15 @@ export function alxia<const Prefix extends '' | RoutePath = ''>(
 /** The route table of an app, as the client reads it. */
 export type RoutesOf<App> = App extends { readonly '~routes': infer Routes }
 	? Routes
+	: never;
+
+/**
+ * What a route declared next on `App` reads: the context its hooks build —
+ * `decorate`, `derive`, every plugin's — on top of the base context. A
+ * GraphQL schema, a service, types its own context with it.
+ */
+export type ContextOf<App> = App extends { readonly '~context': infer Ctx }
+	? BaseContext & Ctx
 	: never;
 
 export type { Outcome };

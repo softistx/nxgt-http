@@ -12,6 +12,7 @@ A type-safe HTTP framework for Bun, published as `@alxia/*`:
 | `@alxia/client` | the client of an app, typed from `typeof app` alone | core |
 | `@alxia/openapi` | the OpenAPI 3.1 document of an app, from its route schemas | core |
 | `@alxia/zod` | Zod coercions (`zq`) and the OpenAPI converter | zod |
+| `@alxia/graphql` | GraphQL Yoga as a route: the app's hooks and typed context, Yoga's plugins | core, graphql-yoga, graphql |
 | `@alxia/cors`, `@alxia/secure-headers`, `@alxia/compress` | function plugins: global hooks | core |
 | `@alxia/rate-limit`, `@alxia/jwt`, `@alxia/logger`, `@alxia/static` | app plugins: typed context, typed replies, routes | core |
 | `@alxia/env` | environment variables through any Standard Schema | — |
@@ -23,7 +24,7 @@ A check added there is a check to port here.
 ## Principles
 
 - **No package has a dependency.** What one needs at runtime is a peer:
-  `@alxia/core`, `zod`. Bun's and the web platform's own APIs —
+  `@alxia/core`, `zod`, `graphql-yoga`. Bun's and the web platform's own APIs —
   `Bun.CookieMap`, `Bun.file`, Web Crypto, `CompressionStream`, `node:zlib`
   — are not dependencies. `verify:artifacts` fails a manifest with a
   `dependencies` field that lists anything.
@@ -55,7 +56,7 @@ A check added there is a check to port here.
 ## Layering
 
 ```
-core ◄── client, openapi, cors, secure-headers, compress, rate-limit, jwt, logger, static
+core ◄── client, openapi, graphql, cors, secure-headers, compress, rate-limit, jwt, logger, static
 zod             (peer: zod; dev: core, client, openapi for its specs)
 env             (standalone)
 ```

@@ -15,6 +15,7 @@ bun add @alxia/core
 Everything else is a package of its own, to take or leave:
 [`@alxia/zod`](https://www.npmjs.com/package/@alxia/zod),
 [`@alxia/openapi`](https://www.npmjs.com/package/@alxia/openapi),
+[`@alxia/graphql`](https://www.npmjs.com/package/@alxia/graphql),
 [`@alxia/cors`](https://www.npmjs.com/package/@alxia/cors),
 [`@alxia/secure-headers`](https://www.npmjs.com/package/@alxia/secure-headers),
 [`@alxia/rate-limit`](https://www.npmjs.com/package/@alxia/rate-limit),
@@ -210,5 +211,6 @@ global hooks become this app's.
 | `Plugin`, `AnyAlxia` | a function plugin, any app |
 | `withHeaders`, `vary`, `check` | for plugins: edit a response's headers, add to `Vary`, run a schema |
 | `RoutesOf<App>`, `Jsonify<T>` | the route table the client reads, and what a value is on the wire |
+| `ContextOf<App>` | what a route declared next on `App` reads: to type a GraphQL schema, a service |
 | `StandardSchemaV1`, `InferInput`, `InferOutput` | the Standard Schema types |
 | `ValidationErrorBody`, `InternalErrorBody`, `RoutingErrorBody` | the bodies of the 400, 500, 404, 405 and 426 |

@@ -1,5 +1,7 @@
 import type { Method } from '@alxia/core';
+import { readEvents } from './sse/read-events';
 import type { AppLike, CallOptions, Client } from './types';
+import { openSocket } from './ws/socket';
 
 /** Where a client sends its calls: a base URL, or a fetch handler such as an app. */
 export type Target =
@@ -18,6 +20,7 @@ interface CallInput extends CallOptions {
 	readonly params?: Readonly<Record<string, string | number>>;
 	readonly query?: Readonly<Record<string, unknown>>;
 	readonly headers?: Readonly<Record<string, unknown>>;
+	readonly cookies?: Readonly<Record<string, unknown>>;
 	readonly body?: unknown;
 }
 
@@ -54,6 +57,17 @@ export function client<App extends AppLike>(
 		methods[method.toLowerCase()] = (path: string, input: CallInput = {}) =>
 			call(send, options, method, path, input);
 	}
+	methods['ws'] = (path: string, input: CallInput = {}) => {
+		if (send.base === IN_PROCESS) {
+			throw new TypeError(
+				'client(app).ws(): a socket needs a server. Give the client its URL.',
+			);
+		}
+		const url = new URL(send.base + fillPath(path, input.params ?? {}));
+		appendQuery(url, input.query);
+		url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+		return openSocket(url);
+	};
 	return methods as Client<App>;
 }
 
@@ -67,7 +81,7 @@ function sender(
 	}
 	if ('fetch' in target && typeof target.fetch === 'function') {
 		return {
-			base: 'http://alxia.local',
+			base: IN_PROCESS,
 			fetch: target.fetch as (request: Request) => Promise<Response>,
 		};
 	}
@@ -82,11 +96,7 @@ async function call(
 	input: CallInput,
 ) {
 	const url = new URL(send.base + fillPath(path, input.params ?? {}));
-	for (const [key, value] of Object.entries(input.query ?? {})) {
-		for (const item of Array.isArray(value) ? value : [value]) {
-			if (item !== undefined) url.searchParams.append(key, stringify(item));
-		}
-	}
+	appendQuery(url, input.query);
 
 	const headers = new Headers(
 		typeof options.headers === 'function'
@@ -98,6 +108,16 @@ async function call(
 	}
 	for (const [key, value] of Object.entries(input.headers ?? {})) {
 		if (value !== undefined) headers.set(key, stringify(value));
+	}
+	const cookies = Object.entries(input.cookies ?? {})
+		.filter(([, value]) => value !== undefined)
+		.map(
+			([name, value]) =>
+				`${encodeURIComponent(name)}=${encodeURIComponent(stringify(value))}`,
+		);
+	if (cookies.length > 0) {
+		const existing = headers.get('cookie');
+		headers.set('cookie', [existing, ...cookies].filter(Boolean).join('; '));
 	}
 
 	let body: BodyInit | undefined;
@@ -161,14 +181,27 @@ export function fillPath(
 		.join('/');
 }
 
+const IN_PROCESS = 'http://alxia.local';
+
+function appendQuery(url: URL, query: CallInput['query']): void {
+	for (const [key, value] of Object.entries(query ?? {})) {
+		for (const item of Array.isArray(value) ? value : [value]) {
+			if (item !== undefined) url.searchParams.append(key, stringify(item));
+		}
+	}
+}
+
 function stringify(value: unknown): string {
 	return value instanceof Date ? value.toISOString() : String(value);
 }
 
-/** The body as the server sent it: JSON, text, nothing, or a `Blob`. */
+/** The body as the server sent it: JSON, events, text, nothing, or a `Blob`. */
 async function readData(response: Response): Promise<unknown> {
 	if (response.status === 204 || response.status === 304) return undefined;
 	const type = response.headers.get('content-type')?.toLowerCase() ?? '';
+	if (type.startsWith('text/event-stream') && response.body !== null) {
+		return readEvents(response.body);
+	}
 	if (type.includes('json')) {
 		const text = await response.text();
 		return text === '' ? undefined : JSON.parse(text);

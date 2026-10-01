@@ -1,3 +1,4 @@
+import { isAsyncIterable, toEventStream } from '../sse/event-stream';
 import { BODILESS, type StatusCode } from '../types/status';
 
 export interface ReplyInit {
@@ -54,12 +55,14 @@ const BINARY = (value: unknown): value is BodyInit =>
 
 /**
  * The `Response` a reply is sent as. A string is `text/plain`, a binary body
- * goes as it is, and anything else is JSON. A body-less status sends none.
+ * goes as it is, an async iterable is a stream of server-sent events, and
+ * anything else is JSON. A body-less status sends none.
  */
 export function toResponse(
 	status: number,
 	body: unknown,
 	headers: Headers,
+	signal?: AbortSignal,
 ): Response {
 	if (BODILESS.has(status) || body === undefined) {
 		return new Response(null, { status, headers });
@@ -70,6 +73,12 @@ export function toResponse(
 		return new Response(body, { status, headers });
 	}
 	if (BINARY(body)) return new Response(body, { status, headers });
+	if (isAsyncIterable(body)) {
+		headers.set('content-type', 'text/event-stream');
+		headers.set('cache-control', 'no-cache');
+		headers.set('x-accel-buffering', 'no');
+		return new Response(toEventStream(body, signal), { status, headers });
+	}
 	if (!headers.has('content-type'))
 		headers.set('content-type', 'application/json');
 	return new Response(JSON.stringify(body), { status, headers });

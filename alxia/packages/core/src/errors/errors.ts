@@ -1,5 +1,11 @@
 /** Where a refused value was read from. */
-export type ValidationTarget = 'params' | 'query' | 'headers' | 'body';
+export type ValidationTarget =
+	| 'params'
+	| 'query'
+	| 'headers'
+	| 'cookies'
+	| 'body'
+	| 'message';
 
 export interface ValidationIssue {
 	readonly target: ValidationTarget;
@@ -19,9 +25,9 @@ export interface InternalErrorBody {
 	readonly error: 'internal';
 }
 
-/** The body of the 404 and 405 the app answers outside every route. */
+/** The body of the 404, 405 and 426 the app answers outside every route. */
 export interface RoutingErrorBody {
-	readonly error: 'not_found' | 'method_not_allowed';
+	readonly error: 'not_found' | 'method_not_allowed' | 'upgrade_required';
 }
 
 /**

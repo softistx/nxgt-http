@@ -3,6 +3,7 @@ import type {
 	Method,
 	Outcome,
 	RouteRecord,
+	SocketRecord,
 	SuccessStatus,
 } from '@alxia/core';
 
@@ -15,8 +16,8 @@ export type RoutesOf<App> = App extends { readonly '~routes': infer Routes }
 	? Routes
 	: never;
 
-/** The paths of `Routes` that answer `M`. */
-export type PathsFor<Routes, M extends Method> = {
+/** The paths of `Routes` that answer `M`: a method, or `WS` for a socket. */
+export type PathsFor<Routes, M extends Method | 'WS'> = {
 	[Path in keyof Routes]: M extends keyof Routes[Path] ? Path : never;
 }[keyof Routes] &
 	string;
@@ -74,9 +75,40 @@ export type CallMethod<Routes, M extends Method> = <
 	...args: CallArgs<InputOf<Routes, Path, M>>
 ) => Promise<CallResult<OutputOf<Routes, Path, M>>>;
 
-/** The client of an app: one method per HTTP method its routes answer. */
+type SocketAt<Routes, Path> = Path extends keyof Routes
+	? 'WS' extends keyof Routes[Path]
+		? Routes[Path]['WS' & keyof Routes[Path]] extends SocketRecord
+			? Routes[Path]['WS' & keyof Routes[Path]]
+			: never
+		: never
+	: never;
+
+/** A socket, typed: what it sends, and what it receives. */
+export interface TypedSocket<Send, Receive> extends AsyncIterable<Receive> {
+	/** The browser's or Bun's own socket. */
+	readonly raw: WebSocket;
+	/** Settles once the socket is open; rejects if it fails first. */
+	readonly opened: Promise<void>;
+	/** Sends `message` as JSON; queued until the socket is open. */
+	send(message: Send): void;
+	/** Calls `listener` with each message received, until the function returned is called. */
+	on(listener: (message: Receive) => void): () => void;
+	close(code?: number, reason?: string): void;
+}
+
+export type SocketMethod<Routes> = <const Path extends PathsFor<Routes, 'WS'>>(
+	path: Path,
+	...args: CallArgs<SocketAt<Routes, Path>['input']>
+) => TypedSocket<
+	SocketAt<Routes, Path>['send'],
+	SocketAt<Routes, Path>['receive']
+>;
+
+/** The client of an app: one method per HTTP method its routes answer, and `ws` for its sockets. */
 export type Client<App> = {
 	readonly [M in Method as [PathsFor<RoutesOf<App>, M>] extends [never]
 		? never
 		: Lowercase<M>]: CallMethod<RoutesOf<App>, M>;
-};
+} & ([PathsFor<RoutesOf<App>, 'WS'>] extends [never]
+	? Empty
+	: { readonly ws: SocketMethod<RoutesOf<App>> });

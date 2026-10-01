@@ -1,11 +1,18 @@
 export {
 	Alxia,
 	type AlxiaOptions,
+	type AnyAlxia,
 	alxia,
 	type ListenOptions,
+	type Plugin,
+	type RequestHook,
+	type ResponseHook,
 	type RouteDefinition,
 	type RouteMethod,
 	type RoutesOf,
+	type SocketDefinition,
+	type StartHook,
+	type StopHook,
 } from './app/alxia';
 export type {
 	BaseContext,
@@ -18,7 +25,9 @@ export type {
 	Outcome,
 	OutcomeOf,
 	RedirectFunction,
+	RequestContext,
 	ResponseSchemas,
+	ResponseSettings,
 	RouteDetail,
 	RouteEntryOf,
 	RouteInput,
@@ -44,6 +53,7 @@ export {
 	Reply,
 	type ReplyInit,
 } from './reply/reply';
+export type { BodyParser } from './request/read';
 export type {
 	InferInput,
 	InferOutput,
@@ -51,6 +61,11 @@ export type {
 	StandardResult,
 	StandardSchemaV1,
 } from './schema/standard-schema';
+export {
+	type EventStreamSchema,
+	eventStream,
+	isEventStreamSchema,
+} from './sse/event-stream';
 export type { Jsonify, Simplify } from './types/json';
 export type {
 	JoinPath,
@@ -66,3 +81,13 @@ export type {
 	StatusCode,
 	SuccessStatus,
 } from './types/status';
+export type {
+	Socket,
+	SocketContext,
+	SocketEntryOf,
+	SocketHandlers,
+	SocketMessage,
+	SocketRecord,
+	SocketSchema,
+	SocketSend,
+} from './ws/types';

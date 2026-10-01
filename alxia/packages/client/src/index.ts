@@ -1,4 +1,5 @@
 export { type ClientOptions, client, fillPath, type Target } from './client';
+export { readEvents } from './sse/read-events';
 export type {
 	AppLike,
 	CallArgs,
@@ -10,4 +11,6 @@ export type {
 	OutputOf,
 	PathsFor,
 	RoutesOf,
+	SocketMethod,
+	TypedSocket,
 } from './types';

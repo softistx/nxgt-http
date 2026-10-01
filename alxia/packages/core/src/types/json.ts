@@ -9,26 +9,28 @@ export type Jsonify<Value> = Value extends
 	| ArrayBuffer
 	| ArrayBufferView
 	? Blob
-	: Value extends { toJSON(): infer Json }
-		? Jsonify<Json>
-		: Value extends string | number | boolean | null | undefined
-			? Value
-			: Value extends bigint | symbol | ((...args: never[]) => unknown)
-				? never
-				: Value extends ReadonlyMap<unknown, unknown> | ReadonlySet<unknown>
-					? Record<string, never>
-					: Value extends readonly unknown[]
-						? { -readonly [Index in keyof Value]: Jsonify<Value[Index]> }
-						: {
-								-readonly [Key in keyof Value as Key extends symbol
-									? never
-									: Value[Key] extends
-												| bigint
-												| symbol
-												| ((...args: never[]) => unknown)
+	: Value extends AsyncIterable<infer Item>
+		? AsyncIterable<Jsonify<Item>>
+		: Value extends { toJSON(): infer Json }
+			? Jsonify<Json>
+			: Value extends string | number | boolean | null | undefined
+				? Value
+				: Value extends bigint | symbol | ((...args: never[]) => unknown)
+					? never
+					: Value extends ReadonlyMap<unknown, unknown> | ReadonlySet<unknown>
+						? Record<string, never>
+						: Value extends readonly unknown[]
+							? { -readonly [Index in keyof Value]: Jsonify<Value[Index]> }
+							: {
+									-readonly [Key in keyof Value as Key extends symbol
 										? never
-										: Key]: Jsonify<Value[Key]>;
-							};
+										: Value[Key] extends
+													| bigint
+													| symbol
+													| ((...args: never[]) => unknown)
+											? never
+											: Key]: Jsonify<Value[Key]>;
+								};
 
 /** An object type with its intersections flattened, for readable hovers. */
 export type Simplify<Value> = { [Key in keyof Value]: Value[Key] } & {};

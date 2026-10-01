@@ -23,17 +23,62 @@ export function readHeaders(headers: Headers): Record<string, string> {
 	return read;
 }
 
+/** The request cookies as an object. */
+export function readCookies(headers: Headers): Record<string, string> {
+	const cookie = headers.get('cookie');
+	if (cookie === null) return {};
+	return Object.fromEntries(new Bun.CookieMap(cookie));
+}
+
+/** A body parser an app adds, tried before the built-in ones. */
+export interface BodyParser {
+	/** A `content-type` it reads: a prefix, or a pattern. */
+	readonly type: string | RegExp;
+	readonly parse: (request: Request) => unknown;
+}
+
+function parserFor(
+	parsers: readonly BodyParser[],
+	type: string,
+): BodyParser | undefined {
+	return parsers.find((parser) =>
+		typeof parser.type === 'string'
+			? type.startsWith(parser.type)
+			: parser.type.test(type),
+	);
+}
+
 export type ReadBody =
 	| { readonly ok: true; readonly value: unknown }
 	| { readonly ok: false; readonly issue: ValidationIssue };
 
 /**
- * The request body, read by its `content-type`: JSON, a form (an object of
- * its fields, a field given more than once an array), or text. Nothing else
- * is read: the handler takes it from `ctx.request`.
+ * The request body, read by its `content-type`: by a parser the app added,
+ * else JSON, a form (an object of its fields, a field given more than once
+ * an array), text, or the bytes.
  */
-export async function readBody(request: Request): Promise<ReadBody> {
+export async function readBody(
+	request: Request,
+	parsers: readonly BodyParser[] = [],
+): Promise<ReadBody> {
 	const type = request.headers.get('content-type')?.toLowerCase() ?? '';
+	const custom = parserFor(parsers, type);
+	if (custom !== undefined) {
+		try {
+			return { ok: true, value: await custom.parse(request) };
+		} catch (error) {
+			return {
+				ok: false,
+				issue: {
+					target: 'body',
+					path: [],
+					code: 'unreadable_body',
+					message:
+						error instanceof Error ? error.message : 'The body cannot be read',
+				},
+			};
+		}
+	}
 	if (type.includes('json')) {
 		const text = await request.text();
 		if (text === '') return { ok: true, value: undefined };

@@ -48,15 +48,17 @@ export interface RouteDetail {
 
 /**
  * What a route validates. Every part is optional, and each one may be any
- * Standard Schema: Zod 4, Valibot, ArkType.
+ * Standard Schema: Zod, Valibot, ArkType, or one written by hand.
  */
 export interface RouteSchema {
-	/** The path parameters, which arrive as strings: `z.coerce.number()` reads `/users/:id`. */
+	/** The path parameters, which arrive as strings: a schema that coerces reads `/users/:id` as a number. */
 	readonly params?: StandardSchemaV1;
 	/** The query string: a key given once is a string, given more than once an array. */
 	readonly query?: StandardSchemaV1;
 	/** The request headers, names lowercased. */
 	readonly headers?: StandardSchemaV1;
+	/** The request cookies, by name. */
+	readonly cookies?: StandardSchemaV1;
 	/** The body, read as its `content-type` says: JSON, a form, or text. */
 	readonly body?: StandardSchemaV1;
 	/** The body of each status the route may answer. Its handler can answer no other. */
@@ -120,14 +122,28 @@ export type RedirectFunction = <const Status extends RedirectStatus = 302>(
 	status?: Status,
 ) => Reply<Status, undefined>;
 
-/** What every hook and handler reads, before the request is validated. */
-export interface BaseContext {
+/** What every hook reads, routed or not. */
+export interface RequestContext {
 	readonly request: Request;
 	readonly url: URL;
+	/** The server that took the request; none when the app is called through `fetch` alone. */
+	readonly server: Bun.Server<unknown> | undefined;
+	/** The client's address, as the app's `ip` option reads it. */
+	readonly ip: string | undefined;
+}
+
+/** What a route sets on its response, whatever the status. */
+export interface ResponseSettings {
+	readonly headers: Headers;
+	/** Cookies set or deleted: each change is a `Set-Cookie` header. */
+	readonly cookies: Bun.CookieMap;
+}
+
+/** What every route hook and handler reads, before the request is validated. */
+export interface BaseContext extends RequestContext {
 	/** The route's path as declared, `/users/:id`, not as requested. */
 	readonly route: string;
-	/** Headers added to the response, whatever its status. */
-	readonly set: { readonly headers: Headers };
+	readonly set: ResponseSettings;
 	/** A reply that ends the request here. A hook's is added to every route after it. */
 	readonly reply: FreeReplyFunction;
 	readonly redirect: RedirectFunction;
@@ -148,6 +164,11 @@ export type Context<Ctx, Path extends string, Schema> = Omit<
 		readonly headers: OutputAt<
 			Schema,
 			'headers',
+			Readonly<Record<string, string>>
+		>;
+		readonly cookies: OutputAt<
+			Schema,
+			'cookies',
 			Readonly<Record<string, string>>
 		>;
 		readonly body: OutputAt<Schema, 'body', undefined>;
@@ -177,7 +198,7 @@ type UnknownKeys<Schema> = [Exclude<keyof Schema, keyof RouteSchema>] extends [
 			readonly [Key in Exclude<
 				keyof Schema,
 				keyof RouteSchema
-			>]: `"${Key & string}" is not a part of a route: params, query, headers, body, response or detail`;
+			>]: `"${Key & string}" is not a part of a route: params, query, headers, cookies, body, response or detail`;
 		};
 
 type ParamsMatchPath<Path extends string, Schema> = Schema extends {
@@ -217,7 +238,7 @@ export type OutcomeOf<Replies> =
 		: never;
 
 type ValidatesRequest<Schema> = [
-	SchemaAt<Schema, 'params' | 'query' | 'headers' | 'body'>,
+	SchemaAt<Schema, 'params' | 'query' | 'headers' | 'cookies' | 'body'>,
 ] extends [never]
 	? false
 	: true;
@@ -242,7 +263,7 @@ export type RouteOutput<Schema, Result, Shortcuts> =
 			: never)
 	| Outcome<500, InternalErrorBody>;
 
-type PartInput<Schema, Key extends 'query' | 'headers' | 'body'> = [
+type PartInput<Schema, Key extends 'query' | 'headers' | 'cookies' | 'body'> = [
 	SchemaAt<Schema, Key>,
 ] extends [never]
 	? Empty
@@ -251,6 +272,11 @@ type PartInput<Schema, Key extends 'query' | 'headers' | 'body'> = [
 		: Empty extends InferInput<SchemaAt<Schema, Key>>
 			? { readonly [Part in Key]?: InferInput<SchemaAt<Schema, Key>> }
 			: { readonly [Part in Key]: InferInput<SchemaAt<Schema, Key>> };
+
+/** Cookies are optional to a client: a browser sends its own. */
+type CookiesInput<Schema> = [SchemaAt<Schema, 'cookies'>] extends [never]
+	? Empty
+	: { readonly cookies?: InferInput<SchemaAt<Schema, 'cookies'>> };
 
 type ParamsInput<Path extends string> = [PathParamName<Path>] extends [never]
 	? Empty
@@ -265,6 +291,7 @@ export type RouteInput<Path extends string, Schema> = Simplify<
 	ParamsInput<Path> &
 		PartInput<Schema, 'query'> &
 		PartInput<Schema, 'headers'> &
+		CookiesInput<Schema> &
 		PartInput<Schema, 'body'>
 >;
 

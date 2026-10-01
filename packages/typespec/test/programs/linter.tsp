@@ -48,7 +48,7 @@ namespace Shop {
 
   @route("/users")
   interface Users {
-    @get list(...PageParameters): Page<User> | BadRequest;
+    @get list(...PageParameters): Page<User> | ListErrors;
     @get @route("/all") listAll(): User[];
     @get @route("/search") searchUsers(...CursorPageParameters): CursorPage<User>;
     @get @route("/lists") listing(): User[];
@@ -60,7 +60,9 @@ namespace Shop {
     @get @route("/any") any(): User | Anything;
   }
 
-  @route("/listed") @get op listPets is listTemplate<User>;
+  @route("/listed") @get op listMembers is listTemplate<User>;
+
+  @route("/pets") interface Pets extends Listable<User> {}
 }
 
 @operationIds

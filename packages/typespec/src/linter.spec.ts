@@ -35,11 +35,12 @@ it('warns of each rule the recommended set enables', async () => {
 			message,
 		})),
 	).toEqual([
-		list('listPets'),
+		list('listMembers'),
 		list('listAll'),
 		body('create', '418'),
 		body('fail', '500-599'),
 		body('any', '*'),
+		list('list'),
 		{
 			code: '@nxgt/typespec/service-operation-ids',
 			severity: 'warning',

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { alxia } from '@alxia/core';
+import { alxia, eventStream } from '@alxia/core';
 import { z } from 'zod';
 import { openApiPath, openapi, operationId } from './document';
 import { docs } from './plugin';
@@ -7,7 +7,6 @@ import { docs } from './plugin';
 const User = z.object({
 	id: z.number(),
 	name: z.string(),
-	createdAt: z.date(),
 });
 
 const app = alxia()
@@ -28,8 +27,7 @@ const app = alxia()
 			response: { 201: User },
 			detail: { operationId: 'createUser' },
 		},
-		({ reply, body }) =>
-			reply(201, { id: 1, name: body.name, createdAt: new Date() }),
+		({ reply, body }) => reply(201, { id: 1, name: body.name }),
 	)
 	.delete('/files/*', ({ reply }) => reply(204));
 
@@ -59,10 +57,36 @@ describe('openapi', () => {
 		expect(get?.tags).toEqual(['users']);
 	});
 
-	test('replies are documented as they go over the wire: a Date is a string', () => {
+	test('replies are documented by what their schema gives back', () => {
 		const ok = document.paths['/users/{id}']?.get?.responses['200'];
 		expect(ok?.content?.['application/json']?.schema).toMatchObject({
-			properties: { createdAt: { type: 'string', format: 'date-time' } },
+			properties: { id: { type: 'number' }, name: { type: 'string' } },
+		});
+	});
+
+	test('an event stream, cookies, and a converter', () => {
+		const streaming = alxia().get(
+			'/ticks',
+			{
+				cookies: z.object({ session: z.string() }),
+				response: { 200: eventStream(z.object({ n: z.number() })) },
+			},
+			({ reply }) => reply(200, (async function* () {})()),
+		);
+		const doc = openapi(streaming, {
+			info: { title: 't', version: '1' },
+			convert: (schema) =>
+				schema['~standard'].vendor === 'zod' ? undefined : { type: 'null' },
+		});
+		const get = doc.paths['/ticks']?.get;
+		expect(get?.parameters?.[0]).toMatchObject({
+			name: 'session',
+			in: 'cookie',
+		});
+		expect(
+			get?.responses['200']?.content?.['text/event-stream']?.schema,
+		).toMatchObject({
+			properties: { n: { type: 'number' } },
 		});
 	});
 

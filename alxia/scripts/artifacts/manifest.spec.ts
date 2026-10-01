@@ -34,7 +34,7 @@ describe('manifestShapeProblems', () => {
 	test('refuses a package that lists itself', () => {
 		expect(
 			manifestShapeProblems([
-				{ ...httpyz, dependencies: { '@alxia/core': '.' } },
+				{ ...httpyz, peerDependencies: { '@alxia/core': '.' } },
 			]),
 		).toEqual([expect.stringContaining('lists itself')]);
 	});
@@ -44,14 +44,28 @@ describe('manifestShapeProblems', () => {
 			manifestShapeProblems([
 				{
 					name: '@alxia/core',
-					dependencies: { a: 'link:../a' },
+					peerDependencies: { a: 'link:../a' },
 					optionalDependencies: { b: 'file:../b' },
 					devDependencies: { c: 'link:../c' },
 				},
 			]),
 		).toEqual([
-			'@alxia/core: dependencies.a = link:../a',
+			'@alxia/core: peerDependencies.a = link:../a',
 			'@alxia/core: optionalDependencies.b = file:../b',
+		]);
+	});
+
+	test('refuses any dependency: alxia packages have peers only', () => {
+		expect(
+			manifestShapeProblems([
+				{
+					name: '@alxia/core',
+					version: '1.0.0',
+					dependencies: { zod: '^4.0.0' },
+				},
+			]),
+		).toEqual([
+			'@alxia/core: declares dependencies (zod); every alxia package has none — what it needs at runtime is a peer, chosen and installed by the app',
 		]);
 	});
 });

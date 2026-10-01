@@ -1,11 +1,15 @@
-import type { StandardSchemaV1 } from '@alxia/core';
+import { isEventStreamSchema, type StandardSchemaV1 } from '@alxia/core';
 
 export type JsonSchema = Record<string, unknown>;
 
 /** Which side of a schema: what it accepts, or what it gives back. */
 export type Side = 'input' | 'output';
 
-/** Turns a schema into JSON Schema, for a vendor without Standard JSON Schema. */
+/**
+ * Turns a schema into JSON Schema, before Standard JSON Schema is tried:
+ * for a vendor that does not carry it, or to say more than it does.
+ * `undefined` lets the default conversion run. `@alxia/zod` exports one.
+ */
 export type Converter = (
 	schema: StandardSchemaV1,
 	side: Side,
@@ -19,44 +23,26 @@ interface StandardJsonSchema {
 }
 
 /**
- * Zod's own options: a `Date` goes over the wire as an ISO string, which is
- * what the client reads, so that is what is documented; anything else JSON
- * Schema cannot say is documented as anything rather than thrown on.
- */
-const ZOD_OPTIONS = {
-	unrepresentable: 'any',
-	override: (ctx: {
-		zodSchema: { _zod?: { def?: { type?: string } } };
-		jsonSchema: JsonSchema;
-	}) => {
-		if (ctx.zodSchema._zod?.def?.type === 'date') {
-			ctx.jsonSchema['type'] = 'string';
-			ctx.jsonSchema['format'] = 'date-time';
-		}
-	},
-};
-
-/**
- * `schema` as JSON Schema 2020-12, the dialect of OpenAPI 3.1, through
- * [Standard JSON Schema](https://standardschema.dev): Zod 4.2 and later,
- * ArkType and Valibot carry it. `convert` is tried first; a schema neither
- * converts is documented as `{}`, anything.
+ * `schema` as JSON Schema 2020-12, the dialect of OpenAPI 3.1: by
+ * `convert`, else through [Standard JSON Schema](https://standardschema.dev),
+ * which Zod 4.2 and later, ArkType and Valibot carry. A schema neither
+ * converts is documented as `{}`, anything. An event stream is documented
+ * by the schema of one event.
  */
 export function toJsonSchema(
 	schema: StandardSchemaV1,
 	side: Side,
 	convert?: Converter,
 ): JsonSchema {
+	if (isEventStreamSchema(schema)) {
+		return toJsonSchema(schema['~eventStream'], side, convert);
+	}
 	const converted = convert?.(schema, side);
 	if (converted !== undefined) return clean(converted);
 	const standard = schema['~standard'] as StandardJsonSchema;
 	if (standard.jsonSchema === undefined) return {};
-	const options: Record<string, unknown> = { target: 'draft-2020-12' };
-	if (schema['~standard'].vendor === 'zod') {
-		options['libraryOptions'] = ZOD_OPTIONS;
-	}
 	try {
-		return clean(standard.jsonSchema[side](options));
+		return clean(standard.jsonSchema[side]({ target: 'draft-2020-12' }));
 	} catch {
 		return {};
 	}

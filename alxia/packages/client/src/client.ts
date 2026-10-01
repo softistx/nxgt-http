@@ -191,8 +191,11 @@ function appendQuery(url: URL, query: CallInput['query']): void {
 	}
 }
 
+/** A value as text: a date in ISO 8601, an object as JSON. */
 function stringify(value: unknown): string {
-	return value instanceof Date ? value.toISOString() : String(value);
+	if (value instanceof Date) return value.toISOString();
+	if (value !== null && typeof value === 'object') return JSON.stringify(value);
+	return String(value);
 }
 
 /** The body as the server sent it: JSON, events, text, nothing, or a `Blob`. */

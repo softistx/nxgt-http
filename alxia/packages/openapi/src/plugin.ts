@@ -44,10 +44,23 @@ export function docs(
 	if (ui === false) return plugin;
 	return plugin.get(ui, ({ reply }) =>
 		reply(200, page(options.info.title, path), {
-			headers: { 'content-type': 'text/html;charset=utf-8' },
+			headers: {
+				'content-type': 'text/html;charset=utf-8',
+				'content-security-policy': PAGE_POLICY,
+			},
 		}),
 	);
 }
+
+/** What the reference page loads: Scalar from jsDelivr, and the document from here. */
+const PAGE_POLICY = [
+	"default-src 'self'",
+	"script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+	"style-src 'self' 'unsafe-inline' https:",
+	"img-src 'self' data: https:",
+	"font-src 'self' data: https:",
+	"connect-src 'self'",
+].join('; ');
 
 function page(title: string, spec: string): string {
 	const html = (text: string) =>

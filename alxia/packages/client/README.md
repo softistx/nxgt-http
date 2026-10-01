@@ -40,6 +40,31 @@ const created = await api.post('/users', { body: { name: 'Ada' } });
 expect(created.status).toBe(201);
 ```
 
+## Server-sent events
+
+A route that streams events resolves to an async iterable, typed by the
+event's schema:
+
+```ts
+const ticks = await api.get('/ticks');
+if (ticks.status === 200) {
+	for await (const tick of ticks.data) console.log(tick.n);
+}
+```
+
+## WebSockets
+
+```ts
+const socket = api.ws('/rooms/:room', { params: { room: 'lobby' } });
+socket.send({ text: 'hi' });                    // typed by the route's `message`
+socket.on((chat) => console.log(chat.text));    // typed by its `send`
+for await (const chat of socket) { ... }        // or as an async iterable
+socket.close();
+```
+
+Messages are JSON both ways; a send before the socket opens is queued. A
+socket needs a server: give the client its URL.
+
 ## Options
 
 ```ts
@@ -49,7 +74,11 @@ const api = client<App>('https://api.example.com', {
 });
 
 await api.get('/users/:id', { params: { id: 1 }, signal, init: { cache: 'no-store' } });
+await api.get('/me', { cookies: { session } }); // when the route types its cookies
 ```
+
+A query or header value that is a `Date` is sent in ISO 8601, an object as
+JSON.
 
 ## API
 
@@ -57,5 +86,7 @@ await api.get('/users/:id', { params: { id: 1 }, signal, init: { cache: 'no-stor
 | --- | --- |
 | `client<App>(target, options?)` | the client of an app: a base URL, or anything with a `fetch(request)` |
 | `fillPath(path, params)` | a path with its parameters encoded in |
+| `readEvents(body)` | a `text/event-stream` body as the values of its events |
+| `TypedSocket<Send, Receive>` | what `api.ws()` returns |
 | `Client<App>` | the client's type: one method per HTTP method the app answers |
 | `CallResult<Output>` | what a call resolves to: `status`, `ok`, `data`, `response` |

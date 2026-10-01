@@ -25,6 +25,20 @@
         "typescript": "^6.0.3",
       },
     },
+    "packages/compress": {
+      "name": "@alxia/compress",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@alxia/client": "workspace:^",
+        "@alxia/core": "workspace:^",
+        "@types/bun": "^1.3.0",
+        "zod": "^4.2.0",
+      },
+      "peerDependencies": {
+        "@alxia/core": "workspace:^",
+        "typescript": "^6.0.3",
+      },
+    },
     "packages/core": {
       "name": "@alxia/core",
       "version": "0.0.0",
@@ -33,6 +47,59 @@
         "zod": "^4.1.0",
       },
       "peerDependencies": {
+        "typescript": "^6.0.3",
+      },
+    },
+    "packages/cors": {
+      "name": "@alxia/cors",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@alxia/client": "workspace:^",
+        "@alxia/core": "workspace:^",
+        "@types/bun": "^1.3.0",
+        "zod": "^4.2.0",
+      },
+      "peerDependencies": {
+        "@alxia/core": "workspace:^",
+        "typescript": "^6.0.3",
+      },
+    },
+    "packages/env": {
+      "name": "@alxia/env",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@types/bun": "^1.3.0",
+        "zod": "^4.2.0",
+      },
+      "peerDependencies": {
+        "typescript": "^6.0.3",
+      },
+    },
+    "packages/jwt": {
+      "name": "@alxia/jwt",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@alxia/client": "workspace:^",
+        "@alxia/core": "workspace:^",
+        "@types/bun": "^1.3.0",
+        "zod": "^4.2.0",
+      },
+      "peerDependencies": {
+        "@alxia/core": "workspace:^",
+        "typescript": "^6.0.3",
+      },
+    },
+    "packages/logger": {
+      "name": "@alxia/logger",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@alxia/client": "workspace:^",
+        "@alxia/core": "workspace:^",
+        "@types/bun": "^1.3.0",
+        "zod": "^4.2.0",
+      },
+      "peerDependencies": {
+        "@alxia/core": "workspace:^",
         "typescript": "^6.0.3",
       },
     },
@@ -49,6 +116,63 @@
         "typescript": "^6.0.3",
       },
     },
+    "packages/rate-limit": {
+      "name": "@alxia/rate-limit",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@alxia/client": "workspace:^",
+        "@alxia/core": "workspace:^",
+        "@types/bun": "^1.3.0",
+        "zod": "^4.2.0",
+      },
+      "peerDependencies": {
+        "@alxia/core": "workspace:^",
+        "typescript": "^6.0.3",
+      },
+    },
+    "packages/secure-headers": {
+      "name": "@alxia/secure-headers",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@alxia/client": "workspace:^",
+        "@alxia/core": "workspace:^",
+        "@types/bun": "^1.3.0",
+        "zod": "^4.2.0",
+      },
+      "peerDependencies": {
+        "@alxia/core": "workspace:^",
+        "typescript": "^6.0.3",
+      },
+    },
+    "packages/static": {
+      "name": "@alxia/static",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@alxia/client": "workspace:^",
+        "@alxia/core": "workspace:^",
+        "@types/bun": "^1.3.0",
+        "zod": "^4.2.0",
+      },
+      "peerDependencies": {
+        "@alxia/core": "workspace:^",
+        "typescript": "^6.0.3",
+      },
+    },
+    "packages/zod": {
+      "name": "@alxia/zod",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@alxia/client": "workspace:^",
+        "@alxia/core": "workspace:^",
+        "@alxia/openapi": "workspace:^",
+        "@types/bun": "^1.3.0",
+        "zod": "^4.2.0",
+      },
+      "peerDependencies": {
+        "typescript": "^6.0.3",
+        "zod": "^4.2.0",
+      },
+    },
   },
   "overrides": {
     "typescript": "~6.0.3",
@@ -56,9 +180,27 @@
   "packages": {
     "@alxia/client": ["@alxia/client@workspace:packages/client"],
 
+    "@alxia/compress": ["@alxia/compress@workspace:packages/compress"],
+
     "@alxia/core": ["@alxia/core@workspace:packages/core"],
 
+    "@alxia/cors": ["@alxia/cors@workspace:packages/cors"],
+
+    "@alxia/env": ["@alxia/env@workspace:packages/env"],
+
+    "@alxia/jwt": ["@alxia/jwt@workspace:packages/jwt"],
+
+    "@alxia/logger": ["@alxia/logger@workspace:packages/logger"],
+
     "@alxia/openapi": ["@alxia/openapi@workspace:packages/openapi"],
+
+    "@alxia/rate-limit": ["@alxia/rate-limit@workspace:packages/rate-limit"],
+
+    "@alxia/secure-headers": ["@alxia/secure-headers@workspace:packages/secure-headers"],
+
+    "@alxia/static": ["@alxia/static@workspace:packages/static"],
+
+    "@alxia/zod": ["@alxia/zod@workspace:packages/zod"],
 
     "@biomejs/biome": ["@biomejs/biome@2.5.15", "", { "optionalDependencies": { "@biomejs/cli-darwin-arm64": "2.5.15", "@biomejs/cli-darwin-x64": "2.5.15", "@biomejs/cli-linux-arm64": "2.5.15", "@biomejs/cli-linux-arm64-musl": "2.5.15", "@biomejs/cli-linux-x64": "2.5.15", "@biomejs/cli-linux-x64-musl": "2.5.15", "@biomejs/cli-win32-arm64": "2.5.15", "@biomejs/cli-win32-x64": "2.5.15" }, "bin": { "biome": "bin/biome" } }, "sha512-WZTW4slm/pdkh92K6t/3aEN++44JD1PQ7squ7RCMLI1flHGl43DVOIGXvCjHiZgBMO1V4uYxoFNtqrIA4qGuIQ=="],
 

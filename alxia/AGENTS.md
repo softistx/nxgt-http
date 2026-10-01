@@ -1,17 +1,20 @@
 # AGENTS.md
 
-Instructions for any coding agent working in `alxia`. (`alxia` is a working
-name; renaming it is a search-and-replace of `alxia` and `@alxia`.)
+Instructions for any coding agent working in `alxia`.
 
 ## What this repository is
 
-An HTTP framework for Bun, published as `@alxia/*`:
+A type-safe HTTP framework for Bun, published as `@alxia/*`:
 
-| package | what it is |
-| --- | --- |
-| `@alxia/core` | the framework: routes on `Bun.serve`, validated with any Standard Schema, typed from the request to the reply |
-| `@alxia/client` | the client of an app, typed from `typeof app` alone |
-| `@alxia/openapi` | the OpenAPI 3.1 document of an app, from its route schemas |
+| package | what it is | peers |
+| --- | --- | --- |
+| `@alxia/core` | the framework: routes, hooks, groups, plugins, cookies, SSE, WebSockets | — |
+| `@alxia/client` | the client of an app, typed from `typeof app` alone | core |
+| `@alxia/openapi` | the OpenAPI 3.1 document of an app, from its route schemas | core |
+| `@alxia/zod` | Zod coercions (`zq`) and the OpenAPI converter | zod |
+| `@alxia/cors`, `@alxia/secure-headers`, `@alxia/compress` | function plugins: global hooks | core |
+| `@alxia/rate-limit`, `@alxia/jwt`, `@alxia/logger`, `@alxia/static` | app plugins: typed context, typed replies, routes | core |
+| `@alxia/env` | environment variables through any Standard Schema | — |
 
 Its skeleton is `softistx/nxgt-http`'s: the Bun workspace, the root
 `build.ts`, Biome, changesets, `scripts/publish.ts` and `verify:artifacts`.
@@ -19,30 +22,42 @@ A check added there is a check to port here.
 
 ## Principles
 
+- **No package has a dependency.** What one needs at runtime is a peer:
+  `@alxia/core`, `zod`. Bun's and the web platform's own APIs —
+  `Bun.CookieMap`, `Bun.file`, Web Crypto, `CompressionStream`, `node:zlib`
+  — are not dependencies. `verify:artifacts` fails a manifest with a
+  `dependencies` field that lists anything.
+- **The core knows no validator.** It reads `~standard`, and nothing in
+  `@alxia/core` or `@alxia/openapi` names Zod. What only Zod can do goes in
+  `@alxia/zod`. Specs may use Zod, a devDependency, and `core` has a spec
+  with a schema written by hand to keep it honest.
+- **Modular by plugin, not by option.** A feature that can live outside the
+  core does, as a package. A plugin is either an app given to `use` — it
+  adds context, routes or typed replies — or a function `Plugin` that adds
+  global hooks and returns the app unchanged in type. Plugins use the
+  core's public API only: if one needs more, export it from the core.
 - **The types are the product.** A mistake a type can catch is a compile
-  error, never a runtime surprise: a params schema that does not read the
-  path's parameters, an unknown key in a route, an undeclared status, a body
-  its schema refuses. Each has a `@ts-expect-error` in a spec; a new check
-  gets one too, and a probe that the assertion really fails when wrong.
-- **Standard Schema, Zod first.** `@alxia/core` imports no validator: it
-  reads `~standard`. Zod 4 is the reference — every example, every spec —
-  and `@alxia/openapi` passes Zod its own options, but Valibot and ArkType
-  must keep working.
+  error: a params schema that does not read the path, an unknown key in a
+  route, an undeclared status, a body its schema refuses. Each has a
+  `@ts-expect-error` in a spec; a new check gets one too, and a probe that
+  the assertion really fails when wrong.
 - **The client is honest.** Every status a route may answer is in its type:
   its declared replies, the replies of the hooks before it, its 400 when it
   validates, the 500 of every route. A handler cannot return a raw
-  `Response`: it would be a status the client cannot know.
-- **Order is meaning.** A hook applies to the routes declared after it, at
-  runtime and in the types alike. Keep the two in step.
-- **What leaves the server is the schema's output.** A reply is validated
-  and sent as its schema gives it back, so an unknown key never leaks.
+  `Response`. A global hook's `Response` is outside the contract: use it
+  only for what a typed client never asks.
+- **Order is meaning.** A route hook applies to the routes declared after
+  it, at runtime and in the types alike; a group's stay inside it. Global
+  hooks apply everywhere. Keep the two in step.
+- **What leaves the server is the schema's output.** A reply, an event, a
+  socket message is validated and sent as its schema gives it back.
 
 ## Layering
 
 ```
-server
-  ├─ client    (types only; dev: its specs run an app)
-  └─ openapi   (reads app.routes; its `docs` plugin is an app)
+core ◄── client, openapi, cors, secure-headers, compress, rate-limit, jwt, logger, static
+zod             (peer: zod; dev: core, client, openapi for its specs)
+env             (standalone)
 ```
 
 A package that uses a sibling declares it by `workspace:^`, as a peer and a
@@ -57,6 +72,9 @@ with `packages: 'external'`, declarations from `tsc` against
 each with a matching key in `exports`.
 
 - **Build before typecheck and tests**: `exports` points at `dist/`.
+  `bun run build`, `typecheck` and `test` go through `scripts/workspace.ts`,
+  which runs a package only after every sibling it names in any dependency
+  field: `bun run --filter` started dependents beside their dependencies.
 - **A build that exits 0 is not evidence the artifact loads.**
   `bun run verify:artifacts` packs, installs and imports every package.
 

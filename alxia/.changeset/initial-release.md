@@ -2,6 +2,15 @@
 "@alxia/core": minor
 "@alxia/client": minor
 "@alxia/openapi": minor
+"@alxia/zod": minor
+"@alxia/cors": minor
+"@alxia/secure-headers": minor
+"@alxia/rate-limit": minor
+"@alxia/compress": minor
+"@alxia/static": minor
+"@alxia/jwt": minor
+"@alxia/logger": minor
+"@alxia/env": minor
 ---
 
-The first release: a Bun.serve framework whose routes validate with any Standard Schema, Zod first; its typed client, inferred from the app's type; and its OpenAPI 3.1 document, from the same schemas.
+The first release of alxia: a zero-dependency, type-safe HTTP framework for Bun, its typed client, its OpenAPI document, its Zod integration, and its plugins.

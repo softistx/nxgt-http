@@ -77,7 +77,8 @@ export async function manifestProblems(
 }
 
 /**
- * Every check on the manifests' dependency fields that needs no network: a
+ * Every check on the manifests' dependency fields that needs no network: any
+ * `dependencies` at all — alxia's packages have none, only peers — a
  * `link:` or `file:`, a package listing itself, an exact pin on a sibling, and
  * a sibling range that excludes the sibling published beside it. The siblings'
  * versions are the ones in these same manifests. Pure, so it has specs.
@@ -88,20 +89,33 @@ export function manifestShapeProblems(
 	const own = new Map(
 		manifests.map((m) => [m.name as string, m.version as string]),
 	);
-	return manifests.flatMap((manifest) =>
-		['dependencies', 'peerDependencies', 'optionalDependencies'].flatMap(
-			(field) =>
-				Object.entries<string>(
-					(manifest[field] as Record<string, string>) ?? {},
-				).flatMap(([dep, range]) =>
-					dependencyProblems(
-						manifest.name as string,
-						field,
-						dep,
-						String(range),
-						own,
+	const dependencies = manifests.flatMap((manifest) =>
+		Object.keys((manifest['dependencies'] as Record<string, string>) ?? {})
+			.length > 0
+			? [
+					`${manifest.name}: declares dependencies (${Object.keys(
+						manifest['dependencies'] as Record<string, string>,
+					).join(', ')}); every alxia package has none — what it needs ` +
+						'at runtime is a peer, chosen and installed by the app',
+				]
+			: [],
+	);
+	return dependencies.concat(
+		manifests.flatMap((manifest) =>
+			['dependencies', 'peerDependencies', 'optionalDependencies'].flatMap(
+				(field) =>
+					Object.entries<string>(
+						(manifest[field] as Record<string, string>) ?? {},
+					).flatMap(([dep, range]) =>
+						dependencyProblems(
+							manifest.name as string,
+							field,
+							dep,
+							String(range),
+							own,
+						),
 					),
-				),
+			),
 		),
 	);
 }

@@ -178,7 +178,6 @@ type Prefixed<Prefix extends string, Routes, Shortcuts> = {
 };
 
 /** Any app, whatever it holds. */
-// biome-ignore lint/suspicious/noExplicitAny: matches every instantiation.
 export type AnyAlxia = Alxia<any, any, any, any>;
 
 /**
@@ -519,7 +518,6 @@ export class Alxia<
 		Prefix,
 		Shortcuts | PluginShortcuts
 	>;
-	// biome-ignore lint/suspicious/noExplicitAny: the overloads above type it.
 	use(plugin: AnyAlxia | ((app: any) => AnyAlxia)): AnyAlxia {
 		if (!(plugin instanceof Alxia)) return plugin(this);
 		for (const route of plugin.routes) {

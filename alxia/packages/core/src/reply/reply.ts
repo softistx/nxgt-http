@@ -70,6 +70,7 @@ export function toResponse(
 	if (typeof body === 'string') {
 		if (!headers.has('content-type'))
 			headers.set('content-type', 'text/plain;charset=utf-8');
+		headers.set('content-length', String(Buffer.byteLength(body)));
 		return new Response(body, { status, headers });
 	}
 	if (BINARY(body)) return new Response(body, { status, headers });
@@ -81,5 +82,7 @@ export function toResponse(
 	}
 	if (!headers.has('content-type'))
 		headers.set('content-type', 'application/json');
-	return new Response(JSON.stringify(body), { status, headers });
+	const json = JSON.stringify(body);
+	headers.set('content-length', String(Buffer.byteLength(json)));
+	return new Response(json, { status, headers });
 }

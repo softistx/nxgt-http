@@ -35,13 +35,17 @@ await Bun.write('openapi.json', JSON.stringify(openapi(app, { info }), null, 2))
 - `params`, `query` and `headers` as parameters, required as their schemas say
 - `body` as a JSON request body, what its schema **accepts**
 - each `response` as what its schema **gives back**, as it goes over the wire:
-  a Zod `Date` is a `date-time` string
+  (with Zod, give it `zodConverter` from `@alxia/zod`: a `Date` is then a `date-time` string)
+- an event stream as `text/event-stream`, by the schema of one event
+- `cookies` as cookie parameters
 - the 400 of a route that validates its request, and the 500 of every route
 - `detail`: `summary`, `description`, `tags`, `operationId`, `deprecated`. An
   operation id is otherwise made from the method and path: `getUsersById`
 
 Schemas convert through [Standard JSON Schema](https://standardschema.dev),
-which Zod 4.2 and later carry. For a vendor that does not, pass `convert`.
+which Zod 4.2 and later, ArkType and Valibot carry: the package imports no
+validator. `convert` runs first — for a vendor that carries none, or to say
+more than it does; `@alxia/zod` exports one for Zod.
 
 ## API
 

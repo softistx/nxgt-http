@@ -1,4 +1,9 @@
-import type { Method, RouteDefinition, StandardSchemaV1 } from '@alxia/core';
+import {
+	isEventStreamSchema,
+	type Method,
+	type RouteDefinition,
+	type StandardSchemaV1,
+} from '@alxia/core';
 import { type Converter, type JsonSchema, toJsonSchema } from './json-schema';
 
 export interface OpenApiInfo {
@@ -46,7 +51,7 @@ export interface Operation {
 
 interface Parameter {
 	name: string;
-	in: 'path' | 'query' | 'header';
+	in: 'path' | 'query' | 'header' | 'cookie';
 	required: boolean;
 	schema: JsonSchema;
 	description?: string;
@@ -60,7 +65,7 @@ interface Response {
 const ISSUE: JsonSchema = {
 	type: 'object',
 	properties: {
-		target: { enum: ['params', 'query', 'headers', 'body'] },
+		target: { enum: ['params', 'query', 'headers', 'cookies', 'body'] },
 		path: { type: 'array', items: { type: ['string', 'integer'] } },
 		code: { type: 'string' },
 		message: { type: 'string' },
@@ -167,6 +172,7 @@ function operation(route: RouteDefinition, convert?: Converter): Operation {
 		...pathParameters(path, schema.params, convert),
 		...objectParameters('query', schema.query, convert),
 		...objectParameters('header', schema.headers, convert),
+		...objectParameters('cookie', schema.cookies, convert),
 	];
 	if (parameters.length > 0) op.parameters = parameters;
 
@@ -188,7 +194,11 @@ function operation(route: RouteDefinition, convert?: Converter): Operation {
 				? { description: describe(status) }
 				: {
 						description: describe(status),
-						content: { [contentType(json)]: { schema: json } },
+						content: {
+							[isEventStreamSchema(responseSchema)
+								? 'text/event-stream'
+								: contentType(json)]: { schema: json },
+						},
 					};
 	}
 	if (schema.response === undefined) {
@@ -198,6 +208,7 @@ function operation(route: RouteDefinition, convert?: Converter): Operation {
 		schema.params !== undefined ||
 		schema.query !== undefined ||
 		schema.headers !== undefined ||
+		schema.cookies !== undefined ||
 		schema.body !== undefined
 	) {
 		op.responses['400'] = errorResponse(
@@ -262,7 +273,7 @@ function pathParameters(
 }
 
 function objectParameters(
-	location: 'query' | 'header',
+	location: 'query' | 'header' | 'cookie',
 	schema: StandardSchemaV1 | undefined,
 	convert?: Converter,
 ): Parameter[] {

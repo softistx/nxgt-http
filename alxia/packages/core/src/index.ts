@@ -47,6 +47,7 @@ export {
 	type ValidationIssue,
 	type ValidationTarget,
 } from './errors/errors';
+export { vary, withHeaders } from './reply/headers';
 export {
 	type AnyReply,
 	type FreeReplyFunction,
@@ -61,6 +62,7 @@ export type {
 	StandardResult,
 	StandardSchemaV1,
 } from './schema/standard-schema';
+export { type Checked, check } from './schema/standard-schema';
 export {
 	type EventStreamSchema,
 	eventStream,

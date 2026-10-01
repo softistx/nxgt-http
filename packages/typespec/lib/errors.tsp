@@ -131,6 +131,29 @@ model TooManyRequests {
 }
 
 /**
+ * A request with this `Idempotency-Key` is still running. Retry it as it is,
+ * after `Retry-After`.
+ */
+@error
+model IdempotencyInProgress {
+  @statusCode _: 409;
+  ...RateLimitHeaders;
+  ...RetryAfterHeader;
+  @body body: ConflictBody;
+}
+
+/**
+ * This `Idempotency-Key` was already used for a request with another body. A
+ * new request takes a new key.
+ */
+@error
+model IdempotencyKeyReused {
+  @statusCode _: 422;
+  ...RateLimitHeaders;
+  @body body: UnprocessableEntityBody;
+}
+
+/**
  * The server failed. With `validateResponses`, `@nxgt/openapi-hono` answers
  * it too when a reply breaks the spec, with `errors.response-validation-failed`.
  */

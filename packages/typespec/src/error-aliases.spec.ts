@@ -30,4 +30,15 @@ it('names the errors of each verb', async () => {
 		delete: [404],
 		me: [401, 403],
 	});
+	// `AuthErrors` carries the envelope, unlike `AuthenticationRequired`.
+	const me = service?.operations.find(
+		({ operation }) => operation.name === 'me',
+	);
+	const auth = (me?.responses ?? []).filter(
+		({ statusCodes }) => statusCodes === 401 || statusCodes === 403,
+	);
+	expect(auth.map(({ responses }) => responses[0]?.body?.type.kind)).toEqual([
+		'Model',
+		'Model',
+	]);
 });

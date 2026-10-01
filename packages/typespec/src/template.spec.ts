@@ -7,7 +7,12 @@
 import { afterAll, expect, it } from 'bun:test';
 import { access, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { compile, NodeHost, navigateProgram } from '@typespec/compiler';
+import {
+	compile,
+	type LinterRuleSet,
+	NodeHost,
+	navigateProgram,
+} from '@typespec/compiler';
 import { getOperationId } from '@typespec/openapi';
 
 const templates = new URL('../templates/', import.meta.url);
@@ -17,7 +22,7 @@ afterAll(() => rm(directory, { recursive: true, force: true }));
 
 interface Template {
 	readonly libraries: readonly string[];
-	readonly config: { readonly linter: { readonly extends: string[] } };
+	readonly config: { readonly linter: LinterRuleSet };
 	readonly emitters: Record<string, unknown>;
 	readonly files: readonly { path: string; destination: string }[];
 }

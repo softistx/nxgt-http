@@ -27,6 +27,67 @@ no `package.json` to resolve it from.
 devDependencies, with the command in the
 [README's Install section](../README.md#install).
 
+## `init-template-invalid-json: Unable to parse …/scaffolding.json: Unexpected token … is not valid JSON`
+
+**When:** `tsp init` with the package's template, before it writes anything.
+
+```text
+error init-template-invalid-json: Unable to parse https://unpkg.com/@nxgt/typespec@0.8.0/templates/scaffolding.json: Unexpected token 'N', "Not found:"... is not valid JSON. Check that the template URL is correct.
+```
+
+**Why:** the URL names no template, so unpkg answers a page of text, `Not
+found: …` or `Package version not found: …`, which `tsp init` cannot parse.
+The template ships from 0.9.0 on: a version before it in the URL, a version
+that is not published, or a typo in the path all answer that page.
+
+**Fix:** drop the version, or name 0.9.0 or later, and keep the path as it is:
+
+```sh
+npm view @nxgt/typespec version   # 0.9.0 or later
+npx --package=@typespec/compiler tsp init https://unpkg.com/@nxgt/typespec/templates/scaffolding.json
+```
+
+## `init-template-download-failed: Failed to download template from …: fetch failed`
+
+**When:** `tsp init` with the package's template, before it writes anything.
+
+```text
+error init-template-download-failed: Failed to download template from https://unpkg.com/@nxgt/typespec/templates/scaffolding.json: fetch failed. Check that the template URL is correct.
+```
+
+**Why:** `tsp init` could not reach the host: no network, a firewall or
+proxy in the way, or a host name mistyped. Nothing answered, unlike the entry
+above, where unpkg answers a page that is not the template.
+
+**Fix:** check that the host answers from that machine, then run `tsp init`
+again:
+
+```sh
+curl -fsSI https://unpkg.com/@nxgt/typespec/templates/scaffolding.json
+```
+
+## `env: 'bun': No such file or directory`
+
+**When:** `nxgt-openapi generate` runs, through `npx`, an npm script such as
+the template's `api`, or a CI step, on a machine without Bun. A shell in
+another locale quotes it `‘bun’`; macOS prints `env: bun: No such file or
+directory`. The exit code is 127.
+
+**Why:** `@nxgt/openapi-codegen`'s CLI, `nxgt-openapi`, runs on
+[Bun](https://bun.sh): its first line is `#!/usr/bin/env bun`. `npx` and
+`npm run` find the script, then the system looks for `bun` to run it.
+`tsp compile` runs on Node and is not affected.
+
+**Fix:** install Bun, and make sure `bun` is on the PATH of the shell or the
+CI job that runs the generator:
+
+```sh
+curl -fsSL https://bun.sh/install | bash
+bunx nxgt-openapi generate
+```
+
+In GitHub Actions, add `oven-sh/setup-bun@v2` before the step.
+
 ## `Duplicate type name: 'NotFoundBody'`
 
 **When:** `tsp compile` runs on a spec that declares its own model named like

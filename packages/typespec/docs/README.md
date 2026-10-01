@@ -4,6 +4,7 @@ The [package README](../README.md) is the short version.
 
 | Page | Read it when |
 | --- | --- |
+| [Getting started](guide/getting-started.md) | starting a new API project from the `tsp init` template, up to a Hono route |
 | [Error replies](guide/errors.md) | declaring what an operation answers when it fails |
 | [Pagination](guide/pagination.md) | listing a collection a page at a time |
 | [Authentication](guide/auth.md) | protecting an operation with a `@nxgt/janus` session |

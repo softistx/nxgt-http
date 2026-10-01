@@ -8,6 +8,10 @@ Each shape here is one the `@nxgt/*` packages already send on the wire.
 
 ## Install
 
+A new project needs no install of its own: `tsp init` with the package's
+template installs everything ([Start a project](#start-a-project)). For an
+existing project, install the library and its peers:
+
 ```sh
 bun add -d @nxgt/typespec @typespec/compiler @typespec/http @typespec/openapi @typespec/openapi3 @nxgt/openapi-codegen
 ```
@@ -16,6 +20,8 @@ bun add -d @nxgt/typespec @typespec/compiler @typespec/http @typespec/openapi @t
 are peer dependencies,
 and `typescript` 6 too, as for every `@nxgt` package. `@typespec/openapi3`
 compiles the spec, and `@nxgt/openapi-codegen` generates the code from it.
+The generator's CLI, `nxgt-openapi`, runs on [Bun](https://bun.sh): it needs
+`bun` on the PATH, even when called through `npx` or an npm script.
 Emit OpenAPI 3.1 or 3.2 in `tspconfig.yaml`: `@typespec/openapi3` emits 3.0
 by default, and the generator refuses it. Every convention here is compiled
 to both in CI, and generates the same code from either.
@@ -32,6 +38,35 @@ options:
 ```
 
 ## Usage
+
+### Start a project
+
+`tsp init` with the package's template starts an API project with these
+conventions in place. Run it in an empty directory, with
+[Bun](https://bun.sh) on the PATH for the generator:
+
+```sh
+npx --package=@typespec/compiler tsp init https://unpkg.com/@nxgt/typespec/templates/scaffolding.json \
+  --template nxgt -y --project-name petstore
+npx tsp compile .
+npx nxgt-openapi generate
+```
+
+It installs the compiler, `@typespec/http`, `@typespec/openapi`,
+`@typespec/openapi3`, this package and `@nxgt/openapi-codegen`, and writes:
+
+- `tspconfig.yaml`: the linter's recommended rules, and OpenAPI 3.1 written
+  to `openapi/openapi.yaml`;
+- `main.tsp`: the service in the namespace `Api`, with `@operationIds`, and a
+  `Users` resource with a paged, sorted list, `get`, `create`, `update` and
+  `delete`, and their error aliases;
+- `openapi-codegen.config.ts`: the generator's input, and `src/generated`
+  with the Hono routes;
+- `README.md`: the `api` and `api:check` scripts to add to `package.json`.
+
+Drop `-y` and its options to be asked instead. The next steps, serving the
+routes and renaming the resource, are in
+[Getting started](docs/guide/getting-started.md).
 
 ### A spec split across files
 
@@ -513,6 +548,9 @@ envelope and the rate limit's headers.
 
 ## Traps
 
+- **`nxgt-openapi` fails with `env: 'bun': No such file or directory`**
+  without Bun on the PATH: install it, `curl -fsSL https://bun.sh/install | bash`
+  ([troubleshooting](docs/troubleshooting.md#env-bun-no-such-file-or-directory)).
 - **Do not declare a schema named `ValidationErrorBody`.** The generator
   declares it itself, and two schemas of that name fail with
   `name_collision`. `BadRequestBody` carries the `issues` instead.
@@ -570,6 +608,8 @@ envelope and the rate limit's headers.
 
 ## Documentation
 
+- [Getting started](docs/guide/getting-started.md): the `tsp init`
+  template, the files it writes, and the steps from the spec to a Hono route;
 - [Error replies](docs/guide/errors.md): the envelope, each response, the
   aliases by verb, and what the generator makes of them;
 - [Pagination](docs/guide/pagination.md): offset and cursor pages, and

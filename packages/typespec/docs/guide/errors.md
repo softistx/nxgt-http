@@ -162,7 +162,9 @@ its own way, through `onValidationError`, turns that off with the generator's
 | `Forbidden` | 403 | `ForbiddenBody` | authenticated, but not allowed; a `@nxgt/janus-hono` guard sends `AccessDenied` instead, and `janusErrors()` its own `{ code }` body ([Authentication](auth.md)) |
 | `NotFound` | 404 | `NotFoundBody` | nothing is there |
 | `Conflict` | 409 | `ConflictBody` | the request conflicts with the resource's state, such as a stale `version` |
+| `IdempotencyInProgress` | 409 | `ConflictBody` | the first request with this `Idempotency-Key` still runs; with the `RateLimit-*` headers and `Retry-After` ([Headers](headers.md)) |
 | `UnprocessableEntity` | 422 | `UnprocessableEntityBody` | well-formed, but not something the server can act on |
+| `IdempotencyKeyReused` | 422 | `UnprocessableEntityBody` | an `Idempotency-Key` sent again with another body; with the `RateLimit-*` headers ([Headers](headers.md)) |
 | `TooManyRequests` | 429 | `TooManyRequestsBody` | too many requests; with the `RateLimit-*` headers and `Retry-After` ([Headers](headers.md)) |
 | `InternalServerError` | 500 | `InternalServerErrorBody` | the server failed; with `validateResponses`, `@nxgt/openapi-hono` sends it with `errors.response-validation-failed` when a reply breaks the spec |
 | `ErrorResponse<Status>` | any | `ErrorBody<Status>` | any other status |

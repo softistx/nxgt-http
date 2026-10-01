@@ -381,6 +381,34 @@ The verbs `verbs` adds are not checked, nor an operation with its own
 `@operationId`. More, with each verb's methods, in
 [Operation ids](docs/guide/operation-ids.md).
 
+### Linter
+
+Extend the library's ruleset in `tspconfig.yaml`, and `tsp compile` warns
+where the spec strays from these conventions. Nothing runs without it:
+
+```yaml
+# api/tspconfig.yaml
+linter:
+  extends:
+    - '@nxgt/typespec/recommended'
+```
+
+| Rule | Warns when | Fix |
+| --- | --- | --- |
+| `list-returns-page` | an operation named `list`, `search` or `query`, alone or before a capital letter (`listUsers`, not `listing`), answers an array | return `Page<Item>` or `CursorPage<Item>` |
+| `service-operation-ids` | a `@service` namespace has no `@operationIds`, on itself or on a namespace around it | mark the namespace with `@operationIds` |
+| `error-body-shape` | a reply of status 400 or above, or `default`, has a body without `status`, `message` and `timestamp` | declare one of the library's errors, or a body that spreads or extends `ErrorBody<Status>` |
+
+```text
+warning @nxgt/typespec/list-returns-page: listAll returns an array: return Page<Item> or CursorPage<Item>, which can carry a total or a next cursor.
+```
+
+A reply without a body, such as `AuthenticationRequired`, passes
+`error-body-shape`. Turn a rule off for the spec under `linter: disable:`
+with a reason, or for one operation with
+`#suppress "@nxgt/typespec/<rule>" "<reason>"`. More, with a failing and a
+passing example of each rule, in [Linter](docs/guide/linter.md).
+
 ## API
 
 ### Decorators
@@ -402,6 +430,17 @@ overrides verbs, on a namespace or an interface.
 | `duplicate-status-reply` | error: an operation declares a reply without a body and one with a body of one status, which the emitter merges, losing the one without a body |
 | `merged-status-reply` | warning: an operation declares two replies with a body of one status code, which the emitter merges under the first one's description |
 | `verb-method-mismatch` | warning: an operation `@operationIds` names after one of the library's verbs, in an interface, is sent with a method that verb does not name: `create` with a `GET` |
+
+### Linter rules
+
+In the ruleset `@nxgt/typespec/recommended`; each is a warning, and named
+`@nxgt/typespec/<rule>` in `tspconfig.yaml` and `#suppress`.
+
+| Rule | Reported when |
+| --- | --- |
+| `list-returns-page` | an operation named `list`, `search` or `query`, alone or before a capital letter, has a success reply whose body is an array |
+| `service-operation-ids` | a `@service` namespace is not marked with `@operationIds`, itself or by a namespace around it |
+| `error-body-shape` | a reply of status 400 or above, of a range from 400 up, or `default`, has a body that is not a model with `status`, `message` and `timestamp` |
 
 ### Models
 
@@ -546,6 +585,8 @@ envelope and the rate limit's headers.
 - [Operation ids](docs/guide/operation-ids.md): `@operationIds`, each
   operation named as written or a verb with its resource, the method each
   verb is sent with, the options, and the ids it refuses;
+- [Linter](docs/guide/linter.md): the ruleset `@nxgt/typespec/recommended`,
+  each rule with a failing and a passing spec, and how to turn one off;
 - [troubleshooting](docs/troubleshooting.md);
 - [the roadmap](docs/roadmap.md): what is coming.
 

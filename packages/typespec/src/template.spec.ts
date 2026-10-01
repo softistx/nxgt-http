@@ -1,7 +1,8 @@
 /**
  * The `tsp init` template in `templates/`. `tsp init` renders its files with
- * Mustache and installs its packages from npm; here the two placeholders it
- * uses are filled in by hand, into `test/scaffolded/`, where this package
+ * Mustache and installs its packages from npm; here its one placeholder,
+ * `{{name}}`, is filled in by hand (a copy of the renderer, since the
+ * compiler's own is internal), into `test/scaffolded/`, where this package
  * resolves. The project compiles, and passes the linter it turns on.
  */
 import { afterAll, expect, it } from 'bun:test';
@@ -34,14 +35,9 @@ async function template(): Promise<Template> {
 	return index.nxgt;
 }
 
-/** What `tsp init --project-name petstore` writes for the two placeholders. */
+/** What `tsp init --project-name petstore` writes for its placeholder. */
 function rendered(text: string): string {
-	return text
-		.replaceAll(
-			'{{#casing.pascalCase}}{{name}}{{/casing.pascalCase}}',
-			'Petstore',
-		)
-		.replaceAll('{{name}}', 'petstore');
+	return text.replaceAll('{{name}}', 'petstore');
 }
 
 it('lists files that exist, and the packages they import', async () => {

@@ -9,7 +9,7 @@ using Nxgt;
 /** The {{name}} API. */
 @service(#{ title: "{{name}}" })
 @operationIds
-namespace {{#casing.pascalCase}}{{name}}{{/casing.pascalCase}};
+namespace Api;
 
 /** Someone who uses the API. */
 model User {

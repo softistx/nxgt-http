@@ -6,7 +6,37 @@ OpenAPI 3.1 or 3.2 with `@typespec/openapi3`, then generate the code with
 [`@nxgt/openapi-codegen`](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-codegen/README.md).
 Each shape here is one the `@nxgt/*` packages already send on the wire.
 
+## Start a project
+
+`tsp init` with the package's template starts an API project with these
+conventions in place. Run it in an empty directory:
+
+```sh
+npx --package=@typespec/compiler tsp init https://unpkg.com/@nxgt/typespec/templates/scaffolding.json \
+  --template nxgt -y --project-name petstore
+npx tsp compile .
+npx nxgt-openapi generate
+```
+
+It installs the compiler, `@typespec/http`, `@typespec/openapi`,
+`@typespec/openapi3`, this package and `@nxgt/openapi-codegen`, and writes:
+
+- `tspconfig.yaml`: the linter's recommended rules, and OpenAPI 3.1 written
+  to `openapi/openapi.yaml`;
+- `main.tsp`: the service with `@operationIds`, and a `Users` resource with a
+  paged, sorted list, `get`, `create`, `update` and `delete`, and their error
+  aliases;
+- `openapi-codegen.config.ts`: the generator's input, and `src/generated`
+  with the Hono routes;
+- `README.md`: the `api` and `api:check` scripts to add to `package.json`.
+
+Drop `-y` and its options to be asked instead. The next steps, serving the
+routes and renaming the resource, are in
+[Getting started](docs/guide/getting-started.md).
+
 ## Install
+
+For an existing project, install the library and its peers:
 
 ```sh
 bun add -d @nxgt/typespec @typespec/compiler @typespec/http @typespec/openapi @typespec/openapi3 @nxgt/openapi-codegen
@@ -513,6 +543,10 @@ envelope and the rate limit's headers.
 
 ## Traps
 
+- **`npx tsp init` without `--package=@typespec/compiler` runs another
+  package.** Outside a project that has the compiler, `npx tsp` fetches
+  `tsp`, an unrelated npm package. Name the compiler:
+  `npx --package=@typespec/compiler tsp init …`.
 - **Do not declare a schema named `ValidationErrorBody`.** The generator
   declares it itself, and two schemas of that name fail with
   `name_collision`. `BadRequestBody` carries the `issues` instead.
@@ -570,6 +604,8 @@ envelope and the rate limit's headers.
 
 ## Documentation
 
+- [Getting started](docs/guide/getting-started.md): the `tsp init`
+  template, the files it writes, and the steps from the spec to a Hono route;
 - [Error replies](docs/guide/errors.md): the envelope, each response, the
   aliases by verb, and what the generator makes of them;
 - [Pagination](docs/guide/pagination.md): offset and cursor pages, and

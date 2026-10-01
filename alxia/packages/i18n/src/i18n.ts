@@ -1,21 +1,12 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { alxia } from '@alxia/core';
 import { type LanguageOptions, language } from '@alxia/language';
-import * as nxgt from '@nxgt/i18n';
 import {
 	createTranslator,
 	type Path,
+	registerLanguageSource,
 	type TranslationContext,
 } from '@nxgt/i18n';
-
-/** `@nxgt/i18n` 2.0's registry, absent from 1.x: detected, so either works. */
-const registerLanguageSource = (
-	nxgt as {
-		readonly registerLanguageSource?: (
-			source: () => string | undefined,
-		) => () => void;
-	}
-).registerLanguageSource;
 
 /** Catalogues by language: `{ en: { greeting: 'Hello {name}' }, fr: … }`. */
 export type Catalogues = Readonly<
@@ -66,10 +57,9 @@ export interface I18nContext<Key extends string> {
  * app.use(i18n).get('/', ({ t, reply }) => reply(200, t('home.title')));
  * ```
  *
- * With `@nxgt/i18n` 2.0 the plugin registers the request's language as one
- * of its sources, so its own `getLanguage()` and `translate` — and every
- * nxgt package that translates through them — speak it too. With 1.x, which
- * reads a Hono request only, translate through `t`.
+ * The plugin registers the request's language as one of `@nxgt/i18n`'s
+ * language sources, so its own `getLanguage()` and `translate` — and every
+ * nxgt package that translates through them — speak it too.
  */
 export function createI18n<
 	const C extends Catalogues,
@@ -88,7 +78,8 @@ export function createI18n<
 		(key, context) =>
 			translator(key, context, lang as never);
 
-	registerLanguageSource?.(() => current.getStore());
+	// nxgt's own getLanguage() and translate speak the request's language too.
+	registerLanguageSource(() => current.getStore());
 
 	const plugin = alxia()
 		.use(language<Language>({ ...detect, supported, fallback }))

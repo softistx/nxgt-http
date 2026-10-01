@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, test } from 'bun:test';
 import { alxia } from '@alxia/core';
-import { resources as shared } from '@nxgt/i18n';
+import { getLanguage, resources as shared } from '@nxgt/i18n';
 import { createI18n } from './i18n';
 
 const en = {
@@ -74,20 +74,14 @@ describe('i18n', () => {
 });
 
 describe("@nxgt/i18n's own getLanguage", () => {
-	const nxgt = require('@nxgt/i18n') as {
-		registerLanguageSource?: unknown;
-		getLanguage: () => string;
-	};
-	test.skipIf(nxgt.registerLanguageSource === undefined)(
-		'speaks the alxia request’s language, from @nxgt/i18n 2.0',
-		async () => {
-			const spoken = alxia()
-				.use(i18n)
-				.get('/nxgt', async ({ reply }) => {
-					await Bun.sleep(1);
-					return reply(200, nxgt.getLanguage());
-				});
-			expect(await (await spoken.request('/nxgt?lang=fr')).text()).toBe('fr');
-		},
-	);
+	test("speaks the alxia request's language", async () => {
+		const spoken = alxia()
+			.use(i18n)
+			.get('/nxgt', async ({ reply }) => {
+				await Bun.sleep(1);
+				return reply(200, getLanguage());
+			});
+		expect(await (await spoken.request('/nxgt?lang=fr')).text()).toBe('fr');
+		expect(getLanguage()).toBe('en');
+	});
 });

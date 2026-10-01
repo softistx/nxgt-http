@@ -6,7 +6,7 @@ request's language, keys typed by your catalogue, ICU messages — plurals,
 selects, numbers.
 
 ```sh
-bun add @alxia/i18n @alxia/language @nxgt/i18n
+bun add @alxia/i18n @alxia/language @nxgt/i18n@^2
 ```
 
 ## Usage
@@ -46,11 +46,10 @@ which.
 
 ### `@nxgt/i18n`'s own `translate`
 
-From `@nxgt/i18n` 2.0, `createI18n()` registers the request's language as
-one of its language sources: its `getLanguage()` and `translate` — and every
-nxgt package that translates through them, an error's message — speak the
-alxia request's language too. `@nxgt/i18n` 1.x reads a Hono request only:
-with it, translate through `t`. Both are supported peers.
+`createI18n()` registers the request's language as one of `@nxgt/i18n`'s
+language sources: its `getLanguage()` and `translate` — and every nxgt
+package that translates through them, an error's message — speak the alxia
+request's language too.
 
 ## Cached responses
 

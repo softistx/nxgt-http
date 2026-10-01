@@ -1,5 +1,11 @@
 # @nxgt/typespec
 
+## 0.7.0
+
+### Minor Changes
+
+- [#85](https://github.com/softistx/nxgt-http/pull/85) [`6569379`](https://github.com/softistx/nxgt-http/commit/656937915b489dd85513f1bf56ffad05f2227b0d) Thanks [@SteveGT96](https://github.com/SteveGT96)! - Error aliases by verb, so an operation declares its usual errors in one name: `ListErrors` (`BadRequest`), `GetErrors` (`NotFound`), `CreateErrors` (`BadRequest | Conflict`), `UpdateErrors` (`BadRequest | NotFound | Conflict`), `DeleteErrors` (`NotFound`), and `AuthErrors` (`Unauthorized | Forbidden`). `get(@path id: uuid): User | GetErrors` emits what `User | NotFound` did.
+
 ## 0.6.1
 
 ### Patch Changes

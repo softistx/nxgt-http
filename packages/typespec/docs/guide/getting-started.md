@@ -5,6 +5,10 @@ then takes it from the spec to a running Hono route.
 
 ## Start a project
 
+You need Node.js for `tsp`, and [Bun](https://bun.sh) on the PATH for the
+generator, `nxgt-openapi`, which runs on Bun
+([Compile and generate](#compile-and-generate)).
+
 Run `tsp init` with the template, in an empty directory:
 
 ```sh
@@ -25,7 +29,9 @@ a bare `npx tsp` runs `tsp`, an unrelated npm package. `bunx
 --package=@typespec/compiler tsp init …` works too.
 
 `tsp init` writes into the current directory, then runs `npm install`, so it
-needs the network. The template ships from 0.9.0 on.
+needs the network. The template ships from 0.9.0 on; an older version, or no
+network, fails before anything is written
+([troubleshooting](../troubleshooting.md#init-template-invalid-json-unable-to-parse-scaffoldingjson-unexpected-token--is-not-valid-json)).
 
 ## What it writes
 
@@ -56,15 +62,15 @@ options:
     output-file: openapi.yaml
 ```
 
-`main.tsp` declares the service in a namespace named after the project, and
-one resource with each convention in place: a paged, filtered and sorted
+`main.tsp` declares the service in the namespace `Api`, titled after the
+project, and one resource with each convention in place: a paged, filtered and sorted
 list, and the error aliases of each verb.
 
 ```tsp
 // main.tsp (excerpt)
 @service(#{ title: "petstore" })
 @operationIds
-namespace Petstore;
+namespace Api;
 
 model User {
   @visibility(Lifecycle.Read)
@@ -122,7 +128,11 @@ export default defineConfig({
 
 ## Compile and generate
 
-Compile the spec to `openapi/openapi.yaml`, then generate the code from it:
+Compile the spec to `openapi/openapi.yaml`, then generate the code from it.
+`nxgt-openapi` runs on Bun: it needs `bun` on the PATH, even through `npx` or
+an npm script, and fails with `env: 'bun': No such file or directory`
+without it ([troubleshooting](../troubleshooting.md#env-bun-no-such-file-or-directory)).
+`bunx nxgt-openapi generate` does the same as the `npx` line.
 
 ```sh
 npx tsp compile .
@@ -158,11 +168,11 @@ of date: run it in CI.
 
 The generated `hono.ts` binds the routes to the spec through
 [`@nxgt/openapi-hono`](https://www.npmjs.com/package/@nxgt/openapi-hono).
-Install it, Hono, and zod, which the generated validators import:
+Install it, Hono, and zod, which the generated validators import, with the
+package manager `tsp init` used:
 
 ```sh
-bun add @nxgt/openapi-hono hono zod
-bun add -d typescript
+npm install @nxgt/openapi-hono hono zod
 ```
 
 Then register a handler per operation. Each one reads its validated input,
@@ -172,6 +182,7 @@ and may only answer the replies the spec declares:
 // src/app.ts
 import { Hono } from 'hono';
 import { createRoutes } from './generated/hono';
+import type { NotFoundBody } from './generated/types';
 
 const app = new Hono();
 const routes = createRoutes(app);
@@ -180,24 +191,30 @@ routes.operation('getUser', async (c) => {
 	const { id } = c.req.valid('param');
 	const user = await users.find(id);
 	if (!user) {
-		return c.json(
-			{ status: 404, message: 'errors.not-found', timestamp: new Date().toISOString() },
-			404,
-		);
+		const body: NotFoundBody = {
+			status: 404,
+			message: 'errors.not-found',
+			timestamp: new Date().toISOString(),
+		};
+		return c.json(body, 404);
 	}
 	return c.json(user, 200);
 });
 
 routes.operation('listUsers', async (c) => {
-	const { page = 1, pageSize = 20, orderBy, direction } = c.req.valid('query');
-	return c.json(await users.page({ page, pageSize, orderBy, direction }), 200);
+	const { name, page = 1, pageSize = 20, orderBy, direction } = c.req.valid('query');
+	return c.json(await users.page({ name, page, pageSize, orderBy, direction }), 200);
 });
 
 export default app;
 ```
 
-`users` stands for your data layer. A `418`, or a 404 without `timestamp`,
-does not compile. More on the routes in the
+`users` stands for your data layer. Annotate an error body with its generated
+type, as `NotFoundBody` above: an object literal passed straight to
+`c.json(…, 404)` is inferred beside the handler's other returns, its fields
+turn optional, and the handler fails with `TS2769: No overload matches this
+call`. A `418`,
+or a 404 without `timestamp`, does not compile either. More on the routes in the
 [`@nxgt/openapi-hono` README](https://www.npmjs.com/package/@nxgt/openapi-hono),
 and on serving a page in [Pagination](pagination.md#serving-it).
 

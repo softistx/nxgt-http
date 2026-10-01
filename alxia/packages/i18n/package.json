@@ -48,7 +48,7 @@
 	"peerDependencies": {
 		"@alxia/core": "workspace:^",
 		"@alxia/language": "workspace:^",
-		"@nxgt/i18n": "^1.1.0",
+		"@nxgt/i18n": "^1.1.0 || ^2.0.0",
 		"typescript": "^6.0.3"
 	}
 }

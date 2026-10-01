@@ -44,8 +44,13 @@ export const describeCart = (count: number) => i18n.t('cart.items', { count });
 every `await` — and in the fallback outside one. `i18n.language()` says
 which.
 
-`@nxgt/i18n`'s own `getLanguage()` reads a Hono request, never an alxia one:
-inside alxia, translate through `t`.
+### `@nxgt/i18n`'s own `translate`
+
+From `@nxgt/i18n` 2.0, `createI18n()` registers the request's language as
+one of its language sources: its `getLanguage()` and `translate` — and every
+nxgt package that translates through them, an error's message — speak the
+alxia request's language too. `@nxgt/i18n` 1.x reads a Hono request only:
+with it, translate through `t`. Both are supported peers.
 
 ## Cached responses
 

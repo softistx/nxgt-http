@@ -72,3 +72,22 @@ describe('i18n', () => {
 		expect(i18n.t('home.nope')).toBe('home.nope');
 	});
 });
+
+describe("@nxgt/i18n's own getLanguage", () => {
+	const nxgt = require('@nxgt/i18n') as {
+		registerLanguageSource?: unknown;
+		getLanguage: () => string;
+	};
+	test.skipIf(nxgt.registerLanguageSource === undefined)(
+		'speaks the alxia request’s language, from @nxgt/i18n 2.0',
+		async () => {
+			const spoken = alxia()
+				.use(i18n)
+				.get('/nxgt', async ({ reply }) => {
+					await Bun.sleep(1);
+					return reply(200, nxgt.getLanguage());
+				});
+			expect(await (await spoken.request('/nxgt?lang=fr')).text()).toBe('fr');
+		},
+	);
+});

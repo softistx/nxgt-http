@@ -27,23 +27,23 @@ interface Authors {
 
   /** One author. */
   @get
-  get(@path id: uuid): Author | NotFound;
+  get(@path id: uuid): Author | GetErrors;
 
   /** Creates an author. */
   @post
   create(@body author: Create<Author>): {
     @statusCode _: 201;
     @body author: Author;
-  } | BadRequest | Conflict;
+  } | CreateErrors;
 
   /** Updates an author with a merge patch. */
   @patch
   update(
     @path id: uuid,
     @body author: MergePatchUpdate<Author>,
-  ): Author | BadRequest | NotFound | Conflict;
+  ): Author | UpdateErrors;
 
   /** Deletes an author. */
   @delete
-  delete(@path id: uuid): NoContentResponse | NotFound;
+  delete(@path id: uuid): NoContentResponse | DeleteErrors;
 }

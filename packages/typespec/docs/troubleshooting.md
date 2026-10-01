@@ -281,6 +281,15 @@ header either reply declares required becomes optional.
 @post createPost(@body post: Post): Post | IdempotencyInProgress;
 ```
 
+An alias can hide the duplicate: `CreateErrors` holds a `Conflict`, so
+`Post | CreateErrors | IdempotencyInProgress` declares two 409s, and
+`UpdateErrors | NotFound` two 404s. Spell the alias's other errors out
+instead:
+
+```tsp
+@post createPost(@body post: Post): Post | BadRequest | IdempotencyInProgress;
+```
+
 Two plain bodies, `Post | Draft`, are one reply whose body is either; two
 `@error` models without a `@statusCode` share `default`, and one
 description; bodies of different content types are negotiated. All three

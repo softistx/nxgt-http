@@ -131,6 +131,24 @@ The generator also declares the validators' own 400, `ValidationErrorBody`,
 on every operation that takes a parameter or a body. With `BadRequest`, a
 400 reply is typed `BadRequestBody | ValidationErrorBody`.
 
+Each verb has an alias for the errors it usually answers, so a resource's
+operations do not repeat the same unions. Combine them, and add a response
+an alias leaves out:
+
+```tsp
+@route("/users")
+interface Users {
+  @get list(...PageParameters): Page<User> | ListErrors;
+  @get get(@path id: uuid): User | GetErrors;
+  @post create(@body user: User): User | CreateErrors | AuthErrors | TooManyRequests;
+  @patch update(@path id: uuid, @body user: User): User | UpdateErrors;
+  @delete delete(@path id: uuid): NoContentResponse | DeleteErrors;
+}
+```
+
+An alias is exactly its union, so the OpenAPI it emits is the same as
+writing the responses out.
+
 ### Pagination
 
 Spread the query of a page into the operation's parameters, and answer the
@@ -445,6 +463,15 @@ envelope and the rate limit's headers.
 `@error` model with its `@statusCode` and body, and
 `ErrorResponse<Status>` for any other status.
 
+| Alias | What it is |
+| --- | --- |
+| `ListErrors` | `BadRequest` |
+| `GetErrors` | `NotFound` |
+| `CreateErrors` | `BadRequest \| Conflict` |
+| `UpdateErrors` | `BadRequest \| NotFound \| Conflict` |
+| `DeleteErrors` | `NotFound` |
+| `AuthErrors` | `Unauthorized \| Forbidden`, with the envelope; a route that answers without a body declares `AuthenticationRequired \| AccessDenied` instead |
+
 ## Traps
 
 - **Do not declare a schema named `ValidationErrorBody`.** The generator
@@ -503,8 +530,8 @@ envelope and the rate limit's headers.
 
 ## Documentation
 
-- [Error replies](docs/guide/errors.md): the envelope, each response, and
-  what the generator makes of them;
+- [Error replies](docs/guide/errors.md): the envelope, each response, the
+  aliases by verb, and what the generator makes of them;
 - [Pagination](docs/guide/pagination.md): offset and cursor pages, and
   what a handler answers;
 - [Authentication](docs/guide/auth.md): `JanusAuth`, and the guards'

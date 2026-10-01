@@ -1,7 +1,7 @@
 {
 	"name": "@alxia/core",
 	"version": "0.0.0",
-	"description": "An HTTP framework for Bun.serve, type-safe end to end: routes validated with any Standard Schema, Zod first",
+	"description": "A zero-dependency, type-safe HTTP framework for Bun: routes validated with any Standard Schema, typed from the request to the client",
 	"license": "MIT",
 	"type": "module",
 	"main": "./dist/index.js",

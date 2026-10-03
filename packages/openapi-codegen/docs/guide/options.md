@@ -10,6 +10,7 @@ await generate({
 	importExtension: '',
 	enums: 'object',
 	hono: false,
+	alxia: false,
 	dates: 'string',
 	lint: false,
 	names: { 'components/schemas/Error.yaml': 'ApiError' },
@@ -26,6 +27,7 @@ await generate({
 | [`importExtension`](#importextension) | `''` | how generated files import each other |
 | [`enums`](#enums) | `'object'` | a named enum as an `as const` object, or a plain union |
 | [`hono`](#hono) | `false` | also write `hono.ts`: typed routes for a Hono app |
+| [`alxia`](#alxia) | `false` | also write `alxia.ts`: each operation as the data an alxia app's `app.route()` takes |
 | [`dates`](#dates) | `'string'` | a `date-time` as its string, or decoded to a `Date` |
 | [`lint`](#lint) | `false` | lint the spec with Redocly before generating |
 | [`names`](#names) | `{}` | renames schemas |
@@ -97,6 +99,40 @@ per enum, `Status.Active`, which `zod.ts` imports.
 The file imports `hono` and `@nxgt/openapi-hono`, so both become runtime
 dependencies of the app. It is off by default, so a project without Hono
 gets no file it cannot compile. See [Typed Hono routes](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-hono/docs/guide.md).
+
+## `alxia`
+
+`true` also writes `alxia.ts`: one constant per operation, named by its
+`operationId`, holding what [alxia](https://github.com/softistx/alxia)'s
+`app.route(operation, handler)` takes, then `operations`, all of them by
+`operationId`:
+
+```ts
+import { alxia } from '@alxia/core';
+import { operations as api } from './generated/alxia';
+
+const app = alxia().route(api.getPet, ({ params, reply }) =>
+	reply.ok(pets.get(params.petId)),
+);
+```
+
+The file is plain data: it imports `zod` and `./zod`, and `eventStream`
+from `@alxia/core` only when an operation replies with server-sent events.
+It needs an `@alxia/core` with `app.route()`.
+
+alxia answers a request the schemas refuse with its own 400,
+`{ error: 'validation', issues }`, and types it itself. So the 400 that
+[`validationErrors`](#validationerrors) declares is never written into
+`alxia.ts`, whichever way that option is set; a 400 the spec declares is
+kept as the spec writes it.
+
+An operation alxia cannot route or validate yet is left out, with an
+`ignored` warning: a `TRACE`, a path parameter sharing its segment with text
+(`/files/{name}.json`) or named with a character other than a letter, a
+digit, `_` or `$`, a parameter named twice, a path that matches the same requests as an earlier one
+with other parameter names, a binary body, and a reply that is binary, JSON
+Lines, a form, or events alxia's `eventStream` cannot send. See
+[`alxia.ts`](generated-code.md#alxiats) for what is kept, and how.
 
 ## `dates`
 
@@ -186,6 +222,9 @@ warning per file that uses it. Fragment libraries written for 3.0 are full
 of it. Set `'error'` to refuse it instead, once a spec has been converted.
 
 ## `validationErrors`
+
+It changes `types.ts`, `zod.ts`, `operations.ts`, `paths.ts` and `hono.ts`,
+never `alxia.ts`: alxia answers a refused request with a 400 of its own.
 
 `@nxgt/openapi-hono` answers a request its validators refuse with a 400 of
 its own, `{ status: 400, message, timestamp, issues }`, which a spec rarely

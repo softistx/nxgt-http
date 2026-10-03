@@ -24,8 +24,11 @@
 		"noFallthroughCasesInSwitch": true,
 		// The generator's own fixtures have a hono.ts too, and the generator does
 		// not depend on the runtime it imports: the runtime's built declarations.
+		// alxia is not in this repository: the generator's fixtures' alxia.ts
+		// are checked against a stand-in of the types they import.
 		"paths": {
-			"@nxgt/openapi-hono": ["./packages/openapi-hono/dist/index.d.ts"]
+			"@nxgt/openapi-hono": ["./packages/openapi-hono/dist/index.d.ts"],
+			"@alxia/core": ["./packages/openapi-codegen/test/alxia/core.ts"]
 		}
 	},
 	"include": ["packages/*/test/generated/**/*.ts"],

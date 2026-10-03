@@ -414,3 +414,100 @@ export interface Replies {
 	// …
 }
 ```
+
+## `alxia.ts`
+
+Written with the [`alxia` option](options.md#alxia) only. Each operation
+[alxia](https://github.com/softistx/alxia) can route is a constant named by
+its `operationId`, holding the three things alxia's
+`app.route(operation, handler)` reads: the method, the path and the route
+schema. `operations` then lists them all, keyed by `operationId`:
+
+```ts
+// alxia.ts — generated from the pet store spec
+import { z } from 'zod';
+import { zPet, zTier } from './zod';
+
+/** Fetch a pet. */
+export const getPet = {
+	method: 'GET',
+	path: '/pets/:petId',
+	schema: {
+		params: z.object({
+			petId: numeric.pipe(z.int().min(1)),
+		}),
+		query: z.object({
+			fields: z.preprocess(repeated, z.array(z.string())).optional(),
+			ids: z.preprocess(commas, z.array(numeric.pipe(z.int()))).optional(),
+			verbose: flag.default(false),
+			tier: numeric.pipe(zTier).optional(),
+		}),
+		headers: z.object({
+			'x-request-id': z.guid(),
+		}),
+		response: {
+			200: zPet,
+			304: z.undefined(),
+		},
+		detail: { operationId: 'getPet', summary: 'Fetch a pet.' },
+	},
+} as const;
+
+export const operations = {
+	getPet,
+	deletePet,
+	putTags,
+} as const;
+```
+
+```ts
+import { alxia } from '@alxia/core';
+import { operations as api } from './generated/alxia';
+
+const app = alxia()
+	.route(api.getPet, ({ params, query, reply }) => {
+		params.petId; // number
+		query.fields; // string[] | undefined, from ?fields=a or ?fields=a&fields=b
+		return reply.ok({ kind: 'cat', lives: params.petId });
+	})
+	.route(api.deletePet, ({ reply }) => reply.noContent());
+```
+
+The file is plain data. Each schema keeps its concrete Zod type, which the
+erased `operations.ts` table does not, so alxia types the handler's
+`params`, `query`, `headers` and `body`, and the replies it may send, from
+it.
+
+| Part | What is written |
+| --- | --- |
+| `method` | uppercased: `'GET'`, and `'QUERY'` for OpenAPI 3.2's `query` |
+| `path` | `{name}` as `:name`: `/pets/{petId}` is `/pets/:petId` |
+| `params` | each path parameter read from its string, as in `operations.ts`; an enum of strings piped from `z.string()`, since alxia refuses a schema that does not take the string it hands over |
+| `query` | each parameter read from its string. alxia hands over a key given once as a string, and given more than once as a list, so a list parameter takes a lone value as a list of one (`z.preprocess(repeated, …)`), or splits it on commas with `explode: false` (`z.preprocess(commas, …)`) |
+| `headers` | keyed by lowercased name, as alxia reads them; a list split on commas (`z.preprocess(headerList, …)`) |
+| `body` | the schema of `application/json`, of a form, read field by field as `operations.ts`'s `z<Operation>Form`, or of text; `.optional()` when the spec does not require the body |
+| `response` | per status, the schema of its JSON or text; `z.undefined()` for a reply with no content, such as a 204 or a 304; `eventStream(schema)` for server-sent events whose `itemSchema` declares unnamed events with JSON data |
+| `detail` | `operationId`, and the `summary`, `description`, `tags` and `deprecated` the spec gives |
+
+alxia validates the request and answers a refused one with its own 400,
+`{ error: 'validation', issues }`, which it types itself. So the 400 of
+[`validationErrors`](options.md#validationerrors) is not written here; a
+400 the spec declares is.
+
+An operation `alxia.ts` cannot express is left out, with an `ignored`
+warning naming why: a `TRACE`; a path alxia cannot route, a parameter that
+shares its segment with text, a parameter name with a character other than
+a letter, a digit, `_` or `$`, a parameter named twice, or a path that matches the same requests as an
+earlier one with other parameter names; a binary body; a reply that is
+binary, JSON Lines, a form, or named events. A body or a reply with several
+media types keeps one, `application/json` first, with a `not_enforced`
+warning, and a status alxia has no type for, such as 306, is dropped with
+one too. A form body that is not a flat object is validated with its JSON
+schema, with a `not_enforced` warning: its fields are not read from text.
+
+An `operationId` that is not an identifier names its constant in camelCase,
+`getBoard` for `get-board`, still keyed by the id:
+`operations['get-board']`. A reserved word, or `Number`, `Array` or `Date`,
+which the helpers call, is suffixed: `deleteOperation`, keyed `delete`. One that would shadow another name of the file,
+`operations`, `z`, a helper such as `numeric`, or a schema's `z<Name>`, is a
+`name_collision`.

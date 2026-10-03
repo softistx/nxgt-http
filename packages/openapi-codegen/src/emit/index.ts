@@ -1,5 +1,6 @@
 import type { Diagnostic } from '../errors';
-import type { ApiIR } from '../ir/types';
+import type { ApiIR, OperationIR } from '../ir/types';
+import { emitAlxia } from './alxia';
 import { EmitContext, type EmitOptions } from './context';
 import { emitHono } from './hono';
 import { emitOperations, operationTypes } from './operations';
@@ -20,12 +21,18 @@ export const FILE_NAMES = [
 	'operations.ts',
 	'paths.ts',
 	'hono.ts',
+	'alxia.ts',
 ] as const;
 
-/** Every generated file, named relative to the output directory, and what it does not enforce. */
+/**
+ * Every generated file, named relative to the output directory, and what it
+ * does not enforce. `specOperations` are the operations as the spec declares
+ * them, before `validationErrors` adds its 400: what `alxia.ts` declares.
+ */
 export function emitFiles(
 	ir: ApiIR,
 	options: EmitOptions,
+	specOperations: readonly OperationIR[] = ir.operations,
 ): { files: GeneratedFile[]; warnings: Diagnostic[] } {
 	const ctx = new EmitContext(ir, options);
 	const operations = emitOperations(ctx);
@@ -50,6 +57,9 @@ export function emitFiles(
 		},
 		{ path: 'paths.ts', content: emitPaths(ctx) },
 		...(options.hono ? [{ path: 'hono.ts', content: emitHono(ctx) }] : []),
+		...(options.alxia
+			? [{ path: 'alxia.ts', content: emitAlxia(ctx, specOperations) }]
+			: []),
 	];
 	return { files, warnings: ctx.warnings };
 }

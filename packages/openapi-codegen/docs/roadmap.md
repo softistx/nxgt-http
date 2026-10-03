@@ -32,6 +32,10 @@ history.
   leaves out what the server sets. Today `readOnly` has no effect, so a
   TypeSpec body with implicit visibility requires those properties; declare
   the body as `Create<T>` meanwhile.
+- **More of the spec in `alxia.ts`** — binary bodies and replies, JSON
+  Lines, named server-sent events, and several media types on one body or
+  reply, once alxia reads or sends them; such an operation is left out
+  today, with a warning.
 - **Tuples** — `prefixItems` and `items` as a list, refused today as not
   supported yet.
 
@@ -53,6 +57,9 @@ history.
 
 ## Shipped
 
+- **`alxia.ts`, every operation as the data an alxia app's `app.route()`
+  takes** (`alxia` option): its method, its `:name` path and its schemas,
+  with concrete Zod types — 0.6.0.
 - **A class defined once per package, not once per entry point** — 0.4.1.
 - **`c.env` typed in route handlers**, from the app's `Hono<E>` — 0.4.0.
 - **Generated imports without an extension**, `importExtension: '.js'` to

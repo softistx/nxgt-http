@@ -11,6 +11,7 @@ import type {
 	SchemaNode,
 } from '../ir/types';
 import type { Location } from '../loader/location';
+import { ALXIA_NAMES, operationConst } from './alxia/names';
 
 /** What an object does with keys it does not declare, when the spec does not say. */
 export type UnknownKeys = 'strip' | 'strict' | 'loose';
@@ -35,6 +36,8 @@ export interface EmitOptions {
 	rootDir: string;
 	/** Also emit `hono.ts`. */
 	hono?: boolean;
+	/** Also emit `alxia.ts`. */
+	alxia?: boolean;
 	/** `date-time` as a string (the default), or decoded to a `Date` by a codec. */
 	dates?: Dates;
 }
@@ -437,18 +440,28 @@ export class EmitContext {
 	 * fail, so this is the only place the clash is caught.
 	 */
 	#checkNames(): void {
-		const owners = new Map<string, string>();
+		const types = new Map<string, string>();
+		/** alxia.ts's values: a module of their own, beside the types. */
+		const values = new Map<string, string>();
 		const diagnostics: Diagnostic[] = [];
-		const claim = (name: string, owner: string, at: Location): void => {
+		const claim = (
+			name: string,
+			owner: string,
+			at: Location,
+			owners = types,
+		): void => {
 			const holder = owners.get(name);
 			if (holder === undefined) {
 				owners.set(name, owner);
 				return;
 			}
+			const fix = [holder, owner].some((o) => o.startsWith('schema '))
+				? 'Rename the schema with the `names` option'
+				: 'Change the operationId';
 			diagnostics.push({
 				severity: 'error',
 				code: 'name_collision',
-				message: `${holder} and ${owner} would both generate ${name}. Rename the schema with the \`names\` option`,
+				message: `${holder} and ${owner} would both generate ${name}. ${fix}`,
 				file: at.file,
 				pointer: at.pointer,
 			});
@@ -485,6 +498,23 @@ export class EmitContext {
 			}
 			if (this.formOf(operation)) {
 				claim(`${operation.name}Form`, owner, operation.location);
+			}
+		}
+		if (this.options.alxia) {
+			// alxia.ts holds values, not types: its own names, the `z<Name>` it
+			// imports from zod.ts, and one const per operation.
+			for (const name of ALXIA_NAMES) claim(name, 'alxia.ts', root, values);
+			for (const schema of this.ir.schemas) {
+				const owner = `schema ${schema.name}`;
+				claim(`z${schema.name}`, owner, schema.location, values);
+			}
+			for (const alias of this.ir.aliases) {
+				const owner = `schema ${alias.name}`;
+				claim(`z${alias.name}`, owner, alias.location, values);
+			}
+			for (const operation of this.ir.operations) {
+				const owner = `operation ${operation.operationId}`;
+				claim(operationConst(operation), owner, operation.location, values);
 			}
 		}
 		if (diagnostics.length > 0) {

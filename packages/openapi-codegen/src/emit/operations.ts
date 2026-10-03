@@ -35,10 +35,10 @@ import {
 	withDefault,
 } from './zod';
 
-type Helper = 'flag' | 'isoDate' | 'none' | 'numeric' | 'repeated';
+export type Helper = 'flag' | 'isoDate' | 'none' | 'numeric' | 'repeated';
 
 /** Declared at the top of `operations.ts` when a validator uses them. */
-const HELPERS: Record<Helper, string> = {
+export const HELPERS: Record<Helper, string> = {
 	isoDate: ISO_DATE,
 	flag: [
 		'/** `true` or `false`, as JSON spells them. */',
@@ -56,7 +56,7 @@ const HELPERS: Record<Helper, string> = {
 		'\t.transform(Number);',
 	].join('\n'),
 	repeated: [
-		'/** A form field that may repeat: one value arrives alone, several as a list. */',
+		'/** A query key or a form field that may repeat: one value arrives alone, several as a list. */',
 		'const repeated = (value: unknown) =>',
 		'\tvalue === undefined || Array.isArray(value) ? value : [value];',
 	].join('\n'),
@@ -571,14 +571,17 @@ function paramObject(
  * read like a parameter, and a list field takes one value alone as a list of
  * one. The object keeps its unknown-key mode.
  */
-function formObject(
+export function formObject(
 	ctx: EmitContext,
 	object: ObjectNode,
 	helpers: Set<Helper>,
 	scope: (indent: string) => Scope,
+	/** Where the object starts: its fields are a tab further in. */
+	indent = '',
 ): string {
+	const inner = `${indent}\t`;
 	const entries = object.properties.map((property) => {
-		let value = fromString(ctx, property.schema, helpers, scope('\t'));
+		let value = fromString(ctx, property.schema, helpers, scope(inner));
 		if (ctx.resolve(property.schema).kind === 'array') {
 			helpers.add('repeated');
 			value = `z.preprocess(repeated, ${value})`;
@@ -590,7 +593,7 @@ function formObject(
 					? '.optional()'
 					: withDefault(ctx, property.schema, fallback.value);
 		}
-		return `\t${propertyKey(property.name)}: ${value},`;
+		return `${inner}${propertyKey(property.name)}: ${value},`;
 	});
 	const mode = ctx.mode(object);
 	const create =
@@ -601,14 +604,14 @@ function formObject(
 				: 'z.object';
 	return entries.length === 0
 		? `${create}({})`
-		: `${create}({\n${entries.join('\n')}\n})`;
+		: `${create}({\n${entries.join('\n')}\n${indent}})`;
 }
 
 /**
  * The validator for a value that arrives as text — a path segment, a query
  * value, a header — reading numbers and booleans out of it strictly.
  */
-function fromString(
+export function fromString(
 	ctx: EmitContext,
 	node: SchemaNode,
 	helpers: Set<Helper>,

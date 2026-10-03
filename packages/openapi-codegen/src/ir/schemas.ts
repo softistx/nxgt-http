@@ -88,7 +88,7 @@ const NUMBER_FORMATS = new Set(['int32', 'int64', 'float', 'double']);
 const IDENTIFIER = /^[A-Za-z_$][\w$]*$/;
 
 /** Words a `names` override cannot be: `export interface default` does not compile. */
-const RESERVED = new Set([
+export const RESERVED = new Set([
 	...['break', 'case', 'catch', 'class', 'const', 'continue', 'debugger'],
 	...['default', 'delete', 'do', 'else', 'enum', 'export', 'extends'],
 	...['false', 'finally', 'for', 'function', 'if', 'import', 'in'],

@@ -15,11 +15,12 @@ yet.
 | --- | --- | --- |
 | unit specs | `src/**/*.spec.ts` | one behaviour each: a pointer escape, a mapping row, a refusal |
 | IR snapshots | `src/ir/fixtures.spec.ts` | the whole IR of the `split` and `query` fixtures |
-| code snapshots | `src/emit/golden.spec.ts` | every generated file of every fixture, `hono.ts` included |
+| code snapshots | `src/emit/golden.spec.ts` | every generated file of every fixture, `hono.ts` and `alxia.ts` included |
 | runtime | `src/emit/zod.spec.ts`, `operations.spec.ts` | the generated validators, run on real values |
 | type agreement | `test/generated/<case>/agreement.ts` | `tsc` fails if a type and its validator disagree, form validators included |
 | index typing | `test/types/operations.ts` | `Operations` and its indexes resolve as a server reads them |
 | conformance | `src/conformance.spec.ts` | real, public specs: each generates with only the warnings it calls for, and every JSON example it gives passes the generated validator |
+| alxia routes | `src/emit/alxia/alxia.spec.ts`, `test/types/alxia.ts` | what `alxia.ts` writes, leaves out and warns about, its validators run on what alxia hands over, and every fixture's `operations` typed as alxia's `RouteOperation`, against the stand-in `test/alxia/core.ts` |
 | openapi-fetch typing | `test/types/paths.ts` | `createClient<paths>()` types requests and replies from `paths.ts` alone |
 | command line | `src/cli/run.spec.ts` | flags, config files, `--check` and exit codes through `run()`, and `src/cli.ts` as a process |
 
@@ -43,7 +44,7 @@ fixtures' `hono.ts`, which imports that package.
 | `dates` | generated with `dates: 'date'`: a date-time in every place a value goes (named, nullable, defaulted, listed, recursive, a query, a form, a reply); `src/emit/dates.spec.ts` runs it |
 
 `test/generate.ts` writes each case's generated files to
-`test/generated/<case>/`, with the `hono` option on, together with its
+`test/generated/<case>/`, with the `hono` and `alxia` options on, together with its
 `agreement.ts`. Git ignores that folder. Nothing generated is committed as a
 file. What the output looks like is pinned by the snapshots in
 `src/emit/__snapshots__/`, and a change to the generator shows up there as a

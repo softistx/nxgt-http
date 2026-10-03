@@ -37,7 +37,7 @@ export const CONFORMANCE = [
 	'oai-tags-3.2',
 ] as const;
 
-/** What a case is generated with, beside `hono`. */
+/** What a case is generated with, beside `hono` and `alxia`. */
 const OPTIONS: { [name: string]: { dates?: Dates } } = {
 	dates: { dates: 'date' },
 	// Dated, so a stream's items are typed both decoded and as JSON carries them.
@@ -53,6 +53,7 @@ export async function fixtureFiles(name: string): Promise<GeneratedFile[]> {
 		input,
 		output,
 		hono: true,
+		alxia: true,
 		...options,
 	});
 	return [
@@ -74,6 +75,7 @@ async function agreement(
 		enums: 'object',
 		importExtension: '.js',
 		hono: true,
+		alxia: true,
 		source: '',
 		rootDir: TEST_DIR,
 		...options,

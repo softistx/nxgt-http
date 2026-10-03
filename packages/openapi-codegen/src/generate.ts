@@ -36,6 +36,14 @@ export interface GenerateOptions extends IROptions {
 	 */
 	hono?: boolean;
 	/**
+	 * Also emit `alxia.ts`: each operation as the data alxia's
+	 * `app.route(operation, handler)` takes, its schemas typed by the spec.
+	 * It imports `zod`, and `@alxia/core` only for a reply that streams
+	 * events. alxia answers a refused request with its own 400, so the
+	 * `validationErrors` 400 is not declared there.
+	 */
+	alxia?: boolean;
+	/**
 	 * A `date-time`: validated and kept as its string (`string`, the default),
 	 * or decoded to a `Date` by a `z.codec` (`date`). `format: date` stays a
 	 * string either way: a day is not an instant.
@@ -109,6 +117,10 @@ export async function generateFiles(
 	if (typeof hono !== 'boolean') {
 		throw invalid(`hono must be true or false, not ${String(hono)}`);
 	}
+	const alxia = options.alxia ?? false;
+	if (typeof alxia !== 'boolean') {
+		throw invalid(`alxia must be true or false, not ${String(alxia)}`);
+	}
 	const dates = options.dates ?? 'string';
 	if (!DATES.includes(dates)) {
 		throw invalid(`dates must be string or date, not ${dates}`);
@@ -137,15 +149,20 @@ export async function generateFiles(
 	}
 	const built = buildIR(doc, options);
 	const ir = validationErrors ? withValidationErrors(built, doc.entry) : built;
-	const { files, warnings } = emitFiles(ir, {
-		unknownKeys,
-		enums,
-		importExtension,
-		hono,
-		dates,
-		source: relative(output, input).split(sep).join('/'),
-		rootDir: dirname(doc.entry.file),
-	});
+	const { files, warnings } = emitFiles(
+		ir,
+		{
+			unknownKeys,
+			enums,
+			importExtension,
+			hono,
+			alxia,
+			dates,
+			source: relative(output, input).split(sep).join('/'),
+			rootDir: dirname(doc.entry.file),
+		},
+		built.operations,
+	);
 	return {
 		files: files.map((file) => ({ ...file, path: join(output, file.path) })),
 		warnings: [...linted, ...ir.warnings, ...warnings],
@@ -155,7 +172,7 @@ export async function generateFiles(
 /**
  * Generates the files and writes those that changed, and deletes a file an
  * earlier run generated that this one does not (`hono.ts` once `hono` is
- * off). With `check`, writes nothing and lists in `drifted` the files a run
+ * off, `alxia.ts` once `alxia` is). With `check`, writes nothing and lists in `drifted` the files a run
  * would change.
  */
 export async function generate(

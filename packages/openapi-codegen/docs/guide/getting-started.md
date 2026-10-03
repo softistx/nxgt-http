@@ -62,8 +62,9 @@ components:
 Only OpenAPI 3.1 and 3.2 are read. Convert a 3.0 or Swagger 2.0 document
 first.
 
-Four files land in `output` (`generated/openapi` when it is left out), and a
-fifth with the [`hono`](options.md#hono) option:
+Four files land in `output` (`generated/openapi` when it is left out), a
+fifth with the [`hono`](options.md#hono) option, and `alxia.ts` with the
+[`alxia`](options.md#alxia) option:
 
 | File | Holds | Imports |
 | --- | --- | --- |
@@ -72,6 +73,7 @@ fifth with the [`hono`](options.md#hono) option:
 | `operations.ts` | every operation as data, with its parameter and form validators | `zod`, `zod.ts`, types from `types.ts` |
 | `paths.ts` | `paths`, `operations` and `components`, as openapi-typescript prints them | types from `types.ts` |
 | `hono.ts` | `Replies`, `createRoutes` and `createApi`, bound to the spec | `hono` types, `@nxgt/openapi-hono`, `operations.ts`, types from `types.ts` |
+| `alxia.ts` | each operation as the data an alxia app's `app.route()` takes, and `operations` | `zod`, `zod.ts`; `eventStream` from `@alxia/core` for a reply of server-sent events |
 
 A file whose content would not change is not rewritten, so a file watcher
 does not fire on a run that changed nothing. Commit the files, or generate

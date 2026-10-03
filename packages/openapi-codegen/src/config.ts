@@ -75,6 +75,7 @@ const OPTIONS = new Set<string>([
 	'importExtension',
 	'enums',
 	'hono',
+	'alxia',
 	'dates',
 	'lint',
 	'names',

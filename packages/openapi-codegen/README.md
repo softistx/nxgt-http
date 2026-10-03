@@ -5,7 +5,10 @@ operation from an OpenAPI 3.1 or 3.2 document, whether it is one file or
 split across many. Types and validators are printed from the same reading of
 the spec, so they cannot disagree. With the `hono` option, it also types a
 Hono app's routes from the spec, which
-[`@nxgt/openapi-hono`](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-hono/README.md) validates.
+[`@nxgt/openapi-hono`](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-hono/README.md) validates. With the `alxia`
+option, it writes each operation as the data an
+[alxia](https://github.com/softistx/alxia) app's `app.route(operation, handler)`
+takes, so the handler is the only thing left to write.
 
 ## Install
 
@@ -26,6 +29,10 @@ Peers:
 With `hono: true`, the generated `hono.ts` imports `@nxgt/openapi-hono` at
 runtime and `hono`'s types, and your app builds its own `Hono`: add both to
 your app's dependencies. The generator stays a dev dependency.
+
+With `alxia: true`, the generated `alxia.ts` imports only `zod` and
+`./zod`, plus `eventStream` from `@alxia/core` when an operation replies
+with server-sent events. It needs an `@alxia/core` with `app.route()`.
 
 The generator runs on Bun. The code it generates runs anywhere, and compiles
 under the strictest `tsconfig` an app may have: `strict`,
@@ -100,8 +107,9 @@ out:
   openapi-typescript prints, so `createClient<paths>()` from openapi-fetch
   works with no other step.
 
-With `hono: true`, it writes a fifth, `hono.ts`. A file an earlier run
-generated and this one does not, `hono.ts` once `hono` is off, is deleted.
+With `hono: true`, it writes a fifth, `hono.ts`, and with `alxia: true`,
+`alxia.ts`. A file an earlier run generated and this one does not, `hono.ts`
+once `hono` is off, is deleted.
 
 `types.ts` also holds `ClientOperations`, the map
 [`@nxgt/openapi-httpyz`](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-httpyz/README.md) reads to type a
@@ -148,6 +156,29 @@ createRoutes(app).put('/employees/{id}', auth, async (c) => {
 issue. A reply the spec does not declare does not compile.
 [Typed Hono routes](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-hono/docs/guide.md) covers modules, error
 hooks and reply checks.
+
+### Serve typed alxia routes
+
+With `alxia: true` in the config, each operation is a constant holding its
+method, its path written `/pets/:petId`, and its schemas:
+
+```ts
+import { alxia } from '@alxia/core';
+import { operations as api } from './generated/alxia';
+
+const app = alxia()
+	.route(api.getPet, ({ params, reply }) => {
+		const pet = pets.get(params.petId); // a number, read from the path by the spec
+		return pet ? reply.ok(pet) : reply.notFound({ title: 'No such pet' });
+	})
+	.route(api.searchEmployees, ({ body, reply }) => reply.ok(search(body)));
+```
+
+alxia validates the request, answers a refused one with its own 400, and
+refuses a reply the spec does not declare, at compile time and at run time.
+What alxia cannot route or validate yet, such as a binary body, is left out
+of `alxia.ts` with a warning. See
+[The generated code](docs/guide/generated-code.md#alxiats).
 
 ### Fail CI when the generated code is stale
 
@@ -284,6 +315,7 @@ this one does not, when it still starts with the generated header. See
 | `importExtension` | `'' \| '.js' \| '.ts'` | `''` | appended to imports between generated files; `'.js'` for `nodenext` ([more](docs/guide/options.md#importextension)) |
 | `enums` | `'object' \| 'union'` | `'object'` | a named enum as an `as const` object that `z.enum()` reuses, or a plain union ([more](docs/guide/options.md#enums)) |
 | `hono` | `boolean` | `false` | also write `hono.ts`; `hono` and `@nxgt/openapi-hono` become runtime dependencies ([more](docs/guide/options.md#hono)) |
+| `alxia` | `boolean` | `false` | also write `alxia.ts`: each operation as the data alxia's `app.route(operation, handler)` takes; imports `@alxia/core` only for a reply of server-sent events ([more](docs/guide/options.md#alxia)) |
 | `dates` | `'string' \| 'date'` | `'string'` | a `date-time` kept as its string, or decoded to a `Date` by a `z.codec` ([more](docs/guide/options.md#dates)) |
 | `lint` | `boolean \| string` | `false` | lint with Redocly first: `true` uses the `redocly.yaml` beside `input` or Redocly's defaults, a string names the config file. Needs `@redocly/openapi-core`; cannot be combined with `context.fs` ([more](docs/guide/options.md#lint)) |
 | `names` | `Record<string, string>` | `{}` | renames schemas, keyed by file relative to the root document plus `#pointer` when the schema is not the whole file ([more](docs/guide/options.md#names)) |
@@ -519,6 +551,7 @@ interface GenerateOptions extends IROptions {
 	importExtension?: '' | '.js' | '.ts';
 	enums?: Enums;
 	hono?: boolean;
+	alxia?: boolean;
 	dates?: Dates;
 	lint?: Lint;
 	validationErrors?: boolean;
@@ -1150,6 +1183,7 @@ shows each in full.
 | `operations.ts` | `operations`; `z<Operation>Param`, `z<Operation>Query`, `z<Operation>Header`, `z<Operation>Form`; the types `OperationSpec`, `MediaSpec`, `ParameterSpec` |
 | `paths.ts` | `paths`, `operations`, `components`, `webhooks`, `$defs`: the openapi-typescript shape. `webhooks` and `$defs` are always empty, since webhooks are not generated |
 | `hono.ts` | `Replies`, `HonoSpec`, `createApi`, `createRoutes`; `streamEvents` and `streamLines` when an operation Hono can route replies with a stream |
+| `alxia.ts` | per operation alxia can route, a constant named by its `operationId` (`getPet`), `{ method, path, schema }` as `app.route()` takes it; `operations`, all of them by `operationId` |
 
 - **`Operations`**: each operation keyed by `operationId` as a server sees it:
   `method`, `path`, `honoPath`, `param`, `query`, `header`, `json` or `form`,
@@ -1221,6 +1255,24 @@ const streamEvents: <Id extends /* operations replying with events */>(
 on one app, with a registry of its own. See
 [Typed Hono routes](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-hono/docs/guide.md).
 
+`alxia.ts` is plain data, one constant per operation:
+
+```ts
+export const getPet = {
+	method: 'GET',
+	path: '/pets/:petId',
+	schema: {
+		params: z.object({ petId: numeric.pipe(z.int().min(1)) }),
+		query: z.object({ fields: z.preprocess(repeated, z.array(z.string())).optional() }),
+		headers: z.object({ 'x-request-id': z.guid() }),
+		response: { 200: zPet, 304: z.undefined() },
+		detail: { operationId: 'getPet', summary: 'Fetch a pet.' },
+	},
+} as const;
+
+export const operations = { getPet /* , … */ } as const;
+```
+
 ## Traps
 
 - **The generator runs on Bun**, the bin and `generate()` alike: it reads
@@ -1246,6 +1298,9 @@ on one app, with a registry of its own. See
 - **`hono.ts` imports `@nxgt/openapi-hono` at runtime.** Install it, and
   `hono`, as dependencies once you generate that file; this package stays a
   dev dependency.
+- **`alxia.ts` leaves out the 400 of `validationErrors`.** alxia answers a
+  refused request with its own `{ error: 'validation', issues }` and types
+  it itself; a 400 the spec declares is kept.
 - **Give `c.json()` a status, and reply with plain objects.** Without a
   status, Hono types a reply with any status, and it matches no declared
   one. A Mongoose document does not type as its schema; return `.lean()`

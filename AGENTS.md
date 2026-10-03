@@ -114,7 +114,12 @@ no relative import into one.
   excluded from its typecheck, and `@nxgt/openapi-hono` type-checks and runs
   the same files against itself. `typecheck:generated` checks them all, the
   conformance ones included, against the runtime's built declarations; `hono`
-  is a devDependency of the generator for that.
+  is a devDependency of the generator for that. It does not depend on alxia
+  either, though its `alxia` option writes `alxia.ts` for an alxia app: the
+  fixtures' `alxia.ts`, which import `eventStream` from `@alxia/core` for a
+  reply of server-sent events, are checked against `test/alxia/core.ts`, a
+  stand-in of alxia's types, through a `paths` entry in the generator's
+  `tsconfig.json` and in `tsconfig.generated.json`.
 
 **There are no cycles and there must not be one**, devDependencies included.
 A published package cannot depend on a package that depends back on it: the
@@ -231,6 +236,7 @@ publishes to npm.
 | `scripts/verify-artifacts.ts` and `scripts/artifacts/`, beside nxgt-janus, nxgt-data and nxgt-core | each repository releases on its own, so the skeleton is copied, not shared. All four are split module for module and hold the same three checks: the test-code check, the guard that reports an unbuilt package as `no dist/`, and `missingFiles`, whose spec holds that a `files` entry `dis` is not covered by `dist/`. This copy lacks nxgt-core's `browser.ts`, a check for the `browser` export condition, which no package here declares. It also reads a sibling's version from the packed manifests, where nxgt-janus and nxgt-data read it from the workspace. Outside `scripts/artifacts/`, `check-changesets.ts` is nxgt-janus's alone, and `check-nxgt-versions.ts` with its weekly `nxgt versions` workflow is nxgt-janus's, copied into nxgt-data and nxgt-core by softistx/nxgt-data#139 and softistx/nxgt-core#158, but not here: it tracks `@nxgt/*` devDependencies from outside the repository, and every `@nxgt/*` package here depends only on its siblings, by `workspace:^`. A package that takes one from outside brings the check with it. A check added to one copy is a check to port to the others |
 | How a request is read and refused, in `openapi-hono/src/engine.ts` and `openapi-msw/src/request/read-request.ts` | the mock answers with the server's 400, with the same issues in the same order. The engine reads through Hono's `Context`, which the mock has no use for, and the mock depending on the runtime would pull in Hono. Change both together |
 | The pinned `tsp compile` and its drift check, in `openapi-codegen/test/typespec.ts` and `typespec/test/generate.ts` | neither can import the other: `@nxgt/typespec` reaching into the generator's `test/` is a relative import into a sibling, and the generator depending on `@nxgt/typespec` is a cycle. Change both together |
+| alxia's `RouteOperation`, `StatusCode` and `eventStream`, in `openapi-codegen/test/alxia/core.ts`, and its router's rules, in `openapi-codegen/src/emit/alxia/routable.ts` | alxia lives in `softistx/alxia`, and the generator depends on no framework it writes for: the stand-in types the fixtures' `alxia.ts` is checked against, and the warning for a path alxia's `compilePath` would refuse. Change them when alxia's `app/route-operation.ts`, `types/status.ts`, `sse/event-stream.ts` or `router/router.ts` change |
 | `openapi-codegen/test/fixtures/shared-components/` | a copy of the `openapi/components/` that nxgt-core's `@nxgt/shared-openapi` publishes: real split fragments for the loader and the `split` fixture. It is a fixture, not a dependency |
 
 ## Conventions
@@ -256,8 +262,8 @@ publishes to npm.
 
 ## Known state
 
-`bun run test` is **548 pass, 0 fail** on 2026-09-30: datasource-rest 26, httpyz 90, httpyz-query 14,
-openapi-codegen 164, openapi-hono 31, openapi-httpyz 28, openapi-msw 21, openapi-nuxt 36, typespec 114,
+`bun run test` is **565 pass, 0 fail** on 2026-10-02: datasource-rest 26, httpyz 90, httpyz-query 14,
+openapi-codegen 181, openapi-hono 31, openapi-httpyz 28, openapi-msw 21, openapi-nuxt 36, typespec 114,
 scripts 24. It runs one process per package, and each
 package's `test` script writes the generated fixtures its specs import first;
 then `bun test scripts` runs the repository scripts' own specs.

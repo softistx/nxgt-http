@@ -130,3 +130,66 @@ lost precision before any validator sees it.
 **Fix:** keep such ids as strings in the spec, for instance
 `@format("uuid") id: string`, or a `string` holding the digits. Use `int64`
 only for values that stay within 2^53.
+
+## Routes for alxia
+
+What the [`alxia` option](guide/options.md#alxia) runs into.
+
+### `ignored`: `<operationId>: alxia.ts leaves it out. …`
+
+**When:** `alxia.ts` has no constant for an operation of the spec, and
+`app.route(operations.x, …)` does not compile.
+
+**Why:** alxia cannot route the operation, or cannot validate what it takes
+or replies, yet. The rest of the warning names which:
+
+| The warning goes on | Because |
+| --- | --- |
+| `alxia has no TRACE routes` | alxia does not route that method |
+| `a path parameter must fill its whole segment, and {name}.json does not` | alxia's router reads a parameter as a whole segment |
+| `:item-id is not a parameter name it reads` | alxia names a parameter with letters, digits, `_` and `$` |
+| `it declares :x twice` | alxia reads each parameter of a path once |
+| `… beside /users/{id}: the two match the same requests with other parameter names` | alxia refuses two paths of one shape whose parameters are named apart |
+| `Its body is application/octet-stream, which alxia hands over as bytes, unvalidated` | binary bodies are not declared yet |
+| `Its 200 reply is application/pdf`, `is JSON Lines`, `is a form` | alxia replies with JSON, text or `eventStream`; the others are not declared yet |
+| `streams events alxia cannot send` | alxia's `eventStream` sends unnamed events, each its data as JSON: named events, or events whose data is text, have no schema yet |
+
+**Fix:** where the spec can say it another way, do: give the parameter its
+own segment (`/files/{name}`), rename it (`{itemId}`), name the parameters of
+paths of one shape alike. Otherwise declare that route with alxia's own
+`app.get(path, schema, handler)` beside the generated ones.
+
+### `not_enforced`: `alxia declares one schema per status, so its 200 reply is declared as application/json only, not text/html`
+
+**When:** a body or a reply declares several media types.
+
+**Why:** an alxia route has one `body` schema and one schema per status.
+`alxia.ts` keeps `application/json` (or the first JSON type, then the first
+form or text type): a body sent as another type is checked against that
+schema, and the handler cannot reply as the other type.
+
+**Fix:** declare one media type where you can. To serve several, declare
+that route by hand.
+
+### A refused request gets `{ error: 'validation', issues }`, not `ValidationErrorBody`
+
+**When:** a client generated from the same spec reads alxia's 400.
+
+**Why:** alxia answers a request its schemas refuse with its own 400, and
+types it on the route itself. `alxia.ts` leaves out the 400 that
+[`validationErrors`](guide/options.md#validationerrors) declares, which is
+`@nxgt/openapi-hono`'s.
+
+**Fix:** type the client from the alxia app (`@alxia/client` reads the
+app's routes, its 400 included), or, for a client generated from the spec,
+declare alxia's 400 body in the spec and set `validationErrors: false`.
+
+### `Cannot find module '@alxia/core'` in `alxia.ts`
+
+**When:** an operation replies with server-sent events.
+
+**Why:** `alxia.ts` imports `eventStream` from `@alxia/core` for that reply,
+and only then.
+
+**Fix:** add `@alxia/core` to the app's dependencies, as an alxia app
+already has it.

@@ -1,7 +1,8 @@
 # Emitters
 
 `emitFiles(ir, options)` (`src/emit/index.ts`) prints four files from one
-`EmitContext`, and a fifth with the `hono` option:
+`EmitContext`, a fifth with the `hono` option, and `alxia.ts` with the
+`alxia` option:
 
 | File | Printed by |
 | --- | --- |
@@ -10,6 +11,7 @@
 | `operations.ts` | `emitOperations` (`src/emit/operations.ts`) |
 | `paths.ts` | `emitPaths` (`src/emit/paths.ts`) |
 | `hono.ts` | `emitHono` (`src/emit/hono.ts`), with `hono` only |
+| `alxia.ts` | `emitAlxia` (`src/emit/alxia/`), with `alxia` only |
 
 Code is printed as text, with no TypeScript compiler API. That keeps the
 generator independent of the compiler version its consumers run.
@@ -173,6 +175,52 @@ generator does not depend on the runtime. Change both together.
   `import * as runtime from '@nxgt/openapi-hono'`. Schema types are
   imported by name, so `Replies`, `HonoSpec` and `Hono` are claimed in
   `#checkNames`, as a schema's name would be.
+
+## alxia (`src/emit/alxia/`)
+
+Written only with the `alxia` option: one `as const` object per operation,
+`{ method, path, schema }`, as alxia's `app.route(operation, handler)` reads
+it, then `operations`. It reuses `operations.ts`'s readers (`fromString`,
+`formObject`, `valueSchema` and its helpers) and `zod.ts`'s `expr`, so a
+parameter or a form is read from text exactly as the Hono engine reads it.
+Only what alxia hands over differs:
+
+- **The query** arrives as alxia's `readQuery` builds it: a key given once is
+  a string, given more than once a list. A list parameter is wrapped in
+  `z.preprocess(repeated, …)`, or `z.preprocess(commas, …)` with
+  `explode: false`; the Hono engine does this before validating, alxia does
+  not. A header list is split by `headerList`.
+- **Path parameters** arrive as strings, and alxia's types refuse a
+  `params` schema whose input does not take them: one that does not read a
+  string (an enum of strings, say) is piped from `z.string()`.
+- **It is emitted from the spec's operations**, `generateFiles` passing
+  `buildIR`'s operations beside the IR `validationErrors` changed: alxia
+  answers a refused request with its own 400, so the engine's 400 is never
+  declared here.
+- **What alxia cannot route or validate is left out** with an `ignored`
+  warning, decided by `routable.ts`, a deliberate copy of alxia's router
+  rules (`compilePath`): no `TRACE`, a parameter fills its segment, is named
+  as an identifier and only once, and two paths of one shape name their
+  parameters alike. A body or a reply alxia cannot read or send (binary,
+  JSON Lines, a form reply, named events) leaves its operation out too.
+  Each operation is printed into a state of its own (`printing.ts`), merged
+  only once it is kept, so a left-out one imports nothing.
+- **The folder by role:** `index.ts` assembles the file, `request.ts` prints
+  `params`, `query`, `headers` and `body`, `reply.ts` the `response`
+  schemas, `routable.ts` decides what is left out, `names.ts` names the
+  constants.
+- **Names:** each constant is named by `operationConst` (`names.ts`): the
+  `operationId`, camelCased when it is not an identifier, and suffixed
+  `Operation` when it is a reserved word or `Number`, `Array` or `Date`,
+  which the helpers call. With `alxia`, `#checkNames` claims those, every
+  `z<Name>` the file may import, and the file's own names (`ALXIA_NAMES`),
+  in a namespace apart from the types: an operation may share its id with a
+  schema's type name.
+- **`@alxia/core` is not a dependency**: the generated file imports
+  `eventStream` from it only for a reply of server-sent events. The fixtures
+  are type-checked against `test/alxia/core.ts`, a stand-in of the types
+  they touch, and `test/types/alxia.ts` holds every fixture's `operations`
+  to alxia's `RouteOperation`.
 
 ## openapi-typescript's shape (`src/emit/paths.ts`)
 

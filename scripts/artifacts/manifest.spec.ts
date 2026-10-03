@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { manifestShapeProblems } from './manifest';
+import { accessProblems, manifestShapeProblems } from './manifest';
 
 describe('manifestShapeProblems', () => {
 	const httpyz = { name: '@nxgt/httpyz', version: '0.4.0' };
@@ -52,6 +52,36 @@ describe('manifestShapeProblems', () => {
 		).toEqual([
 			'@nxgt/httpyz: dependencies.a = link:../a',
 			'@nxgt/httpyz: optionalDependencies.b = file:../b',
+		]);
+	});
+});
+
+describe('accessProblems', () => {
+	test('accepts a scoped package published as public', () => {
+		expect(
+			accessProblems({
+				name: '@nxgt/httpyz',
+				publishConfig: { access: 'public' },
+			}),
+		).toEqual([]);
+	});
+
+	test('passes an unscoped package, which npm publishes as public', () => {
+		expect(accessProblems({ name: 'nxgt-tool' })).toEqual([]);
+	});
+
+	test('refuses a scoped package published as restricted', () => {
+		expect(
+			accessProblems({
+				name: '@nxgt/httpyz',
+				publishConfig: { access: 'restricted' },
+			}),
+		).toHaveLength(1);
+	});
+
+	test('refuses a scoped package with no publishConfig', () => {
+		expect(accessProblems({ name: '@nxgt/httpyz' })).toEqual([
+			'@nxgt/httpyz: publishConfig.access is not "public"; bun publish would publish this scoped package as restricted',
 		]);
 	});
 });

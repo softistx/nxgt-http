@@ -32,7 +32,7 @@ export async function writeFiles(
 	{
 		check = false,
 		retired = [],
-	}: { check?: boolean; retired?: readonly string[] } = {},
+	}: { check?: boolean | undefined; retired?: readonly string[] } = {},
 ): Promise<WriteResult> {
 	const result: WriteResult = {
 		written: [],

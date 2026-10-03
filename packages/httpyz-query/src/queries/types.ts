@@ -74,7 +74,7 @@ export interface HttpMutationOptions<Path extends string, Data> {
 	/** Optional when the path has no `{name}`s: `mutate()`. */
 	readonly mutationFn: (
 		variables: [PathParamNames<Path>] extends [never]
-			? // biome-ignore lint/suspicious/noConfusingVoidType: void, not undefined, is what lets `mutate()` be called with nothing
+			? // void, not undefined, is what lets `mutate()` be called with nothing
 				MutationVariables<Path> | void
 			: MutationVariables<Path>,
 	) => Promise<Data>;

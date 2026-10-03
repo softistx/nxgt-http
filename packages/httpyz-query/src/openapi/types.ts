@@ -28,12 +28,12 @@ export type OperationData<
 
 /** An operation's input: `void` when it takes none, and may be left out when nothing in it is required. */
 export type OperationVariables<Args> = Args extends readonly []
-	? // biome-ignore lint/suspicious/noConfusingVoidType: void, not undefined, is what lets `mutate()` be called with nothing
+	? // void, not undefined, is what lets `mutate()` be called with nothing
 		void
 	: Args extends readonly [infer Input]
 		? Input
 		: Args extends readonly [(infer Input)?]
-			? // biome-ignore lint/suspicious/noConfusingVoidType: void, not undefined, is what lets `mutate()` be called with nothing
+			? // void, not undefined, is what lets `mutate()` be called with nothing
 				Input | void
 			: never;
 

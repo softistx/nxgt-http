@@ -63,7 +63,7 @@ export function isReference(value: unknown): value is Reference {
 	}
 	const object = value as Record<string, unknown>;
 	return (
-		typeof object.$ref === 'string' &&
+		typeof object['$ref'] === 'string' &&
 		Object.keys(object).every((key) => REFERENCE_KEYS.has(key))
 	);
 }
@@ -77,8 +77,8 @@ export interface Resolved<T = unknown> {
 	/** Where each hop landed, in order; empty when `value` was no reference. */
 	hops: Location[];
 	/** Written next to the outermost `$ref` that has one; overrides the target's. */
-	summary?: string;
-	description?: string;
+	summary?: string | undefined;
+	description?: string | undefined;
 }
 
 const refKey = (file: string, ref: string) => `${file}\0${ref}`;
@@ -233,7 +233,7 @@ export class Resolver {
 		}
 		if (node === null || typeof node !== 'object') return;
 		const object = node as Record<string, unknown>;
-		if (!names && '$ref' in object) await this.#follow(object.$ref, at);
+		if (!names && '$ref' in object) await this.#follow(object['$ref'], at);
 		for (const [key, value] of Object.entries(object)) {
 			if (names) {
 				await this.#walk(value, child(at, key), false);

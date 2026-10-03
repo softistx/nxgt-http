@@ -1,4 +1,11 @@
 {
 	"extends": "../tsconfig.base.json",
+	"compilerOptions": {
+		// The repository scripts read manifests and the environment, whose keys
+		// are open: alxia and nxgt-data copy them from here as they are, under
+		// these settings.
+		"noPropertyAccessFromIndexSignature": false,
+		"exactOptionalPropertyTypes": false
+	},
 	"include": ["**/*.ts"]
 }

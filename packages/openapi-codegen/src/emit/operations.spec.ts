@@ -100,9 +100,9 @@ describe('generated operations', () => {
 			'ping',
 		]);
 		// Text data has no validator: it is yielded as it came.
-		expect(feed?.events?.ping).toBeNull();
+		expect(feed?.events?.['ping']).toBeNull();
 		expect(
-			feed?.events?.update?.parse({
+			feed?.events?.['update']?.parse({
 				id: 'a',
 				name: 'b',
 				updatedAt: '2026-09-14T10:00:00Z',

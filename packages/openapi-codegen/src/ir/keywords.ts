@@ -23,7 +23,7 @@ export const extraKeys = (
 	s: Record<string, unknown>,
 ): 'additionalProperties' | 'unevaluatedProperties' =>
 	!('additionalProperties' in s) &&
-	isObject(s.unevaluatedProperties) &&
+	isObject(s['unevaluatedProperties']) &&
 	!IN_PLACE.some((key) => key in s)
 		? 'unevaluatedProperties'
 		: 'additionalProperties';
@@ -34,5 +34,5 @@ export const extraKeys = (
  * key already.
  */
 export const settledByAdditional = (s: Record<string, unknown>): boolean =>
-	isObject(s.unevaluatedProperties) &&
+	isObject(s['unevaluatedProperties']) &&
 	('additionalProperties' in s || extraKeys(s) === 'unevaluatedProperties');

@@ -46,9 +46,10 @@ function app(createRoutes: typeof routes31): Hono {
 			);
 		})
 		.post('/authors', (c) => c.json({ ...ada, ...c.req.valid('json') }, 201))
-		.patch('/authors/{id}', (c) =>
-			c.json({ ...ada, ...c.req.valid('json') }, 200),
-		)
+		.patch('/authors/{id}', (c) => {
+			const { name = ada.name, email = ada.email } = c.req.valid('json');
+			return c.json({ ...ada, name, email }, 200);
+		})
 		.delete('/authors/{id}', (c) => c.body(null, 204));
 	return hono;
 }

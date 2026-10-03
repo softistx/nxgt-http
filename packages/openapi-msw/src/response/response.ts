@@ -27,6 +27,16 @@ const WRITERS = {
 
 type Writer = (...args: unknown[]) => Response;
 
+/** The `ResponseInit` keys a writer's options set: only those given, as `Response` reads them. */
+const initOf = (
+	options: ResponseOptions | undefined,
+): Pick<ResponseInit, 'statusText' | 'headers'> => ({
+	...(options?.statusText === undefined
+		? {}
+		: { statusText: options.statusText }),
+	...(options?.headers === undefined ? {} : { headers: options.headers }),
+});
+
 /** What the types call `ResponseFactory`, untyped. */
 export type RuntimeResponse = ((status: number) => Record<string, Writer>) &
 	Record<string, unknown>;
@@ -65,11 +75,7 @@ export function createResponse(
 			(...args) => {
 				if (types.length === 0 && kinds === undefined) {
 					const [options] = args as [ResponseOptions?];
-					return new Response(null, {
-						status,
-						statusText: options?.statusText,
-						headers: options?.headers,
-					});
+					return new Response(null, { status, ...initOf(options) });
 				}
 				const [data, options] = args as [unknown, ResponseOptions?];
 				const candidates = kinds
@@ -91,7 +97,7 @@ export function createResponse(
 				const headers = new Headers(options?.headers);
 				const response = new Response(write(media, type, data, headers), {
 					status,
-					statusText: options?.statusText,
+					...initOf(options),
 					headers,
 				});
 				written.set(response, { media, data });
@@ -107,10 +113,10 @@ export function createResponse(
 	const response = ((status: number) => at(status)) as RuntimeResponse;
 	for (const [name, status] of Object.entries(PRESETS)) {
 		response[name] = (...args: unknown[]) =>
-			(at(status).body as Writer)(...args);
+			(at(status)['body'] as Writer)(...args);
 	}
-	response.untyped = (own: Response) => own;
-	response.passthrough = () => passthrough();
+	response['untyped'] = (own: Response) => own;
+	response['passthrough'] = () => passthrough();
 	return response;
 }
 

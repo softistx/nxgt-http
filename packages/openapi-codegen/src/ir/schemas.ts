@@ -214,7 +214,7 @@ function merged(a: SchemaNode, b: SchemaNode): SchemaNode | undefined {
 		else if (mine === undefined) out[key] = value;
 		else if (JSON.stringify(mine) !== JSON.stringify(value)) return undefined;
 	}
-	if (!(a.nullable && b.nullable)) delete out.nullable;
+	if (!(a.nullable && b.nullable)) delete out['nullable'];
 	return annotated(out as unknown as SchemaNode, b);
 }
 
@@ -324,7 +324,7 @@ export class SchemaBuilder {
 		if ('unevaluatedProperties' in value && !settledByAdditional(value)) {
 			this.#seal(
 				node,
-				value.unevaluatedProperties,
+				value['unevaluatedProperties'],
 				child(at, 'unevaluatedProperties'),
 			);
 		}
@@ -517,9 +517,9 @@ export class SchemaBuilder {
 
 	#reference(s: Record<string, unknown>, at: Location): SchemaNode {
 		// A $ref that is not a string was refused by the loader already.
-		if (typeof s.$ref !== 'string') return { kind: 'unknown' };
+		if (typeof s['$ref'] !== 'string') return { kind: 'unknown' };
 		const target = this.#register(
-			this.#resolver.deref({ $ref: s.$ref }, at),
+			this.#resolver.deref({ $ref: s['$ref'] }, at),
 			undefined,
 			'ref',
 		);
@@ -547,7 +547,7 @@ export class SchemaBuilder {
 		if ('unevaluatedProperties' in s && !settledByAdditional(s)) {
 			this.#seal(
 				node,
-				s.unevaluatedProperties,
+				s['unevaluatedProperties'],
 				child(at, 'unevaluatedProperties'),
 			);
 		}
@@ -559,13 +559,13 @@ export class SchemaBuilder {
 		s: Record<string, unknown>,
 		at: Location,
 	): SchemaNode {
-		const description = asString(s.description);
+		const description = asString(s['description']);
 		if (description !== undefined) node.description = description;
-		if (s.deprecated === true) node.deprecated = true;
-		if (s.readOnly === true) node.readOnly = true;
-		if (s.writeOnly === true) node.writeOnly = true;
-		if ('default' in s) node.default = { value: s.default };
-		if (s.nullable === true) {
+		if (s['deprecated'] === true) node.deprecated = true;
+		if (s['readOnly'] === true) node.readOnly = true;
+		if (s['writeOnly'] === true) node.writeOnly = true;
+		if ('default' in s) node.default = { value: s['default'] };
+		if (s['nullable'] === true) {
 			node.nullable = true;
 			this.#legacyNullable(child(at, 'nullable'));
 		}
@@ -593,24 +593,24 @@ export class SchemaBuilder {
 	}
 
 	#structure(s: Record<string, unknown>, at: Location): SchemaNode {
-		if (Array.isArray(s.allOf)) return this.#allOf(s, at);
-		if (Array.isArray(s.oneOf) || Array.isArray(s.anyOf)) {
+		if (Array.isArray(s['allOf'])) return this.#allOf(s, at);
+		if (Array.isArray(s['oneOf']) || Array.isArray(s['anyOf'])) {
 			return this.#union(s, at);
 		}
 		if ('const' in s) {
 			return this.#typedLiteral(
 				s,
-				this.#literal([s.const], child(at, 'const')),
+				this.#literal([s['const']], child(at, 'const')),
 				at,
 			);
 		}
-		if (Array.isArray(s.enum)) {
+		if (Array.isArray(s['enum'])) {
 			const key = 'x-enum-varnames' in s ? 'x-enum-varnames' : 'x-enumNames';
 			const names =
 				key in s ? { key, value: s[key], at: child(at, key) } : undefined;
 			return this.#typedLiteral(
 				s,
-				this.#literal(s.enum, child(at, 'enum'), names),
+				this.#literal(s['enum'], child(at, 'enum'), names),
 				at,
 			);
 		}
@@ -637,10 +637,11 @@ export class SchemaBuilder {
 		s: Record<string, unknown>,
 		at: Location,
 	): { types: string[]; nullable: boolean; any: boolean } {
-		if (s.type === undefined) return { types: [], nullable: false, any: false };
+		if (s['type'] === undefined)
+			return { types: [], nullable: false, any: false };
 		const types: string[] = [];
 		let nullable = false;
-		for (const type of Array.isArray(s.type) ? s.type : [s.type]) {
+		for (const type of Array.isArray(s['type']) ? s['type'] : [s['type']]) {
 			if (typeof type !== 'string' || !JSON_TYPES.has(type)) {
 				this.#diagnostics.error(
 					'invalid_schema',
@@ -731,18 +732,18 @@ export class SchemaBuilder {
 	}
 
 	#string(s: Record<string, unknown>, at: Location): SchemaNode {
-		const format = asString(s.format);
-		const media = asString(s.contentMediaType);
+		const format = asString(s['format']);
+		const media = asString(s['contentMediaType']);
 		if (
 			format === 'binary' ||
 			(media !== undefined &&
-				s.contentEncoding === undefined &&
+				s['contentEncoding'] === undefined &&
 				!/^text\/|json$/.test(media))
 		) {
 			return { kind: 'binary' };
 		}
 		const node: StringNode = { kind: 'string' };
-		if (format === 'byte' || s.contentEncoding === 'base64')
+		if (format === 'byte' || s['contentEncoding'] === 'base64')
 			node.format = 'byte';
 		else if (format !== undefined) {
 			if (STRING_FORMATS.has(format)) node.format = format as StringFormat;
@@ -755,11 +756,11 @@ export class SchemaBuilder {
 				);
 			}
 		}
-		const minLength = asNumber(s.minLength);
+		const minLength = asNumber(s['minLength']);
 		if (minLength !== undefined) node.minLength = minLength;
-		const maxLength = asNumber(s.maxLength);
+		const maxLength = asNumber(s['maxLength']);
 		if (maxLength !== undefined) node.maxLength = maxLength;
-		const pattern = asString(s.pattern);
+		const pattern = asString(s['pattern']);
 		if (pattern !== undefined) {
 			if (isRegExp(pattern)) node.pattern = pattern;
 			else {
@@ -779,7 +780,7 @@ export class SchemaBuilder {
 		at: Location,
 	): SchemaNode {
 		const node: NumberNode = { kind: 'number', integer };
-		const format = asString(s.format);
+		const format = asString(s['format']);
 		if (format !== undefined) {
 			if (NUMBER_FORMATS.has(format)) node.format = format as NumberFormat;
 			else if (!this.#warnedFormats.has(format)) {
@@ -811,19 +812,19 @@ export class SchemaBuilder {
 
 	#array(s: Record<string, unknown>, at: Location): SchemaNode {
 		let items: SchemaNode = { kind: 'unknown' };
-		if (Array.isArray(s.items)) {
+		if (Array.isArray(s['items'])) {
 			this.#diagnostics.error(
 				'unsupported_keyword',
 				'a list of `items` (a tuple) is not supported',
 				child(at, 'items'),
 			);
-		} else if ('items' in s) items = this.node(s.items, child(at, 'items'));
+		} else if ('items' in s) items = this.node(s['items'], child(at, 'items'));
 		const node: ArrayNode = { kind: 'array', items };
-		const minItems = asNumber(s.minItems);
+		const minItems = asNumber(s['minItems']);
 		if (minItems !== undefined) node.minItems = minItems;
-		const maxItems = asNumber(s.maxItems);
+		const maxItems = asNumber(s['maxItems']);
 		if (maxItems !== undefined) node.maxItems = maxItems;
-		if (s.uniqueItems === true) {
+		if (s['uniqueItems'] === true) {
 			this.#diagnostics.warning(
 				'not_enforced',
 				'`uniqueItems` is not enforced',
@@ -834,17 +835,17 @@ export class SchemaBuilder {
 	}
 
 	#object(s: Record<string, unknown>, at: Location): SchemaNode {
-		const required = new Set(strings(s.required));
+		const required = new Set(strings(s['required']));
 		const properties: Property[] = [];
-		if (isObject(s.properties)) {
-			for (const [name, value] of Object.entries(s.properties)) {
+		if (isObject(s['properties'])) {
+			for (const [name, value] of Object.entries(s['properties'])) {
 				properties.push({
 					name,
 					required: required.has(name),
 					schema: this.node(value, child(at, 'properties', name)),
 				});
 			}
-		} else if (s.properties !== undefined) {
+		} else if (s['properties'] !== undefined) {
 			this.#diagnostics.error(
 				'invalid_schema',
 				'`properties` must be an object',
@@ -970,8 +971,8 @@ export class SchemaBuilder {
 	}
 
 	#union(s: Record<string, unknown>, at: Location): SchemaNode {
-		const key = Array.isArray(s.oneOf) ? 'oneOf' : 'anyOf';
-		if (Array.isArray(s.oneOf) && Array.isArray(s.anyOf)) {
+		const key = Array.isArray(s['oneOf']) ? 'oneOf' : 'anyOf';
+		if (Array.isArray(s['oneOf']) && Array.isArray(s['anyOf'])) {
 			this.#diagnostics.error(
 				'unsupported_keyword',
 				'`oneOf` and `anyOf` together are not supported',
@@ -996,8 +997,8 @@ export class SchemaBuilder {
 				variants,
 				exclusive: key === 'oneOf',
 			};
-			const property = isObject(s.discriminator)
-				? asString(s.discriminator.propertyName)
+			const property = isObject(s['discriminator'])
+				? asString(s['discriminator']['propertyName'])
 				: undefined;
 			if (property !== undefined) {
 				union.discriminator = property;
@@ -1038,7 +1039,7 @@ export class SchemaBuilder {
 	}
 
 	#allOf(s: Record<string, unknown>, at: Location): SchemaNode {
-		const members = (s.allOf as unknown[]).map((value, index) =>
+		const members = (s['allOf'] as unknown[]).map((value, index) =>
 			this.node(value, child(at, 'allOf', index)),
 		);
 		const own = without(
@@ -1054,8 +1055,8 @@ export class SchemaBuilder {
 		// `required` next to `allOf` names properties that live in a member.
 		let requires: string[] = [];
 		if ('required' in own && !('properties' in own)) {
-			requires = strings(own.required);
-			delete own.required;
+			requires = strings(own['required']);
+			delete own['required'];
 		}
 		if (Object.keys(own).length > 0) members.push(this.#structure(own, at));
 		return this.#combine(members, requires, at);
@@ -1263,7 +1264,7 @@ export class SchemaBuilder {
 		node: SchemaNode,
 		at: Location,
 	): SchemaNode {
-		if (s.type === undefined || this.#types(s, at).nullable) return node;
+		if (s['type'] === undefined || this.#types(s, at).nullable) return node;
 		if (node.kind === 'null') return { kind: 'never' };
 		delete node.nullable;
 		return node;

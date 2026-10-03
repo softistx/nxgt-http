@@ -45,6 +45,7 @@ async function issues(res: Response): Promise<string[][]> {
 const auth: MiddlewareHandler = async (c, next) => {
 	if (!c.req.header('authorization')) return c.json({ status: 401 }, 401);
 	await next();
+	return undefined;
 };
 
 describe('hono routes', () => {
@@ -125,6 +126,7 @@ describe('hono routes', () => {
 			const body = c.req.valid('json' as never) as unknown as Employee;
 			if (body.name === 'Mallory') return c.json({ status: 403 }, 403);
 			await next();
+			return undefined;
 		};
 		routes
 			.put('/employees/{id}', auth, (c) => c.json(ada, 200))
@@ -309,36 +311,41 @@ describe('hono registration', () => {
 
 	it('refuses a route that an earlier one would always answer for', () => {
 		const routes = routesOn();
-		routes.get?.('/users/{id}', handler);
-		expect(() => routes.get?.('/users/me', handler)).toThrow(
+		routes['get']?.('/users/{id}', handler);
+		expect(() => routes['get']?.('/users/me', handler)).toThrow(
 			'getMe (GET /users/me) would never be reached: getUser (GET /users/{id}), registered before it',
 		);
 		const ordered = routesOn();
-		ordered.get?.('/users/me', handler);
-		expect(() => ordered.get?.('/users/{id}', handler)).not.toThrow();
+		ordered['get']?.('/users/me', handler);
+		expect(() => ordered['get']?.('/users/{id}', handler)).not.toThrow();
 	});
 
 	it('refuses a second route, an unknown one, and one outside its scope', () => {
 		const routes = routesOn();
-		routes.get?.('/users/me', handler);
-		expect(() => routes.operation?.('getMe', handler)).toThrow(
+		routes['get']?.('/users/me', handler);
+		expect(() => routes['operation']?.('getMe', handler)).toThrow(
 			'getMe (GET /users/me) already has a route',
 		);
-		expect(() => routes.get?.('/nope', handler)).toThrow(
+		expect(() => routes['get']?.('/nope', handler)).toThrow(
 			'The spec has no GET /nope operation',
 		);
-		expect(() => routes.operation?.('nope', handler)).toThrow(
+		expect(() => routes['operation']?.('nope', handler)).toThrow(
 			'nope is not an operationId of the spec',
 		);
 		expect(() =>
-			routesOn({ tag: 'users' }).get?.('/users/me', handler),
+			routesOn({ tag: 'users' })['get']?.('/users/me', handler),
 		).toThrow('is not tagged users');
 		expect(() =>
-			routesOn({ prefix: '/accounts' }).get?.('/users/me', handler),
+			routesOn({ prefix: '/accounts' })['get']?.('/users/me', handler),
 		).toThrow('is not under the prefix /accounts');
 		const marked = routesOn();
 		expect(() =>
-			marked.get?.('/users/me', marked.validate, marked.validate, handler),
+			marked['get']?.(
+				'/users/me',
+				marked['validate'],
+				marked['validate'],
+				handler,
+			),
 		).toThrow('routes.validate appears twice');
 	});
 });
@@ -376,10 +383,10 @@ describe('hono edge cases', () => {
 			file: op('get', '/files/{name}.json'),
 		});
 		const routes = api.routes(new Hono()) as unknown as Loose;
-		expect(() => routes.head?.('/x', ran)).toThrow(
+		expect(() => routes['head']?.('/x', ran)).toThrow(
 			'headX (HEAD /x): Hono answers HEAD with the GET route of /x',
 		);
-		expect(() => routes.get?.('/files/{name}.json', ran)).toThrow(
+		expect(() => routes['get']?.('/files/{name}.json', ran)).toThrow(
 			'a path parameter must fill its whole segment, and {name}.json does not',
 		);
 		expect(api.missing()).toEqual(['getX']);
@@ -413,7 +420,7 @@ describe('hono edge cases', () => {
 			},
 			app,
 		);
-		for (const path of ['/form', '/text', '/bin']) routes.post?.(path, ran);
+		for (const path of ['/form', '/text', '/bin']) routes['post']?.(path, ran);
 		// With the length a client sends, which a Request built here leaves out.
 		const post = (path: string, sent: string, type: string) =>
 			app.request(path, {
@@ -461,7 +468,7 @@ describe('hono edge cases', () => {
 				}),
 			},
 			app,
-		).get?.('/list', ran);
+		)['get']?.('/list', ran);
 		const twice = await app.request('/list?page=1&page=abc');
 		expect([twice.status, await codes(twice)]).toEqual([
 			400,
@@ -487,7 +494,7 @@ describe('hono edge cases', () => {
 				}),
 			},
 			app,
-		).post?.('/make', drain, ran);
+		)['post']?.('/make', drain, ran);
 		const res = await app.request('/make', json('POST', {}));
 		expect(await res.text()).toStartWith(
 			'A middleware read the request body through c.req.raw',
@@ -521,9 +528,9 @@ describe('hono edge cases', () => {
 			app,
 			{ validateResponses: true },
 		);
-		routes.get?.('/problem', (c: Context) => c.json({ a: 1 }, 200));
-		routes.get?.('/csv', (c: Context) => c.text('a', 200));
-		routes.get?.(
+		routes['get']?.('/problem', (c: Context) => c.json({ a: 1 }, 200));
+		routes['get']?.('/csv', (c: Context) => c.text('a', 200));
+		routes['get']?.(
 			'/events',
 			() =>
 				new Response(

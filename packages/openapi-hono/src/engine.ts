@@ -294,6 +294,7 @@ function validation(
 			});
 		}
 		await next();
+		return undefined;
 	};
 }
 

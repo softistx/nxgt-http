@@ -553,7 +553,7 @@ interface GenerateOptions extends IROptions {
 	hono?: boolean;
 	alxia?: boolean;
 	dates?: Dates;
-	lint?: Lint;
+	lint?: Lint | undefined;
 	validationErrors?: boolean;
 }
 ```
@@ -792,7 +792,7 @@ it came from.
 | --- | --- | --- |
 | `openapi` | `string` | the `openapi` field as written |
 | `version` | `'3.1' \| '3.2'` | |
-| `title`, `apiVersion` | `string`, optional | `info.title` and `info.version` |
+| `title`, `apiVersion` | `string \| undefined` | `info.title` and `info.version` |
 | `schemas` | `NamedSchema[]` | dependencies before dependents; members of a cycle are marked `recursive` |
 | `aliases` | `Alias[]` | second `components.schemas` keys for a schema already named |
 | `operations` | `OperationIR[]` | |
@@ -883,7 +883,7 @@ Where a parameter goes. Cookie parameters are refused.
 ```ts
 interface BodyIR {
 	required: boolean;
-	description?: string;
+	description?: string | undefined;
 	content: MediaIR[];
 }
 ```
@@ -895,7 +895,7 @@ A request body, in `OperationIR.body`.
 ```ts
 interface ResponseIR {
 	status: number;
-	description?: string;
+	description?: string | undefined;
 	content: MediaIR[];
 	location: Location;
 }
@@ -939,7 +939,7 @@ One schema, reduced to one shape; switch on `kind`.
 ```ts
 interface Annotations {
 	nullable?: boolean;
-	description?: string;
+	description?: string | undefined;
 	deprecated?: boolean;
 	readOnly?: boolean;
 	writeOnly?: boolean;

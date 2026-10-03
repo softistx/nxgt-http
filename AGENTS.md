@@ -105,7 +105,12 @@ no relative import into one.
   each instance, never emitted, so the ids go to the interfaces extending
   it. A program the library must accept or refuse, without a fixture of its
   own, is a `.tsp` under `test/programs/`, compiled without emitting by its
-  spec.
+  spec. `templates/` is the `tsp init` template, shipped in the tarball:
+  `src/template.spec.ts` fills in its placeholders into the gitignored
+  `test/scaffolded/` and compiles it with the linter. Never run `tsp init`
+  inside the repository: it writes `package.json`, `main.tsp` and the rest
+  into the current directory, over the package's own; try it from a scratch
+  directory.
 - `@nxgt/openapi-hono` has the generator as a devDependency, for its
   fixtures. The one `paths` entry left is its own name, so that the
   generated `hono.ts` in its fixtures runs the engine the specs import from
@@ -262,8 +267,8 @@ publishes to npm.
 
 ## Known state
 
-`bun run test` is **565 pass, 0 fail** on 2026-10-02: datasource-rest 26, httpyz 90, httpyz-query 14,
-openapi-codegen 181, openapi-hono 31, openapi-httpyz 28, openapi-msw 21, openapi-nuxt 36, typespec 114,
+`bun run test` is **571 pass, 0 fail** on 2026-10-02: datasource-rest 26, httpyz 90, httpyz-query 14,
+openapi-codegen 181, openapi-hono 31, openapi-httpyz 28, openapi-msw 21, openapi-nuxt 36, typespec 120,
 scripts 24. It runs one process per package, and each
 package's `test` script writes the generated fixtures its specs import first;
 then `bun test scripts` runs the repository scripts' own specs.

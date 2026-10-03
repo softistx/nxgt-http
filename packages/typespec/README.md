@@ -8,6 +8,10 @@ Each shape here is one the `@nxgt/*` packages already send on the wire.
 
 ## Install
 
+A new project needs no install of its own: `tsp init` with the package's
+template installs everything ([Start a project](#start-a-project)). For an
+existing project, install the library and its peers:
+
 ```sh
 bun add -d @nxgt/typespec @typespec/compiler @typespec/http @typespec/openapi @typespec/openapi3 @nxgt/openapi-codegen
 ```
@@ -16,6 +20,8 @@ bun add -d @nxgt/typespec @typespec/compiler @typespec/http @typespec/openapi @t
 are peer dependencies,
 and `typescript` 6 too, as for every `@nxgt` package. `@typespec/openapi3`
 compiles the spec, and `@nxgt/openapi-codegen` generates the code from it.
+The generator's CLI, `nxgt-openapi`, runs on [Bun](https://bun.sh): it needs
+`bun` on the PATH, even when called through `npx` or an npm script.
 Emit OpenAPI 3.1 or 3.2 in `tspconfig.yaml`: `@typespec/openapi3` emits 3.0
 by default, and the generator refuses it. Every convention here is compiled
 to both in CI, and generates the same code from either.
@@ -32,6 +38,35 @@ options:
 ```
 
 ## Usage
+
+### Start a project
+
+`tsp init` with the package's template starts an API project with these
+conventions in place. Run it in an empty directory, with
+[Bun](https://bun.sh) on the PATH for the generator:
+
+```sh
+npx --package=@typespec/compiler tsp init https://unpkg.com/@nxgt/typespec/templates/scaffolding.json \
+  --template nxgt -y --project-name petstore
+npx tsp compile .
+npx nxgt-openapi generate
+```
+
+It installs the compiler, `@typespec/http`, `@typespec/openapi`,
+`@typespec/openapi3`, this package and `@nxgt/openapi-codegen`, and writes:
+
+- `tspconfig.yaml`: the linter's recommended rules, and OpenAPI 3.1 written
+  to `openapi/openapi.yaml`;
+- `main.tsp`: the service in the namespace `Api`, with `@operationIds`, and a
+  `Users` resource with a paged, sorted list, `get`, `create`, `update` and
+  `delete`, and their error aliases;
+- `openapi-codegen.config.ts`: the generator's input, and `src/generated`
+  with the Hono routes;
+- `README.md`: the `api` and `api:check` scripts to add to `package.json`.
+
+Drop `-y` and its options to be asked instead. The next steps, serving the
+routes and renaming the resource, are in
+[Getting started](docs/guide/getting-started.md).
 
 ### A spec split across files
 
@@ -130,6 +165,24 @@ export interface NotFoundBody {
 The generator also declares the validators' own 400, `ValidationErrorBody`,
 on every operation that takes a parameter or a body. With `BadRequest`, a
 400 reply is typed `BadRequestBody | ValidationErrorBody`.
+
+Each verb has an alias for the errors it usually answers, so a resource's
+operations do not repeat the same unions. Combine them, and add a response
+an alias leaves out:
+
+```tsp
+@route("/users")
+interface Users {
+  @get list(...PageParameters): Page<User> | ListErrors;
+  @get get(@path id: uuid): User | GetErrors;
+  @post create(@body user: User): User | CreateErrors | AuthErrors | TooManyRequests;
+  @patch update(@path id: uuid, @body user: User): User | UpdateErrors;
+  @delete delete(@path id: uuid): NoContentResponse | DeleteErrors;
+}
+```
+
+An alias is exactly its union, so the OpenAPI it emits is the same as
+writing the responses out.
 
 ### Pagination
 
@@ -363,6 +416,34 @@ The verbs `verbs` adds are not checked, nor an operation with its own
 `@operationId`. More, with each verb's methods, in
 [Operation ids](docs/guide/operation-ids.md).
 
+### Linter
+
+Extend the library's ruleset in `tspconfig.yaml`, and `tsp compile` warns
+where the spec strays from these conventions. Nothing runs without it:
+
+```yaml
+# api/tspconfig.yaml
+linter:
+  extends:
+    - '@nxgt/typespec/recommended'
+```
+
+| Rule | Warns when | Fix |
+| --- | --- | --- |
+| `list-returns-page` | an operation named `list`, `search` or `query`, alone or before a capital letter (`listUsers`, not `listing`), answers an array | return `Page<Item>` or `CursorPage<Item>` |
+| `service-operation-ids` | a `@service` namespace has no `@operationIds`, on itself or on a namespace around it | mark the namespace with `@operationIds` |
+| `error-body-shape` | a reply of status 400 or above, or `default`, has a body without `status`, `message` and `timestamp` | declare one of the library's errors, or a body that spreads or extends `ErrorBody<Status>` |
+
+```text
+warning @nxgt/typespec/list-returns-page: listAll returns an array: return Page<Item> or CursorPage<Item>, which can carry a total or a next cursor.
+```
+
+A reply without a body, such as `AuthenticationRequired`, passes
+`error-body-shape`. Turn a rule off for the spec under `linter: disable:`
+with a reason, or for one operation with
+`#suppress "@nxgt/typespec/<rule>" "<reason>"`. More, with a failing and a
+passing example of each rule, in [Linter](docs/guide/linter.md).
+
 ## API
 
 ### Decorators
@@ -384,6 +465,17 @@ overrides verbs, on a namespace or an interface.
 | `duplicate-status-reply` | error: an operation declares a reply without a body and one with a body of one status, which the emitter merges, losing the one without a body |
 | `merged-status-reply` | warning: an operation declares two replies with a body of one status code, which the emitter merges under the first one's description |
 | `verb-method-mismatch` | warning: an operation `@operationIds` names after one of the library's verbs, in an interface, is sent with a method that verb does not name: `create` with a `GET` |
+
+### Linter rules
+
+In the ruleset `@nxgt/typespec/recommended`; each is a warning, and named
+`@nxgt/typespec/<rule>` in `tspconfig.yaml` and `#suppress`.
+
+| Rule | Reported when |
+| --- | --- |
+| `list-returns-page` | an operation named `list`, `search` or `query`, alone or before a capital letter, has a success reply whose body is an array |
+| `service-operation-ids` | a `@service` namespace is not marked with `@operationIds`, itself or by a namespace around it |
+| `error-body-shape` | a reply of status 400 or above, of a range from 400 up, or `default`, has a body that is not a model with `status`, `message` and `timestamp` |
 
 ### Models
 
@@ -445,8 +537,20 @@ envelope and the rate limit's headers.
 `@error` model with its `@statusCode` and body, and
 `ErrorResponse<Status>` for any other status.
 
+| Alias | What it is |
+| --- | --- |
+| `ListErrors` | `BadRequest` |
+| `GetErrors` | `NotFound` |
+| `CreateErrors` | `BadRequest \| Conflict` |
+| `UpdateErrors` | `BadRequest \| NotFound \| Conflict` |
+| `DeleteErrors` | `NotFound` |
+| `AuthErrors` | `Unauthorized \| Forbidden`, with the envelope; a route that answers without a body declares `AuthenticationRequired \| AccessDenied` instead |
+
 ## Traps
 
+- **`nxgt-openapi` fails with `env: 'bun': No such file or directory`**
+  without Bun on the PATH: install it, `curl -fsSL https://bun.sh/install | bash`
+  ([troubleshooting](docs/troubleshooting.md#env-bun-no-such-file-or-directory)).
 - **Do not declare a schema named `ValidationErrorBody`.** The generator
   declares it itself, and two schemas of that name fail with
   `name_collision`. `BadRequestBody` carries the `issues` instead.
@@ -466,7 +570,8 @@ envelope and the rate limit's headers.
 - **One status, one reply.** `@typespec/openapi3` merges two replies of one
   status into one. With `AuthenticationRequired` and `Unauthorized`, the 401
   keeps the envelope and the reply without a body is lost: the library
-  refuses it, `duplicate-status-reply`. With `Conflict` beside
+  refuses it, `duplicate-status-reply`. With `Conflict` (which
+  `CreateErrors` and `UpdateErrors` hold) beside
   `IdempotencyInProgress`, or `UnprocessableEntity` beside
   `IdempotencyKeyReused`, both bodies stay, under the first reply's
   description: the library warns, `merged-status-reply`. Declare the one the
@@ -503,8 +608,10 @@ envelope and the rate limit's headers.
 
 ## Documentation
 
-- [Error replies](docs/guide/errors.md): the envelope, each response, and
-  what the generator makes of them;
+- [Getting started](docs/guide/getting-started.md): the `tsp init`
+  template, the files it writes, and the steps from the spec to a Hono route;
+- [Error replies](docs/guide/errors.md): the envelope, each response, the
+  aliases by verb, and what the generator makes of them;
 - [Pagination](docs/guide/pagination.md): offset and cursor pages, and
   what a handler answers;
 - [Authentication](docs/guide/auth.md): `JanusAuth`, and the guards'
@@ -518,6 +625,8 @@ envelope and the rate limit's headers.
 - [Operation ids](docs/guide/operation-ids.md): `@operationIds`, each
   operation named as written or a verb with its resource, the method each
   verb is sent with, the options, and the ids it refuses;
+- [Linter](docs/guide/linter.md): the ruleset `@nxgt/typespec/recommended`,
+  each rule with a failing and a passing spec, and how to turn one off;
 - [troubleshooting](docs/troubleshooting.md);
 - [the roadmap](docs/roadmap.md): what is coming.
 

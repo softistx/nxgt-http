@@ -162,7 +162,9 @@ its own way, through `onValidationError`, turns that off with the generator's
 | `Forbidden` | 403 | `ForbiddenBody` | authenticated, but not allowed; a `@nxgt/janus-hono` guard sends `AccessDenied` instead, and `janusErrors()` its own `{ code }` body ([Authentication](auth.md)) |
 | `NotFound` | 404 | `NotFoundBody` | nothing is there |
 | `Conflict` | 409 | `ConflictBody` | the request conflicts with the resource's state, such as a stale `version` |
+| `IdempotencyInProgress` | 409 | `ConflictBody` | the first request with this `Idempotency-Key` still runs; with the `RateLimit-*` headers and `Retry-After` ([Headers](headers.md)) |
 | `UnprocessableEntity` | 422 | `UnprocessableEntityBody` | well-formed, but not something the server can act on |
+| `IdempotencyKeyReused` | 422 | `UnprocessableEntityBody` | an `Idempotency-Key` sent again with another body; with the `RateLimit-*` headers ([Headers](headers.md)) |
 | `TooManyRequests` | 429 | `TooManyRequestsBody` | too many requests; with the `RateLimit-*` headers and `Retry-After` ([Headers](headers.md)) |
 | `InternalServerError` | 500 | `InternalServerErrorBody` | the server failed; with `validateResponses`, `@nxgt/openapi-hono` sends it with `errors.response-validation-failed` when a reply breaks the spec |
 | `ErrorResponse<Status>` | any | `ErrorBody<Status>` | any other status |
@@ -172,6 +174,71 @@ Name them in an operation's return type, beside the success:
 ```tsp
 @get getPost(@path postId: string): Post | NotFound | Unauthorized | Forbidden;
 ```
+
+## Aliases by verb
+
+Most operations of a resource answer the same errors. Each verb has an alias
+for them:
+
+| Alias | Responses | Statuses |
+| --- | --- | --- |
+| `ListErrors` | `BadRequest` | 400 |
+| `GetErrors` | `NotFound` | 404 |
+| `CreateErrors` | `BadRequest \| Conflict` | 400, 409 |
+| `UpdateErrors` | `BadRequest \| NotFound \| Conflict` | 400, 404, 409 |
+| `DeleteErrors` | `NotFound` | 404 |
+| `AuthErrors` | `Unauthorized \| Forbidden` | 401, 403 |
+
+```tsp
+import "@typespec/http";
+import "@nxgt/typespec";
+
+using Http;
+using Nxgt;
+
+@service
+namespace Shop;
+
+model User {
+  id: uuid;
+}
+
+@route("/users")
+interface Users {
+  @get list(...PageParameters): Page<User> | ListErrors;
+  @get get(@path id: uuid): User | GetErrors;
+  @post create(@body user: User): User | CreateErrors;
+  @patch update(@path id: uuid, @body user: User): User | UpdateErrors;
+  @delete delete(@path id: uuid): NoContentResponse | DeleteErrors;
+  @get @route("/me") me(): User | AuthErrors;
+}
+```
+
+An alias is a union, and nothing more: it emits the same OpenAPI as the
+responses written out. Combine aliases, and add a response an alias leaves
+out:
+
+```tsp
+@post create(@body user: User): User | CreateErrors | AuthErrors | TooManyRequests;
+```
+
+A union of your own names the errors your routes share:
+
+```tsp
+alias WriteErrors = CreateErrors | AuthErrors | TooManyRequests;
+```
+
+Do not add a response the alias already holds. `UpdateErrors | NotFound`
+declares the 404 twice, and the library warns, `merged-status-reply`. A 409
+beside `CreateErrors` or `UpdateErrors`, such as `IdempotencyInProgress`,
+warns too: declare the responses one by one there
+([Headers](headers.md), [troubleshooting](../troubleshooting.md)).
+
+`AuthErrors` carries the envelope, for a handler's own refusal. A route
+whose guard answers the 401 and 403 without a body, as `@nxgt/janus-hono`'s
+do, declares `AuthenticationRequired | AccessDenied` instead
+([Authentication](auth.md)). The two in one operation are an error,
+`duplicate-status-reply`.
 
 ## Another status, named
 

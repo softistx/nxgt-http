@@ -1,6 +1,6 @@
 {
 	"name": "@nxgt/typespec",
-	"version": "0.6.1",
+	"version": "0.9.1",
 	"license": "MIT",
 	"type": "module",
 	"main": "./dist/index.js",
@@ -9,6 +9,7 @@
 	"files": [
 		"dist",
 		"lib",
+		"templates",
 		"docs",
 		"README.md",
 		"package.json",

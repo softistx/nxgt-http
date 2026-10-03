@@ -27,6 +27,67 @@ no `package.json` to resolve it from.
 devDependencies, with the command in the
 [README's Install section](../README.md#install).
 
+## `init-template-invalid-json: Unable to parse …/scaffolding.json: Unexpected token … is not valid JSON`
+
+**When:** `tsp init` with the package's template, before it writes anything.
+
+```text
+error init-template-invalid-json: Unable to parse https://unpkg.com/@nxgt/typespec@0.8.0/templates/scaffolding.json: Unexpected token 'N', "Not found:"... is not valid JSON. Check that the template URL is correct.
+```
+
+**Why:** the URL names no template, so unpkg answers a page of text, `Not
+found: …` or `Package version not found: …`, which `tsp init` cannot parse.
+The template ships from 0.9.0 on: a version before it in the URL, a version
+that is not published, or a typo in the path all answer that page.
+
+**Fix:** drop the version, or name 0.9.0 or later, and keep the path as it is:
+
+```sh
+npm view @nxgt/typespec version   # 0.9.0 or later
+npx --package=@typespec/compiler tsp init https://unpkg.com/@nxgt/typespec/templates/scaffolding.json
+```
+
+## `init-template-download-failed: Failed to download template from …: fetch failed`
+
+**When:** `tsp init` with the package's template, before it writes anything.
+
+```text
+error init-template-download-failed: Failed to download template from https://unpkg.com/@nxgt/typespec/templates/scaffolding.json: fetch failed. Check that the template URL is correct.
+```
+
+**Why:** `tsp init` could not reach the host: no network, a firewall or
+proxy in the way, or a host name mistyped. Nothing answered, unlike the entry
+above, where unpkg answers a page that is not the template.
+
+**Fix:** check that the host answers from that machine, then run `tsp init`
+again:
+
+```sh
+curl -fsSI https://unpkg.com/@nxgt/typespec/templates/scaffolding.json
+```
+
+## `env: 'bun': No such file or directory`
+
+**When:** `nxgt-openapi generate` runs, through `npx`, an npm script such as
+the template's `api`, or a CI step, on a machine without Bun. A shell in
+another locale quotes it `‘bun’`; macOS prints `env: bun: No such file or
+directory`. The exit code is 127.
+
+**Why:** `@nxgt/openapi-codegen`'s CLI, `nxgt-openapi`, runs on
+[Bun](https://bun.sh): its first line is `#!/usr/bin/env bun`. `npx` and
+`npm run` find the script, then the system looks for `bun` to run it.
+`tsp compile` runs on Node and is not affected.
+
+**Fix:** install Bun, and make sure `bun` is on the PATH of the shell or the
+CI job that runs the generator:
+
+```sh
+curl -fsSL https://bun.sh/install | bash
+bunx nxgt-openapi generate
+```
+
+In GitHub Actions, add `oven-sh/setup-bun@v2` before the step.
+
 ## `Duplicate type name: 'NotFoundBody'`
 
 **When:** `tsp compile` runs on a spec that declares its own model named like
@@ -281,10 +342,152 @@ header either reply declares required becomes optional.
 @post createPost(@body post: Post): Post | IdempotencyInProgress;
 ```
 
+An alias can hide the duplicate: `CreateErrors` holds a `Conflict`, so
+`Post | CreateErrors | IdempotencyInProgress` declares two 409s, and
+`UpdateErrors | NotFound` two 404s. Spell the alias's other errors out
+instead:
+
+```tsp
+@post createPost(@body post: Post): Post | BadRequest | IdempotencyInProgress;
+```
+
 Two plain bodies, `Post | Draft`, are one reply whose body is either; two
 `@error` models without a `@statusCode` share `default`, and one
 description; bodies of different content types are negotiated. All three
 pass.
+
+## `returns an array: return Page<Item> or CursorPage<Item>`
+
+**When:** a warning, with the ruleset `@nxgt/typespec/recommended` on: an
+operation named `list`, `search` or `query`, alone or before a capital
+letter, has a success reply whose body is an array.
+
+```tsp
+@route("/users")
+interface Users {
+  @get list(): User[];
+}
+```
+
+```text
+warning @nxgt/typespec/list-returns-page: list returns an array: return Page<Item> or CursorPage<Item>, which can carry a total or a next cursor.
+```
+
+**Why:** an array cannot grow a `total` or a `nextCursor` later without
+breaking its clients. A page can.
+
+**Fix:** return a page ([Pagination](guide/pagination.md)):
+
+```tsp
+@get list(...PageParameters): Page<User>;
+```
+
+Or, for a list that will never page, silence that one operation:
+
+```tsp
+#suppress "@nxgt/typespec/list-returns-page" "a fixed set of ten"
+@get @route("/top") listTop(): User[];
+```
+
+## `The service … has no @operationIds: its ids are the emitter's, such as Users_list`
+
+**When:** a warning, with the ruleset `@nxgt/typespec/recommended` on: a
+`@service` namespace is not marked with `@operationIds`, neither itself nor
+a namespace around it. `@operationIds` on its interfaces alone does not
+count.
+
+```tsp
+@service
+namespace Shop {
+  @route("/health") @get op health(): void;
+}
+```
+
+```text
+warning @nxgt/typespec/service-operation-ids: The service Shop has no @operationIds: its ids are the emitter's, such as Users_list. Mark the namespace with @operationIds.
+```
+
+**Why:** the emitter names each operation after its interface,
+`Users_list`, and the generated client's methods and types take that name.
+
+**Fix:** mark the namespace ([Operation ids](guide/operation-ids.md)):
+
+```tsp
+@service
+@operationIds
+namespace Shop {
+  @route("/health") @get op health(): void;
+}
+```
+
+Marking an existing service renames its operations, and the generated
+client's methods with them. To keep the old ids, silence the rule on that
+namespace:
+
+```tsp
+#suppress "@nxgt/typespec/service-operation-ids" "its clients already call Health_check"
+@service
+namespace Health {
+  @route("/health") @get op check(): void;
+}
+```
+
+## `answers … with a body that is not the nxgt envelope`
+
+**When:** a warning, with the ruleset `@nxgt/typespec/recommended` on: a
+reply of status 400 or above, of a range from 400 up, or `default` (an
+`@error` model without `@statusCode`) has a body that is not a model with
+`status`, `message` and `timestamp`.
+
+```tsp
+model Teapot {
+  @statusCode _: 418;
+  @body body: { reason: string };
+}
+
+@route("/users")
+interface Users {
+  @post create(@body user: User): User | Teapot;
+}
+```
+
+```text
+warning @nxgt/typespec/error-body-shape: create answers 418 with a body that is not the nxgt envelope: declare BadRequest, NotFound or another of the library's errors, or a body that spreads or extends ErrorBody<Status>.
+```
+
+A range is named `500-599`, and `default` `*`.
+
+**Why:** `@nxgt/openapi-hono` answers its own 400 and 500 with the envelope,
+and a client reads `message` from every error. Another shape is one more
+case for each client.
+
+**Fix:** declare one of the library's errors, `ErrorResponse<Status>`, or a
+body that spreads or extends `ErrorBody<Status>` ([Error replies](guide/errors.md)):
+
+```tsp
+model TeapotBody {
+  ...ErrorBody<418>;
+  reason: string;
+}
+
+@error
+model Teapot {
+  @statusCode _: 418;
+  @body body: TeapotBody;
+}
+```
+
+A reply without a body, such as `AuthenticationRequired`, passes. For a
+spec whose errors have another shape on purpose, turn the rule off in
+`tspconfig.yaml` ([Linter](guide/linter.md#turn-a-rule-off)):
+
+```yaml
+linter:
+  extends:
+    - '@nxgt/typespec/recommended'
+  disable:
+    '@nxgt/typespec/error-body-shape': 'the legacy routes answer their own errors'
+```
 
 ## `Unknown decorator @operationId`
 

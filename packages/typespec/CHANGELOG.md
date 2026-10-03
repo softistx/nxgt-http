@@ -1,5 +1,29 @@
 # @nxgt/typespec
 
+## 0.9.1
+
+### Patch Changes
+
+- [#91](https://github.com/softistx/nxgt-http/pull/91) [`12c74d5`](https://github.com/softistx/nxgt-http/commit/12c74d5e5633ac28977e16d82523cb685c70d4bc) Thanks [@SteveGT96](https://github.com/SteveGT96)! - `IdempotencyInProgress` and `IdempotencyKeyReused` are declared in `lib/errors.tsp`, beside the library's other error replies, instead of `lib/headers.tsp`. Their names, namespace and emitted OpenAPI are unchanged.
+
+## 0.9.0
+
+### Minor Changes
+
+- [#89](https://github.com/softistx/nxgt-http/pull/89) [`4eeeaa6`](https://github.com/softistx/nxgt-http/commit/4eeeaa6094aa618f18a18f42f5725c7fa68a716a) Thanks [@SteveGT96](https://github.com/SteveGT96)! - A `tsp init` template: `npx --package=@typespec/compiler tsp init https://unpkg.com/@nxgt/typespec/templates/scaffolding.json` starts a project with `@service` and `@operationIds`, a `Users` interface (a paged, sorted list, get, create, update and delete, with their error aliases), the linter's recommended rules in `tspconfig.yaml`, OpenAPI 3.1 written to `openapi/openapi.yaml`, and an `openapi-codegen.config.ts` for `nxgt-openapi generate`.
+
+## 0.8.0
+
+### Minor Changes
+
+- [#87](https://github.com/softistx/nxgt-http/pull/87) [`04d6b6f`](https://github.com/softistx/nxgt-http/commit/04d6b6facfe480087e877be933870fb6e534cd5b) Thanks [@SteveGT96](https://github.com/SteveGT96)! - A linter, with the ruleset `@nxgt/typespec/recommended` a spec extends in its `tspconfig.yaml` (`linter: extends: ["@nxgt/typespec/recommended"]`). Its rules are warnings, each one a spec can disable: `list-returns-page` (a `list`, `search` or `query` returns `Page<Item>` or `CursorPage<Item>`, not an array), `service-operation-ids` (a `@service` namespace has `@operationIds`), and `error-body-shape` (an error reply's body is the nxgt envelope, `status`, `message` and `timestamp`). Nothing runs unless the spec extends the set.
+
+## 0.7.0
+
+### Minor Changes
+
+- [#85](https://github.com/softistx/nxgt-http/pull/85) [`6569379`](https://github.com/softistx/nxgt-http/commit/656937915b489dd85513f1bf56ffad05f2227b0d) Thanks [@SteveGT96](https://github.com/SteveGT96)! - Error aliases by verb, so an operation declares its usual errors in one name: `ListErrors` (`BadRequest`), `GetErrors` (`NotFound`), `CreateErrors` (`BadRequest | Conflict`), `UpdateErrors` (`BadRequest | NotFound | Conflict`), `DeleteErrors` (`NotFound`), and `AuthErrors` (`Unauthorized | Forbidden`). `get(@path id: uuid): User | GetErrors` emits what `User | NotFound` did.
+
 ## 0.6.1
 
 ### Patch Changes

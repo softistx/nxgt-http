@@ -20,6 +20,29 @@ Nothing in progress.
 
 ## Shipped
 
+### 0.9.0
+
+- **A `tsp init` template.** `tsp init` with the package's template
+  starts a project with the conventions in place: `@operationIds`, a paged
+  resource with its error aliases, the linter on, and the OpenAPI that
+  `@nxgt/openapi-codegen` generates from.
+
+### 0.8.0
+
+- **A linter.** The ruleset `@nxgt/typespec/recommended`, which a spec
+  extends in `tspconfig.yaml`, warns of a list that returns an array
+  (`list-returns-page`), a service without `@operationIds`
+  (`service-operation-ids`), and an error reply without the envelope
+  (`error-body-shape`). Each rule can be turned off, for the spec or for one
+  operation.
+
+### 0.7.0
+
+- **Error aliases by verb.** `ListErrors`, `GetErrors`, `CreateErrors`,
+  `UpdateErrors`, `DeleteErrors` and `AuthErrors` name the errors each verb
+  usually answers, so an operation writes `User | GetErrors` instead of the
+  union. Each is exactly its union, and they combine.
+
 ### 0.6.0
 
 - **Verbs name their methods.** An operation named after one of the

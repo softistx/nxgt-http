@@ -131,6 +131,29 @@ model TooManyRequests {
 }
 
 /**
+ * A request with this `Idempotency-Key` is still running. Retry it as it is,
+ * after `Retry-After`.
+ */
+@error
+model IdempotencyInProgress {
+  @statusCode _: 409;
+  ...RateLimitHeaders;
+  ...RetryAfterHeader;
+  @body body: ConflictBody;
+}
+
+/**
+ * This `Idempotency-Key` was already used for a request with another body. A
+ * new request takes a new key.
+ */
+@error
+model IdempotencyKeyReused {
+  @statusCode _: 422;
+  ...RateLimitHeaders;
+  @body body: UnprocessableEntityBody;
+}
+
+/**
  * The server failed. With `validateResponses`, `@nxgt/openapi-hono` answers
  * it too when a reply breaks the spec, with `errors.response-validation-failed`.
  */
@@ -146,3 +169,31 @@ model ErrorResponse<Status extends integer> {
   @statusCode _: Status;
   @body body: ErrorBody<Status>;
 }
+
+/**
+ * The errors a list declares: a query its validators refuse.
+ *
+ * ```tsp
+ * @get list(...PageParameters): Page<User> | ListErrors;
+ * ```
+ */
+alias ListErrors = BadRequest;
+
+/** The errors a read of one declares: nothing at that id. */
+alias GetErrors = NotFound;
+
+/** The errors a create declares: a body refused, or one that conflicts. */
+alias CreateErrors = BadRequest | Conflict;
+
+/** The errors an update declares: a body refused, nothing at that id, or a conflict. */
+alias UpdateErrors = BadRequest | NotFound | Conflict;
+
+/** The errors a delete declares: nothing at that id. */
+alias DeleteErrors = NotFound;
+
+/**
+ * The errors of an operation behind authentication, with the nxgt envelope.
+ * A route that answers them without a body, as Janus does, declares
+ * `AuthenticationRequired | AccessDenied` instead.
+ */
+alias AuthErrors = Unauthorized | Forbidden;

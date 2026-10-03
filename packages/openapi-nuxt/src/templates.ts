@@ -39,8 +39,8 @@ export const clientTemplate = (input: {
 	readonly operations: string;
 	readonly prefix: string;
 	readonly runtime: string;
-	readonly baseUrl?: string;
-	readonly client?: ClientOptions;
+	readonly baseUrl?: string | undefined;
+	readonly client?: ClientOptions | undefined;
 }): string => {
 	const options =
 		input.client && Object.keys(input.client).length > 0

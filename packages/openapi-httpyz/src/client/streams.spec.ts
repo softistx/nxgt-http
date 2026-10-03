@@ -11,7 +11,6 @@ import {
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { operations as dated } from '../../test/generated/dates/operations';
-import type { ClientOperations as DatedOperations } from '../../test/generated/dates/types';
 import {
 	createRoutes,
 	streamEvents,

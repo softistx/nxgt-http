@@ -59,7 +59,7 @@ properties:
 			'/spec/paths/employees.yaml',
 		]);
 
-		const paths = doc.document.paths as any;
+		const paths = doc.document['paths'] as any;
 		const item = doc.resolver.deref(
 			paths['/employees'],
 			child(doc.entry, 'paths', '/employees'),
@@ -100,7 +100,7 @@ components:
   $ref: 'openapi.yaml#/paths/~1employees~1%7Bid%7D'
 `,
 		});
-		const components = doc.document.components as any;
+		const components = doc.document['components'] as any;
 		const at = child(doc.entry, 'components');
 
 		const alias = doc.resolver.deref(
@@ -132,7 +132,7 @@ components:
 				'type: object\ndescription: the real one\n',
 		});
 		const resolved = doc.resolver.deref<any>(
-			(doc.document.components as any).schemas.Error,
+			(doc.document['components'] as any).schemas.Error,
 			child(doc.entry, 'components', 'schemas', 'Error'),
 		);
 		expect(resolved.hops).toHaveLength(2);
@@ -156,7 +156,7 @@ components:
 			},
 			{ '/spec/node_modules/@nxgt/shared': '/packages/shared' },
 		);
-		const schemas = (doc.document.components as any).schemas;
+		const schemas = (doc.document['components'] as any).schemas;
 		const at = child(doc.entry, 'components', 'schemas');
 		const viaModules = doc.resolver.deref(
 			schemas.ViaModules,
@@ -296,7 +296,8 @@ components:
     Ok: { description: ok }
 `,
 		});
-		const responses = (doc.document.paths as any)['/employees'].get.responses;
+		const responses = (doc.document['paths'] as any)['/employees'].get
+			.responses;
 		expect(Object.keys(responses)).toEqual(['200']);
 	});
 });

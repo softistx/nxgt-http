@@ -40,8 +40,8 @@ const isObject = (value: unknown): value is Json =>
 
 /** `value`, or what its local `$ref` points at. */
 function deref(doc: Json, value: unknown): unknown {
-	if (!isObject(value) || typeof value.$ref !== 'string') return value;
-	const found = value.$ref
+	if (!isObject(value) || typeof value['$ref'] !== 'string') return value;
+	const found = value['$ref']
 		.replace(/^#\//, '')
 		.split('/')
 		.map((part) => part.replaceAll('~1', '/').replaceAll('~0', '~'))
@@ -53,12 +53,12 @@ function deref(doc: Json, value: unknown): unknown {
 function examplesOf(doc: Json, media: unknown): [string, unknown][] {
 	if (!isObject(media)) return [];
 	const found: [string, unknown][] = [];
-	if ('example' in media) found.push(['example', media.example]);
-	if (isObject(media.examples)) {
-		for (const [key, example] of Object.entries(media.examples)) {
+	if ('example' in media) found.push(['example', media['example']]);
+	if (isObject(media['examples'])) {
+		for (const [key, example] of Object.entries(media['examples'])) {
 			const resolved = deref(doc, example);
 			if (isObject(resolved) && 'value' in resolved) {
-				found.push([key, resolved.value]);
+				found.push([key, resolved['value']]);
 			}
 		}
 	}
@@ -86,15 +86,15 @@ async function examples(name: Name) {
 		Object.values(operations).map((op) => [`${op.method} ${op.path}`, op]),
 	);
 	const checks: [string, z.ZodType, unknown][] = [];
-	for (const [path, item] of Object.entries((doc.paths ?? {}) as Json)) {
+	for (const [path, item] of Object.entries((doc['paths'] ?? {}) as Json)) {
 		if (!isObject(item)) continue;
 		for (const method of HTTP_METHODS) {
 			const operation = item[method];
 			const spec = byRoute.get(`${method} ${path}`);
 			if (!isObject(operation) || !spec) continue;
-			const body = deref(doc, operation.requestBody);
+			const body = deref(doc, operation['requestBody']);
 			const content =
-				isObject(body) && isObject(body.content) ? body.content : {};
+				isObject(body) && isObject(body['content']) ? body['content'] : {};
 			for (const [type, media] of Object.entries(content)) {
 				const validator = spec.body?.content[type];
 				if (validator?.kind !== 'json' || !validator.schema) continue;
@@ -106,13 +106,13 @@ async function examples(name: Name) {
 					]);
 				}
 			}
-			const responses = isObject(operation.responses)
-				? operation.responses
+			const responses = isObject(operation['responses'])
+				? operation['responses']
 				: {};
 			for (const [status, response] of Object.entries(responses)) {
 				const reply = deref(doc, response);
-				if (!isObject(reply) || !isObject(reply.content)) continue;
-				for (const [type, media] of Object.entries(reply.content)) {
+				if (!isObject(reply) || !isObject(reply['content'])) continue;
+				for (const [type, media] of Object.entries(reply['content'])) {
 					const validator = spec.responses[Number(status)]?.[type];
 					if (validator?.kind !== 'json' || !validator.schema) continue;
 					for (const [key, example] of examplesOf(doc, media)) {

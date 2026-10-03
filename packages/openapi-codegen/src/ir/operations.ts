@@ -110,8 +110,8 @@ export class OperationBuilder {
 	build(): OperationIR[] {
 		const { document, entry } = this.#doc;
 		const operations: OperationIR[] = [];
-		if (document.paths === undefined) return operations;
-		if (!isObject(document.paths)) {
+		if (document['paths'] === undefined) return operations;
+		if (!isObject(document['paths'])) {
 			this.#diagnostics.error(
 				'invalid_operation',
 				'`paths` must be an object',
@@ -120,7 +120,7 @@ export class OperationBuilder {
 			return operations;
 		}
 
-		for (const [path, raw] of Object.entries(document.paths)) {
+		for (const [path, raw] of Object.entries(document['paths'])) {
 			const pathAt = child(entry, 'paths', path);
 			if (!path.startsWith('/')) {
 				this.#diagnostics.error(
@@ -133,7 +133,7 @@ export class OperationBuilder {
 			// A path item `$ref` with fields beside it is no longer a plain
 			// reference: the operations it points at would be lost silently.
 			let target: unknown = raw;
-			if (isObject(raw) && typeof raw.$ref === 'string') {
+			if (isObject(raw) && typeof raw['$ref'] === 'string') {
 				const extra = Object.keys(raw).filter(
 					(key) => !['$ref', 'summary', 'description'].includes(key),
 				);
@@ -145,7 +145,7 @@ export class OperationBuilder {
 					);
 					continue;
 				}
-				target = { $ref: raw.$ref };
+				target = { $ref: raw['$ref'] };
 			}
 			const item = this.#resolver.deref(target, pathAt);
 			if (!isObject(item.value)) {
@@ -157,7 +157,7 @@ export class OperationBuilder {
 				continue;
 			}
 			const shared = this.#parameters(
-				item.value.parameters,
+				item.value['parameters'],
 				child(item.location, 'parameters'),
 			);
 			for (const [key, value] of Object.entries(item.value)) {
@@ -237,7 +237,7 @@ export class OperationBuilder {
 			);
 			return undefined;
 		}
-		let operationId = asString(raw.operationId);
+		let operationId = asString(raw['operationId']);
 		if (!operationId) {
 			operationId = operationIdFor(method, path);
 			this.#diagnostics.warning(
@@ -259,10 +259,10 @@ export class OperationBuilder {
 
 		const name = pascalCase(operationId);
 		// An operation's parameter replaces the path item's with the same name and location.
-		const own = this.#parameters(raw.parameters, child(at, 'parameters'));
+		const own = this.#parameters(raw['parameters'], child(at, 'parameters'));
 		const parameters = [...new Map([...shared, ...own]).values()];
 		this.#checkTemplate(path, parameters, at);
-		if (raw.callbacks !== undefined) {
+		if (raw['callbacks'] !== undefined) {
 			this.#diagnostics.warning(
 				'ignored',
 				'callbacks are not generated',
@@ -276,18 +276,22 @@ export class OperationBuilder {
 			method,
 			path,
 			honoPath: toHonoPath(path),
-			summary: asString(raw.summary),
-			description: asString(raw.description),
-			deprecated: raw.deprecated === true,
-			tags: Array.isArray(raw.tags)
-				? raw.tags.filter((tag): tag is string => typeof tag === 'string')
+			summary: asString(raw['summary']),
+			description: asString(raw['description']),
+			deprecated: raw['deprecated'] === true,
+			tags: Array.isArray(raw['tags'])
+				? raw['tags'].filter((tag): tag is string => typeof tag === 'string')
 				: [],
 			parameters,
 			body:
-				raw.requestBody === undefined
+				raw['requestBody'] === undefined
 					? undefined
-					: this.#body(raw.requestBody, child(at, 'requestBody'), name),
-			responses: this.#responses(raw.responses, child(at, 'responses'), name),
+					: this.#body(raw['requestBody'], child(at, 'requestBody'), name),
+			responses: this.#responses(
+				raw['responses'],
+				child(at, 'responses'),
+				name,
+			),
 			location: at,
 		};
 	}
@@ -320,8 +324,8 @@ export class OperationBuilder {
 		const { value: p, location: at } = this.#resolver.deref(raw, site);
 		if (
 			!isObject(p) ||
-			typeof p.name !== 'string' ||
-			typeof p.in !== 'string'
+			typeof p['name'] !== 'string' ||
+			typeof p['in'] !== 'string'
 		) {
 			this.#diagnostics.error(
 				'invalid_operation',
@@ -330,11 +334,11 @@ export class OperationBuilder {
 			);
 			return undefined;
 		}
-		const where = p.in;
+		const where = p['in'];
 		if (where === 'cookie') {
 			this.#diagnostics.error(
 				'unsupported_parameter',
-				`cookie parameter \`${p.name}\` is not supported`,
+				`cookie parameter \`${p['name']}\` is not supported`,
 				child(at, 'in'),
 			);
 			return undefined;
@@ -355,18 +359,18 @@ export class OperationBuilder {
 			);
 			return undefined;
 		}
-		if (where === 'header' && RESERVED_HEADERS.has(p.name.toLowerCase())) {
+		if (where === 'header' && RESERVED_HEADERS.has(p['name'].toLowerCase())) {
 			return undefined;
 		}
 		if ('content' in p) {
 			this.#diagnostics.error(
 				'unsupported_parameter',
-				`parameter \`${p.name}\` is described by \`content\`; describe it with \`schema\``,
+				`parameter \`${p['name']}\` is described by \`content\`; describe it with \`schema\``,
 				child(at, 'content'),
 			);
 			return undefined;
 		}
-		const style = asString(p.style) ?? STYLE[where];
+		const style = asString(p['style']) ?? STYLE[where];
 		if (style !== STYLE[where]) {
 			this.#diagnostics.error(
 				'unsupported_parameter',
@@ -375,7 +379,7 @@ export class OperationBuilder {
 			);
 			return undefined;
 		}
-		if (where === 'path' && p.required !== true) {
+		if (where === 'path' && p['required'] !== true) {
 			this.#diagnostics.warning(
 				'invalid_operation',
 				'a path parameter is always required; `required: true` is implied',
@@ -383,13 +387,14 @@ export class OperationBuilder {
 			);
 		}
 		return {
-			name: p.name,
+			name: p['name'],
 			in: where,
-			required: where === 'path' || p.required === true,
-			explode: typeof p.explode === 'boolean' ? p.explode : style === 'form',
-			schema: this.#schemas.node(p.schema, child(at, 'schema')),
-			description: asString(p.description),
-			deprecated: p.deprecated === true ? true : undefined,
+			required: where === 'path' || p['required'] === true,
+			explode:
+				typeof p['explode'] === 'boolean' ? p['explode'] : style === 'form',
+			schema: this.#schemas.node(p['schema'], child(at, 'schema')),
+			description: asString(p['description']),
+			deprecated: p['deprecated'] === true ? true : undefined,
 			location: at,
 		};
 	}
@@ -431,10 +436,10 @@ export class OperationBuilder {
 		const stem =
 			body.hops.length > 0 ? sharedName(body.location, 'Body') : `${name}Body`;
 		return {
-			required: body.value.required === true,
-			description: body.description ?? asString(body.value.description),
+			required: body.value['required'] === true,
+			description: body.description ?? asString(body.value['description']),
 			content: this.#content(
-				body.value.content,
+				body.value['content'],
 				child(body.location, 'content'),
 				stem,
 			),
@@ -486,9 +491,9 @@ export class OperationBuilder {
 			responses.push({
 				status: Number(code),
 				description:
-					response.description ?? asString(response.value.description),
+					response.description ?? asString(response.value['description']),
 				content: this.#content(
-					response.value.content,
+					response.value['content'],
 					child(response.location, 'content'),
 					stem,
 					true,
@@ -519,15 +524,15 @@ export class OperationBuilder {
 			const itemAt = child(entry.location, 'itemSchema');
 			const sequential = reply ? sequentialKind(mediaType) : undefined;
 			if (sequential === 'sse') {
-				const events = this.#events(object.itemSchema, itemAt, stem);
+				const events = this.#events(object['itemSchema'], itemAt, stem);
 				media.push({ mediaType, kind: 'sse', ...(events && { events }) });
 				continue;
 			}
 			if (sequential === 'jsonl') {
 				const item =
-					object.itemSchema === undefined
+					object['itemSchema'] === undefined
 						? undefined
-						: this.#schemas.inline(object.itemSchema, itemAt, `${stem}Item`);
+						: this.#schemas.inline(object['itemSchema'], itemAt, `${stem}Item`);
 				media.push({ mediaType, kind: 'jsonl', ...(item && { item }) });
 				continue;
 			}
@@ -536,15 +541,15 @@ export class OperationBuilder {
 			if (kind === 'json' || kind === 'form') {
 				structured++;
 				schema = this.#schemas.inline(
-					object.schema,
+					object['schema'],
 					schemaAt,
 					structured === 1 ? stem : `${stem}${structured}`,
 				);
 			} else if (kind === 'text') {
 				schema =
-					object.schema === undefined
+					object['schema'] === undefined
 						? { kind: 'string' }
-						: this.#schemas.node(object.schema, schemaAt);
+						: this.#schemas.node(object['schema'], schemaAt);
 			}
 			media.push({ mediaType, kind, schema });
 		}
@@ -573,10 +578,12 @@ export class OperationBuilder {
 				});
 				return;
 			}
-			const properties = isObject(schema.properties) ? schema.properties : {};
+			const properties = isObject(schema['properties'])
+				? schema['properties']
+				: {};
 			const propertiesAt = child(location, 'properties');
 			const name = this.#eventName(
-				properties.event,
+				properties['event'],
 				child(propertiesAt, 'event'),
 			);
 			if (name === undefined) {
@@ -596,7 +603,7 @@ export class OperationBuilder {
 				return;
 			}
 			const data = this.#eventData(
-				properties.data,
+				properties['data'],
 				child(propertiesAt, 'data'),
 				`${stem}${pascalCase(name)}Data`,
 			);
@@ -611,13 +618,13 @@ export class OperationBuilder {
 		if (raw === undefined) return 'message';
 		const { value } = this.#resolver.deref(raw, at);
 		if (!isObject(value)) return undefined;
-		if (typeof value.const === 'string') return value.const;
+		if (typeof value['const'] === 'string') return value['const'];
 		if (
-			Array.isArray(value.enum) &&
-			value.enum.length === 1 &&
-			typeof value.enum[0] === 'string'
+			Array.isArray(value['enum']) &&
+			value['enum'].length === 1 &&
+			typeof value['enum'][0] === 'string'
 		) {
-			return value.enum[0];
+			return value['enum'][0];
 		}
 		return undefined;
 	}
@@ -626,11 +633,11 @@ export class OperationBuilder {
 	#eventData(raw: unknown, at: Location, name: string): SchemaNode | undefined {
 		if (raw === undefined) return undefined;
 		const data = this.#resolver.deref(raw, at);
-		if (!isObject(data.value) || !isJsonText(data.value.contentMediaType)) {
+		if (!isObject(data.value) || !isJsonText(data.value['contentMediaType'])) {
 			return undefined;
 		}
 		return this.#schemas.inline(
-			data.value.contentSchema,
+			data.value['contentSchema'],
 			child(data.location, 'contentSchema'),
 			name,
 		);

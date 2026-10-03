@@ -32,7 +32,7 @@ function keyed(input: object | undefined): object | undefined {
 	for (const part of PARTS) {
 		if (given[part] !== undefined) key[part] = hashable(given[part]);
 	}
-	if (given.decode === false) key.decode = false;
+	if (given['decode'] === false) key['decode'] = false;
 	return Object.keys(key).length > 0 ? key : undefined;
 }
 

@@ -353,7 +353,7 @@ describe('http.events()', () => {
 
 describe('http.lines()', () => {
 	const ndjson = (chunks: string[], end?: Error) =>
-		reply(chunks, { type: 'application/x-ndjson', end });
+		reply(chunks, { type: 'application/x-ndjson', ...(end ? { end } : {}) });
 
 	it('reads each line, checked by item, the last one without its line end', async () => {
 		const { http, sent } = scripted([

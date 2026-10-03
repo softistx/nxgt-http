@@ -189,7 +189,16 @@ Rules carried over from nxgt-core, each learned from a shipped defect:
   version `bun run check` runs locally, and the one `biome.json`'s `$schema`
   names. Not `biomejs/setup-biome` with `latest`, which linted
   CI with a newer Biome than anyone ran locally. Raising Biome is a lock bump
-  that moves the `$schema` with it.
+  that moves the `$schema` with it: 2.5.15 today, as alxia's and nxgt-data's.
+  `biome.json` is alxia's too. Beyond the recommended rules it turns
+  `noConfusingVoidType` off — `@nxgt/httpyz-query`'s `OperationVariables`
+  and `mutationFn` take `void`, not `undefined`, so `mutate()` can be called
+  with nothing, and `@nxgt/openapi-msw`'s `MockResult` is
+  `MockResponse | undefined | void` — `useLiteralKeys` off, since it would
+  turn the bracket reads `noPropertyAccessFromIndexSignature` asks for back
+  into dots, and `noBannedTypes` up to an error; the `{}` that mean "adds no
+  field", in `@nxgt/openapi-msw`'s `mock/types.ts` and as the default `Env`
+  of `@nxgt/openapi-nuxt`'s `createHonoApp`, carry their own `biome-ignore`.
 - **Every job has a `timeout-minutes`**, sized from the runs measured up to
   2026-09-27: 8 for CI, whose job took 1 to 2 minutes, and 10 for the
   release, which took under a minute and a half — generous, since a publish
@@ -200,6 +209,61 @@ Rules carried over from nxgt-core, each learned from a shipped defect:
   release keeps its own group, which never cancels a run under way.
 - **An asset ships only if it is outside `dist`.** The codegen docs are in
   `files` for that reason.
+
+## TypeScript
+
+`tsconfig.base.json` is alxia's: the owner chose one skeleton for alxia,
+nxgt-http and nxgt-data on 2026-10-02, the strictest of the three. It is
+strict past `strict` — `exactOptionalPropertyTypes`,
+`noUncheckedIndexedAccess`, `noPropertyAccessFromIndexSignature`,
+`noImplicitAny`, `noImplicitOverride`, `noImplicitReturns`,
+`noUnusedLocals`, `noUnusedParameters`, `useDefineForClassFields` — and has
+no `allowJs`, no decorators and no `strictPropertyInitialization: false`:
+nothing here is JavaScript or uses a decorator. An application's own
+tsconfig may hold any of these, so the published declarations must compile
+under all of them; a package's `tsconfig.json` turns no check on or off.
+`tsconfig.generated.json` held most of them already, for the generated code;
+now the packages' own source holds them too.
+
+- **A key off an index signature is read with brackets**: `raw['operationId']`,
+  `document['paths']`, `group['cancel']`. That is what
+  `noPropertyAccessFromIndexSignature` asks for, and why Biome's
+  `useLiteralKeys` is off. The built JavaScript keeps the brackets, which
+  read the same key.
+- **An option a caller is likely to hold as a maybe-missing value, and whose
+  `undefined` the package treats as left out, is typed `?: T | undefined`**,
+  so a caller under `exactOptionalPropertyTypes` can pass it as it is. So far:
+  `@nxgt/httpyz`'s `fetch`, the generator's `lint` and `loadDocument`'s
+  `fs`, and `@nxgt/datasource-rest`'s `Paginated` `data` and `metadata`. A field the package itself writes as
+  `undefined` is typed so too, since it is there: the IR's `title`,
+  `apiVersion`, `summary`, `description`, `body`, a media's `schema` and a
+  parameter's `deprecated`, `Resolved`'s `summary` and `description`, and
+  `PageInfo`'s `startCursor` and `endCursor`,
+  which `relayPaginate` writes for a page without `metadata`. The other
+  options are still `?: T`, stricter than the run time; widen one when it is
+  met. A third party's options, the web's `Request` and `Response` or
+  Redocly's `loadConfig`, are given only the keys that have a value
+  (`@nxgt/openapi-msw`'s `initOf`, `configPath === undefined ? {} : { configPath }`):
+  an absent key and an `undefined` one are the same to them, but not to the
+  types. A `Request`'s `signal` is the exception: `null` means none, and is
+  what `@nxgt/httpyz` passes when a call has none, so that a client-level
+  `init` never carries one in.
+- **A Hono middleware that returns a response on one path returns on the
+  others too**: `await next(); return undefined;`, as `noImplicitReturns`
+  asks, in `@nxgt/openapi-hono`'s validation middleware and its specs.
+- **`useDefineForClassFields` is an emit setting, not a check**: `Bun.build`
+  reads it, so a class field is defined as JavaScript defines it, an own
+  property from construction, in declaration order. Every error class here
+  sets each of its fields in its constructor, unconditionally, so their
+  values are what they were. A field a constructor sets only sometimes
+  would be written `declare`, or it would be there as `undefined` when it
+  was not given; there is none today.
+- `scripts/tsconfig.json` relaxes two, as alxia's does:
+  `noPropertyAccessFromIndexSignature` and `exactOptionalPropertyTypes`. The
+  repository scripts read manifests and the environment, whose keys are
+  open, and alxia and nxgt-data copy them from here as they are.
+- `@nxgt/openapi-nuxt`'s `test/app` is checked against the tsconfigs
+  `nuxi prepare` writes, not this one: they are Nuxt's.
 
 ## Releasing
 
@@ -237,6 +301,7 @@ publishes to npm.
 | Kept twice | Why |
 | --- | --- |
 | `unroutable`, in `openapi-hono/src/routable.ts` and `openapi-codegen/src/emit/routable.ts` | the runtime refuses the route and the generator warns. Importing one from the other would make the runtime a dependency of the generator. Change both together |
+| `tsconfig.base.json`, `scripts/tsconfig.json` and `biome.json`, beside alxia and nxgt-data | one skeleton, the strictest, chosen by the owner on 2026-10-02 (softistx/nxgt-data#143, then this copy). Each repository releases on its own, so the files are copied, not shared: the compiler options and the rules are alxia's, byte for byte; only the comment in `scripts/tsconfig.json` names its own repository. Change all three copies together |
 | `LICENSE`, at the root and in each `packages/*/` | npm ships only the `LICENSE` in the package's own directory. `verify:artifacts` fails a tarball without one. Change them all together |
 | `scripts/verify-artifacts.ts` and `scripts/artifacts/`, beside nxgt-janus, nxgt-data and nxgt-core | each repository releases on its own, so the skeleton is copied, not shared. All four are split module for module and hold the same three checks: the test-code check, the guard that reports an unbuilt package as `no dist/`, and `missingFiles`, whose spec holds that a `files` entry `dis` is not covered by `dist/`. This copy lacks nxgt-core's `browser.ts`, a check for the `browser` export condition, which no package here declares. It also reads a sibling's version from the packed manifests, where nxgt-janus and nxgt-data read it from the workspace. Outside `scripts/artifacts/`, `check-changesets.ts` is nxgt-janus's alone, and `check-nxgt-versions.ts` with its weekly `nxgt versions` workflow is nxgt-janus's, copied into nxgt-data and nxgt-core by softistx/nxgt-data#139 and softistx/nxgt-core#158, but not here: it tracks `@nxgt/*` devDependencies from outside the repository, and every `@nxgt/*` package here depends only on its siblings, by `workspace:^`. A package that takes one from outside brings the check with it. A check added to one copy is a check to port to the others |
 | How a request is read and refused, in `openapi-hono/src/engine.ts` and `openapi-msw/src/request/read-request.ts` | the mock answers with the server's 400, with the same issues in the same order. The engine reads through Hono's `Context`, which the mock has no use for, and the mock depending on the runtime would pull in Hono. Change both together |

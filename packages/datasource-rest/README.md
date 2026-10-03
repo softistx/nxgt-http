@@ -337,8 +337,8 @@ The second argument of `new DataSourceError()`.
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `data` | `T[]`, optional | The page's items. |
-| `metadata` | `PageInfo`, optional | Where the page stands. |
+| `data` | `T[] \| undefined`, optional | The page's items. |
+| `metadata` | `PageInfo \| undefined`, optional | Where the page stands. |
 
 A page as a service sends it: what `relayPaginate` takes.
 
@@ -364,8 +364,8 @@ An item of a `Connection`.
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `startCursor` | `string`, optional | The cursor of the first item in the result set. |
-| `endCursor` | `string`, optional | The cursor of the last item in the result set. |
+| `startCursor` | `string \| undefined`, optional | The cursor of the first item in the result set. |
+| `endCursor` | `string \| undefined`, optional | The cursor of the last item in the result set. |
 | `hasNextPage` | `boolean` | Whether there are more items after the current page. |
 | `totalElements` | `number` | The number of items across all pages. |
 

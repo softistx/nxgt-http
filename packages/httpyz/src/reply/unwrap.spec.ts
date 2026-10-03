@@ -42,6 +42,7 @@ describe('ok', () => {
 			} catch (error) {
 				return error;
 			}
+			return undefined;
 		})();
 		expect(caught).toBeInstanceOf(ReplyStatusError);
 		expect((caught as ReplyStatusError).message).toBe(

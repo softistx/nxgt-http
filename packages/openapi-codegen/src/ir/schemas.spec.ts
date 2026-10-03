@@ -586,7 +586,7 @@ describe('buildIR — names and order', () => {
 
 	it('names a referenced file after its basename', async () => {
 		const { byName } = await components({ Employee: usesStatus }, {}, status);
-		expect(byName.EmployeeStatus?.source).toBe('ref');
+		expect(byName['EmployeeStatus']?.source).toBe('ref');
 	});
 
 	it('refuses two schemas that would share a name, and `names` settles it', async () => {
@@ -599,7 +599,7 @@ describe('buildIR — names and order', () => {
 			{ names: { 'schemas/employee-status.json': 'EmploymentStatus' } },
 			status,
 		);
-		expect(byName.EmploymentStatus?.source).toBe('ref');
+		expect(byName['EmploymentStatus']?.source).toBe('ref');
 	});
 
 	it('makes a second component naming the same schema an alias', async () => {

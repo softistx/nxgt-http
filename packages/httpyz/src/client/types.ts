@@ -38,7 +38,7 @@ export interface HttpClientOptions {
 	 * Sends each request. Default: `globalThis.fetch`, looked up at each call.
 	 * It may answer at once, as a Hono app's `app.fetch` does.
 	 */
-	fetch?: (request: Request) => Response | Promise<Response>;
+	fetch?: ((request: Request) => Response | Promise<Response>) | undefined;
 	/** Sent with every request. A function runs before each one. */
 	headers?: HeadersInit | (() => HeadersInit | Promise<HeadersInit>);
 	/** fetch options for every request: `credentials`, `mode`, `cache`… */

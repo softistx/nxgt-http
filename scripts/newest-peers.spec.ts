@@ -16,6 +16,8 @@ test('two carets of one major end at the same version: the narrower one', () => 
 	// Under 1.0.0 a caret holds one minor: `^0.2.0` and `^0.3.0` share nothing.
 	expect(agreed('^0.2.0', '^0.3.0')).toBeUndefined();
 	expect(agreed('^4.0.0', '>=4.0.0 <5')).toBeUndefined();
+	// A prerelease caret ends elsewhere: refused, rather than guessed.
+	expect(agreed('^4.0.0', '^4.1.0-rc.1')).toBeUndefined();
 });
 
 const root: Manifest = {
@@ -87,6 +89,40 @@ describe('rewrite', () => {
 		});
 		expect(result.packages.get('h')?.devDependencies).toEqual({
 			hono: '^4.13.4',
+		});
+	});
+
+	test('three carets of one major fold to the narrowest', () => {
+		const peer = (name: string, hono: string) =>
+			pkg(name, {
+				peerDependencies: { hono },
+				devDependencies: { hono: '4.13.4' },
+			});
+		const result = rewrite(
+			root,
+			new Map([
+				['a', peer('@nxgt/a', '^4.0.0')],
+				['b', peer('@nxgt/b', '^4.13.4')],
+				['c', peer('@nxgt/c', '^4.5.0')],
+			]),
+		);
+		for (const key of ['a', 'b', 'c']) {
+			expect(result.packages.get(key)?.devDependencies).toEqual({
+				hono: '^4.13.4',
+			});
+		}
+	});
+
+	test('a package’s dependencies that install a peer get its range too', () => {
+		const nuxt = pkg('@nxgt/openapi-nuxt', {
+			peerDependencies: { nuxt: '^4.0.0' },
+			dependencies: { '@nuxt/kit': '^4.0.0', nuxt: '4.5.2' },
+			devDependencies: { nuxt: '4.5.2' },
+		});
+		const result = rewrite(root, new Map([['n', nuxt]]));
+		expect(result.packages.get('n')?.dependencies).toEqual({
+			'@nuxt/kit': '^4.0.0',
+			nuxt: '^4.0.0',
 		});
 	});
 

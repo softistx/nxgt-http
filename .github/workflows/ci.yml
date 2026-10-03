@@ -73,16 +73,17 @@ jobs:
         run: bun run changeset:status
 
   newest-peers:
-    # The job above runs the lockfile's toolchain: the version each package
-    # pins as a devDependency, the oldest end of each peer range. This one
-    # runs the newest end — the latest hono, msw, nuxt, vue, TanStack Query,
+    # The job above runs the lockfile's toolchain: whatever each
+    # devDependency range resolved to at the last install, older as the
+    # lockfile ages. This one runs the newest end of each peer range — the latest hono, msw, nuxt, vue, TanStack Query,
     # TypeSpec, Redocly and zod each range accepts, and TypeScript within
     # `^6.0.3` — so a range stays true after the release that would break it.
     # It resolves without a lockfile, so an upstream release can turn it red
     # with no change here: read it, do not make it a required check.
     name: Newest peers
     runs-on: ubuntu-latest
-    # The job above's, which it repeats after an install without a lockfile.
+    # The job above's, which it repeats after an install without a lockfile;
+    # revisit once its own runs are measured.
     timeout-minutes: 8
     steps:
       - name: Checkout code

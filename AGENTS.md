@@ -189,7 +189,9 @@ Rules carried over from nxgt-core, each learned from a shipped defect:
   responsibility, with a spec beside each pure one: `packages.ts` reads the
   workspace, `tarball.ts` a tarball's entries, `manifest.ts` its dependency
   fields, `registry.ts` asks npm, then `stale.ts`, `install.ts`, `load.ts`,
-  `classes.ts` and `imports.ts`, which `declarations.ts` serves. The split follows nxgt-janus's copy module for module,
+  `classes.ts` and `imports.ts`, which `declarations.ts` serves. A built
+  file the scanner refuses fails with `<package>: <file> could not be
+  scanned: <message>`, not a stack trace. The split follows nxgt-janus's copy module for module,
   so a check added to one copy is a check to port to the others; the table
   under *Kept twice* says what this copy has and lacks.
   It packs `dist/` and does not build, so it refuses to start on a package
@@ -207,10 +209,14 @@ Rules carried over from nxgt-core, each learned from a shipped defect:
   and the generator, then `@nxgt/openapi-hono`, then `@nxgt/openapi-httpyz`
   and `@nxgt/typespec`, then `@nxgt/datasource-rest`, `@nxgt/httpyz-query`
   and `@nxgt/openapi-msw`, then `@nxgt/openapi-nuxt`.
-- **CI's "Newest peers" job tests the other end of every peer range.** The
-  CI job runs the lockfile: the version each package pins as a
-  devDependency, the oldest its range accepts. `scripts/newest-peers.ts`,
-  after alxia's and nxgt-data's, rewrites every manifest that installs a
+- **CI's "Newest peers" job tests the newest end of every peer range**, as
+  of the day it runs. It comes from alxia, not from a defect here. The CI
+  job runs the lockfile: whatever each package's devDependency range, a
+  caret here, resolved to at the last install, which grows older with the
+  lockfile. No job tests the lower bound of a peer range — `msw` 2.0.0,
+  `nuxt` 4.0.0, `hono` 4.0.0 for `@nxgt/openapi-nuxt`, TanStack Query
+  5.90.0, `vue` 3.5.0 — so that floor is a claim, not a measurement.
+  `scripts/newest-peers.ts`, after alxia's and nxgt-data's, rewrites every manifest that installs a
   peer to the newest end of the range: the last alternative of an `a || b`
   range, as in alxia, or else the range itself — `hono` `^4.13.4`, `msw`
   `^2.0.0`, `nuxt` `^4.0.0`, `zod` `^4.5.4`, `typescript` `^6.0.3` and the
@@ -238,7 +244,9 @@ Rules carried over from nxgt-core, each learned from a shipped defect:
   2026-09-27: 8 for CI, whose job took 1 to 2 minutes, and 10 for the
   release, which took under a minute and a half — generous, since a publish
   killed half-way is worse than one waited on. Past it a run is hung, and the
-  six-hour default holds the runner for nothing. `ci.yml` has nxgt-janus's
+  six-hour default holds the runner for nothing. The "Newest peers" job has
+  8 too, CI's, since it repeats CI after an install without a lockfile; it
+  is not measured yet. `ci.yml` has nxgt-janus's
   `concurrency` group: a pull request's new push cancels its run in progress,
   and a push to `develop`, were CI ever to run on one, never would. The
   release keeps its own group, which never cancels a run under way.
@@ -282,7 +290,7 @@ publishes to npm.
 | --- | --- |
 | `unroutable`, in `openapi-hono/src/routable.ts` and `openapi-codegen/src/emit/routable.ts` | the runtime refuses the route and the generator warns. Importing one from the other would make the runtime a dependency of the generator. Change both together |
 | `LICENSE`, at the root and in each `packages/*/` | npm ships only the `LICENSE` in the package's own directory. `verify:artifacts` fails a tarball without one. Change them all together |
-| `scripts/verify-artifacts.ts` and `scripts/artifacts/`, beside nxgt-janus, nxgt-data and nxgt-core | each repository releases on its own, so the skeleton is copied, not shared. All four are split module for module and hold the same three checks: the test-code check, the guard that reports an unbuilt package as `no dist/`, and `missingFiles`, whose spec holds that a `files` entry `dis` is not covered by `dist/`. This copy, nxgt-data's, alxia's and bumail's hold two more, which alxia took from bumail (softistx/alxia#32), nxgt-data from alxia (softistx/nxgt-data#144) and this copy from nxgt-data: `imports.ts` with `declarations.ts`, the undeclared-import check, and `accessProblems` in `manifest.ts`. nxgt-janus and nxgt-core do not have them yet. This copy's `imports.ts` also skips a bin's `#!` line before Bun's scanner reads it, which the others do not: no package of theirs ships a bin today. `scripts/workspace.ts` and `scripts/newest-peers.ts`, with their specs and the "Newest peers" job in `ci.yml`, are alxia's, by way of nxgt-data's. `workspace.ts` is unchanged except for its comment. This `newest-peers.ts` is nxgt-data's with two changes: it reads no `examples/*`, which this repository has none of, and two carets of one major count as one range, the narrower (`agreed`), where nxgt-data's and alxia's fail on any two ranges that differ. This copy lacks nxgt-core's `browser.ts`, a check for the `browser` export condition, which no package here declares. It also reads a sibling's version from the packed manifests, where nxgt-janus and nxgt-data read it from the workspace. Outside `scripts/artifacts/`, `check-changesets.ts` is nxgt-janus's alone, and `check-nxgt-versions.ts` with its weekly `nxgt versions` workflow is nxgt-janus's, copied into nxgt-data and nxgt-core by softistx/nxgt-data#139 and softistx/nxgt-core#158, but not here: it tracks `@nxgt/*` devDependencies from outside the repository, and every `@nxgt/*` package here depends only on its siblings, by `workspace:^`. A package that takes one from outside brings the check with it. A check added to one copy is a check to port to the others |
+| `scripts/verify-artifacts.ts` and `scripts/artifacts/`, beside nxgt-janus, nxgt-data and nxgt-core, and `scripts/workspace.ts` and `scripts/newest-peers.ts`, beside alxia and nxgt-data | each repository releases on its own, so the skeleton is copied, not shared. The four copies of `verify-artifacts.ts` are split module for module and hold the same three checks: the test-code check, the guard that reports an unbuilt package as `no dist/`, and `missingFiles`, whose spec holds that a `files` entry `dis` is not covered by `dist/`. This copy, nxgt-data's, alxia's and bumail's hold two more, which alxia took from bumail (softistx/alxia#32), nxgt-data from alxia (softistx/nxgt-data#144) and this copy from nxgt-data: `imports.ts` with `declarations.ts`, the undeclared-import check, and `accessProblems` in `manifest.ts`. nxgt-janus and nxgt-core do not have them yet. This copy's `imports.ts` also skips a bin's `#!` line before Bun's scanner reads it, which the others do not: no package of theirs ships a bin today. `scripts/workspace.ts` and `scripts/newest-peers.ts`, with their specs and the "Newest peers" job in `ci.yml`, are alxia's, by way of nxgt-data's. `workspace.ts` is unchanged except for its comment. This `newest-peers.ts` is nxgt-data's with two changes: it reads no `examples/*`, which this repository has none of, and two carets of one major count as one range, the narrower (`agreed`), where nxgt-data's and alxia's fail on any two ranges that differ. `workspace.ts` prints a package's output only once it exits, as alxia's does, where `bun run --filter` streamed it: a package that hangs leaves nothing in the log for its wave. This copy lacks nxgt-core's `browser.ts`, a check for the `browser` export condition, which no package here declares. It also reads a sibling's version from the packed manifests, where nxgt-janus and nxgt-data read it from the workspace. Outside `scripts/artifacts/`, `check-changesets.ts` is nxgt-janus's alone, and `check-nxgt-versions.ts` with its weekly `nxgt versions` workflow is nxgt-janus's, copied into nxgt-data and nxgt-core by softistx/nxgt-data#139 and softistx/nxgt-core#158, but not here: it tracks `@nxgt/*` devDependencies from outside the repository, and every `@nxgt/*` package here depends only on its siblings, by `workspace:^`. A package that takes one from outside brings the check with it. A check added to one copy is a check to port to the others |
 | How a request is read and refused, in `openapi-hono/src/engine.ts` and `openapi-msw/src/request/read-request.ts` | the mock answers with the server's 400, with the same issues in the same order. The engine reads through Hono's `Context`, which the mock has no use for, and the mock depending on the runtime would pull in Hono. Change both together |
 | The pinned `tsp compile` and its drift check, in `openapi-codegen/test/typespec.ts` and `typespec/test/generate.ts` | neither can import the other: `@nxgt/typespec` reaching into the generator's `test/` is a relative import into a sibling, and the generator depending on `@nxgt/typespec` is a cycle. Change both together |
 | alxia's `RouteOperation`, `StatusCode` and `eventStream`, in `openapi-codegen/test/alxia/core.ts`, and its router's rules, in `openapi-codegen/src/emit/alxia/routable.ts` | alxia lives in `softistx/alxia`, and the generator depends on no framework it writes for: the stand-in types the fixtures' `alxia.ts` is checked against, and the warning for a path alxia's `compilePath` would refuse. Change them when alxia's `app/route-operation.ts`, `types/status.ts`, `sse/event-stream.ts` or `router/router.ts` change |
@@ -311,11 +319,11 @@ publishes to npm.
 
 ## Known state
 
-`bun run test` is **600 pass, 0 fail** on 2026-10-02: datasource-rest 26, httpyz 90, httpyz-query 14,
+`bun run test` is **606 pass, 0 fail** on 2026-10-02: datasource-rest 26, httpyz 90, httpyz-query 14,
 openapi-codegen 181, openapi-hono 31, openapi-httpyz 28, openapi-msw 21, openapi-nuxt 36, typespec 120,
-scripts 53. It runs one process per package, through `scripts/workspace.ts`, and each
+scripts 59. It runs one process per package, through `scripts/workspace.ts`, and each
 package's `test` script writes the generated fixtures its specs import first;
-then `bun test scripts` runs the repository scripts' own specs.
+then `bun test ./scripts/` runs the repository scripts' own specs.
 Treat any failure as yours.
 
 **The generated code compiles under the strictest settings.** It lands in an

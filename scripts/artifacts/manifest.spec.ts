@@ -66,6 +66,19 @@ describe('accessProblems', () => {
 		).toEqual([]);
 	});
 
+	test('passes an unscoped package, which npm publishes as public', () => {
+		expect(accessProblems({ name: 'nxgt-tool' })).toEqual([]);
+	});
+
+	test('refuses a scoped package published as restricted', () => {
+		expect(
+			accessProblems({
+				name: '@nxgt/httpyz',
+				publishConfig: { access: 'restricted' },
+			}),
+		).toHaveLength(1);
+	});
+
 	test('refuses a scoped package with no publishConfig', () => {
 		expect(accessProblems({ name: '@nxgt/httpyz' })).toEqual([
 			'@nxgt/httpyz: publishConfig.access is not "public"; bun publish would publish this scoped package as restricted',

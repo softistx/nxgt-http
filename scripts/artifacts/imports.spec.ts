@@ -57,6 +57,25 @@ describe('undeclaredImports', () => {
 		).toEqual([['dist/cli.js', '@nxgt/openapi-codegen']]);
 	});
 
+	test('reads a bin whose #! line ends in CRLF', () => {
+		expect(
+			undeclaredImports(msw, [
+				[
+					'dist/cli.js',
+					'#!/usr/bin/env bun\r\nimport "@nxgt/openapi-codegen";',
+				],
+			]),
+		).toEqual([['dist/cli.js', '@nxgt/openapi-codegen']]);
+	});
+
+	test('strips a #! only on the first line', () => {
+		expect(() =>
+			undeclaredImports(msw, [
+				['dist/cli.js', 'import "a";\n#!/usr/bin/env bun\n'],
+			]),
+		).toThrow();
+	});
+
 	test('passes a peer, a dependency and an optional dependency', () => {
 		expect(
 			undeclaredImports(

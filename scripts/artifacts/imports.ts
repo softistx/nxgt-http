@@ -81,6 +81,25 @@ export function undeclaredImports(
 }
 
 /**
+ * Which file the scanner refused, and why: the scan of each bundle again,
+ * one at a time, so the report names it rather than the run ending in a
+ * stack trace.
+ */
+function scanFailure(
+	bundles: readonly (readonly [string, string])[],
+	error: unknown,
+): string {
+	for (const [rel, text] of bundles) {
+		try {
+			specifiersOf(rel, text);
+		} catch (each) {
+			return `${rel} could not be scanned: ${(each as Error).message}`;
+		}
+	}
+	return `could not be scanned: ${(error as Error).message}`;
+}
+
+/**
  * Every built import names something the manifest declares, checked on the
  * installed tarballs; false if any package imports what it does not declare.
  *
@@ -106,7 +125,14 @@ export async function importsDeclared(
 		})) {
 			bundles.push([rel, await Bun.file(join(root, rel)).text()]);
 		}
-		const found = undeclaredImports(manifest, bundles);
+		let found: [string, string][];
+		try {
+			found = undeclaredImports(manifest, bundles);
+		} catch (error) {
+			undeclared++;
+			console.log(`  FAIL    ${pkg.name}: ${scanFailure(bundles, error)}`);
+			continue;
+		}
 		if (found.length === 0) {
 			console.log(`  ok      ${pkg.name}`);
 			continue;

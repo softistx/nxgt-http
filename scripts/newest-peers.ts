@@ -7,11 +7,12 @@
  * the range itself, which an install without a lockfile resolves to the
  * newest version it allows. A sibling's `workspace:^` is the sibling.
  *
- * The repository's own toolchain is the lockfile's: the exact versions each
- * package pins as a devDependency, the oldest end of each range, so
- * everything CI normally runs proves only that end of it. CI's "Newest peers"
- * job runs this, deletes `bun.lock`, installs, then builds, typechecks, tests
- * and verifies the artifacts: the other end. The ranges come from the
+ * The repository's own toolchain is the lockfile's: whatever each package's
+ * devDependency range resolved to at the last install, which grows older
+ * with the lockfile. CI's "Newest peers" job runs this, deletes `bun.lock`,
+ * installs, then builds, typechecks, tests and verifies the artifacts: the
+ * newest end of each peer range, as of today. The lower bounds of the peer
+ * ranges are tested by neither. The ranges come from the
  * packages' own manifests, so widening one is all it takes for this to test
  * it — and a range it could not test fails the run, rather than pass it.
  *

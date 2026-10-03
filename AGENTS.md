@@ -185,15 +185,16 @@ Rules carried over from nxgt-core, each learned from a shipped defect:
 - **A type a consumer's declaration must name is exported.** The last stage
   of `verify:artifacts`, `scripts/artifacts/emit.ts`, emits the declarations
   of each package's `test/declarations/*.ts` against the install, under a
-  consumer's strict settings. A function there whose inferred return type
-  holds a type the entry does not export fails with TS2883 ("cannot be named
-  without a reference to …"), and nowhere else: inside the workspace a
-  package resolves to its own folder through a symlink, so tsc names the
-  type by a relative path, even with the declaration build on. Learned in
-  alxia (softistx/alxia#87), not nxgt-core. `httpyz`'s fixture covers the client, a
-  group, declared replies, `unwrap`, `ok`, `cache`, `events` and `lines`; a
-  builder that adds a type to what an app exports gets a case there. The
-  folder is typechecked with its package and never built or shipped.
+  consumer's strict settings with this repository's `@types/bun`. A
+  function there whose inferred return type holds a type the entry does not
+  export fails with TS2883 ("cannot be named without a reference to …"),
+  and nowhere else: inside the workspace a package resolves to its own
+  folder through a symlink, so tsc names the type by a relative path, even
+  with the declaration build on. Learned in alxia (softistx/alxia#87), not
+  nxgt-core. `httpyz`'s fixture covers the client, a group, declared
+  replies, `unwrap`, `ok`, `cache`, `events` and `lines`; a builder that
+  adds a type to what an app exports gets a case there. The folder is
+  typechecked with its package and never built or shipped.
 - **Build before typecheck and tests.** `exports` points at `dist/`, so on a
   clean checkout `@nxgt/httpyz` resolves to nothing for the binding. CI builds
   first.
@@ -250,7 +251,7 @@ publishes to npm.
 | --- | --- |
 | `unroutable`, in `openapi-hono/src/routable.ts` and `openapi-codegen/src/emit/routable.ts` | the runtime refuses the route and the generator warns. Importing one from the other would make the runtime a dependency of the generator. Change both together |
 | `LICENSE`, at the root and in each `packages/*/` | npm ships only the `LICENSE` in the package's own directory. `verify:artifacts` fails a tarball without one. Change them all together |
-| `scripts/verify-artifacts.ts` and `scripts/artifacts/`, beside nxgt-janus, nxgt-data and nxgt-core | each repository releases on its own, so the skeleton is copied, not shared. All four are split module for module and hold the same three checks: the test-code check, the guard that reports an unbuilt package as `no dist/`, and `missingFiles`, whose spec holds that a `files` entry `dis` is not covered by `dist/`. `emit.ts`, the declaration-emit check over `test/declarations/`, comes from softistx/alxia#87 and is ported to nxgt-janus, nxgt-data and nxgt-core in step with this copy. This copy lacks nxgt-core's `browser.ts`, a check for the `browser` export condition, which no package here declares. It also reads a sibling's version from the packed manifests, where nxgt-janus and nxgt-data read it from the workspace. Outside `scripts/artifacts/`, `check-changesets.ts` is nxgt-janus's alone, and `check-nxgt-versions.ts` with its weekly `nxgt versions` workflow is nxgt-janus's, copied into nxgt-data and nxgt-core by softistx/nxgt-data#139 and softistx/nxgt-core#158, but not here: it tracks `@nxgt/*` devDependencies from outside the repository, and every `@nxgt/*` package here depends only on its siblings, by `workspace:^`. A package that takes one from outside brings the check with it. A check added to one copy is a check to port to the others |
+| `scripts/verify-artifacts.ts` and `scripts/artifacts/`, beside nxgt-janus, nxgt-data and nxgt-core | each repository releases on its own, so the skeleton is copied, not shared. All four are split module for module and hold the same three checks: the test-code check, the guard that reports an unbuilt package as `no dist/`, and `missingFiles`, whose spec holds that a `files` entry `dis` is not covered by `dist/`. `emit.ts`, the declaration-emit check over `test/declarations/`, comes from softistx/alxia#87; this copy takes the tsc run as a parameter and has `emit.spec.ts`, which alxia's gets back in a PR of its own, and nxgt-data, nxgt-janus and nxgt-core take the same module in PRs opened beside this one. This copy lacks nxgt-core's `browser.ts`, a check for the `browser` export condition, which no package here declares. It also reads a sibling's version from the packed manifests, where nxgt-janus and nxgt-data read it from the workspace. Outside `scripts/artifacts/`, `check-changesets.ts` is nxgt-janus's alone, and `check-nxgt-versions.ts` with its weekly `nxgt versions` workflow is nxgt-janus's, copied into nxgt-data and nxgt-core by softistx/nxgt-data#139 and softistx/nxgt-core#158, but not here: it tracks `@nxgt/*` devDependencies from outside the repository, and every `@nxgt/*` package here depends only on its siblings, by `workspace:^`. A package that takes one from outside brings the check with it. A check added to one copy is a check to port to the others |
 | How a request is read and refused, in `openapi-hono/src/engine.ts` and `openapi-msw/src/request/read-request.ts` | the mock answers with the server's 400, with the same issues in the same order. The engine reads through Hono's `Context`, which the mock has no use for, and the mock depending on the runtime would pull in Hono. Change both together |
 | The pinned `tsp compile` and its drift check, in `openapi-codegen/test/typespec.ts` and `typespec/test/generate.ts` | neither can import the other: `@nxgt/typespec` reaching into the generator's `test/` is a relative import into a sibling, and the generator depending on `@nxgt/typespec` is a cycle. Change both together |
 | alxia's `RouteOperation`, `StatusCode` and `eventStream`, in `openapi-codegen/test/alxia/core.ts`, and its router's rules, in `openapi-codegen/src/emit/alxia/routable.ts` | alxia lives in `softistx/alxia`, and the generator depends on no framework it writes for: the stand-in types the fixtures' `alxia.ts` is checked against, and the warning for a path alxia's `compilePath` would refuse. Change them when alxia's `app/route-operation.ts`, `types/status.ts`, `sse/event-stream.ts` or `router/router.ts` change |

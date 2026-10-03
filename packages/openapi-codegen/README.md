@@ -721,7 +721,7 @@ as a type only.
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `fs` | `FileSystem`, optional | default `nodeFileSystem` |
+| `fs` | `FileSystem \| undefined`, optional | default `nodeFileSystem` |
 | `cwd` | `string`, optional | what a relative `path` resolves against; default `process.cwd()` |
 
 The second argument of `loadDocument`.
@@ -781,7 +781,7 @@ node that can be reported on carries one.
 | `location` | `Location` | where `value` really lives |
 | `id` | `string` | `file#pointer`: equal for every route to the same node |
 | `hops` | `Location[]` | where each hop landed, in order; empty when `value` was no reference |
-| `summary`, `description` | `string`, optional | written next to the outermost `$ref` that has one; they override the target's |
+| `summary`, `description` | `string \| undefined`, optional | written next to the outermost `$ref` that has one; they override the target's |
 
 What `Resolver.deref<T>()` returns: `Resolved<Schema>` is a schema and where
 it came from.

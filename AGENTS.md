@@ -233,18 +233,21 @@ now the packages' own source holds them too.
 - **An option a caller is likely to hold as a maybe-missing value, and whose
   `undefined` the package treats as left out, is typed `?: T | undefined`**,
   so a caller under `exactOptionalPropertyTypes` can pass it as it is. So far:
-  `@nxgt/httpyz`'s `fetch`, the generator's `lint`, and `@nxgt/datasource-rest`'s
-  `Paginated` `data` and `metadata`. A field the package itself writes as
+  `@nxgt/httpyz`'s `fetch`, the generator's `lint` and `loadDocument`'s
+  `fs`, and `@nxgt/datasource-rest`'s `Paginated` `data` and `metadata`. A field the package itself writes as
   `undefined` is typed so too, since it is there: the IR's `title`,
   `apiVersion`, `summary`, `description`, `body`, a media's `schema` and a
-  parameter's `deprecated`, and `PageInfo`'s `startCursor` and `endCursor`,
+  parameter's `deprecated`, `Resolved`'s `summary` and `description`, and
+  `PageInfo`'s `startCursor` and `endCursor`,
   which `relayPaginate` writes for a page without `metadata`. The other
   options are still `?: T`, stricter than the run time; widen one when it is
   met. A third party's options, the web's `Request` and `Response` or
   Redocly's `loadConfig`, are given only the keys that have a value
-  (`...(signal ? { signal } : {})`, `@nxgt/openapi-msw`'s `initOf`): an
-  absent key and an `undefined` one are the same to them, but not to the
-  types.
+  (`@nxgt/openapi-msw`'s `initOf`, `configPath === undefined ? {} : { configPath }`):
+  an absent key and an `undefined` one are the same to them, but not to the
+  types. A `Request`'s `signal` is the exception: `null` means none, and is
+  what `@nxgt/httpyz` passes when a call has none, so that a client-level
+  `init` never carries one in.
 - **A Hono middleware that returns a response on one path returns on the
   others too**: `await next(); return undefined;`, as `noImplicitReturns`
   asks, in `@nxgt/openapi-hono`'s validation middleware and its specs.

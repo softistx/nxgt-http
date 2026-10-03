@@ -41,7 +41,7 @@ export const http = createHttpClient({
 | Option | Default | |
 | --- | --- | --- |
 | `baseUrl` | none: relative URLs, which only a browser resolves | may carry a path prefix: `https://example.com/api` |
-| `fetch` | `globalThis.fetch`, looked up at each call | anything that takes a `Request` and returns a `Response`, or a promise of one: a Hono app's `app.fetch`, in tests. `undefined` is the default |
+| `fetch` | `globalThis.fetch`, looked up at each call | anything that takes a `Request` and returns a `Response`, or a promise of one: a Hono app's `app.fetch`, in tests. `fetch: undefined` is the same as leaving it out |
 | `headers` | none | sent with every request: an object, or a function run before each one |
 | `init` | none | fetch options for every request: `credentials`, `mode`, `cache`… |
 | `timeout` | none | milliseconds before a call fails with `TimeoutError` |

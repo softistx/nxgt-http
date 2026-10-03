@@ -237,7 +237,7 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
 			joinSignals(built.signal, replaced),
 		);
 		const response = await dispatch(
-			new Request(built.url, { ...built.init, ...(signal ? { signal } : {}) }),
+			new Request(built.url, { ...built.init, signal: signal ?? null }),
 			built.context,
 			built.timeout,
 			deadline,
@@ -436,7 +436,7 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
 				return send(
 					extra
 						? new Request(sent, {
-								signal: joinSignals(sent.signal, extra) ?? null,
+								signal: AbortSignal.any([sent.signal, extra]),
 							})
 						: sent,
 					given ?? {},

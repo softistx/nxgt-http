@@ -43,8 +43,9 @@ export function installedTsc(workdir: string): Tsc {
  * builder writes a declaration whose types must be named through the
  * package's own entry. A type the entry does not export fails there with
  * TS2883 ("cannot be named without a reference to …"), and only there:
- * inside the workspace a sibling resolves to its source, so tsc names it by
- * a relative path and nothing complains.
+ * inside the workspace a package resolves to its own folder through a
+ * symlink, so tsc names the type by a relative path and nothing complains,
+ * even with the declaration build on.
  */
 export async function declarationsEmit(
 	workdir: string,
@@ -82,7 +83,7 @@ export async function declarationsEmit(
 	return true;
 }
 
-/** A consumer's strictest settings, with the declaration build on. */
+/** A consumer's strict settings, with the declaration build on. */
 export const TSCONFIG = {
 	compilerOptions: {
 		types: [],

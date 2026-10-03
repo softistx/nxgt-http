@@ -187,8 +187,10 @@ Rules carried over from nxgt-core, each learned from a shipped defect:
   of each package's `test/declarations/*.ts` against the install, under a
   consumer's strict settings. A function there whose inferred return type
   holds a type the entry does not export fails with TS2883 ("cannot be named
-  without a reference to …"), and nowhere else, since inside the workspace
-  tsc names it by a relative path. `httpyz`'s fixture covers the client, a
+  without a reference to …"), and nowhere else: inside the workspace a
+  package resolves to its own folder through a symlink, so tsc names the
+  type by a relative path, even with the declaration build on. Learned in
+  alxia (softistx/alxia#87), not nxgt-core. `httpyz`'s fixture covers the client, a
   group, declared replies, `unwrap`, `ok`, `cache`, `events` and `lines`; a
   builder that adds a type to what an app exports gets a case there. The
   folder is typechecked with its package and never built or shipped.
@@ -277,9 +279,9 @@ publishes to npm.
 
 ## Known state
 
-`bun run test` is **571 pass, 0 fail** on 2026-10-02: datasource-rest 26, httpyz 90, httpyz-query 14,
+`bun run test` is **575 pass, 0 fail** on 2026-10-03: datasource-rest 26, httpyz 90, httpyz-query 14,
 openapi-codegen 181, openapi-hono 31, openapi-httpyz 28, openapi-msw 21, openapi-nuxt 36, typespec 120,
-scripts 24. It runs one process per package, and each
+scripts 28. It runs one process per package, and each
 package's `test` script writes the generated fixtures its specs import first;
 then `bun test scripts` runs the repository scripts' own specs.
 Treat any failure as yours.

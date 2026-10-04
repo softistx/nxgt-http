@@ -6,7 +6,9 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import ts from 'typescript';
+// TypeScript 6's language service, by an alias: TypeScript 7, which the
+// peer range allows and CI's "Newest peers" job installs, has no JS API.
+import ts from 'typescript-6';
 
 const ROOT = resolve(import.meta.dir, '..');
 /** Not on disk: its unfinished bodies would fail `tsc`. */

@@ -40,12 +40,13 @@
 		"@nxgt/openapi-httpyz": "workspace:^",
 		"@types/bun": "^1.4.0",
 		"msw": "^2.15.0",
+		"typescript-6": "npm:typescript@~6.0.3",
 		"zod": "^4.5.4"
 	},
 	"peerDependencies": {
 		"@nxgt/httpyz": "workspace:^",
 		"@nxgt/openapi-httpyz": "workspace:^",
 		"msw": "^2.0.0",
-		"typescript": "^6.0.3"
+		"typescript": "^6.0.3 || ^7.0.0"
 	}
 }

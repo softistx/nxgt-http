@@ -58,6 +58,7 @@ export {
 } from './ir/types';
 export {
 	VALIDATION_ERROR_BODY,
+	type ValidationServer,
 	withValidationErrors,
 } from './ir/validation-errors';
 export type { Lint } from './lint';

@@ -21,7 +21,8 @@ turns its calls into query options.
 bun add @nxgt/httpyz
 ```
 
-- `typescript` 6: required peer, the version every `@nxgt` package pins.
+- `typescript` 6 or 7: required peer, `^6.0.3 || ^7.0.0`, the range every
+  `@nxgt` package accepts.
 - A Standard Schema library: optional, and not a peer. Bring your own if you
   declare replies.
 

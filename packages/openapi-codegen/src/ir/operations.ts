@@ -24,6 +24,15 @@ const STYLE: Record<ParamLocation, string> = {
 	path: 'simple',
 	query: 'form',
 	header: 'simple',
+	cookie: 'form',
+};
+
+/** Where a parameter's text comes from, as an error names it. */
+const READ_FROM: Record<ParamLocation, string> = {
+	path: 'a URL',
+	query: 'a URL',
+	header: 'a header',
+	cookie: 'a cookie',
 };
 
 /** OpenAPI says header parameters with these names are ignored: HTTP owns them. */
@@ -192,18 +201,21 @@ export class OperationBuilder {
 		return operations;
 	}
 
-	/** Once every schema is built: can each parameter be read from a URL or a header? */
+	/** Once every schema is built: can each parameter be read from a URL, a header or a cookie? */
 	checkParameters(operations: readonly OperationIR[]): void {
 		const scalar = (node: SchemaNode) =>
 			SCALAR_KINDS.has(this.#schemas.resolve(node).kind);
 		for (const operation of operations) {
-			for (const parameter of operation.parameters) {
+			for (const parameter of [...operation.parameters, ...operation.cookies]) {
 				const node = this.#schemas.resolve(parameter.schema);
 				const at = child(parameter.location, 'schema');
-				if (node.kind === 'array' && parameter.in === 'path') {
+				if (
+					node.kind === 'array' &&
+					(parameter.in === 'path' || parameter.in === 'cookie')
+				) {
 					this.#diagnostics.error(
 						'unsupported_parameter',
-						`path parameter \`${parameter.name}\` is a list; a path segment carries one value`,
+						`${parameter.in} parameter \`${parameter.name}\` is a list; a ${parameter.in === 'path' ? 'path segment' : 'cookie'} carries one value`,
 						at,
 					);
 					continue;
@@ -215,7 +227,7 @@ export class OperationBuilder {
 				this.#diagnostics.error(
 					'unsupported_parameter',
 					`${parameter.in} parameter \`${parameter.name}\` is ${KIND_NAMES[item.kind] ?? item.kind}; ` +
-						`only strings, numbers, booleans, enums and lists of them can be read from ${parameter.in === 'header' ? 'a header' : 'a URL'}`,
+						`only strings, numbers, booleans, enums and lists of them can be read from ${READ_FROM[parameter.in]}`,
 					at,
 				);
 			}
@@ -260,7 +272,9 @@ export class OperationBuilder {
 		const name = pascalCase(operationId);
 		// An operation's parameter replaces the path item's with the same name and location.
 		const own = this.#parameters(raw.parameters, child(at, 'parameters'));
-		const parameters = [...new Map([...shared, ...own]).values()];
+		const merged = [...new Map([...shared, ...own]).values()];
+		const parameters = merged.filter((p) => p.in !== 'cookie');
+		const cookies = merged.filter((p) => p.in === 'cookie');
 		this.#checkTemplate(path, parameters, at);
 		if (raw.callbacks !== undefined) {
 			this.#diagnostics.warning(
@@ -283,6 +297,7 @@ export class OperationBuilder {
 				? raw.tags.filter((tag): tag is string => typeof tag === 'string')
 				: [],
 			parameters,
+			cookies,
 			body:
 				raw.requestBody === undefined
 					? undefined
@@ -331,14 +346,6 @@ export class OperationBuilder {
 			return undefined;
 		}
 		const where = p.in;
-		if (where === 'cookie') {
-			this.#diagnostics.error(
-				'unsupported_parameter',
-				`cookie parameter \`${p.name}\` is not supported`,
-				child(at, 'in'),
-			);
-			return undefined;
-		}
 		if (where === 'querystring') {
 			this.#diagnostics.error(
 				'unsupported_parameter',
@@ -347,7 +354,12 @@ export class OperationBuilder {
 			);
 			return undefined;
 		}
-		if (where !== 'path' && where !== 'query' && where !== 'header') {
+		if (
+			where !== 'path' &&
+			where !== 'query' &&
+			where !== 'header' &&
+			where !== 'cookie'
+		) {
 			this.#diagnostics.error(
 				'invalid_operation',
 				`\`in: ${where}\` is not a parameter location`,

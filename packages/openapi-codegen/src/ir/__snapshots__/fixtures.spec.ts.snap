@@ -7,6 +7,7 @@ exports[`buildIR on whole specs builds a spec split across files and shared frag
   "openapi": "3.2.0",
   "operations": [
     {
+      "cookies": [],
       "deprecated": false,
       "honoPath": "/employees",
       "location": {
@@ -124,6 +125,7 @@ exports[`buildIR on whole specs builds a spec split across files and shared frag
         ],
         "required": true,
       },
+      "cookies": [],
       "deprecated": false,
       "honoPath": "/employees",
       "location": {
@@ -178,6 +180,7 @@ exports[`buildIR on whole specs builds a spec split across files and shared frag
       ],
     },
     {
+      "cookies": [],
       "deprecated": false,
       "honoPath": "/employees/:id",
       "location": {
@@ -260,6 +263,7 @@ exports[`buildIR on whole specs builds a spec split across files and shared frag
         ],
         "required": true,
       },
+      "cookies": [],
       "deprecated": false,
       "honoPath": "/employees/:id",
       "location": {
@@ -329,6 +333,7 @@ exports[`buildIR on whole specs builds a spec split across files and shared frag
       ],
     },
     {
+      "cookies": [],
       "deprecated": false,
       "honoPath": "/employees/:id",
       "location": {
@@ -574,6 +579,7 @@ exports[`buildIR on whole specs builds an OpenAPI 3.2 \`query\` operation 1`] = 
         ],
         "required": true,
       },
+      "cookies": [],
       "deprecated": false,
       "honoPath": "/employees",
       "location": {

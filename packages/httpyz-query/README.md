@@ -22,7 +22,7 @@ bun add @nxgt/httpyz @nxgt/httpyz-query @tanstack/react-query
 | --- | --- | --- |
 | `@nxgt/httpyz` | required | the client whose calls the queries send |
 | `@tanstack/query-core` | required | TanStack's types. Every adapter depends on it, so installing yours is enough |
-| `typescript` | required | `^6.0.3` |
+| `typescript` | required | `^6.0.3 \|\| ^7.0.0` |
 | `@nxgt/openapi-httpyz` | optional | only for [`@nxgt/httpyz-query/openapi`](#with-an-openapi-spec) |
 
 ## Setup

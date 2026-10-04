@@ -419,9 +419,10 @@ export interface Replies {
 
 Written with the [`alxia` option](options.md#alxia) only. Each operation
 [alxia](https://github.com/softistx/alxia) can route is a constant named by
-its `operationId`, holding the three things alxia's
-`app.route(operation, handler)` reads: the method, the path and the route
-schema. `operations` then lists them all, keyed by `operationId`:
+its `operationId`, holding the three things `@alxia/core`'s
+`app.route(operation, ...middlewares, handler)` reads, 0.4 or later: the
+method, the path and the route schema. `operations` then lists them all,
+keyed by `operationId`:
 
 ```ts
 // alxia.ts — generated from the pet store spec
@@ -445,6 +446,9 @@ export const getPet = {
 		headers: z.object({
 			'x-request-id': z.guid(),
 		}),
+		cookies: z.object({
+			session: z.string().min(1),
+		}),
 		response: {
 			200: zPet,
 			304: z.undefined(),
@@ -453,25 +457,65 @@ export const getPet = {
 	},
 } as const;
 
+/** Ticks, then one done event. */
+export const watchTicks = {
+	method: 'GET',
+	path: '/ticks',
+	schema: {
+		response: {
+			200: eventStream({
+				tick: zTick,
+				done: zWatchTicks200ResponseDoneData,
+			}),
+		},
+		detail: { operationId: 'watchTicks' },
+	},
+} as const;
+
 export const operations = {
 	getPet,
 	deletePet,
-	putTags,
+	watchTicks,
 } as const;
 ```
 
 ```ts
-import { alxia } from '@alxia/core';
+import { alxia, defineMiddleware, validate } from '@alxia/core';
 import { operations as api } from './generated/alxia';
 
+const auth = defineMiddleware(({ cookies, reply }, next) =>
+	cookies['session'] ? next() : reply(401, { title: 'Sign in' }),
+);
+
 const app = alxia()
-	.route(api.getPet, ({ params, query, reply }) => {
+	.route(api.getPet, ({ params, query, cookies, reply }) => {
 		params.petId; // number
 		query.fields; // string[] | undefined, from ?fields=a or ?fields=a&fields=b
+		cookies.session; // string, validated
 		return reply.ok({ kind: 'cat', lives: params.petId });
 	})
-	.route(api.deletePet, ({ reply }) => reply.noContent());
+	// auth runs before the request is validated, just before the handler
+	.route(api.deletePet, auth, ({ reply }) => reply.noContent())
+	// validate(operation) among the middlewares validates there instead
+	.route(api.watchTicks, validate(api.watchTicks), ({ reply }) =>
+		reply.ok(
+			(async function* () {
+				yield { event: 'tick' as const, data: { n: 1 } };
+				yield { event: 'done' as const, data: { count: 1 } };
+			})(),
+		),
+	);
 ```
+
+The route adds two middlewares of its own around those it is given: a
+`responds` of `schema.response` first, which checks every reply whose status
+the operation declares, a middleware's included, and a `validate` of the
+request parts just before the handler. `validate(operation)` placed among
+the middlewares replaces that last one: the middlewares before it read the
+request unvalidated. `matchesSpec(app, operations)`, from
+[`@alxia/openapi`](https://github.com/softistx/alxia/tree/develop/packages/openapi)
+(formerly `@alxia/openapi-routes`), fails a test while an operation of the
+table has no route. Each file opens with a comment saying as much.
 
 The file is plain data. Each schema keeps its concrete Zod type, which the
 erased `operations.ts` table does not, so alxia types the handler's
@@ -485,8 +529,9 @@ it.
 | `params` | each path parameter read from its string, as in `operations.ts`; an enum of strings piped from `z.string()`, since alxia refuses a schema that does not take the string it hands over |
 | `query` | each parameter read from its string. alxia hands over a key given once as a string, and given more than once as a list, so a list parameter takes a lone value as a list of one (`z.preprocess(repeated, …)`), or splits it on commas with `explode: false` (`z.preprocess(commas, …)`) |
 | `headers` | keyed by lowercased name, as alxia reads them; a list split on commas (`z.preprocess(headerList, …)`) |
+| `cookies` | each cookie parameter by its name, read from its string as a query parameter is; the client files and `hono.ts` leave it out, with a warning |
 | `body` | the schema of `application/json`, of a form, read field by field as `operations.ts`'s `z<Operation>Form`, or of text; `.optional()` when the spec does not require the body |
-| `response` | per status, the schema of its JSON or text; `z.undefined()` for a reply with no content, such as a 204 or a 304; `eventStream(schema)` for server-sent events whose `itemSchema` declares unnamed events with JSON data |
+| `response` | per status, the schema of its JSON or text; `z.undefined()` for a reply with no content, such as a 204 or a 304; `eventStream(schema)` for server-sent events whose `itemSchema` declares one unnamed event with JSON data; `eventStream({ name: schema, … })` for named events, each sent with its `event:` line |
 | `detail` | `operationId`, and the `summary`, `description`, `tags` and `deprecated` the spec gives |
 
 alxia validates the request and answers a refused one with its own 400,
@@ -499,7 +544,8 @@ warning naming why: a `TRACE`; a path alxia cannot route, a parameter that
 shares its segment with text, a parameter name with a character other than
 a letter, a digit, `_` or `$`, a parameter named twice, or a path that matches the same requests as an
 earlier one with other parameter names; a binary body; a reply that is
-binary, JSON Lines, a form, or named events. A body or a reply with several
+binary, JSON Lines, a form, or events alxia cannot send: events the
+`itemSchema` does not declare, or one whose data is text rather than JSON. A body or a reply with several
 media types keeps one, `application/json` first, with a `not_enforced`
 warning, and a status alxia has no type for, such as 306, is dropped with
 one too. A form body that is not a flat object is validated with its JSON

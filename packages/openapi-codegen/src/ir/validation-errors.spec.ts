@@ -137,6 +137,66 @@ describe('the validationErrors option', () => {
 		return files.find((file) => file.path.endsWith('/types.ts'))?.content;
 	};
 
+	it("declares @nxgt/openapi-hono's body, alxia's with alxia alone, and either with both", async () => {
+		const body = async (options: object) => {
+			const { files } = await generateFiles(
+				{ input: FILE, output: '/out', ...options },
+				{ fs: memory(SPEC) },
+			);
+			const zod = files.find((file) => file.path.endsWith('/zod.ts'))?.content;
+			return zod
+				?.split('export const zValidationErrorBody = ')[1]
+				?.split(';')[0];
+		};
+		const hono = await body({});
+		expect(hono).toContain('status: z.literal(400),');
+		expect(hono).toContain('timestamp: z.iso.datetime({ offset: true }),');
+		expect(hono).toContain(
+			"target: z.enum(['param', 'query', 'header', 'json', 'form', 'body', 'response']),",
+		);
+		expect(hono).not.toContain('error:');
+		expect(await body({ hono: true })).toBe(hono);
+
+		const alxia = await body({ alxia: true });
+		expect(alxia).toContain("error: z.literal('validation'),");
+		expect(alxia).toContain(
+			"target: z.enum(['params', 'query', 'headers', 'cookies', 'body']),",
+		);
+		expect(alxia).not.toContain('status:');
+		expect(alxia).not.toContain('timestamp:');
+
+		const both = await body({ alxia: true, hono: true });
+		expect(both?.startsWith('z.union([')).toBe(true);
+		expect(both).toContain('status: z.literal(400),');
+		expect(both).toContain("error: z.literal('validation'),");
+	});
+
+	it("declares alxia's 400 on an operation that takes only a cookie, which only alxia validates", async () => {
+		const spec = `openapi: 3.1.0
+info: { title: Me, version: '1' }
+paths:
+  /me:
+    get:
+      operationId: getMe
+      parameters:
+        - { name: session, in: cookie, required: true, schema: { type: string } }
+      responses:
+        '200': { description: you }
+`;
+		const declares400 = async (options: object) => {
+			const { files } = await generateFiles(
+				{ input: FILE, output: '/out', ...options },
+				{ fs: memory(spec) },
+			);
+			const types = files.find((file) => file.path.endsWith('/types.ts'));
+			return types?.content.includes('400: {');
+		};
+		expect(await declares400({ alxia: true })).toBe(true);
+		expect(await declares400({ alxia: true, hono: true })).toBe(true);
+		expect(await declares400({ hono: true })).toBe(false);
+		expect(await declares400({})).toBe(false);
+	});
+
 	it('is on by default, and off with false', async () => {
 		expect(await types()).toContain('export interface ValidationErrorBody {');
 		expect(await types({ validationErrors: false })).not.toContain(

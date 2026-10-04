@@ -73,7 +73,7 @@ fifth with the [`hono`](options.md#hono) option, and `alxia.ts` with the
 | `operations.ts` | every operation as data, with its parameter and form validators | `zod`, `zod.ts`, types from `types.ts` |
 | `paths.ts` | `paths`, `operations` and `components`, as openapi-typescript prints them | types from `types.ts` |
 | `hono.ts` | `Replies`, `createRoutes` and `createApi`, bound to the spec | `hono` types, `@nxgt/openapi-hono`, `operations.ts`, types from `types.ts` |
-| `alxia.ts` | each operation as the data an alxia app's `app.route()` takes, and `operations` | `zod`, `zod.ts`; `eventStream` from `@alxia/core` for a reply of server-sent events |
+| `alxia.ts` | each operation as the data an alxia app's `app.route(operation, ...middlewares, handler)` takes, and `operations` | `zod`, `zod.ts`; `eventStream` from `@alxia/core` for a reply of server-sent events |
 
 A file whose content would not change is not rewritten, so a file watcher
 does not fire on a run that changed nothing. Commit the files, or generate
@@ -123,7 +123,7 @@ and JSON pointer it is in:
 
 ```
 2 error(s) in the OpenAPI document:
-  error paths/pets.yaml#/get/parameters/0/in: cookie parameter `session` is not supported [unsupported_parameter]
+  error paths/pets.yaml#/get/parameters/0/in: `in: querystring` (OpenAPI 3.2) is not supported [unsupported_parameter]
   error components/schemas/Pet.yaml#/not: `not` is not supported [unsupported_keyword]
 ```
 

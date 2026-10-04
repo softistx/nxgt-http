@@ -20,7 +20,7 @@ yet.
 | type agreement | `test/generated/<case>/agreement.ts` | `tsc` fails if a type and its validator disagree, form validators included |
 | index typing | `test/types/operations.ts` | `Operations` and its indexes resolve as a server reads them |
 | conformance | `src/conformance.spec.ts` | real, public specs: each generates with only the warnings it calls for, and every JSON example it gives passes the generated validator |
-| alxia routes | `src/emit/alxia/alxia.spec.ts`, `test/types/alxia.ts` | what `alxia.ts` writes, leaves out and warns about, its validators run on what alxia hands over, and every fixture's `operations` typed as alxia's `RouteOperation`, against the stand-in `test/alxia/core.ts` |
+| alxia routes | `src/emit/alxia/alxia.spec.ts`, `test/types/alxia.ts` | what `alxia.ts` writes, leaves out and warns about, its validators run on what alxia hands over, and every fixture's `operations` typed as alxia's `RouteOperation`, its `cookies` taking strings, against the stand-in `test/alxia/core.ts` |
 | openapi-fetch typing | `test/types/paths.ts` | `createClient<paths>()` types requests and replies from `paths.ts` alone |
 | command line | `src/cli/run.spec.ts` | flags, config files, `--check` and exit codes through `run()`, and `src/cli.ts` as a process |
 
@@ -41,10 +41,11 @@ fixtures' `hono.ts`, which imports that package.
 | `kitchen-sink` | one schema per mapping row, one parameter per way a value reaches a request, and a form with numbers, flags and lists |
 | `conformance/*` | real, public 3.1 and 3.2 specs, vendored unchanged; sources, licences and upstream commits are in its `README.md`. Generated and type-checked, not snapshotted |
 | `typespec` | a spec authored in TypeSpec: `main.tsp` and its `tspconfig.yaml`, and the `openapi.yaml` that `@typespec/openapi3` compiles them to, committed. `src/typespec.spec.ts` compiles it again with the TypeSpec pinned in `package.json` and fails when the two differ; `bun run fixtures:typespec` rewrites it. `@nxgt/openapi-hono` serves it |
+| `alxia` | generated with `alxia` and without `hono`: cookie parameters, named server-sent events, and alxia's own 400 as `ValidationErrorBody` in the client files |
 | `dates` | generated with `dates: 'date'`: a date-time in every place a value goes (named, nullable, defaulted, listed, recursive, a query, a form, a reply); `src/emit/dates.spec.ts` runs it |
 
 `test/generate.ts` writes each case's generated files to
-`test/generated/<case>/`, with the `hono` and `alxia` options on, together with its
+`test/generated/<case>/`, with the `hono` and `alxia` options on (`alxia` alone for the `alxia` case), together with its
 `agreement.ts`. Git ignores that folder. Nothing generated is committed as a
 file. What the output looks like is pinned by the snapshots in
 `src/emit/__snapshots__/`, and a change to the generator shows up there as a

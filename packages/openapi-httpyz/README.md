@@ -22,7 +22,7 @@ bun add -d @nxgt/openapi-codegen typescript
 ```
 
 Both peers are required: `@nxgt/httpyz`, since the binding uses your client,
-not a copy of its own, and `typescript` 6, for the types. The generated
+not a copy of its own, and `typescript` 6 or 7, for the types. The generated
 `operations.ts` imports `zod`, so the app needs it too.
 
 ## Setup

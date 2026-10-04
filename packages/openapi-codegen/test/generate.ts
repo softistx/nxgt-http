@@ -24,6 +24,8 @@ export const CASES = [
 	'kitchen-sink',
 	'dates',
 	'streams',
+	// Generated with alxia alone: cookies, named events, alxia's 400.
+	'alxia',
 	// Authored in TypeSpec: `openapi.yaml` is what `main.tsp` compiles to.
 	'typespec',
 ] as const;
@@ -38,10 +40,12 @@ export const CONFORMANCE = [
 ] as const;
 
 /** What a case is generated with, beside `hono` and `alxia`. */
-const OPTIONS: { [name: string]: { dates?: Dates } } = {
+const OPTIONS: { [name: string]: { dates?: Dates; hono?: boolean } } = {
 	dates: { dates: 'date' },
 	// Dated, so a stream's items are typed both decoded and as JSON carries them.
 	streams: { dates: 'date' },
+	// The client files then declare alxia's 400, not @nxgt/openapi-hono's.
+	alxia: { hono: false },
 };
 
 /** A fixture's generated files, then its `agreement.ts`, with absolute paths. */
@@ -67,7 +71,7 @@ export async function fixtureFiles(name: string): Promise<GeneratedFile[]> {
 
 async function agreement(
 	input: string,
-	options: { dates?: Dates },
+	options: { dates?: Dates; hono?: boolean },
 ): Promise<string> {
 	const ir = buildIR(await loadDocument(input));
 	const ctx = new EmitContext(ir, {

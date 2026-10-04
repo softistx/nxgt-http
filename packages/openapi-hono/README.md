@@ -21,7 +21,7 @@ bun add -d @nxgt/openapi-codegen typescript
 
 - `hono` is a required peer. This package imports it for types only; your
   app imports it to build the app.
-- `typescript` 6 is a required peer, as for every `@nxgt` package.
+- `typescript` 6 or 7 is a required peer, as for every `@nxgt` package.
 - `zod` is not a peer, but the app needs it: the generated `operations.ts`
   imports it.
 - The generator is only a dev dependency.

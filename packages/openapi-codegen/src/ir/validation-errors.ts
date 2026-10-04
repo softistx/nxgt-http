@@ -1,9 +1,10 @@
 /**
- * The 400 `@nxgt/openapi-hono` answers a request with when its validators
- * refuse it: `{ status, message, timestamp, issues }`. The spec rarely says
- * so, and a client that checks its replies would refuse a reply the spec
- * does not describe. So it is declared on every operation the engine checks
- * a request for, beside the 400 the spec declares, if any.
+ * The 400 the server answers a request with when its validators refuse it:
+ * `@nxgt/openapi-hono`'s `{ status, message, timestamp, issues }`, or
+ * alxia's `{ error: 'validation', issues }`. The spec rarely says so, and a
+ * client that checks its replies would refuse a reply the spec does not
+ * describe. So it is declared on every operation the server checks a
+ * request for, beside the 400 the spec declares, if any.
  */
 import type { Location } from '../loader/location';
 import { locationId } from '../loader/location';
@@ -20,16 +21,11 @@ import type {
 /** The name the body is generated under: `ValidationErrorBody`, `zValidationErrorBody`. */
 export const VALIDATION_ERROR_BODY = 'ValidationErrorBody';
 
-/** Where the engine found a value wrong, as its `ValidationIssue` has it. */
-const TARGETS = [
-	'param',
-	'query',
-	'header',
-	'json',
-	'form',
-	'body',
-	'response',
-];
+/**
+ * Which server answers a refused request: `@nxgt/openapi-hono`, alxia, or
+ * either, when both `hono.ts` and `alxia.ts` are generated from one spec.
+ */
+export type ValidationServer = 'hono' | 'alxia' | 'both';
 
 const text: SchemaNode = { kind: 'string' };
 
@@ -39,10 +35,21 @@ const required = (name: string, schema: SchemaNode) => ({
 	schema,
 });
 
-const ISSUE: ObjectNode = {
+const object = (
+	properties: ObjectNode['properties'],
+	description?: string,
+): ObjectNode => ({
 	kind: 'object',
-	properties: [
-		required('target', { kind: 'literal', values: TARGETS }),
+	...(description !== undefined && { description }),
+	properties,
+	additional: 'default',
+	extends: [],
+});
+
+/** An issue, `{ target, path, code, message }`, with the targets the server names. */
+const issue = (targets: string[]): ObjectNode =>
+	object([
+		required('target', { kind: 'literal', values: targets }),
 		required('path', {
 			kind: 'array',
 			items: {
@@ -53,28 +60,67 @@ const ISSUE: ObjectNode = {
 		}),
 		required('code', text),
 		required('message', text),
-	],
-	additional: 'default',
-	extends: [],
-};
+	]);
 
-const BODY: ObjectNode = {
-	kind: 'object',
-	description:
-		'The 400 `@nxgt/openapi-hono` answers a request with when its validators refuse it.',
-	properties: [
+/** `@nxgt/openapi-hono`'s 400: `{ status, message, timestamp, issues }`, its `ValidationIssue` targets. */
+const HONO_BODY: ObjectNode = object(
+	[
 		required('status', { kind: 'literal', values: [400] }),
 		required('message', text),
 		required('timestamp', { kind: 'string', format: 'date-time' }),
-		required('issues', { kind: 'array', items: ISSUE }),
+		required('issues', {
+			kind: 'array',
+			items: issue([
+				'param',
+				'query',
+				'header',
+				'json',
+				'form',
+				'body',
+				'response',
+			]),
+		}),
 	],
-	additional: 'default',
-	extends: [],
-};
+	'The 400 `@nxgt/openapi-hono` answers a request with when its validators refuse it.',
+);
 
-/** Whether the engine may refuse a request: it checks parameters and a body, and nothing else. */
-const checked = (operation: OperationIR): boolean =>
-	operation.parameters.length > 0 || operation.body !== undefined;
+/**
+ * alxia's 400: `@alxia/core`'s `ValidationErrorBody`, `{ error: 'validation',
+ * issues }`, each issue's target one of the request parts it validates.
+ */
+const ALXIA_BODY: ObjectNode = object(
+	[
+		required('error', { kind: 'literal', values: ['validation'] }),
+		required('issues', {
+			kind: 'array',
+			items: issue(['params', 'query', 'headers', 'cookies', 'body']),
+		}),
+	],
+	"The 400 alxia answers a request with when a route's schemas refuse it.",
+);
+
+/** The body the server answers with: both in a union when either may. */
+function bodyOf(server: ValidationServer): SchemaNode {
+	if (server === 'hono') return HONO_BODY;
+	if (server === 'alxia') return ALXIA_BODY;
+	return {
+		kind: 'union',
+		description:
+			'The 400 `@nxgt/openapi-hono` or alxia answers a request with when its validators refuse it: the spec is served by either.',
+		variants: [HONO_BODY, ALXIA_BODY],
+		exclusive: false,
+	};
+}
+
+/**
+ * Whether the server may refuse a request: it checks parameters and a
+ * body, and nothing else. alxia checks cookies too; `@nxgt/openapi-hono`
+ * does not read them.
+ */
+const checked = (operation: OperationIR, server: ValidationServer): boolean =>
+	operation.parameters.length > 0 ||
+	operation.body !== undefined ||
+	(server !== 'hono' && operation.cookies.length > 0);
 
 /**
  * The media type of a declared 400 that a client reads the engine's
@@ -89,14 +135,20 @@ const answeredAs = (content: readonly MediaIR[]): MediaIR | undefined =>
 	content.find((m) => m.kind === 'json');
 
 /**
- * `ir` with the engine's 400 declared on each operation that takes a
- * parameter or a body: a 400 of its own when the spec has none; in a union
+ * `ir` with the 400 of `server` declared on each operation that takes a
+ * parameter or a body, or for alxia a cookie: a 400 of its own when the spec has none; in a union
  * with the schema of the media type its reply is read as, when the spec's
  * 400 has one; or as `application/json`, added to a 400 with no JSON.
  * `root` is the spec's root document, where the body's schema is said to be.
  */
-export function withValidationErrors(ir: ApiIR, root: Location): ApiIR {
-	if (!ir.operations.some(checked)) return ir;
+export function withValidationErrors(
+	ir: ApiIR,
+	root: Location,
+	server: ValidationServer = 'hono',
+): ApiIR {
+	if (!ir.operations.some((operation) => checked(operation, server))) {
+		return ir;
+	}
 	const location: Location = {
 		file: root.file,
 		pointer: '/x-nxgt-validation-error-body',
@@ -106,7 +158,7 @@ export function withValidationErrors(ir: ApiIR, root: Location): ApiIR {
 		name: VALIDATION_ERROR_BODY,
 		location,
 		source: 'inline',
-		node: BODY,
+		node: bodyOf(server),
 		recursive: false,
 	};
 	const ref: SchemaNode = { kind: 'ref', target: schema.id };
@@ -116,7 +168,7 @@ export function withValidationErrors(ir: ApiIR, root: Location): ApiIR {
 		schema: ref,
 	};
 	const declare = (operation: OperationIR): OperationIR => {
-		if (!checked(operation)) return operation;
+		if (!checked(operation, server)) return operation;
 		const declared = operation.responses.find((r) => r.status === 400);
 		if (!declared) {
 			const added: ResponseIR = {

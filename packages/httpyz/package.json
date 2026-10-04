@@ -50,6 +50,6 @@
 		"zod": "^4.5.4"
 	},
 	"peerDependencies": {
-		"typescript": "^6.0.3"
+		"typescript": "^6.0.3 || ^7.0.0"
 	}
 }

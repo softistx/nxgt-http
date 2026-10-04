@@ -57,7 +57,7 @@
 		"@nxgt/httpyz": "workspace:^",
 		"@nxgt/openapi-httpyz": "workspace:^",
 		"@tanstack/query-core": "^5.90.0",
-		"typescript": "^6.0.3"
+		"typescript": "^6.0.3 || ^7.0.0"
 	},
 	"peerDependenciesMeta": {
 		"@nxgt/openapi-httpyz": {

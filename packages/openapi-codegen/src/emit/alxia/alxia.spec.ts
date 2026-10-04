@@ -73,7 +73,7 @@ describe('alxia.ts', () => {
 		expect(code).toContain(
 			'export const operations = {\n\tgetToy,\n\tsearchPets,\n} as const;',
 		);
-		expect(code).not.toContain('@alxia/core');
+		expect(code).not.toContain("from '@alxia/core'");
 	});
 
 	it('reads a query list given once as a list of one, and splits a list sent with commas', async () => {
@@ -279,7 +279,7 @@ describe('alxia.ts', () => {
 			'ignored: upload: alxia.ts leaves it out. Its body is application/octet-stream, which alxia hands over as bytes, unvalidated: binary bodies and streams are not declared yet',
 			'ignored: download: alxia.ts leaves it out. Its 200 reply is application/pdf: binary replies are not declared yet',
 			'ignored: lines: alxia.ts leaves it out. Its 200 reply is JSON Lines (application/jsonl), which alxia does not stream yet',
-			'ignored: events: alxia.ts leaves it out. Its 200 reply streams events alxia cannot send: its eventStream sends unnamed events, each its data as JSON',
+			"ignored: events: alxia.ts leaves it out. Its 200 reply streams the event `ping` with text data: alxia's eventStream sends each event's data as JSON",
 		]);
 	});
 
@@ -368,7 +368,9 @@ describe('alxia.ts', () => {
 		);
 		expect(code).toContain('export const getBoard = {');
 		expect(code).toContain("\t'get-board': getBoard,");
-		expect(code).toContain("`app.route(operations['get-board'], handler)`");
+		expect(code).toContain(
+			"`app.route(operations['get-board'], ...middlewares, handler)`",
+		);
 	});
 
 	it('refuses an operationId that would shadow a name alxia.ts declares', async () => {
@@ -533,6 +535,132 @@ describe('alxia.ts', () => {
 		expect(code).toContain(
 			'/** Every operation alxia routes, by operationId. */\nexport const operations = {} as const;',
 		);
+	});
+
+	it('says how the file is used: route() with its middlewares, validate(), responds, @alxia/openapi', async () => {
+		const { code } = await alxia(doc({ '/a': { get: { responses: ok } } }));
+		const usage = code.split('*/')[0] ?? '';
+		expect(usage).toContain('app.route(operation, ...middlewares, handler)');
+		expect(usage).toContain('@alxia/core 0.4 or later');
+		expect(usage).toContain('`validate(operation)`');
+		expect(usage).toContain('`responds`');
+		expect(usage).toContain('`@alxia/openapi`');
+		expect(code).not.toContain('app.route(operation, handler)');
+	});
+
+	it('validates cookies, read from text, where the other files leave them out with a warning', async () => {
+		const spec = doc({
+			'/me': {
+				get: {
+					operationId: 'getMe',
+					parameters: [
+						{
+							name: 'session',
+							in: 'cookie',
+							required: true,
+							schema: { type: 'string' },
+						},
+						{ name: 'visits', in: 'cookie', schema: { type: 'integer' } },
+						{ name: 'q', in: 'query', schema: { type: 'string' } },
+					],
+					responses: ok,
+				},
+			},
+		});
+		const { code, operations, messages } = await alxia(spec);
+		expect(code).toContain(
+			'\t\tquery: z.object({\n\t\t\tq: z.string().optional(),\n\t\t}),\n\t\tcookies: z.object({\n\t\t\tsession: z.string(),\n\t\t\tvisits: numeric.pipe(z.int()).optional(),\n\t\t}),',
+		);
+		expect(operations).not.toContain('session');
+		expect(operations).toContain("{ name: 'q', in: 'query'");
+		expect(messages).toEqual([
+			'ignored: getMe: types.ts, zod.ts, operations.ts and paths.ts leave out its cookies `session` and `visits`: a client does not set cookies, the browser or its cookie jar sends them',
+		]);
+		const withHono = await alxia(spec, { hono: true });
+		expect(withHono.messages).toContain(
+			'not_enforced: getMe: hono.ts routes it without validating its cookies `session` and `visits`: read them with getCookie() from hono/cookie',
+		);
+		const one = await alxia(
+			doc({
+				'/me': {
+					get: {
+						parameters: [
+							{ name: 'sid', in: 'cookie', schema: { type: 'string' } },
+						],
+						responses: ok,
+					},
+				},
+			}),
+			{ hono: true },
+		);
+		expect(one.messages.filter((m) => m.includes('sid'))).toEqual([
+			'ignored: getMe: types.ts, zod.ts, operations.ts and paths.ts leave out its cookie `sid`: a client does not set cookies, the browser or its cookie jar sends them',
+			'not_enforced: getMe: hono.ts routes it without validating its cookie `sid`: read it with getCookie() from hono/cookie',
+		]);
+	});
+
+	it('streams named events as eventStream({ name: schema }), and one unnamed event as eventStream(schema)', async () => {
+		const event = (name: string | undefined, data: object | undefined) => ({
+			type: 'object',
+			properties: {
+				...(name !== undefined && { event: { const: name } }),
+				...(data !== undefined && {
+					data: {
+						type: 'string',
+						contentMediaType: 'application/json',
+						contentSchema: data,
+					},
+				}),
+			},
+		});
+		const stream = (id: string, itemSchema: object) => ({
+			get: {
+				operationId: id,
+				responses: {
+					'200': {
+						description: 'ok',
+						content: { 'text/event-stream': { itemSchema } },
+					},
+				},
+			},
+		});
+		const tick = { $ref: '#/components/schemas/Tick' };
+		const { code, messages } = await alxia(
+			doc(
+				{
+					'/named': stream('named', {
+						oneOf: [
+							event('tick', tick),
+							event('end-of-stream', { type: 'integer' }),
+						],
+					}),
+					'/one': stream('one', event('tick', tick)),
+					'/unnamed': stream('unnamed', event(undefined, tick)),
+					'/mixed': stream('mixed', {
+						anyOf: [event(undefined, tick), event('ping', { type: 'null' })],
+					}),
+					'/text': stream('text', event('note', undefined)),
+				},
+				{ Tick: { type: 'object', properties: { n: { type: 'integer' } } } },
+			),
+		);
+		expect(code).toContain("import { eventStream } from '@alxia/core';");
+		expect(code).toContain(
+			"\t\t\t200: eventStream({\n\t\t\t\ttick: zTick,\n\t\t\t\t'end-of-stream': z.int(),\n\t\t\t}),",
+		);
+		expect(code).toContain(
+			'\t\t\t200: eventStream({\n\t\t\t\ttick: zTick,\n\t\t\t}),',
+		);
+		expect(code).toContain('\t\t\t200: eventStream(zTick),');
+		expect(code).toContain(
+			'\t\t\t200: eventStream({\n\t\t\t\tmessage: zTick,\n\t\t\t\tping: z.null(),\n\t\t\t}),',
+		);
+		expect(code).toContain(
+			'export const operations = {\n\tnamed,\n\tone,\n\tunnamed,\n\tmixed,\n} as const;',
+		);
+		expect(messages.filter((m) => m.startsWith('ignored: '))).toEqual([
+			"ignored: text: alxia.ts leaves it out. Its 200 reply streams the event `note` with text data: alxia's eventStream sends each event's data as JSON",
+		]);
 	});
 
 	it('refuses an alxia option that is not a boolean', async () => {

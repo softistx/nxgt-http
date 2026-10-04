@@ -7,8 +7,9 @@ the spec, so they cannot disagree. With the `hono` option, it also types a
 Hono app's routes from the spec, which
 [`@nxgt/openapi-hono`](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-hono/README.md) validates. With the `alxia`
 option, it writes each operation as the data an
-[alxia](https://github.com/softistx/alxia) app's `app.route(operation, handler)`
-takes, so the handler is the only thing left to write.
+[alxia](https://github.com/softistx/alxia) app's
+`app.route(operation, ...middlewares, handler)` takes, so the handler is the
+only thing left to write.
 
 ## Install
 
@@ -21,8 +22,8 @@ Peers:
 
 - `zod` 4.5.4 or later, **required**. The generated validators import it.
   Earlier releases refuse valid values in some intersections.
-- `typescript` 6, **required**: the version every `@nxgt` package pins. The
-  generator does not call it.
+- `typescript` 6 or 7, **required**: `^6.0.3 || ^7.0.0`, the range every
+  `@nxgt` package accepts. The generator does not call it.
 - `@redocly/openapi-core`, **optional**: only for
   [`lint`](docs/guide/options.md#lint). Add it with `bun add -d`.
 
@@ -32,7 +33,8 @@ your app's dependencies. The generator stays a dev dependency.
 
 With `alxia: true`, the generated `alxia.ts` imports only `zod` and
 `./zod`, plus `eventStream` from `@alxia/core` when an operation replies
-with server-sent events. It needs an `@alxia/core` with `app.route()`.
+with server-sent events. It needs `@alxia/core` 0.4 or later, whose
+`app.route(operation, ...middlewares, handler)` it is written for.
 
 The generator runs on Bun. The code it generates runs anywhere, and compiles
 under the strictest `tsconfig` an app may have: `strict`,
@@ -163,7 +165,7 @@ With `alxia: true` in the config, each operation is a constant holding its
 method, its path written `/pets/:petId`, and its schemas:
 
 ```ts
-import { alxia } from '@alxia/core';
+import { alxia, validate } from '@alxia/core';
 import { operations as api } from './generated/alxia';
 
 const app = alxia()
@@ -171,14 +173,27 @@ const app = alxia()
 		const pet = pets.get(params.petId); // a number, read from the path by the spec
 		return pet ? reply.ok(pet) : reply.notFound({ title: 'No such pet' });
 	})
-	.route(api.searchEmployees, ({ body, reply }) => reply.ok(search(body)));
+	// auth runs first; the body is validated after it, just before the handler
+	.route(api.searchEmployees, auth, ({ body, reply }) => reply.ok(search(body)))
+	// validate(operation) among the middlewares validates there instead
+	.route(api.createPet, validate(api.createPet), auth, ({ body, reply }) =>
+		reply.created(add(body)),
+	);
 ```
 
-alxia validates the request, answers a refused one with its own 400, and
-refuses a reply the spec does not declare, at compile time and at run time.
-What alxia cannot route or validate yet, such as a binary body, is left out
-of `alxia.ts` with a warning. See
-[The generated code](docs/guide/generated-code.md#alxiats).
+`app.route(operation, ...middlewares, handler)` needs `@alxia/core` 0.4 or
+later. The route adds two middlewares of its own: a `responds` of the
+operation's replies, first, which checks every reply with a declared status
+against its schema; and a `validate` of its request just before the handler,
+unless `validate(operation)` stands earlier among the middlewares. A request
+the schemas refuse gets alxia's own 400; a status the spec does not declare
+does not compile. Cookie parameters are validated as `cookies`, and named
+server-sent events as `eventStream({ name: schema })`. What alxia cannot
+route or validate yet, such as a binary body, is left out of `alxia.ts` with
+a warning. `matchesSpec(app, operations)` from
+[`@alxia/openapi`](https://github.com/softistx/alxia/tree/develop/packages/openapi)
+(formerly `@alxia/openapi-routes`) fails a test while an operation has no
+route. See [The generated code](docs/guide/generated-code.md#alxiats).
 
 ### Fail CI when the generated code is stale
 
@@ -281,7 +296,7 @@ for (const op of ir.operations) console.log(op.method, op.path, op.operationId);
 
 `loadDocument` reads every file and checks every `$ref`; `buildIR` reduces
 the spec to one shape per schema and operation; `withValidationErrors`
-declares the engine's 400, as `generate()` does unless
+declares the server's 400, as `generate()` does unless
 `validationErrors: false`. Pass
 `{ fs: createMemoryFileSystem({ '/spec/openapi.yaml': text }) }` to read a
 spec that is not on disk. [The architecture](docs/architecture/overview.md)
@@ -315,12 +330,12 @@ this one does not, when it still starts with the generated header. See
 | `importExtension` | `'' \| '.js' \| '.ts'` | `''` | appended to imports between generated files; `'.js'` for `nodenext` ([more](docs/guide/options.md#importextension)) |
 | `enums` | `'object' \| 'union'` | `'object'` | a named enum as an `as const` object that `z.enum()` reuses, or a plain union ([more](docs/guide/options.md#enums)) |
 | `hono` | `boolean` | `false` | also write `hono.ts`; `hono` and `@nxgt/openapi-hono` become runtime dependencies ([more](docs/guide/options.md#hono)) |
-| `alxia` | `boolean` | `false` | also write `alxia.ts`: each operation as the data alxia's `app.route(operation, handler)` takes; imports `@alxia/core` only for a reply of server-sent events ([more](docs/guide/options.md#alxia)) |
+| `alxia` | `boolean` | `false` | also write `alxia.ts`: each operation as the data `@alxia/core` 0.4's `app.route(operation, ...middlewares, handler)` takes; imports `@alxia/core` only for a reply of server-sent events ([more](docs/guide/options.md#alxia)) |
 | `dates` | `'string' \| 'date'` | `'string'` | a `date-time` kept as its string, or decoded to a `Date` by a `z.codec` ([more](docs/guide/options.md#dates)) |
 | `lint` | `boolean \| string` | `false` | lint with Redocly first: `true` uses the `redocly.yaml` beside `input` or Redocly's defaults, a string names the config file. Needs `@redocly/openapi-core`; cannot be combined with `context.fs` ([more](docs/guide/options.md#lint)) |
 | `names` | `Record<string, string>` | `{}` | renames schemas, keyed by file relative to the root document plus `#pointer` when the schema is not the whole file ([more](docs/guide/options.md#names)) |
 | `legacyNullable` | `'warn' \| 'error'` | `'warn'` | OpenAPI 3.0's `nullable: true`: read with a warning, or refused ([more](docs/guide/options.md#legacynullable)) |
-| `validationErrors` | `boolean` | `true` | declare, on each operation that takes a parameter or a body, the 400 `@nxgt/openapi-hono` answers a refused request with, as `ValidationErrorBody` ([more](docs/guide/options.md#validationerrors)) |
+| `validationErrors` | `boolean` | `true` | declare, on each operation that takes a parameter or a body, the 400 the server answers a refused request with, as `ValidationErrorBody`: `@nxgt/openapi-hono`'s; alxia's with `alxia` and not `hono`; a union of both with both ([more](docs/guide/options.md#validationerrors)) |
 | `check` | `boolean` | `false` | write nothing; list in `drifted` every file that is missing, stale, or generated before and no longer generated |
 
 | Context | Type | Default | Description |
@@ -417,15 +432,26 @@ It never approximates silently.
 ##### `withValidationErrors`
 
 ```ts
-function withValidationErrors(ir: ApiIR, root: Location): ApiIR;
+type ValidationServer = 'hono' | 'alxia' | 'both';
+
+function withValidationErrors(
+	ir: ApiIR,
+	root: Location,
+	server?: ValidationServer, // default 'hono'
+): ApiIR;
 ```
 
-`ir` with the 400 `@nxgt/openapi-hono` answers a refused request with
-declared on each operation that takes a parameter or a body, alone or in a
-union with the schema of the spec's own 400, and its body added to the
-schemas as `ValidationErrorBody`; `root` is the spec's root
-document, `doc.entry`. It returns `ir` itself when no operation takes an
-input. `generate()` runs it unless `validationErrors: false`; see
+`ir` with the 400 the server answers a refused request with declared on
+each operation that takes a parameter or a body, alone or in a union with
+the schema of the spec's own 400, and its body added to the schemas as
+`ValidationErrorBody`; `root` is the spec's root document, `doc.entry`.
+`server` picks the body: `'hono'`, `@nxgt/openapi-hono`'s
+`{ status, message, timestamp, issues }`; `'alxia'`, alxia's
+`{ error: 'validation', issues }`, also declared on an operation that takes
+only a cookie, since alxia validates cookies; `'both'`, a union of the two.
+It returns `ir` itself when no operation takes an input. `generate()` runs
+it unless `validationErrors: false`, with `'alxia'` for `alxia` without
+`hono`, `'both'` for both, and `'hono'` otherwise; see
 [the option](docs/guide/options.md#validationerrors).
 
 ##### `createMemoryFileSystem`
@@ -483,7 +509,7 @@ Every method an operation may have, OpenAPI 3.2's `query` included.
 const VALIDATION_ERROR_BODY: 'ValidationErrorBody';
 ```
 
-The name `withValidationErrors` declares the engine's 400 body under:
+The name `withValidationErrors` declares the server's 400 body under:
 `ValidationErrorBody` in `types.ts`, `zValidationErrorBody` in `zod.ts`.
 
 ##### `nodeFileSystem`
@@ -840,7 +866,8 @@ A second `components.schemas` key standing for a schema already named, in
 | `summary`, `description` | `string \| undefined` | |
 | `deprecated` | `boolean` | |
 | `tags` | `string[]` | |
-| `parameters` | `ParamIR[]` | |
+| `parameters` | `ParamIR[]` | its path, query and header parameters |
+| `cookies` | `ParamIR[]` | its cookie parameters, apart: only `alxia.ts` validates them |
 | `body` | `BodyIR \| undefined` | |
 | `responses` | `ResponseIR[]` | |
 | `location` | `Location` | |
@@ -873,10 +900,11 @@ One parameter of `OperationIR.parameters`.
 ##### `ParamLocation`
 
 ```ts
-type ParamLocation = 'path' | 'query' | 'header';
+type ParamLocation = 'path' | 'query' | 'header' | 'cookie';
 ```
 
-Where a parameter goes. Cookie parameters are refused.
+Where a parameter goes. A `cookie` parameter is kept in
+`OperationIR.cookies`, never in `parameters`.
 
 ##### `BodyIR`
 
@@ -1178,12 +1206,12 @@ shows each in full.
 
 | File | Exports |
 | --- | --- |
-| `types.ts` | per schema, `interface` or `type <Name>`, and `<Name>Input` where defaults make input differ; a second `components.schemas` key for a named schema, as an alias; per named enum of two or more strings or numbers, `const <Name>` (with `enums: 'object'`); per operation, `<Operation>Param`, `<Operation>Query`, `<Operation>Header`, and an inline body or reply named `<Operation>Body`, `<Operation><status>Response`; `Operations`, `ClientOperations`, `OperationsByRoute`, `PathsByMethod`, `OperationsByTag`, `PathsByTag`; `Wire<T>` with `dates: 'date'`; `ValidationErrorBody`, the engine's 400, unless `validationErrors: false` or no operation takes an input |
+| `types.ts` | per schema, `interface` or `type <Name>`, and `<Name>Input` where defaults make input differ; a second `components.schemas` key for a named schema, as an alias; per named enum of two or more strings or numbers, `const <Name>` (with `enums: 'object'`); per operation, `<Operation>Param`, `<Operation>Query`, `<Operation>Header`, and an inline body or reply named `<Operation>Body`, `<Operation><status>Response`; `Operations`, `ClientOperations`, `OperationsByRoute`, `PathsByMethod`, `OperationsByTag`, `PathsByTag`; `Wire<T>` with `dates: 'date'`; `ValidationErrorBody`, the server's 400, unless `validationErrors: false` or no operation takes an input |
 | `zod.ts` | `z<Name>`, a validator per schema, `zValidationErrorBody` included |
 | `operations.ts` | `operations`; `z<Operation>Param`, `z<Operation>Query`, `z<Operation>Header`, `z<Operation>Form`; the types `OperationSpec`, `MediaSpec`, `ParameterSpec` |
 | `paths.ts` | `paths`, `operations`, `components`, `webhooks`, `$defs`: the openapi-typescript shape. `webhooks` and `$defs` are always empty, since webhooks are not generated |
 | `hono.ts` | `Replies`, `HonoSpec`, `createApi`, `createRoutes`; `streamEvents` and `streamLines` when an operation Hono can route replies with a stream |
-| `alxia.ts` | per operation alxia can route, a constant named by its `operationId` (`getPet`), `{ method, path, schema }` as `app.route()` takes it; `operations`, all of them by `operationId` |
+| `alxia.ts` | per operation alxia can route, a constant named by its `operationId` (`getPet`), `{ method, path, schema }` as `app.route(operation, ...middlewares, handler)` takes it; `operations`, all of them by `operationId` |
 
 - **`Operations`**: each operation keyed by `operationId` as a server sees it:
   `method`, `path`, `honoPath`, `param`, `query`, `header`, `json` or `form`,
@@ -1265,12 +1293,23 @@ export const getPet = {
 		params: z.object({ petId: numeric.pipe(z.int().min(1)) }),
 		query: z.object({ fields: z.preprocess(repeated, z.array(z.string())).optional() }),
 		headers: z.object({ 'x-request-id': z.guid() }),
+		cookies: z.object({ session: z.string() }), // a cookie parameter
 		response: { 200: zPet, 304: z.undefined() },
 		detail: { operationId: 'getPet', summary: 'Fetch a pet.' },
 	},
 } as const;
 
-export const operations = { getPet /* , … */ } as const;
+export const watchTicks = {
+	method: 'GET',
+	path: '/ticks',
+	schema: {
+		// named server-sent events: each sent with its `event:` line
+		response: { 200: eventStream({ tick: zTick, done: zDone }) },
+		detail: { operationId: 'watchTicks' },
+	},
+} as const;
+
+export const operations = { getPet, watchTicks /* , … */ } as const;
 ```
 
 ## Traps
@@ -1282,8 +1321,13 @@ export const operations = { getPet /* , … */ } as const;
   convert it. 3.0's `nullable: true` is read with a warning, and
   `legacyNullable: 'error'` refuses it.
 - **Unsupported JSON Schema is an error, not a guess.** `not`,
-  `if`/`then`/`else`, `patternProperties`, tuples and cookie parameters fail
-  the run, each at its pointer ([the full list](docs/guide/schema-mapping.md#refused)).
+  `if`/`then`/`else`, `patternProperties`, tuples, and a cookie that is a
+  list or an object fail the run, each at its pointer
+  ([the full list](docs/guide/schema-mapping.md#refused)).
+- **A cookie parameter is validated by `alxia.ts` alone.** `types.ts`,
+  `zod.ts`, `operations.ts` and `paths.ts` leave it out with an `ignored`
+  warning, since a client does not set cookies; `hono.ts` routes the
+  operation without validating it, with a `not_enforced` warning.
 - **`date-time` stays a string**, validated as RFC 3339 with its offset:
   `2024-01-01T00:00:00` without `Z` is refused. `dates: 'date'` decodes it
   to a `Date` instead; `format: date` stays a string either way.
@@ -1300,7 +1344,9 @@ export const operations = { getPet /* , … */ } as const;
   dev dependency.
 - **`alxia.ts` leaves out the 400 of `validationErrors`.** alxia answers a
   refused request with its own `{ error: 'validation', issues }` and types
-  it itself; a 400 the spec declares is kept.
+  it itself; a 400 the spec declares is kept. The client files declare
+  alxia's body with `alxia` alone, and a union of it and
+  `@nxgt/openapi-hono`'s with `hono` too.
 - **Give `c.json()` a status, and reply with plain objects.** Without a
   status, Hono types a reply with any status, and it matches no declared
   one. A Mongoose document does not type as its schema; return `.lean()`

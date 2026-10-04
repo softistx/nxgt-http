@@ -18,7 +18,7 @@ bun add -d @nxgt/openapi-codegen typescript
 
 `@nxgt/httpyz` and `@nxgt/openapi-httpyz` are required peers. The generated
 `operations.ts` imports `zod`, so the app needs it too. TypeScript is a peer,
-`^6.0.3`, as in every `@nxgt/*` package. `@nxgt/openapi-codegen` generates
+`^6.0.3 || ^7.0.0`, as in every `@nxgt/*` package. `@nxgt/openapi-codegen` generates
 the spec's files, with `nxgt-openapi generate`.
 
 ## Usage

@@ -27,12 +27,12 @@ await generate({
 | [`importExtension`](#importextension) | `''` | how generated files import each other |
 | [`enums`](#enums) | `'object'` | a named enum as an `as const` object, or a plain union |
 | [`hono`](#hono) | `false` | also write `hono.ts`: typed routes for a Hono app |
-| [`alxia`](#alxia) | `false` | also write `alxia.ts`: each operation as the data an alxia app's `app.route()` takes |
+| [`alxia`](#alxia) | `false` | also write `alxia.ts`: each operation as the data an alxia app's `app.route(operation, ...middlewares, handler)` takes |
 | [`dates`](#dates) | `'string'` | a `date-time` as its string, or decoded to a `Date` |
 | [`lint`](#lint) | `false` | lint the spec with Redocly before generating |
 | [`names`](#names) | `{}` | renames schemas |
 | [`legacyNullable`](#legacynullable) | `'warn'` | tolerate or refuse 3.0's `nullable: true` |
-| [`validationErrors`](#validationerrors) | `true` | declare the 400 `@nxgt/openapi-hono` answers a refused request with |
+| [`validationErrors`](#validationerrors) | `true` | declare the 400 the server answers a refused request with: `@nxgt/openapi-hono`'s, or alxia's with `alxia` alone |
 | `check` | `false` | write nothing, report in `drifted` what would change, a file no longer generated included |
 
 A [config file](cli.md#config-file) takes the same options, `check` aside,
@@ -104,21 +104,36 @@ gets no file it cannot compile. See [Typed Hono routes](https://github.com/softi
 
 `true` also writes `alxia.ts`: one constant per operation, named by its
 `operationId`, holding what [alxia](https://github.com/softistx/alxia)'s
-`app.route(operation, handler)` takes, then `operations`, all of them by
-`operationId`:
+`app.route(operation, ...middlewares, handler)` takes, then `operations`,
+all of them by `operationId`:
 
 ```ts
-import { alxia } from '@alxia/core';
+import { alxia, validate } from '@alxia/core';
 import { operations as api } from './generated/alxia';
 
-const app = alxia().route(api.getPet, ({ params, reply }) =>
-	reply.ok(pets.get(params.petId)),
-);
+const app = alxia()
+	.route(api.getPet, ({ params, reply }) => reply.ok(pets.get(params.petId)))
+	// auth, then the body validated just before the handler
+	.route(api.updatePet, auth, ({ params, body, reply }) =>
+		reply.ok(pets.update(params.petId, body)),
+	)
+	// validate(operation) placed first: a bad body gets its 400 before auth runs
+	.route(api.createPet, validate(api.createPet), auth, ({ body, reply }) =>
+		reply.created(pets.add(body)),
+	);
 ```
 
 The file is plain data: it imports `zod` and `./zod`, and `eventStream`
 from `@alxia/core` only when an operation replies with server-sent events.
-It needs an `@alxia/core` with `app.route()`.
+It needs `@alxia/core` 0.4 or later: its routes take middlewares, and its
+`validate` and `responds` are middlewares too. The route runs a `responds`
+of the operation's replies first, which checks each reply with a declared
+status, a middleware's included, and a `validate` of its request just
+before the handler, unless `validate(operation)` stands earlier among the
+middlewares. `matchesSpec(app, operations)` from
+[`@alxia/openapi`](https://github.com/softistx/alxia/tree/develop/packages/openapi),
+formerly `@alxia/openapi-routes`, fails a test while an operation has no
+route.
 
 alxia answers a request the schemas refuse with its own 400,
 `{ error: 'validation', issues }`, and types it itself. So the 400 that
@@ -126,12 +141,17 @@ alxia answers a request the schemas refuse with its own 400,
 `alxia.ts`, whichever way that option is set; a 400 the spec declares is
 kept as the spec writes it.
 
+Cookie parameters are validated as `cookies`, and server-sent events,
+named or not, as `eventStream`: see [`alxia.ts`](generated-code.md#alxiats).
+
 An operation alxia cannot route or validate yet is left out, with an
 `ignored` warning: a `TRACE`, a path parameter sharing its segment with text
 (`/files/{name}.json`) or named with a character other than a letter, a
 digit, `_` or `$`, a parameter named twice, a path that matches the same requests as an earlier one
 with other parameter names, a binary body, and a reply that is binary, JSON
-Lines, a form, or events alxia's `eventStream` cannot send. See
+Lines, a form, or events alxia's `eventStream` cannot send: events the
+`itemSchema` does not declare, or one whose data is text, since alxia sends
+every event's data as JSON. See
 [`alxia.ts`](generated-code.md#alxiats) for what is kept, and how.
 
 ## `dates`
@@ -224,15 +244,42 @@ of it. Set `'error'` to refuse it instead, once a spec has been converted.
 ## `validationErrors`
 
 It changes `types.ts`, `zod.ts`, `operations.ts`, `paths.ts` and `hono.ts`,
-never `alxia.ts`: alxia answers a refused request with a 400 of its own.
+never `alxia.ts`: alxia types its own 400 on the route.
 
-`@nxgt/openapi-hono` answers a request its validators refuse with a 400 of
-its own, `{ status: 400, message, timestamp, issues }`, which a spec rarely
-declares. A client that decodes its replies, as `@nxgt/openapi-httpyz` does
-by default, would refuse that reply as one the spec does not describe. So
-the generator declares it, as `ValidationErrorBody` and
-`zValidationErrorBody`, on each operation that takes a parameter or a body,
-the only ones the engine checks:
+The server answers a request its validators refuse with a 400 of its own,
+which a spec rarely declares. A client that decodes its replies, as
+`@nxgt/openapi-httpyz` does by default, would refuse that reply as one the
+spec does not describe. So the generator declares it, as
+`ValidationErrorBody` and `zValidationErrorBody`, on each operation that
+takes a parameter or a body, the only ones the server checks. Which body
+depends on which server the options generate for:
+
+| `hono` | `alxia` | `ValidationErrorBody` |
+| --- | --- | --- |
+| either | `false` | `@nxgt/openapi-hono`'s `{ status: 400, message, timestamp, issues }`, each issue's `target` one of `param`, `query`, `header`, `json`, `form`, `body`, `response` |
+| `false` | `true` | alxia's `{ error: 'validation', issues }`, `@alxia/core`'s `ValidationErrorBody`, each issue `{ target, path, code, message }` with `target` one of `params`, `query`, `headers`, `cookies`, `body`; declared too on an operation that takes only a cookie, which alxia validates |
+| `true` | `true` | a union of the two: a client generated from these files cannot tell which server answers, so it accepts either |
+
+```ts
+// types.ts, with alxia: true and hono off
+export interface ValidationErrorBody {
+	error: 'validation';
+	issues: {
+		target: 'params' | 'query' | 'headers' | 'cookies' | 'body';
+		path: (string | number)[];
+		code: string;
+		message: string;
+	}[];
+}
+```
+
+With both on, the union is the honest default when one spec is served both
+ways, during a move from Hono to alxia for one. When it is served by one of
+them only, generate for that one: drop the other option, or set
+`validationErrors: false` and declare the 400 in the spec, as an app that
+answers with a body of its own does.
+
+Where the spec declares a 400 of its own, the body is added beside it:
 
 | The spec's 400 | What is generated |
 | --- | --- |
@@ -241,13 +288,14 @@ the only ones the engine checks:
 | with a JSON media type and no schema | nothing: any JSON is already declared |
 | with no JSON media type | `application/json: ValidationErrorBody` added to it |
 
-The JSON media type is the one a client reads the engine's
+The JSON media type is the one a client reads the server's
 `application/json` reply as: `application/json` itself, then
 `application/*`, then `*/*`, then the first JSON one, such as
 `application/problem+json`, which a handler's `c.json()` stands for too.
 
-Set `false` when the app answers with a body of its own through
-`onValidationError`, and declare that body in the spec instead. A schema of
+Set `false` when the app answers with a body of its own, through
+`@nxgt/openapi-hono`'s `onValidationError` or alxia's `onRefusal`, and
+declare that body in the spec instead. A schema of
 the spec already named `ValidationErrorBody` is a `name_collision`: rename it
 with [`names`](#names).
 

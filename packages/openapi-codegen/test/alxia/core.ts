@@ -1,8 +1,9 @@
 /**
- * A stand-in for `@alxia/core`, as the generated `alxia.ts` sees it. The
+ * A stand-in for `@alxia/core` 0.4, as the generated `alxia.ts` sees it. The
  * generator does not depend on alxia, so `tsc` checks its fixtures' `alxia.ts`
- * against this copy of the part they touch: `eventStream`, and the
- * `RouteOperation` that `app.route(operation, handler)` takes, which
+ * against this copy of the part they touch: `eventStream`, with one schema or
+ * one per event name, and the `RouteOperation` that
+ * `app.route(operation, ...middlewares, handler)` takes, which
  * `test/types/alxia.ts` holds every fixture's operations to. A deliberate
  * copy, kept in step with alxia by hand: see AGENTS.md.
  */
@@ -127,6 +128,46 @@ export interface EventStreamSchema<Item extends StandardSchemaV1>
 	readonly '~eventStream': Item;
 }
 
+/** The schema of each event's data, by event name. */
+export type EventSchemas = Readonly<Record<string, StandardSchemaV1>>;
+
+/** What a handler yields on a named stream: one of the declared events, with data its schema accepts. */
+export type EventInput<Events extends EventSchemas> = {
+	[Name in keyof Events & string]: {
+		readonly event: Name;
+		readonly data: InferInput<Events[Name]>;
+		readonly id?: string;
+		readonly retry?: number;
+	};
+}[keyof Events & string];
+
+/** What the client reads of a named stream. */
+export type EventOutput<Events extends EventSchemas> = {
+	[Name in keyof Events & string]: {
+		readonly event: Name;
+		readonly data: InferOutput<Events[Name]>;
+		readonly id?: string;
+	};
+}[keyof Events & string];
+
+export interface NamedEventStreamSchema<Events extends EventSchemas>
+	extends StandardSchemaV1<
+		AsyncIterable<EventInput<Events>>,
+		AsyncIterable<EventOutput<Events>>
+	> {
+	readonly '~events': Events;
+}
+
+/** A map of events alxia can write: one at least, none named ''. */
+type Declarable<Events> = [keyof Events] extends [never]
+	? never
+	: '' extends keyof Events
+		? never
+		: unknown;
+
 export declare function eventStream<Item extends StandardSchemaV1>(
 	item: Item,
 ): EventStreamSchema<Item>;
+export declare function eventStream<Events extends EventSchemas>(
+	events: Events & Declarable<Events>,
+): NamedEventStreamSchema<Events>;

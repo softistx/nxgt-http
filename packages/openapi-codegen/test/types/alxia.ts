@@ -1,5 +1,5 @@
 /**
- * Every fixture's `alxia.ts` is what alxia's `app.route(operation, handler)`
+ * Every fixture's `alxia.ts` is what alxia's `app.route(operation, ...middlewares, handler)`
  * takes: a `RouteOperation` each, whose `params` accept the path's
  * parameters as the strings they arrive as. Checked against the stand-in of
  * `test/alxia/core.ts`, since the generator does not depend on alxia.
@@ -9,6 +9,7 @@ import type {
 	StandardSchemaV1,
 	StatusCode,
 } from '../alxia/core';
+import type { operations as alxia } from '../generated/alxia/alxia';
 import type { operations as oaiQuery } from '../generated/conformance/oai-query-3.2/alxia';
 import type { operations as oaiTags } from '../generated/conformance/oai-tags-3.2/alxia';
 import type { operations as oaiTictactoe } from '../generated/conformance/oai-tictactoe/alxia';
@@ -46,20 +47,31 @@ type KnownStatuses<Operation> = Operation extends {
 		: false
 	: true;
 
+/** The cookies arrive by name as strings, as alxia hands them over: its `cookies` schema must take them so. */
+type CookiesFit<Operation> = Operation extends {
+	readonly schema: { readonly cookies: infer Cookies extends StandardSchemaV1 };
+}
+	? { [Name in keyof InputOf<Cookies>]: string } extends InputOf<Cookies>
+		? true
+		: false
+	: true;
+
 type Fits<Operation> = Operation extends RouteOperation
 	? KnownStatuses<Operation> extends false
 		? false
-		: Operation extends {
-					readonly schema: {
-						readonly params: infer Params extends StandardSchemaV1;
-					};
-				}
-			? PathParams<Operation['path']> extends InputOf<Params>
-				? keyof InputOf<Params> extends ParamName<Operation['path']>
-					? true
+		: CookiesFit<Operation> extends false
+			? false
+			: Operation extends {
+						readonly schema: {
+							readonly params: infer Params extends StandardSchemaV1;
+						};
+					}
+				? PathParams<Operation['path']> extends InputOf<Params>
+					? keyof InputOf<Params> extends ParamName<Operation['path']>
+						? true
+						: false
 					: false
-				: false
-			: true
+				: true
 	: false;
 
 type AllFit<Table> = false extends {
@@ -74,6 +86,7 @@ export type Checks = [
 	Assert<AllFit<typeof split>>,
 	Assert<AllFit<typeof dates>>,
 	Assert<AllFit<typeof streams>>,
+	Assert<AllFit<typeof alxia>>,
 	Assert<AllFit<typeof typespec>>,
 	Assert<AllFit<typeof oaiQuery>>,
 	Assert<AllFit<typeof oaiTags>>,
@@ -87,6 +100,17 @@ export type Checks = [
 	Assert<
 		false extends AllFit<{
 			x: { method: 'GET'; path: '/'; schema: { response: { 299: never } } };
+		}>
+			? true
+			: false
+	>,
+	Assert<
+		false extends AllFit<{
+			x: {
+				method: 'GET';
+				path: '/';
+				schema: { cookies: StandardSchemaV1<{ n: number }> };
+			};
 		}>
 			? true
 			: false

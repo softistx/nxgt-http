@@ -25,7 +25,7 @@
       "peerDependencies": {
         "@nxgt/httpyz": "workspace:^",
         "@nxgt/openapi-httpyz": "workspace:^",
-        "typescript": "^6.0.3",
+        "typescript": "^6.0.3 || ^7.0.0",
       },
     },
     "packages/httpyz": {
@@ -37,7 +37,7 @@
         "zod": "^4.5.4",
       },
       "peerDependencies": {
-        "typescript": "^6.0.3",
+        "typescript": "^6.0.3 || ^7.0.0",
       },
     },
     "packages/httpyz-query": {
@@ -55,7 +55,7 @@
         "@nxgt/httpyz": "workspace:^",
         "@nxgt/openapi-httpyz": "workspace:^",
         "@tanstack/query-core": "^5.90.0",
-        "typescript": "^6.0.3",
+        "typescript": "^6.0.3 || ^7.0.0",
       },
       "optionalPeers": [
         "@nxgt/openapi-httpyz",
@@ -80,7 +80,7 @@
       },
       "peerDependencies": {
         "@redocly/openapi-core": "^2.52.1",
-        "typescript": "^6.0.3",
+        "typescript": "^6.0.3 || ^7.0.0",
         "zod": "^4.5.4",
       },
       "optionalPeers": [
@@ -95,11 +95,12 @@
         "@nxgt/openapi-codegen": "workspace:^",
         "@types/bun": "^1.4.0",
         "hono": "^4.13.4",
+        "typescript-6": "npm:typescript@~6.0.3",
         "zod": "^4.5.4",
       },
       "peerDependencies": {
         "hono": "^4.13.4",
-        "typescript": "^6.0.3",
+        "typescript": "^6.0.3 || ^7.0.0",
       },
     },
     "packages/openapi-httpyz": {
@@ -115,7 +116,7 @@
       },
       "peerDependencies": {
         "@nxgt/httpyz": "workspace:^",
-        "typescript": "^6.0.3",
+        "typescript": "^6.0.3 || ^7.0.0",
       },
     },
     "packages/openapi-msw": {
@@ -127,13 +128,14 @@
         "@nxgt/openapi-httpyz": "workspace:^",
         "@types/bun": "^1.4.0",
         "msw": "^2.15.0",
+        "typescript-6": "npm:typescript@~6.0.3",
         "zod": "^4.5.4",
       },
       "peerDependencies": {
         "@nxgt/httpyz": "workspace:^",
         "@nxgt/openapi-httpyz": "workspace:^",
         "msw": "^2.0.0",
-        "typescript": "^6.0.3",
+        "typescript": "^6.0.3 || ^7.0.0",
       },
     },
     "packages/openapi-nuxt": {
@@ -164,7 +166,7 @@
         "@tanstack/vue-query": "^5.90.0",
         "hono": "^4.0.0",
         "nuxt": "^4.0.0",
-        "typescript": "^6.0.3",
+        "typescript": "^6.0.3 || ^7.0.0",
         "vue": "^3.5.0",
       },
       "optionalPeers": [
@@ -192,7 +194,7 @@
         "@typespec/compiler": "^1.16.0",
         "@typespec/http": "^1.16.0",
         "@typespec/openapi": "^1.16.0",
-        "typescript": "^6.0.3",
+        "typescript": "^6.0.3 || ^7.0.0",
       },
     },
   },
@@ -1543,6 +1545,8 @@
     "type-fest": ["type-fest@5.9.0", "", { "dependencies": { "tagged-tag": "^1.0.0" } }, "sha512-yANm3Jr3GiJ1qgJlxGAVxTOIcEOk1rhQHamlXtnrCK7EHP4HeM9OGxtMg/W7HFdrVzw/ZWJKGVIJusVH85sLtw=="],
 
     "typescript": ["typescript@6.0.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw=="],
+
+    "typescript-6": ["typescript@6.0.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw=="],
 
     "ufo": ["ufo@1.6.4", "", {}, "sha512-JFNbkD1Svwe0KvGi8GOeLcP4kAWQ609twvCdcHxq1oSL8svv39ZuSvajcD8B+5D0eL4+s1Is2D/O6KN3qcTeRA=="],
 

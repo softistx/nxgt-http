@@ -1,0 +1,101 @@
+openapi: 3.2.0
+info:
+  title: Alxia
+  version: 1.0.0
+  description: >-
+    What alxia.ts declares and the other emitters do not: cookies, named
+    server-sent events, and alxia's own 400, generated with alxia alone.
+paths:
+  /me:
+    get:
+      operationId: getMe
+      summary: The signed-in user, by the session cookie.
+      parameters:
+        - name: session
+          in: cookie
+          required: true
+          schema:
+            type: string
+            minLength: 1
+        - name: visits
+          in: cookie
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        '200':
+          description: The user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: No session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /ticks:
+    get:
+      operationId: watchTicks
+      summary: Ticks, then one done event.
+      parameters:
+        - name: every
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+      responses:
+        '200':
+          description: A tick a second, and done when it ends.
+          content:
+            text/event-stream:
+              itemSchema:
+                oneOf:
+                  - type: object
+                    required: [event, data]
+                    properties:
+                      event:
+                        const: tick
+                      data:
+                        type: string
+                        contentMediaType: application/json
+                        contentSchema:
+                          $ref: '#/components/schemas/Tick'
+                  - type: object
+                    required: [event, data]
+                    properties:
+                      event:
+                        const: done
+                      data:
+                        type: string
+                        contentMediaType: application/json
+                        contentSchema:
+                          type: object
+                          required: [count]
+                          properties:
+                            count:
+                              type: integer
+components:
+  schemas:
+    User:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+    Tick:
+      type: object
+      required: [n]
+      properties:
+        n:
+          type: integer
+    Problem:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string

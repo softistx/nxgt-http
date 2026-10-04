@@ -166,15 +166,21 @@ together:
 
 ## Parameters
 
-Parameters are read off a URL or a header, so fewer shapes fit:
+Parameters are read off a URL, a header or a cookie, so fewer shapes fit:
 
 | Allowed | Refused |
 | --- | --- |
-| `in: path`, `query`, `header` | `in: cookie`, `in: querystring` |
+| `in: path`, `query`, `header`, `cookie` | `in: querystring` |
 | scalars, enums, unions of them | objects, maps, nested lists |
-| lists in `query` and `header` | lists in `path` |
-| `style: simple` (path, header), `form` (query) | any other `style`, `deepObject` included |
+| lists in `query` and `header` | lists in `path` and `cookie` |
+| `style: simple` (path, header), `form` (query, cookie) | any other `style`, `deepObject` included |
 | `schema` | `content` |
+
+A cookie parameter is validated by `alxia.ts` only, as its `cookies`. The
+client files leave it out, with an `ignored` warning: a client does not set
+cookies, the browser or its cookie jar sends them. `hono.ts` routes the
+operation without validating it, with a `not_enforced` warning: read it with
+Hono's `getCookie()`.
 
 `Accept`, `Content-Type` and `Authorization` header parameters are ignored,
 as OpenAPI specifies. HTTP carries those itself.

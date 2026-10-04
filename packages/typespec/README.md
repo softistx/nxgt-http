@@ -18,7 +18,7 @@ bun add -d @nxgt/typespec @typespec/compiler @typespec/http @typespec/openapi @t
 
 `@typespec/compiler`, `@typespec/http` and `@typespec/openapi` 1.16 or later
 are peer dependencies,
-and `typescript` 6 too, as for every `@nxgt` package. `@typespec/openapi3`
+and `typescript` 6 or 7 too, as for every `@nxgt` package. `@typespec/openapi3`
 compiles the spec, and `@nxgt/openapi-codegen` generates the code from it.
 The generator's CLI, `nxgt-openapi`, runs on [Bun](https://bun.sh): it needs
 `bun` on the PATH, even when called through `npx` or an npm script.

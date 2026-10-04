@@ -113,7 +113,6 @@ describe('buildIR — operations', () => {
 					'/e/{id}': {
 						get: {
 							parameters: [
-								{ name: 'session', in: 'cookie', schema: { type: 'string' } },
 								{
 									name: 'filter',
 									in: 'query',
@@ -142,13 +141,63 @@ describe('buildIR — operations', () => {
 				}),
 			),
 		).toEqual([
-			{ code: 'unsupported_parameter', pointer: `${at}/parameters/0/in` },
-			{ code: 'unsupported_parameter', pointer: `${at}/parameters/1/style` },
-			{ code: 'unsupported_parameter', pointer: `${at}/parameters/2/content` },
+			{ code: 'unsupported_parameter', pointer: `${at}/parameters/0/style` },
+			{ code: 'unsupported_parameter', pointer: `${at}/parameters/1/content` },
 			{ code: 'path_parameter_mismatch', pointer: at },
 			{ code: 'path_parameter_mismatch', pointer: at },
-			{ code: 'unsupported_parameter', pointer: `${at}/parameters/3/schema` },
+			{ code: 'unsupported_parameter', pointer: `${at}/parameters/2/schema` },
 		]);
+	});
+
+	it('keeps cookie parameters apart from the others, and refuses a cookie list', async () => {
+		const api = await build(
+			spec({
+				'/me': {
+					parameters: [
+						{ name: 'theme', in: 'cookie', schema: { type: 'string' } },
+					],
+					get: {
+						operationId: 'me',
+						parameters: [
+							{
+								name: 'session',
+								in: 'cookie',
+								required: true,
+								schema: { type: 'string' },
+							},
+							{ name: 'q', in: 'query', schema: { type: 'string' } },
+						],
+						responses: ok,
+					},
+				},
+			}),
+		);
+		const [me] = api.operations;
+		expect(me?.parameters.map((p) => p.name)).toEqual(['q']);
+		expect(me?.cookies).toMatchObject([
+			{ name: 'theme', in: 'cookie', required: false },
+			{ name: 'session', in: 'cookie', required: true },
+		]);
+
+		const at = '/paths/~1me/get/parameters/0';
+		const cookie = (schema: object, more: object = {}) =>
+			spec({
+				'/me': {
+					get: {
+						parameters: [{ name: 'ids', in: 'cookie', schema, ...more }],
+						responses: ok,
+					},
+				},
+			});
+		expect(
+			await errors(cookie({ type: 'array', items: { type: 'string' } })),
+		).toEqual([{ code: 'unsupported_parameter', pointer: `${at}/schema` }]);
+		expect(await errors(cookie({ type: 'object' }))).toEqual([
+			{ code: 'unsupported_parameter', pointer: `${at}/schema` },
+		]);
+		expect(
+			await errors(cookie({ type: 'string' }, { style: 'simple' })),
+		).toEqual([{ code: 'unsupported_parameter', pointer: `${at}/style` }]);
 	});
 
 	it('derives a missing operationId, and refuses a duplicate', async () => {

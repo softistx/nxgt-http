@@ -2,6 +2,7 @@ import type { Diagnostic } from '../errors';
 import type { ApiIR, OperationIR } from '../ir/types';
 import { emitAlxia } from './alxia';
 import { EmitContext, type EmitOptions } from './context';
+import { warnCookies } from './cookies';
 import { emitHono } from './hono';
 import { emitOperations, operationTypes } from './operations';
 import { emitPaths } from './paths';
@@ -35,6 +36,7 @@ export function emitFiles(
 	specOperations: readonly OperationIR[] = ir.operations,
 ): { files: GeneratedFile[]; warnings: Diagnostic[] } {
 	const ctx = new EmitContext(ir, options);
+	warnCookies(ctx);
 	const operations = emitOperations(ctx);
 	const files = [
 		{

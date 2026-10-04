@@ -33,7 +33,7 @@ history.
   TypeSpec body with implicit visibility requires those properties; declare
   the body as `Create<T>` meanwhile.
 - **More of the spec in `alxia.ts`** — binary bodies and replies, JSON
-  Lines, named server-sent events, and several media types on one body or
+  Lines, events whose data is text, and several media types on one body or
   reply, once alxia reads or sends them; such an operation is left out
   today, with a warning.
 - **Tuples** — `prefixItems` and `items` as a list, refused today as not
@@ -57,6 +57,14 @@ history.
 
 ## Shipped
 
+- **`alxia.ts` for `@alxia/core` 0.4's middleware model** —
+  `app.route(operation, ...middlewares, handler)`, with `validate(operation)`
+  placed among the middlewares and the route's own `responds`; cookie
+  parameters validated as `cookies`, where the other files leave them out
+  with a warning rather than fail the run; named server-sent events as
+  `eventStream({ name: schema })`; and alxia's own 400 as
+  `ValidationErrorBody` in the client files, with `alxia` alone — 0.7.0.
+- **TypeScript 7 accepted as a peer**, beside 6 — 0.7.0.
 - **`alxia.ts`, every operation as the data an alxia app's `app.route()`
   takes** (`alxia` option): its method, its `:name` path and its schemas,
   with concrete Zod types — 0.6.0.

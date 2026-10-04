@@ -49,6 +49,6 @@
 	"peerDependencies": {
 		"@nxgt/httpyz": "workspace:^",
 		"@nxgt/openapi-httpyz": "workspace:^",
-		"typescript": "^6.0.3"
+		"typescript": "^6.0.3 || ^7.0.0"
 	}
 }

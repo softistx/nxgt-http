@@ -39,7 +39,8 @@ export const server = setupServer(...handlers);
 bun add -d @nxgt/openapi-msw msw @nxgt/openapi-httpyz @nxgt/httpyz
 ```
 
-`msw` 2, `@nxgt/openapi-httpyz` and `@nxgt/httpyz` are peers. The mock reads
+`msw` 2, `@nxgt/openapi-httpyz`, `@nxgt/httpyz` and `typescript` 6 or 7
+(`^6.0.3 || ^7.0.0`) are peers. The mock reads
 the `operations` table through the binding's types, and checks with the
 client's schema checker.
 
@@ -192,6 +193,29 @@ the network's `Response`.
   required gets the server's own issue codes: `invalid_json`,
   `invalid_content_type`, `missing_body`. Answer a refusal your own way with
   `onValidationError`.
+
+  A spec served by alxia, generated with `alxia: true` and no `hono`,
+  declares alxia's 400, `{ error: 'validation', issues }`, so a client that
+  checks its replies refuses the mock's. Answer in alxia's shape:
+
+  ```ts
+  const TARGETS = { param: 'params', header: 'headers', json: 'body', form: 'body' } as const;
+
+  const mock = createOpenApiMsw(operations, {
+  	baseUrl: 'https://api.example.com',
+  	onValidationError: (failure) =>
+  		Response.json(
+  			{
+  				error: 'validation',
+  				issues: failure.issues.map((issue) => ({
+  					...issue,
+  					target: TARGETS[issue.target as keyof typeof TARGETS] ?? issue.target,
+  				})),
+  			},
+  			{ status: 400 },
+  		),
+  });
+  ```
 - **The response.** A body `response` wrote is checked against the status's
   schema, as JSON carries it, so a `Date` is checked as its text. A mock that
   does not match throws a `MockReplyError` naming its issues. MSW then

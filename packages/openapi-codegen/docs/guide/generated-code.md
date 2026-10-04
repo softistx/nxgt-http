@@ -531,7 +531,7 @@ it.
 | `headers` | keyed by lowercased name, as alxia reads them; a list split on commas (`z.preprocess(headerList, …)`) |
 | `cookies` | each cookie parameter by its name, read from its string as a query parameter is; the client files and `hono.ts` leave it out, with a warning |
 | `body` | the schema of `application/json`, of a form, read field by field as `operations.ts`'s `z<Operation>Form`, or of text; `.optional()` when the spec does not require the body |
-| `response` | per status, the schema of its JSON or text; `z.undefined()` for a reply with no content, such as a 204 or a 304; `eventStream(schema)` for server-sent events whose `itemSchema` declares one unnamed event with JSON data; `eventStream({ name: schema, … })` for named events, each sent with its `event:` line, as `@alxia/core` 0.2 and later send them |
+| `response` | per status, the schema of its JSON or text; `z.undefined()` for a reply with no content, such as a 204 or a 304; `eventStream(schema)` for server-sent events whose `itemSchema` declares one unnamed event with JSON data; `eventStream({ name: schema, … })` for named events, each sent with its `event:` line |
 | `detail` | `operationId`, and the `summary`, `description`, `tags` and `deprecated` the spec gives |
 
 alxia validates the request and answers a refused one with its own 400,

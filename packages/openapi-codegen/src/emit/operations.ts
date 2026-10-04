@@ -49,7 +49,7 @@ export const HELPERS: Record<Helper, string> = {
 		'const none = z.object({});',
 	].join('\n'),
 	numeric: [
-		"/** A number in a path, a query or a header: digits, where z.coerce.number() would read '' as 0. */",
+		"/** A number in a path, a query, a header or a cookie: digits, where z.coerce.number() would read '' as 0. */",
 		'const numeric = z',
 		'\t.string()',
 		'\t.regex(/^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$/)',

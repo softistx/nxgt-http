@@ -201,7 +201,7 @@ export class OperationBuilder {
 		return operations;
 	}
 
-	/** Once every schema is built: can each parameter be read from a URL or a header? */
+	/** Once every schema is built: can each parameter be read from a URL, a header or a cookie? */
 	checkParameters(operations: readonly OperationIR[]): void {
 		const scalar = (node: SchemaNode) =>
 			SCALAR_KINDS.has(this.#schemas.resolve(node).kind);

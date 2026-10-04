@@ -165,8 +165,12 @@ With `alxia: true` in the config, each operation is a constant holding its
 method, its path written `/pets/:petId`, and its schemas:
 
 ```ts
-import { alxia, validate } from '@alxia/core';
+import { alxia, defineMiddleware, validate } from '@alxia/core';
 import { operations as api } from './generated/alxia';
+
+const auth = defineMiddleware(({ request, reply }, next) =>
+	request.headers.has('authorization') ? next() : reply(401, { title: 'Sign in' }),
+);
 
 const app = alxia()
 	.route(api.getPet, ({ params, reply }) => {

@@ -152,8 +152,9 @@ or replies, yet. The rest of the warning names which:
 | `… beside /users/{id}: the two match the same requests with other parameter names` | alxia refuses two paths of one shape whose parameters are named apart |
 | `Its body is application/octet-stream, which alxia hands over as bytes, unvalidated` | binary bodies are not declared yet |
 | `Its 200 reply is application/pdf`, `is JSON Lines`, `is a form` | alxia replies with JSON, text or `eventStream`; the others are not declared yet |
-| `streams the event \`ping\` with text data` | alxia's `eventStream` sends every event's data as JSON, so an event whose `data` has no `contentMediaType: application/json` and `contentSchema` cannot be sent as the spec says |
+| `` streams the event `ping` with text data `` | alxia's `eventStream` sends every event's data as JSON, so an event whose `data` has no `contentMediaType: application/json` and `contentSchema` cannot be sent as the spec says |
 | `streams events it does not declare` | the reply has a `schema` but no `itemSchema` naming its events: alxia sends each event from a schema |
+| `` streams an event named "", which alxia's eventStream refuses `` | an event name that is empty or holds a line break or a NUL, which alxia's `eventStream` throws on |
 
 **Fix:** where the spec can say it another way, do: give the parameter its
 own segment (`/files/{name}`), rename it (`{itemId}`), name the parameters of
@@ -197,7 +198,7 @@ export default defineConfig({ input: 'openapi.yaml', output: 'src/generated', al
 An app that answers refusals with a body of its own, through `onRefusal`,
 declares that body in the spec and sets `validationErrors: false`.
 
-### `ignored`: `<operationId>: types.ts, zod.ts, operations.ts and paths.ts leave out its cookie \`session\`: a client does not set cookies, the browser or its cookie jar sends them`
+### `ignored`: `` <operationId>: types.ts, zod.ts, operations.ts and paths.ts leave out its cookie `session`: a client does not set cookies, the browser or its cookie jar sends them ``
 
 **When:** an operation has an `in: cookie` parameter. Up to 0.6.0 the run
 failed instead, with ``cookie parameter `session` is not supported
@@ -216,7 +217,7 @@ cookie on the call yourself, as with `@nxgt/openapi-httpyz`'s call options:
 await api.get('/me', { headers: { cookie: `session=${token}` } });
 ```
 
-### `not_enforced`: `<operationId>: hono.ts routes it without validating its cookie \`session\`: read it with getCookie() from hono/cookie`
+### `not_enforced`: `` <operationId>: hono.ts routes it without validating its cookie `session`: read it with getCookie() from hono/cookie ``
 
 **When:** an operation with an `in: cookie` parameter, generated with
 `hono: true`.
@@ -237,7 +238,7 @@ routes.get('/me', (c) => {
 });
 ```
 
-### `cookie parameter \`ids\` is a list; a cookie carries one value`
+### `` cookie parameter `ids` is a list; a cookie carries one value ``
 
 **When:** an `in: cookie` parameter's schema is an array. An object is
 refused too, with `only strings, numbers, booleans, enums and lists of them

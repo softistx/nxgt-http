@@ -434,7 +434,7 @@ export interface OperationSpec<Client = unknown> {
 /** A location with no parameters declared: whatever arrives there is dropped. */
 const none = z.object({});
 
-/** A number in a path, a query or a header: digits, where z.coerce.number() would read '' as 0. */
+/** A number in a path, a query, a header or a cookie: digits, where z.coerce.number() would read '' as 0. */
 const numeric = z
 	.string()
 	.regex(/^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$/)
@@ -934,7 +934,7 @@ exports[`generated code is unchanged for split: split/alxia.ts 1`] = `
 import { z } from 'zod';
 import { zEmployee, zEmployeeStatus, zErrorResponse, zNewEmployee } from './zod';
 
-/** A number in a path, a query or a header: digits, where z.coerce.number() would read '' as 0. */
+/** A number in a path, a query, a header or a cookie: digits, where z.coerce.number() would read '' as 0. */
 const numeric = z
 	.string()
 	.regex(/^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$/)
@@ -2259,7 +2259,7 @@ const flag = z.stringbool({ truthy: ['true'], falsy: ['false'] });
 /** A location with no parameters declared: whatever arrives there is dropped. */
 const none = z.object({});
 
-/** A number in a path, a query or a header: digits, where z.coerce.number() would read '' as 0. */
+/** A number in a path, a query, a header or a cookie: digits, where z.coerce.number() would read '' as 0. */
 const numeric = z
 	.string()
 	.regex(/^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$/)
@@ -2827,7 +2827,7 @@ import { zPet, zTier } from './zod';
 /** \`true\` or \`false\`, as JSON spells them. */
 const flag = z.stringbool({ truthy: ['true'], falsy: ['false'] });
 
-/** A number in a path, a query or a header: digits, where z.coerce.number() would read '' as 0. */
+/** A number in a path, a query, a header or a cookie: digits, where z.coerce.number() would read '' as 0. */
 const numeric = z
 	.string()
 	.regex(/^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$/)
@@ -4932,7 +4932,7 @@ export interface OperationSpec<Client = unknown> {
 /** A location with no parameters declared: whatever arrives there is dropped. */
 const none = z.object({});
 
-/** A number in a path, a query or a header: digits, where z.coerce.number() would read '' as 0. */
+/** A number in a path, a query, a header or a cookie: digits, where z.coerce.number() would read '' as 0. */
 const numeric = z
 	.string()
 	.regex(/^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$/)
@@ -5148,7 +5148,7 @@ import { eventStream } from '@alxia/core';
 import { z } from 'zod';
 import { zProblem, zTick, zUser, zWatchTicks200ResponseDoneData } from './zod';
 
-/** A number in a path, a query or a header: digits, where z.coerce.number() would read '' as 0. */
+/** A number in a path, a query, a header or a cookie: digits, where z.coerce.number() would read '' as 0. */
 const numeric = z
 	.string()
 	.regex(/^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$/)
@@ -5781,7 +5781,7 @@ export interface OperationSpec<Client = unknown> {
 /** A location with no parameters declared: whatever arrives there is dropped. */
 const none = z.object({});
 
-/** A number in a path, a query or a header: digits, where z.coerce.number() would read '' as 0. */
+/** A number in a path, a query, a header or a cookie: digits, where z.coerce.number() would read '' as 0. */
 const numeric = z
 	.string()
 	.regex(/^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$/)
@@ -6334,7 +6334,7 @@ exports[`generated code is unchanged for typespec: typespec/alxia.ts 1`] = `
 import { z } from 'zod';
 import { zCreatePet, zPet, zPetMergePatchUpdate, zPetPage, zProblem, zStatus } from './zod';
 
-/** A number in a path, a query or a header: digits, where z.coerce.number() would read '' as 0. */
+/** A number in a path, a query, a header or a cookie: digits, where z.coerce.number() would read '' as 0. */
 const numeric = z
 	.string()
 	.regex(/^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$/)

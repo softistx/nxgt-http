@@ -59,7 +59,7 @@ history.
 
 - **`alxia.ts` for `@alxia/core` 0.4's middleware model** —
   `app.route(operation, ...middlewares, handler)`, with `validate(operation)`
-  placed among the middlewares and the route's own `responds`; cookie
+  and `responds(operation)` placed among the middlewares; cookie
   parameters validated as `cookies`, where the other files leave them out
   with a warning rather than fail the run; named server-sent events as
   `eventStream({ name: schema })`; and alxia's own 400 as

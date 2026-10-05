@@ -507,12 +507,14 @@ const app = alxia()
 	);
 ```
 
-The route adds two middlewares of its own around those it is given: a
-`responds` of `schema.response` first, which checks every reply whose status
-the operation declares, a middleware's included, and a `validate` of the
-request parts just before the handler. `validate(operation)` placed among
-the middlewares replaces that last one: the middlewares before it read the
-request unvalidated. `matchesSpec(app, operations)`, from
+The route adds two middlewares of its own, just before the handler: a
+`validate` of the request parts and a `responds` of `schema.response`, which
+checks the handler's reply. A reply a middleware before them makes, such as
+auth's 401, is sent as it is. `validate(operation)` or `responds(operation)`
+placed among the middlewares replaces the implicit one: the middlewares
+before a `validate(operation)` read the request unvalidated, and a
+`responds(operation)` placed first also checks their replies.
+`matchesSpec(app, operations)`, from
 [`@alxia/openapi`](https://github.com/softistx/alxia/tree/develop/packages/openapi)
 (formerly `@alxia/openapi-routes`), fails a test while an operation of the
 table has no route. Each file opens with a comment saying as much.

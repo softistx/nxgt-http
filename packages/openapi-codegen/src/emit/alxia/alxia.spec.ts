@@ -543,7 +543,9 @@ describe('alxia.ts', () => {
 		expect(usage).toContain('app.route(operation, ...middlewares, handler)');
 		expect(usage).toContain('@alxia/core 0.4 or later');
 		expect(usage).toContain('`validate(operation)`');
-		expect(usage).toContain('`responds`');
+		expect(usage).toContain('`responds(operation)`');
+		expect(usage).toContain("checks the handler's reply");
+		expect(usage).not.toContain('run first');
 		expect(usage).toContain('`@alxia/openapi`');
 		expect(code).not.toContain('app.route(operation, handler)');
 	});

@@ -186,12 +186,13 @@ const app = alxia()
 ```
 
 `app.route(operation, ...middlewares, handler)` needs `@alxia/core` 0.4 or
-later. The route adds two middlewares of its own: a `responds` of the
-operation's replies, first, which checks every reply with a declared status
-against its schema; and a `validate` of its request just before the handler,
-unless `validate(operation)` stands earlier among the middlewares. A request
-the schemas refuse gets alxia's own 400; a status the spec does not declare
-does not compile. Cookie parameters are validated as `cookies`, and named
+later. The route adds two middlewares of its own, just before the handler: a
+`validate` of its request and a `responds` of the operation's replies, which
+checks the handler's reply, whose status the types hold to a declared one. A
+middleware's own reply, such as auth's 401, is sent as it is. Place
+`validate(operation)` or `responds(operation)` among the middlewares to move
+either earlier. A request the schemas refuse gets alxia's own 400; a status
+the spec does not declare does not compile. Cookie parameters are validated as `cookies`, and named
 server-sent events as `eventStream({ name: schema })`. What alxia cannot
 route or validate yet, such as a binary body, is left out of `alxia.ts` with
 a warning. `matchesSpec(app, operations)` from

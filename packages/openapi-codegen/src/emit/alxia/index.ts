@@ -111,11 +111,12 @@ export function emitAlxia(
 /** How the file is used, below the header. */
 const USAGE = `/**
  * Each operation as \`@alxia/core\`'s \`app.route(operation, ...middlewares, handler)\`
- * takes it, @alxia/core 0.4 or later. The route checks each reply against
- * \`schema.response\` with a \`responds\` it runs first, and validates the
- * request just before the handler, unless \`validate(operation)\` stands
- * earlier among the middlewares. \`matchesSpec(app, operations)\`, from
- * \`@alxia/openapi\`, fails while an operation has no route.
+ * takes it, @alxia/core 0.4 or later. The route validates the request and
+ * checks the handler's reply against \`schema.response\`, both just before
+ * the handler: \`validate(operation)\` or \`responds(operation)\` stands
+ * earlier among the middlewares when one is placed there.
+ * \`matchesSpec(app, operations)\`, from \`@alxia/openapi\`, fails while an
+ * operation has no route.
  */`;
 
 /** The imports, then the helpers the schemas call. */

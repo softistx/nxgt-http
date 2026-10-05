@@ -126,10 +126,10 @@ const app = alxia()
 The file is plain data: it imports `zod` and `./zod`, and `eventStream`
 from `@alxia/core` only when an operation replies with server-sent events.
 It needs `@alxia/core` 0.4 or later: its routes take middlewares, and its
-`validate` and `responds` are middlewares too. The route runs a `responds`
-of the operation's replies first, which checks each reply with a declared
-status, a middleware's included, and a `validate` of its request just
-before the handler, unless `validate(operation)` stands earlier among the
+`validate` and `responds` are middlewares too. The route runs a `validate`
+of its request and a `responds` of the operation's replies, which checks
+the handler's reply, both just before the handler, unless
+`validate(operation)` or `responds(operation)` stands earlier among the
 middlewares. `matchesSpec(app, operations)` from
 [`@alxia/openapi`](https://github.com/softistx/alxia/tree/develop/packages/openapi),
 formerly `@alxia/openapi-routes`, fails a test while an operation has no

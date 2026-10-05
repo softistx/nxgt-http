@@ -924,11 +924,12 @@ exports[`generated code is unchanged for split: split/alxia.ts 1`] = `
 
 /**
  * Each operation as \`@alxia/core\`'s \`app.route(operation, ...middlewares, handler)\`
- * takes it, @alxia/core 0.4 or later. The route checks each reply against
- * \`schema.response\` with a \`responds\` it runs first, and validates the
- * request just before the handler, unless \`validate(operation)\` stands
- * earlier among the middlewares. \`matchesSpec(app, operations)\`, from
- * \`@alxia/openapi\`, fails while an operation has no route.
+ * takes it, @alxia/core 0.4 or later. The route validates the request and
+ * checks the handler's reply against \`schema.response\`, both just before
+ * the handler: \`validate(operation)\` or \`responds(operation)\` stands
+ * earlier among the middlewares when one is placed there.
+ * \`matchesSpec(app, operations)\`, from \`@alxia/openapi\`, fails while an
+ * operation has no route.
  */
 
 import { z } from 'zod';
@@ -1398,11 +1399,12 @@ exports[`generated code is unchanged for query: query/alxia.ts 1`] = `
 
 /**
  * Each operation as \`@alxia/core\`'s \`app.route(operation, ...middlewares, handler)\`
- * takes it, @alxia/core 0.4 or later. The route checks each reply against
- * \`schema.response\` with a \`responds\` it runs first, and validates the
- * request just before the handler, unless \`validate(operation)\` stands
- * earlier among the middlewares. \`matchesSpec(app, operations)\`, from
- * \`@alxia/openapi\`, fails while an operation has no route.
+ * takes it, @alxia/core 0.4 or later. The route validates the request and
+ * checks the handler's reply against \`schema.response\`, both just before
+ * the handler: \`validate(operation)\` or \`responds(operation)\` stands
+ * earlier among the middlewares when one is placed there.
+ * \`matchesSpec(app, operations)\`, from \`@alxia/openapi\`, fails while an
+ * operation has no route.
  */
 
 import { z } from 'zod';
@@ -2814,11 +2816,12 @@ exports[`generated code is unchanged for kitchen-sink: kitchen-sink/alxia.ts 1`]
 
 /**
  * Each operation as \`@alxia/core\`'s \`app.route(operation, ...middlewares, handler)\`
- * takes it, @alxia/core 0.4 or later. The route checks each reply against
- * \`schema.response\` with a \`responds\` it runs first, and validates the
- * request just before the handler, unless \`validate(operation)\` stands
- * earlier among the middlewares. \`matchesSpec(app, operations)\`, from
- * \`@alxia/openapi\`, fails while an operation has no route.
+ * takes it, @alxia/core 0.4 or later. The route validates the request and
+ * checks the handler's reply against \`schema.response\`, both just before
+ * the handler: \`validate(operation)\` or \`responds(operation)\` stands
+ * earlier among the middlewares when one is placed there.
+ * \`matchesSpec(app, operations)\`, from \`@alxia/openapi\`, fails while an
+ * operation has no route.
  */
 
 import { z } from 'zod';
@@ -3619,11 +3622,12 @@ exports[`generated code is unchanged for dates: dates/alxia.ts 1`] = `
 
 /**
  * Each operation as \`@alxia/core\`'s \`app.route(operation, ...middlewares, handler)\`
- * takes it, @alxia/core 0.4 or later. The route checks each reply against
- * \`schema.response\` with a \`responds\` it runs first, and validates the
- * request just before the handler, unless \`validate(operation)\` stands
- * earlier among the middlewares. \`matchesSpec(app, operations)\`, from
- * \`@alxia/openapi\`, fails while an operation has no route.
+ * takes it, @alxia/core 0.4 or later. The route validates the request and
+ * checks the handler's reply against \`schema.response\`, both just before
+ * the handler: \`validate(operation)\` or \`responds(operation)\` stands
+ * earlier among the middlewares when one is placed there.
+ * \`matchesSpec(app, operations)\`, from \`@alxia/openapi\`, fails while an
+ * operation has no route.
  */
 
 import { z } from 'zod';
@@ -4650,11 +4654,12 @@ exports[`generated code is unchanged for streams: streams/alxia.ts 1`] = `
 
 /**
  * Each operation as \`@alxia/core\`'s \`app.route(operation, ...middlewares, handler)\`
- * takes it, @alxia/core 0.4 or later. The route checks each reply against
- * \`schema.response\` with a \`responds\` it runs first, and validates the
- * request just before the handler, unless \`validate(operation)\` stands
- * earlier among the middlewares. \`matchesSpec(app, operations)\`, from
- * \`@alxia/openapi\`, fails while an operation has no route.
+ * takes it, @alxia/core 0.4 or later. The route validates the request and
+ * checks the handler's reply against \`schema.response\`, both just before
+ * the handler: \`validate(operation)\` or \`responds(operation)\` stands
+ * earlier among the middlewares when one is placed there.
+ * \`matchesSpec(app, operations)\`, from \`@alxia/openapi\`, fails while an
+ * operation has no route.
  */
 
 import { eventStream } from '@alxia/core';
@@ -5137,11 +5142,12 @@ exports[`generated code is unchanged for alxia: alxia/alxia.ts 1`] = `
 
 /**
  * Each operation as \`@alxia/core\`'s \`app.route(operation, ...middlewares, handler)\`
- * takes it, @alxia/core 0.4 or later. The route checks each reply against
- * \`schema.response\` with a \`responds\` it runs first, and validates the
- * request just before the handler, unless \`validate(operation)\` stands
- * earlier among the middlewares. \`matchesSpec(app, operations)\`, from
- * \`@alxia/openapi\`, fails while an operation has no route.
+ * takes it, @alxia/core 0.4 or later. The route validates the request and
+ * checks the handler's reply against \`schema.response\`, both just before
+ * the handler: \`validate(operation)\` or \`responds(operation)\` stands
+ * earlier among the middlewares when one is placed there.
+ * \`matchesSpec(app, operations)\`, from \`@alxia/openapi\`, fails while an
+ * operation has no route.
  */
 
 import { eventStream } from '@alxia/core';
@@ -6324,11 +6330,12 @@ exports[`generated code is unchanged for typespec: typespec/alxia.ts 1`] = `
 
 /**
  * Each operation as \`@alxia/core\`'s \`app.route(operation, ...middlewares, handler)\`
- * takes it, @alxia/core 0.4 or later. The route checks each reply against
- * \`schema.response\` with a \`responds\` it runs first, and validates the
- * request just before the handler, unless \`validate(operation)\` stands
- * earlier among the middlewares. \`matchesSpec(app, operations)\`, from
- * \`@alxia/openapi\`, fails while an operation has no route.
+ * takes it, @alxia/core 0.4 or later. The route validates the request and
+ * checks the handler's reply against \`schema.response\`, both just before
+ * the handler: \`validate(operation)\` or \`responds(operation)\` stands
+ * earlier among the middlewares when one is placed there.
+ * \`matchesSpec(app, operations)\`, from \`@alxia/openapi\`, fails while an
+ * operation has no route.
  */
 
 import { z } from 'zod';

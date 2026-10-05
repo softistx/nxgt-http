@@ -1,5 +1,14 @@
 # @nxgt/datasource-rest
 
+## 3.0.2
+
+### Patch Changes
+
+- [#99](https://github.com/softistx/nxgt-http/pull/99) [`6611e89`](https://github.com/softistx/nxgt-http/commit/6611e8918a93567a48d00ccea41ae6b134b37131) Thanks [@SteveGT96](https://github.com/SteveGT96)! - Accept TypeScript 7: the `typescript` peer is `^6.0.3 || ^7.0.0`, as in every `@nxgt` package of this repository, so a project on TypeScript 7.0 installs without an incorrect-peer warning.
+- Updated dependencies [[`6611e89`](https://github.com/softistx/nxgt-http/commit/6611e8918a93567a48d00ccea41ae6b134b37131)]:
+  - @nxgt/httpyz@0.3.2
+  - @nxgt/openapi-httpyz@0.3.1
+
 ## 3.0.1
 
 ### Patch Changes

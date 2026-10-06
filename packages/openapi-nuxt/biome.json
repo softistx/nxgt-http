@@ -1,1 +1,17 @@
-{ "root": false, "extends": "//" }
+{
+	"root": false,
+	"extends": "//",
+	"overrides": [
+		{
+			"includes": ["**/*.vue"],
+			"linter": {
+				"rules": {
+					"correctness": {
+						"noUnusedVariables": "off",
+						"noUnusedImports": "off"
+					}
+				}
+			}
+		}
+	]
+}

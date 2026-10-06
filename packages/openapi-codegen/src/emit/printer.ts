@@ -1,7 +1,7 @@
 /** Helpers that print JavaScript and TypeScript source text. */
-import type { SchemaNode } from '../ir/types';
 
-const IDENTIFIER = /^[A-Za-z_$][\w$]*$/;
+import { IDENTIFIER } from '../ir/naming';
+import type { SchemaNode } from '../ir/types';
 
 /** Past this many characters, a list goes one item per line. */
 const WIDTH = 72;

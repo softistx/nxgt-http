@@ -106,7 +106,9 @@ node, or one that reaches itself, is marked `recursive`.
   operation's, and the operation's win. Keys are `in:name`, lowercased for
   headers.
   - Each parameter must use its location's style: `simple` for path and
-    header, `form` for query.
+    header, `form` for query and cookie.
+  - Cookie parameters go to `OperationIR.cookies`, never `parameters`: only
+    `alxia.ts` reads them.
   - `explode` defaults to `style === 'form'`.
   - Path parameters are always required.
   - `Accept`, `Content-Type` and `Authorization` header parameters are
@@ -128,4 +130,5 @@ node, or one that reaches itself, is marked `recursive`.
   keeps the four whole-body kinds.
 - **`checkParameters`** runs after every schema is built, since a parameter's
   schema may be a `$ref`. Each must resolve to a scalar, an enum, a union of
-  those, or a list of them, and a list is not allowed in the path.
+  those, or a list of them, and a list is not allowed in the path or a
+  cookie.

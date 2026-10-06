@@ -174,7 +174,8 @@ export const HTTP_METHODS = [
 
 export type HttpMethod = (typeof HTTP_METHODS)[number];
 
-export type ParamLocation = 'path' | 'query' | 'header';
+/** Where a parameter is read from. A `cookie` one is kept apart, in `OperationIR.cookies`. */
+export type ParamLocation = 'path' | 'query' | 'header' | 'cookie';
 
 export interface ParamIR {
 	name: string;
@@ -240,7 +241,14 @@ export interface OperationIR {
 	description?: string | undefined;
 	deprecated: boolean;
 	tags: string[];
+	/** Its path, query and header parameters. */
 	parameters: ParamIR[];
+	/**
+	 * Its cookie parameters, kept apart from `parameters`: only `alxia.ts`
+	 * validates them. The client files leave them out, as a client does not
+	 * send cookies, and `hono.ts` does not validate them.
+	 */
+	cookies: ParamIR[];
 	body?: BodyIR | undefined;
 	responses: ResponseIR[];
 	location: Location;

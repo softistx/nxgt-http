@@ -1,6 +1,6 @@
 {
 	"name": "@nxgt/openapi-nuxt",
-	"version": "0.3.0",
+	"version": "0.3.1",
 	"license": "MIT",
 	"type": "module",
 	"main": "./dist/module.js",
@@ -82,7 +82,7 @@
 		"@tanstack/vue-query": "^5.90.0",
 		"hono": "^4.0.0",
 		"nuxt": "^4.0.0",
-		"typescript": "^6.0.3",
+		"typescript": "^6.0.3 || ^7.0.0",
 		"vue": "^3.5.0"
 	},
 	"peerDependenciesMeta": {

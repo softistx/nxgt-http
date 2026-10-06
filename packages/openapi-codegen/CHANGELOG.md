@@ -1,5 +1,23 @@
 # @nxgt/openapi-codegen
 
+## 0.7.0
+
+### Minor Changes
+
+- [#99](https://github.com/softistx/nxgt-http/pull/99) [`6611e89`](https://github.com/softistx/nxgt-http/commit/6611e8918a93567a48d00ccea41ae6b134b37131) Thanks [@SteveGT96](https://github.com/SteveGT96)! - `alxia.ts` is written for `@alxia/core` 0.4's middleware model, and changes the generated output:
+  
+  - **alxia's own 400 in the client files.** With `alxia: true` and `hono` off, `validationErrors` now declares alxia's `{ error: 'validation', issues: [{ target, path, code, message }] }` as `ValidationErrorBody` in `types.ts`, `zod.ts`, `operations.ts` and `paths.ts`, where it declared `@nxgt/openapi-hono`'s `{ status, message, timestamp, issues }`, which alxia never sends. With both `hono` and `alxia` on, it is a union of the two, since a client cannot tell which server answers. `withValidationErrors` takes the server as a third argument, `'hono'` by default.
+  - **Cookie parameters.** An `in: cookie` parameter no longer fails the run with `unsupported_parameter`. `alxia.ts` validates it as the route's `cookies`, read from its string; `types.ts`, `zod.ts`, `operations.ts` and `paths.ts` leave it out with an `ignored` warning, as a client does not set cookies; `hono.ts` routes the operation without validating it, with a `not_enforced` warning. A cookie that is a list or an object is still refused. The IR keeps them in `OperationIR.cookies`, and `ParamLocation` gains `'cookie'`.
+  - **Named server-sent events.** A stream whose `itemSchema` names its events is declared as `eventStream({ tick: zTick, done: zDone })`, sent by alxia with each event's `event:` line, where it was left out. One unnamed event stays `eventStream(schema)`. An event whose data is text, not JSON, is still left out with an `ignored` warning, which now names it.
+  - **Docs for the middleware model.** `alxia.ts` opens with a comment on `app.route(operation, ...middlewares, handler)`, `@alxia/core` 0.4 or later: the route's `validate` of the request and `responds` of the handler's reply, both just before the handler unless `validate(operation)` or `responds(operation)` stands earlier, and `matchesSpec` from `@alxia/openapi` (formerly `@alxia/openapi-routes`). The `operations` comment reads `app.route(operations.x, ...middlewares, handler)`.
+  - **TypeScript 7.** The `typescript` peer is `^6.0.3 || ^7.0.0`.
+
+## 0.6.0
+
+### Minor Changes
+
+- [#94](https://github.com/softistx/nxgt-http/pull/94) [`a45c5b8`](https://github.com/softistx/nxgt-http/commit/a45c5b828ed7cdf2e0e77be055b36d98c82798cd) Thanks [@SteveGT96](https://github.com/SteveGT96)! - Add the `alxia` option, which writes `alxia.ts`: each operation as the data an alxia app's `app.route(operation, handler)` takes — its method, its path written `/pets/:petId`, and its schemas with their concrete Zod types — and `operations`, all of them by `operationId`. The file imports only `zod` and `./zod`, plus `eventStream` from `@alxia/core` for a reply of server-sent events. The schemas read what alxia hands over: path parameters as strings, a query list given once as a list of one, headers lowercased, a body as JSON, a form or text. alxia answers a refused request with its own 400, so the 400 of `validationErrors` is not declared there. An operation alxia cannot route or validate yet (a `TRACE`, a parameter sharing its path segment, a binary body or reply, JSON Lines, named events) is left out with an `ignored` warning.
+
 ## 0.5.1
 
 ### Patch Changes

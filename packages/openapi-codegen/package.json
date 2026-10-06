@@ -1,6 +1,6 @@
 {
 	"name": "@nxgt/openapi-codegen",
-	"version": "0.5.1",
+	"version": "0.7.0",
 	"license": "MIT",
 	"type": "module",
 	"main": "./dist/index.js",
@@ -58,7 +58,7 @@
 	},
 	"peerDependencies": {
 		"@redocly/openapi-core": "^2.52.1",
-		"typescript": "^6.0.3",
+		"typescript": "^6.0.3 || ^7.0.0",
 		"zod": "^4.5.4"
 	},
 	"peerDependenciesMeta": {

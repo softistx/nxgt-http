@@ -179,8 +179,10 @@ generator does not depend on the runtime. Change both together.
 ## alxia (`src/emit/alxia/`)
 
 Written only with the `alxia` option: one `as const` object per operation,
-`{ method, path, schema }`, as alxia's `app.route(operation, handler)` reads
-it, then `operations`. It reuses `operations.ts`'s readers (`fromString`,
+`{ method, path, schema }`, as `@alxia/core` 0.4's
+`app.route(operation, ...middlewares, handler)` reads it, then
+`operations`, below a comment saying how the route validates and checks
+replies (`USAGE`). It reuses `operations.ts`'s readers (`fromString`,
 `formObject`, `valueSchema` and its helpers) and `zod.ts`'s `expr`, so a
 parameter or a form is read from text exactly as the Hono engine reads it.
 Only what alxia hands over differs:
@@ -190,23 +192,31 @@ Only what alxia hands over differs:
   `z.preprocess(repeated, …)`, or `z.preprocess(commas, …)` with
   `explode: false`; the Hono engine does this before validating, alxia does
   not. A header list is split by `headerList`.
+- **Cookies** arrive by name as strings, in `OperationIR.cookies`, apart
+  from `parameters`: only this emitter reads them, as `cookies`, with the
+  query's readers. The client files leave them out and `hono.ts` routes
+  without them; `src/emit/cookies.ts` warns once per operation for each.
 - **Path parameters** arrive as strings, and alxia's types refuse a
   `params` schema whose input does not take them: one that does not read a
   string (an enum of strings, say) is piped from `z.string()`.
 - **It is emitted from the spec's operations**, `generateFiles` passing
   `buildIR`'s operations beside the IR `validationErrors` changed: alxia
-  answers a refused request with its own 400, so the engine's 400 is never
-  declared here.
+  answers a refused request with its own 400, so the server's 400 is never
+  declared here. With `alxia` and not `hono`, the client files declare
+  alxia's body as `ValidationErrorBody` (`withValidationErrors(…, 'alxia')`);
+  with both, a union of the two.
 - **What alxia cannot route or validate is left out** with an `ignored`
   warning, decided by `routable.ts`, a deliberate copy of alxia's router
   rules (`compilePath`): no `TRACE`, a parameter fills its segment, is named
   as an identifier and only once, and two paths of one shape name their
   parameters alike. A body or a reply alxia cannot read or send (binary,
-  JSON Lines, a form reply, named events) leaves its operation out too.
+  JSON Lines, a form reply, events not declared or whose data is text)
+  leaves its operation out too. Events are `eventStream(schema)` for one
+  unnamed `message`, and `eventStream({ name: schema })` otherwise.
   Each operation is printed into a state of its own (`printing.ts`), merged
   only once it is kept, so a left-out one imports nothing.
 - **The folder by role:** `index.ts` assembles the file, `request.ts` prints
-  `params`, `query`, `headers` and `body`, `reply.ts` the `response`
+  `params`, `query`, `headers`, `cookies` and `body`, `reply.ts` the `response`
   schemas, `routable.ts` decides what is left out, `names.ts` names the
   constants.
 - **Names:** each constant is named by `operationConst` (`names.ts`): the

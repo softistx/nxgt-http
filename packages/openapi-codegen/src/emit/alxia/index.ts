@@ -1,15 +1,17 @@
 /**
- * `alxia.ts`, with the `alxia` option: each operation as the data alxia's
- * `app.route(operation, handler)` takes — its method, its path written with
- * `:name`, and its route schema — then `operations`, all of them by
- * operationId. Plain data: it imports `zod` and `./zod`, and `eventStream`
- * from `@alxia/core` only for a reply that streams events.
+ * `alxia.ts`, with the `alxia` option: each operation as the data
+ * `@alxia/core`'s `app.route(operation, ...middlewares, handler)` takes
+ * (0.4 or later) — its method, its path written with `:name`, and its route
+ * schema — then `operations`, all of them by operationId. Plain data: it
+ * imports `zod` and `./zod`, and `eventStream` from `@alxia/core` only for
+ * a reply that streams events.
  *
  * The schemas accept what alxia hands them: path parameters as strings, a
  * query key given once as a string and given more than once as a list,
- * headers keyed lowercased, a body read by its `content-type`. alxia answers
- * a request they refuse with its own 400, which it types itself, so the 400
- * `validationErrors` declares is never written here.
+ * headers keyed lowercased, cookies by name as strings, a body read by its
+ * `content-type`. alxia answers a request they refuse with its own 400,
+ * which it types itself, so the 400 `validationErrors` declares is never
+ * written here.
  */
 import type { OperationIR } from '../../ir/types';
 import type { EmitContext } from '../context';
@@ -22,6 +24,14 @@ import { bodySchema, paramsObject } from './request';
 import { METHODS, STATUSES, shapeOf, unroutable } from './routable';
 
 const RUNTIME = '@alxia/core';
+
+/** Each location's part of alxia's route schema, in the order alxia validates them. */
+const PARTS = [
+	['path', 'params'],
+	['query', 'query'],
+	['header', 'headers'],
+	['cookie', 'cookies'],
+] as const;
 
 /** A fresh printing state: the whole file's, or one operation's until it is kept. */
 const blank = (ctx: EmitContext): Printing => ({
@@ -89,8 +99,25 @@ export function emitAlxia(
 		consts.push(built.text);
 		kept.push(operation);
 	}
-	return file([ctx.header, ...preamble(printing), ...consts, table(kept)]);
+	return file([
+		ctx.header,
+		USAGE,
+		...preamble(printing),
+		...consts,
+		table(kept),
+	]);
 }
+
+/** How the file is used, below the header. */
+const USAGE = `/**
+ * Each operation as \`@alxia/core\`'s \`app.route(operation, ...middlewares, handler)\`
+ * takes it, @alxia/core 0.4 or later. The route validates the request and
+ * checks the handler's reply against \`schema.response\`, both just before
+ * the handler: \`validate(operation)\` or \`responds(operation)\` stands
+ * earlier among the middlewares when one is placed there.
+ * \`matchesSpec(app, operations)\`, from \`@alxia/openapi\`, fails while an
+ * operation has no route.
+ */`;
 
 /** The imports, then the helpers the schemas call. */
 function preamble(printing: Printing): string[] {
@@ -135,7 +162,7 @@ function table(kept: readonly OperationIR[]): string {
 	return [
 		access === undefined
 			? '/** Every operation alxia routes, by operationId. */'
-			: `/** Every operation alxia routes, by operationId: \`app.route(operations${access}, handler)\`. */`,
+			: `/** Every operation alxia routes, by operationId: \`app.route(operations${access}, ...middlewares, handler)\`. */`,
 		entries.length === 0
 			? 'export const operations = {} as const;'
 			: `export const operations = {\n${entries.join('\n')}\n} as const;`,
@@ -149,15 +176,12 @@ function declaration(
 ): { text: string; issues: Issue[] } | string {
 	const issues: Issue[] = [];
 	const lines: string[] = [];
-	for (const location of ['path', 'query', 'header'] as const) {
-		const params = operation.parameters.filter((p) => p.in === location);
+	for (const [location, key] of PARTS) {
+		const params =
+			location === 'cookie'
+				? operation.cookies
+				: operation.parameters.filter((p) => p.in === location);
 		if (params.length === 0) continue;
-		const key =
-			location === 'path'
-				? 'params'
-				: location === 'header'
-					? 'headers'
-					: 'query';
 		lines.push(`\t\t${key}: ${paramsObject(printing, params, location)},`);
 	}
 	if (operation.body) {

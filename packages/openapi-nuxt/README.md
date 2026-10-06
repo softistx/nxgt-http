@@ -53,7 +53,8 @@ bun add @tanstack/vue-query @nxgt/httpyz-query   # for query: true
 ```
 
 `nuxt` 4, `@nxgt/openapi-httpyz` and `@nxgt/httpyz` are peers: the module
-writes a client that imports them into your app. `hono` is an optional peer,
+writes a client that imports them into your app. `typescript` 6 or 7
+(`^6.0.3 || ^7.0.0`) is a required peer, as in every `@nxgt` package. `hono` is an optional peer,
 for `createHonoApp`. `@tanstack/vue-query` and `@nxgt/httpyz-query` are
 optional peers, for `query`. The module refuses to start with `query` set if
 either is missing.

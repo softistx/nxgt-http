@@ -1,6 +1,6 @@
 {
 	"name": "@nxgt/datasource-rest",
-	"version": "3.0.1",
+	"version": "3.0.2",
 	"license": "MIT",
 	"type": "module",
 	"main": "./dist/index.js",
@@ -49,6 +49,6 @@
 	"peerDependencies": {
 		"@nxgt/httpyz": "workspace:^",
 		"@nxgt/openapi-httpyz": "workspace:^",
-		"typescript": "^6.0.3"
+		"typescript": "^6.0.3 || ^7.0.0"
 	}
 }

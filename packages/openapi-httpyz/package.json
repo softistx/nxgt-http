@@ -1,6 +1,6 @@
 {
 	"name": "@nxgt/openapi-httpyz",
-	"version": "0.3.0",
+	"version": "0.3.1",
 	"license": "MIT",
 	"type": "module",
 	"main": "./dist/index.js",
@@ -44,6 +44,6 @@
 	},
 	"peerDependencies": {
 		"@nxgt/httpyz": "workspace:^",
-		"typescript": "^6.0.3"
+		"typescript": "^6.0.3 || ^7.0.0"
 	}
 }

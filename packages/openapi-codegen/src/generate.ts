@@ -3,7 +3,10 @@ import { emitFiles, FILE_NAMES, type GeneratedFile } from './emit';
 import type { Dates, Enums, UnknownKeys } from './emit/context';
 import { CodegenError, type Diagnostic } from './errors';
 import { buildIR, type IROptions } from './ir';
-import { withValidationErrors } from './ir/validation-errors';
+import {
+	type ValidationServer,
+	withValidationErrors,
+} from './ir/validation-errors';
 import { type Lint, lintSpec } from './lint';
 import { loadDocument } from './loader/document';
 import type { FileSystem } from './loader/fs';
@@ -37,10 +40,11 @@ export interface GenerateOptions extends IROptions {
 	hono?: boolean;
 	/**
 	 * Also emit `alxia.ts`: each operation as the data alxia's
-	 * `app.route(operation, handler)` takes, its schemas typed by the spec.
-	 * It imports `zod`, and `@alxia/core` only for a reply that streams
-	 * events. alxia answers a refused request with its own 400, so the
-	 * `validationErrors` 400 is not declared there.
+	 * `app.route(operation, ...middlewares, handler)` takes (`@alxia/core`
+	 * 0.4 or later), its schemas typed by the spec. It imports `zod`, and
+	 * `@alxia/core` only for a reply that streams events. alxia answers a
+	 * refused request with its own 400, so the `validationErrors` 400 is not
+	 * declared there.
 	 */
 	alxia?: boolean;
 	/**
@@ -58,10 +62,14 @@ export interface GenerateOptions extends IROptions {
 	lint?: Lint | undefined;
 	/**
 	 * Declare, on each operation that takes a parameter or a body, the 400
-	 * `@nxgt/openapi-hono` answers a request its validators refuse with, as
+	 * the server answers a request its validators refuse with, as
 	 * `ValidationErrorBody`: a client that checks its replies then reads it
-	 * rather than refusing it. Default `true`; `false` for an app that answers
-	 * with a body of its own through `onValidationError`.
+	 * rather than refusing it. `@nxgt/openapi-hono`'s `{ status, message,
+	 * timestamp, issues }` by default; alxia's `{ error: 'validation',
+	 * issues }` with `alxia` and not `hono`; a union of the two with both.
+	 * `alxia.ts` never declares it. Default `true`; `false` for an app that
+	 * answers with a body of its own, through `onValidationError` or
+	 * alxia's `onRefusal`, and declares it in the spec.
 	 */
 	validationErrors?: boolean;
 }
@@ -87,6 +95,14 @@ const DATES: readonly string[] = ['string', 'date'];
 
 const invalid = (message: string): CodegenError =>
 	new CodegenError([{ severity: 'error', code: 'invalid_option', message }]);
+
+/**
+ * Whose 400 `validationErrors` declares: alxia's with `alxia` alone, either
+ * with `hono` beside it, since a client cannot tell which one serves the
+ * spec, and `@nxgt/openapi-hono`'s otherwise.
+ */
+const validationServer = (hono: boolean, alxia: boolean): ValidationServer =>
+	alxia ? (hono ? 'both' : 'alxia') : 'hono';
 
 /**
  * The generated files, in memory, with absolute paths. Throws a
@@ -148,7 +164,9 @@ export async function generateFiles(
 		throw new CodegenError(linted, dirname(input));
 	}
 	const built = buildIR(doc, options);
-	const ir = validationErrors ? withValidationErrors(built, doc.entry) : built;
+	const ir = validationErrors
+		? withValidationErrors(built, doc.entry, validationServer(hono, alxia))
+		: built;
 	const { files, warnings } = emitFiles(
 		ir,
 		{

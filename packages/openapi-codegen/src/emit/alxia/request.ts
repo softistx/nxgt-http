@@ -6,7 +6,8 @@ import type {
 	SchemaNode,
 } from '../../ir/types';
 import { paramKey } from '../context';
-import { formObject, fromString, valueSchema } from '../operations';
+import { formObject, fromString } from '../operation/from-string';
+import { valueSchema } from '../operation/read';
 import { propertyKey } from '../printer';
 import { expr, withDefault } from '../zod';
 import { type Issue, note, type Printing, preferred, scope } from './printing';

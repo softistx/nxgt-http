@@ -7,7 +7,7 @@
 
 import type { MediaIR, OperationIR, ResponseIR } from '../ir/types';
 import type { EmitContext } from './context';
-import { operationDocs, streamOf } from './operations';
+import { operationDocs, streamOf } from './operation/read';
 import { docComment, file, jsString, list, propertyKey } from './printer';
 import { unroutable } from './routable';
 import { type } from './types';

@@ -11,7 +11,7 @@
  */
 import type { MediaIR, OperationIR, ParamIR, ParamLocation } from '../ir/types';
 import type { EmitContext } from './context';
-import { operationDocs, valueSchema } from './operations';
+import { operationDocs, valueSchema } from './operation/read';
 import {
 	docComment,
 	docLines,

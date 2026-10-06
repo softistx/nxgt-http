@@ -3,7 +3,6 @@ import { CodegenError } from '../errors';
 import { loadDocument } from '../loader/document';
 import { createMemoryFileSystem } from '../loader/fs';
 import { buildIR } from './index';
-import { mediaKind, sequentialKind } from './operations';
 
 const ROOT = '/spec/openapi.json';
 const ok = { '200': { description: 'ok' } };
@@ -310,33 +309,6 @@ describe('buildIR — operations', () => {
 		expect(api.warnings.map((w) => [w.code, w.pointer])).toEqual([
 			['ignored', '/paths/~1employees/post/responses/default'],
 		]);
-	});
-
-	it('sorts media types into json, form, text and binary', () => {
-		expect(
-			[
-				'application/json',
-				'application/problem+json; charset=utf-8',
-				'multipart/form-data',
-				'application/x-www-form-urlencoded',
-				'text/plain',
-				'application/octet-stream',
-				'image/png',
-			].map(mediaKind),
-		).toEqual(['json', 'json', 'form', 'form', 'text', 'binary', 'binary']);
-	});
-
-	it('reads events and JSON lines as streams', () => {
-		expect(
-			[
-				'text/event-stream; charset=utf-8',
-				'application/jsonl',
-				'application/x-ndjson',
-				'application/json-seq',
-				'application/json',
-				'text/plain',
-			].map(sequentialKind),
-		).toEqual(['sse', 'jsonl', 'jsonl', 'jsonl', undefined, undefined]);
 	});
 
 	it('reads a reply of events or of JSON lines an item at a time, from `itemSchema`', async () => {

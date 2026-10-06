@@ -1,13 +1,16 @@
 import { onRegistry } from './registry';
+import { type SiblingManifest, siblingRangeProblems } from './siblings';
 import { type Tarball, tarballProblems } from './tarball';
 
 /**
  * What a published tarball may not contain, measured on Bun 1.4.0 rather than
  * assumed:
  *
- *   - a `link:` or `file:` in a field a consumer installs. `devDependencies`
- *     are exempt: a consumer never installs a dependency's dev dependencies,
- *     so a `link:` there is untidy, not harmful.
+ *   - a `link:`, `file:` or `workspace:` in a field a consumer installs.
+ *     `devDependencies` are exempt: a consumer never installs a dependency's
+ *     dev dependencies, so a `link:` there is untidy, not harmful. A
+ *     `workspace:` left in a tarball means `bun pm pack` did not resolve it,
+ *     and no registry can.
  *   - a **required** peer that is on no registry. This is the shape that once
  *     broke every consumer's install of nxgt-core with a 404. An *optional*
  *     peer is safe whatever its range; a required one is not.
@@ -17,8 +20,10 @@ import { type Tarball, tarballProblems } from './tarball';
  *     resolved to a newer one: two copies in one tree, and two
  *     `ValidationError` classes. `workspace:^` publishes
  *     as a caret range, which dedupes.
- *   - a **sibling range that excludes the sibling being published beside it**.
- *     `workspace:^` is substituted from `bun.lock`, not from the sibling's
+ *   - a **sibling range other than the one its `workspace:` spec produces**
+ *     beside the sibling's version in this workspace; `siblings.ts` holds that
+ *     check and why it is exact, not `satisfies`.
+ *     This is what a stale `bun.lock` publishes: `workspace:^` is substituted from `bun.lock`, not from the sibling's
  *     `package.json`, so a `changeset version` that is not followed by a
  *     `bun install` publishes yesterday's numbers. This repository was carrying
  *     that exact staleness on 2026-09-22: PR #46 released
@@ -52,11 +57,13 @@ import { type Tarball, tarballProblems } from './tarball';
  */
 export async function manifestProblems(
 	tarballs: readonly Tarball[],
+	sources: readonly SiblingManifest[],
 ): Promise<string[]> {
 	const manifests = tarballs.map((t) => t.manifest);
 	const problems = [
 		...tarballs.flatMap(tarballProblems),
 		...manifestShapeProblems(manifests),
+		...siblingRangeProblems(manifests, sources),
 		...manifests.flatMap(accessProblems),
 	];
 	const own = new Set(manifests.map((m) => m.name as string));
@@ -96,17 +103,14 @@ export function accessProblems(manifest: Record<string, unknown>): string[] {
 }
 
 /**
- * Every check on the manifests' dependency fields that needs no network: a
- * `link:` or `file:`, a package listing itself, an exact pin on a sibling, and
- * a sibling range that excludes the sibling published beside it. The siblings'
- * versions are the ones in these same manifests. Pure, so it has specs.
+ * Every check on the manifests' dependency fields that needs no network nor
+ * the workspace: a `link:`, `file:` or `workspace:`, a package listing
+ * itself, and an exact pin on a sibling. Pure, so it has specs.
  */
 export function manifestShapeProblems(
 	manifests: readonly Record<string, unknown>[],
 ): string[] {
-	const own = new Map(
-		manifests.map((m) => [m.name as string, m.version as string]),
-	);
+	const own = new Set(manifests.map((m) => m.name as string));
 	return manifests.flatMap((manifest) =>
 		['dependencies', 'peerDependencies', 'optionalDependencies'].flatMap(
 			(field) =>
@@ -130,11 +134,17 @@ function dependencyProblems(
 	field: string,
 	dep: string,
 	range: string,
-	own: ReadonlyMap<string, string>,
+	own: ReadonlySet<string>,
 ): string[] {
 	const problems: string[] = [];
 	if (/^(link|file):/.test(range)) {
 		problems.push(`${name}: ${field}.${dep} = ${range}`);
+	}
+	if (range.startsWith('workspace:')) {
+		problems.push(
+			`${name}: ${field}.${dep} = ${range}, which \`bun pm pack\` should ` +
+				'have resolved',
+		);
 	}
 	if (dep === name) {
 		problems.push(
@@ -147,14 +157,6 @@ function dependencyProblems(
 		problems.push(
 			`${name}: ${field}.${dep} = ${range} pins a sibling exactly; ` +
 				'use `workspace:^` so the consumer gets one copy',
-		);
-	}
-	const sibling = own.get(dep);
-	if (sibling && !Bun.semver.satisfies(sibling, range)) {
-		problems.push(
-			`${name}: ${field}.${dep} = ${range} excludes ${dep}@${sibling}, ` +
-				'which is being published beside it; run `bun install` after ' +
-				'`changeset version` so `bun.lock` carries the new numbers',
 		);
 	}
 	return problems;

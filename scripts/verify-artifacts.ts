@@ -57,18 +57,24 @@ async function builtFresh(packages: readonly Pkg[]): Promise<boolean> {
 	return false;
 }
 
-async function tarballsSound({ tarballs }: Packed): Promise<boolean> {
-	const problems = await manifestProblems(tarballs);
+async function tarballsSound(
+	packages: readonly Pkg[],
+	{ tarballs }: Packed,
+): Promise<boolean> {
+	const sources = await Promise.all(
+		packages.map((p) => Bun.file(join(p.dir, 'package.json')).json()),
+	);
+	const problems = await manifestProblems(tarballs, sources);
 	if (problems.length === 0) return true;
 	console.error('\nA published tarball would break a consumer:\n');
 	for (const problem of problems) console.error(`  ${problem}`);
 	console.error(
-		'\nA `link:` or `file:` no consumer can resolve, a required peer that is\n' +
-			'on no registry, an exact pin on a sibling, a sibling range that\n' +
-			'excludes the sibling published beside it, a package that lists\n' +
-			'itself, a license other than MIT or no LICENSE shipped, a `files`\n' +
-			'entry the tarball does not hold, test code shipped, or a scoped\n' +
-			'package not published as public. See AGENTS.md.',
+		'\nA `link:`, `file:` or `workspace:` no consumer can resolve, a required\n' +
+			'peer that is on no registry, a sibling range other than the one its\n' +
+			'`workspace:` spec produces, an exact pin on a sibling, a package that\n' +
+			'lists itself, a license other than MIT or no LICENSE shipped, a\n' +
+			'`files` entry the tarball does not hold, test code shipped, or a\n' +
+			'scoped package not published as public. See AGENTS.md.',
 	);
 	return false;
 }
@@ -81,7 +87,7 @@ async function main(): Promise<boolean> {
 	try {
 		const packed = await pack(workdir, packages);
 		return (
-			(await tarballsSound(packed)) &&
+			(await tarballsSound(packages, packed)) &&
 			(await installAsConsumer(workdir, packed)) &&
 			(await subpathsLoad(workdir, packages)) &&
 			(await classesDefinedOnce(workdir, packages)) &&

@@ -1,5 +1,11 @@
 # @nxgt/openapi-codegen
 
+## 0.7.3
+
+### Patch Changes
+
+- [#109](https://github.com/softistx/nxgt-http/pull/109) [`86194d4`](https://github.com/softistx/nxgt-http/commit/86194d43f341de1cbec71281d63ae13c971d781d) Thanks [@SteveGT96](https://github.com/SteveGT96)! - A schema whose `type` lists every type plus `null` is now `{ kind: 'unknown' }` in the IR, no longer `unknown` marked `nullable`. The generated code reads `unknown` and `z.unknown()` instead of `unknown | null` and `z.unknown().nullable()`. Both accept the same values, since `unknown` already takes `null`.
+
 ## 0.7.2
 
 ### Patch Changes

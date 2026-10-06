@@ -63,7 +63,7 @@
     },
     "packages/openapi-codegen": {
       "name": "@nxgt/openapi-codegen",
-      "version": "0.7.2",
+      "version": "0.7.3",
       "bin": {
         "nxgt-openapi": "./dist/cli.js",
       },

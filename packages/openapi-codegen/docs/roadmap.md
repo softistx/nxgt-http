@@ -6,13 +6,7 @@ history.
 
 ## Now
 
-- **Specs authored in TypeSpec** — a spec written in TypeSpec and compiled to
-  OpenAPI 3.1 by `@typespec/openapi3` generates types, validators and routes
-  like any other: such a project is one of the generator's fixtures, compiled,
-  generated, type-checked and served by `@nxgt/openapi-hono` in CI, and
-  [`guide/typespec.md`](guide/typespec.md) walks through the pipeline. A
-  schema-valued `unevaluatedProperties`, which is how TypeSpec's `Record<T>`
-  reaches OpenAPI 3.1, is read as `additionalProperties`.
+Nothing in progress.
 
 ## Next
 
@@ -68,6 +62,13 @@ history.
 - **`alxia.ts`, every operation as the data an alxia app's `app.route()`
   takes** (`alxia` option): its method, its `:name` path and its schemas,
   with concrete Zod types — 0.6.0.
+- **Specs authored in TypeSpec** — a spec written in TypeSpec and compiled to
+  OpenAPI 3.1 by `@typespec/openapi3` generates types, validators and routes
+  like any other: such a project is one of the generator's fixtures, compiled,
+  generated, type-checked and served by `@nxgt/openapi-hono` in CI, and
+  [`guide/typespec.md`](guide/typespec.md) walks through the pipeline. A
+  schema-valued `unevaluatedProperties`, which is how TypeSpec's `Record<T>`
+  reaches OpenAPI 3.1, is read as `additionalProperties` — 0.5.0.
 - **A class defined once per package, not once per entry point** — 0.4.1.
 - **`c.env` typed in route handlers**, from the app's `Hono<E>` — 0.4.0.
 - **Generated imports without an extension**, `importExtension: '.js'` to

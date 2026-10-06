@@ -39,7 +39,7 @@ function isRuntime(specifier: string): boolean {
 function specifiersOf(rel: string, text: string): string[] {
 	if (rel.endsWith('.d.ts')) return declarationSpecifiers(text);
 	// A bin's built file starts with `#!/usr/bin/env bun`, which the scanner
-	// refuses as a syntax error, measured on bun 1.4.2 with the generator's
+	// refuses as a syntax error, measured on bun 1.4.2 with a built bin's
 	// `dist/cli.js`. It is no code: read what follows it.
 	return new Bun.Transpiler({ loader: 'js' })
 		.scanImports(text.replace(/^#![^\n]*/, ''))
@@ -85,7 +85,7 @@ export function undeclaredImports(
  * one at a time, so the report names it rather than the run ending in a
  * stack trace.
  */
-function scanFailure(
+export function scanFailure(
 	bundles: readonly (readonly [string, string])[],
 	error: unknown,
 ): string {
@@ -105,8 +105,8 @@ function scanFailure(
  *
  * The install below holds every package of this repository side by side, so
  * a package that imports a sibling it lists only as a devDependency — every
- * binding here lists the generator there, for its fixtures — still loads
- * there. A consumer who installs that package alone gets "Cannot find
+ * kit and bridge here lists its siblings there too, for its specs — still
+ * loads there. A consumer who installs that package alone gets "Cannot find
  * package". Only reading the imports catches it; loading cannot.
  */
 export async function importsDeclared(

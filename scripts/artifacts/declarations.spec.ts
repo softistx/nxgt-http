@@ -26,10 +26,10 @@ describe('declarationSpecifiers', () => {
 			declarationSpecifiers(
 				[
 					'/**',
-					" * @example import { generate } from '@nxgt/openapi-codegen';",
-					" * const x = await import('@nxgt/openapi-hono');",
+					" * @example import { defineCache } from '@nxgt/redis';",
+					" * const x = await import('@nxgt/redis-guard');",
 					' */',
-					"// import '@nxgt/typespec';",
+					"// import '@nxgt/s3';",
 					'export type Example = "import { A } from \'not-a-module\'";',
 					"export declare const url: 'http://example.com/x';",
 					"export type { Reply } from './protocol/reply';",
@@ -82,9 +82,9 @@ describe('declarationSpecifiers', () => {
 	test('reads a module augmentation, not the ambient module of a script', () => {
 		expect(
 			declarationSpecifiers(
-				"import type { A } from './a';\ndeclare module '@nxgt/openapi-codegen' {\n\texport interface X {}\n}",
+				"import type { A } from './a';\ndeclare module '@nxgt/redis' {\n\texport interface X {}\n}",
 			).sort(),
-		).toEqual(['./a', '@nxgt/openapi-codegen']);
+		).toEqual(['./a', '@nxgt/redis']);
 		expect(
 			declarationSpecifiers(
 				"declare module 'ambient' {\n\texport type T = import('inner').T;\n}",

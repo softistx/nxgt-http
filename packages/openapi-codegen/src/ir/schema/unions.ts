@@ -1,8 +1,8 @@
 import { child, type Location } from '../../loader/location';
-import { asString, isObject } from '../../util';
+import { asString, isObject, without } from '../../util';
 import type { SchemaNode, UnionNode } from '../types';
 import type { SchemaState } from './state';
-import { ANNOTATION_KEYS, UNSUPPORTED_KEYWORDS, without } from './vocabulary';
+import { ANNOTATION_KEYS, UNSUPPORTED_KEYWORDS } from './vocabulary';
 
 /** What may sit next to `oneOf` or `anyOf`, applied on top of the variant that matches. */
 const BESIDE_UNION = new Set([

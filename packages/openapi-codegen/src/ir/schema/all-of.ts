@@ -1,8 +1,9 @@
 import { child, type Location } from '../../loader/location';
+import { strings, without } from '../../util';
 import type { ObjectNode, SchemaNode } from '../types';
 import { meet } from './meet';
 import type { SchemaState } from './state';
-import { ANNOTATION_KEYS, strings, without } from './vocabulary';
+import { ANNOTATION_KEYS } from './vocabulary';
 
 type CombineState = Pick<SchemaState, 'diagnostics' | 'requiring' | 'composed'>;
 

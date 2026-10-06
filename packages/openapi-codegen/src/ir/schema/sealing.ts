@@ -1,6 +1,6 @@
 import type { Location } from '../../loader/location';
 import type { SchemaNode } from '../types';
-import { replaceNode } from './meet';
+import { replaceNode } from './replace';
 import type { SchemaState } from './state';
 
 /**

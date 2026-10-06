@@ -1,8 +1,8 @@
 import { child, type Location } from '../../loader/location';
+import { IDENTIFIER } from '../naming';
 import type { Scalar, SchemaNode } from '../types';
 import type { SchemaState } from './state';
 import { typesOf } from './typed';
-import { IDENTIFIER } from './vocabulary';
 
 type LiteralState = Pick<SchemaState, 'diagnostics'>;
 

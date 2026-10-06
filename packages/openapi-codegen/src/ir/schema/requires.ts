@@ -1,7 +1,7 @@
 import type { Location } from '../../loader/location';
 import type { UnionNode } from '../types';
-import { replaceNode } from './meet';
 import { type LookupState, propertyOf } from './properties';
+import { replaceNode } from './replace';
 import type { SchemaState } from './state';
 
 /** Says that these `required` names are not checked. */

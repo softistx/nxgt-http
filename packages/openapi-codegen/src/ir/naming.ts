@@ -2,6 +2,9 @@ import { basename, extname } from 'node:path';
 import type { Location } from '../loader/location';
 import { parsePointer } from '../loader/pointer';
 
+/** What a TypeScript identifier may be. */
+export const IDENTIFIER = /^[A-Za-z_$][\w$]*$/;
+
 /** `employee-status` → `EmployeeStatus`, `createEmployee` → `CreateEmployee`. */
 export function pascalCase(input: string): string {
 	const name = input

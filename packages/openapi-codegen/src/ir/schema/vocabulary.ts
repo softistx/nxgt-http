@@ -36,16 +36,3 @@ export const UNSUPPORTED_KEYWORDS = [
 	'$dynamicAnchor',
 	'$recursiveRef',
 ];
-
-export const IDENTIFIER = /^[A-Za-z_$][\w$]*$/;
-
-export const without = (
-	object: Record<string, unknown>,
-	drop: (key: string) => boolean,
-): Record<string, unknown> =>
-	Object.fromEntries(Object.entries(object).filter(([key]) => !drop(key)));
-
-export const strings = (value: unknown): string[] =>
-	Array.isArray(value)
-		? value.filter((item): item is string => typeof item === 'string')
-		: [];

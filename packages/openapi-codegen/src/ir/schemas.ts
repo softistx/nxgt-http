@@ -2,14 +2,13 @@ import { relative } from 'node:path';
 import type { Diagnostics } from '../errors';
 import { type Location, locationId } from '../loader/location';
 import type { Resolved, Resolver } from '../loader/resolver';
-import { nameFromLocation, pascalCase } from './naming';
+import { IDENTIFIER, nameFromLocation, pascalCase } from './naming';
 import { checkDiscriminators } from './schema/discriminators';
 import { checkExtends } from './schema/extends';
 import { schemaNode, structure } from './schema/node';
 import { emitOrder } from './schema/order';
 import { checkRequires } from './schema/requires';
 import type { SchemaState } from './schema/state';
-import { IDENTIFIER } from './schema/vocabulary';
 import type { Alias, NamedSchema, SchemaNode } from './types';
 
 /** Words a `names` override cannot be: `export interface default` does not compile. */

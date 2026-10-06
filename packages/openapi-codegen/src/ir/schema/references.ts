@@ -1,11 +1,12 @@
 import { child, type Location } from '../../loader/location';
+import { without } from '../../util';
 import { settledByAdditional } from '../keywords';
 import type { SchemaNode } from '../types';
 import { combine } from './all-of';
 import { annotate, refuseUnsupported } from './annotations';
 import { seal } from './sealing';
 import type { SchemaState } from './state';
-import { ANNOTATION_KEYS, without } from './vocabulary';
+import { ANNOTATION_KEYS } from './vocabulary';
 
 /** A `$ref`: a `ref` node, met with whatever else sits beside it. */
 export function reference(

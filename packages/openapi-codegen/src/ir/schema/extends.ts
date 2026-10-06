@@ -1,6 +1,7 @@
 import type { SchemaNode } from '../types';
-import { meet, replaceNode } from './meet';
+import { meet } from './meet';
 import { inherited, type LookupState, propertyOf } from './properties';
+import { replaceNode } from './replace';
 import { notChecked } from './requires';
 import type { SchemaState } from './state';
 

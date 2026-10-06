@@ -1,9 +1,8 @@
 import { child, type Location } from '../../loader/location';
-import { isObject } from '../../util';
+import { isObject, strings } from '../../util';
 import { extraKeys } from '../keywords';
 import type { Additional, ObjectNode, Property, SchemaNode } from '../types';
 import type { SchemaState } from './state';
-import { strings } from './vocabulary';
 
 type ObjectState = Pick<
 	SchemaState,

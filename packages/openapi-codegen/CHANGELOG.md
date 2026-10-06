@@ -1,5 +1,13 @@
 # @nxgt/openapi-codegen
 
+## 0.7.2
+
+### Patch Changes
+
+- [#104](https://github.com/softistx/nxgt-http/pull/104) [`c9a59d7`](https://github.com/softistx/nxgt-http/commit/c9a59d7dccdcd84a15e0a957d64367e4c8c7c98a) Thanks [@SteveGT96](https://github.com/SteveGT96)! - The roadmap lists specs authored in TypeSpec under Shipped, in 0.5.0.
+  
+  It also lists `@nxgt/typespec` as its own package, first released as 0.1.0, and drops it from Next.
+
 ## 0.7.1
 
 ### Patch Changes

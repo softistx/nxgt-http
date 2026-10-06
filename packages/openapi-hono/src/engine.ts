@@ -5,8 +5,7 @@
  * to `c.req.valid()`, and answers every issue at once when there is one.
  */
 import type { Context } from 'hono';
-// biome-ignore lint/style/useImportType: tsc copies this form into the shipped engine.d.ts, which stays byte-identical to the one before the split
-import { type SchemaIssue } from './errors';
+import type { SchemaIssue } from './errors';
 import { assertComplete, createRegistry, missing } from './route/registry';
 import { makeRoutes } from './route/routes';
 import type { App, Placed, Settings } from './route/types';

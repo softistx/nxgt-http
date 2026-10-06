@@ -98,7 +98,15 @@ schema-to-schema edges (`refsOf`). The components come out in dependency
 order, which is the emit order. A schema in a component of more than one
 node, or one that reaches itself, is marked `recursive`.
 
-## Operations (`src/ir/operations.ts`)
+## Operations (`src/ir/operations.ts`, `src/ir/operation/`)
+
+`operations.ts` holds `OperationBuilder`, whose two methods put the parts in
+order; each part lives in `operation/`, one role per file, a plain function
+taking the part of `OperationState` (`state.ts`) it reads: `paths.ts` walks
+`paths` and each path item's methods, `operation.ts` reads one operation and
+claims its `operationId`, `parameters.ts`, `template.ts`, `body.ts`,
+`responses.ts`, `content.ts`, `events.ts`, the media type readers in
+`media.ts`, and `check-parameters.ts`.
 
 - **Methods.** The eight classic ones, plus `query` when the document is 3.2.
   `additionalOperations` is refused.
@@ -123,7 +131,7 @@ node, or one that reaches itself, is marked `recursive`.
   `default` and `NXX` are ignored with a warning.
 - **Streams.** In a response only, `text/event-stream` is `sse` and the JSON
   Lines types (`sequentialKind`) are `jsonl`, read from `itemSchema` rather
-  than `schema`. `#events` walks an `sse` item's `oneOf`/`anyOf` into
+  than `schema`. `events` (`operation/events.ts`) walks an `sse` item's `oneOf`/`anyOf` into
   `EventIR`s, keyed by the constant of `event` (`message` without one), with
   `data` from `contentSchema` under a JSON `contentMediaType`; a `jsonl` item
   becomes `MediaIR.item`. Both are named like inline bodies. A request body

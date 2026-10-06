@@ -63,7 +63,7 @@ components:
 `,
 			);
 			const doc = await loadDocument(join(dir, 'openapi.yaml'));
-			const responses = (doc.document.components as any).responses;
+			const responses = (doc.document['components'] as any).responses;
 			const at = child(doc.entry, 'components', 'responses');
 			const viaModules = doc.resolver.deref(
 				responses.ViaModules,

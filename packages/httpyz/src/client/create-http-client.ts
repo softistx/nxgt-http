@@ -237,7 +237,7 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
 			joinSignals(built.signal, replaced),
 		);
 		const response = await dispatch(
-			new Request(built.url, { ...built.init, signal }),
+			new Request(built.url, { ...built.init, signal: signal ?? null }),
 			built.context,
 			built.timeout,
 			deadline,
@@ -320,7 +320,7 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
 		} = given;
 		const call = {
 			...own,
-			signal: joinSignals(own.signal, latestSignal(latest)),
+			signal: joinSignals(own.signal, latestSignal(latest)) ?? null,
 		};
 		const reconnects =
 			reconnect === undefined
@@ -358,7 +358,7 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
 		} = given;
 		const call = {
 			...own,
-			signal: joinSignals(own.signal, latestSignal(latest)),
+			signal: joinSignals(own.signal, latestSignal(latest)) ?? null,
 		};
 		return lineStream({
 			context: contextOf(method, path, call.operationId),
@@ -401,7 +401,10 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
 			timeout,
 			joinSignals(request.signal, replaced),
 		);
-		const sent = new Request(request, { headers, signal });
+		const sent = new Request(request, {
+			headers,
+			...(signal ? { signal } : {}),
+		});
 		return dispatch(sent, context, timeout, deadline, retry, added);
 	};
 
@@ -432,7 +435,9 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
 				const extra = scope();
 				return send(
 					extra
-						? new Request(sent, { signal: joinSignals(sent.signal, extra) })
+						? new Request(sent, {
+								signal: AbortSignal.any([sent.signal, extra]),
+							})
 						: sent,
 					given ?? {},
 					layers(),
@@ -452,7 +457,7 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
 					() => joinSignals(scope(), controller.signal),
 					layers,
 				) as HttpClient & Record<string, unknown>;
-				group.cancel = (reason?: unknown) => {
+				group['cancel'] = (reason?: unknown) => {
 					controller.abort(reason ?? cancelled('The group was cancelled'));
 					controller = new AbortController();
 				};

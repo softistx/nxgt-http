@@ -26,7 +26,7 @@ export type NumberFormat = 'int32' | 'int64' | 'float' | 'double';
 
 export interface Annotations {
 	nullable?: boolean;
-	description?: string;
+	description?: string | undefined;
 	deprecated?: boolean;
 	readOnly?: boolean;
 	writeOnly?: boolean;
@@ -184,8 +184,8 @@ export interface ParamIR {
 	/** Query lists as `?a=1&a=2` (true) or `?a=1,2` (false). */
 	explode: boolean;
 	schema: SchemaNode;
-	description?: string;
-	deprecated?: boolean;
+	description?: string | undefined;
+	deprecated?: boolean | undefined;
 	location: Location;
 }
 
@@ -208,7 +208,7 @@ export interface MediaIR {
 	mediaType: string;
 	kind: MediaKind;
 	/** Absent for binary content, which is passed through unvalidated, and for a stream. */
-	schema?: SchemaNode;
+	schema?: SchemaNode | undefined;
 	/** `sse`: the events its `itemSchema` declares. Absent when it declares none: any event, as text. */
 	events?: EventIR[];
 	/** `jsonl`: each item, from `itemSchema`. Absent when it has none: any JSON. */
@@ -217,13 +217,13 @@ export interface MediaIR {
 
 export interface BodyIR {
 	required: boolean;
-	description?: string;
+	description?: string | undefined;
 	content: MediaIR[];
 }
 
 export interface ResponseIR {
 	status: number;
-	description?: string;
+	description?: string | undefined;
 	content: MediaIR[];
 	location: Location;
 }
@@ -237,8 +237,8 @@ export interface OperationIR {
 	path: string;
 	/** As Hono routes it: `/employees/:id`. */
 	honoPath: string;
-	summary?: string;
-	description?: string;
+	summary?: string | undefined;
+	description?: string | undefined;
 	deprecated: boolean;
 	tags: string[];
 	/** Its path, query and header parameters. */
@@ -249,7 +249,7 @@ export interface OperationIR {
 	 * send cookies, and `hono.ts` does not validate them.
 	 */
 	cookies: ParamIR[];
-	body?: BodyIR;
+	body?: BodyIR | undefined;
 	responses: ResponseIR[];
 	location: Location;
 }
@@ -258,8 +258,8 @@ export interface ApiIR {
 	/** The `openapi` field as written. */
 	openapi: string;
 	version: '3.1' | '3.2';
-	title?: string;
-	apiVersion?: string;
+	title?: string | undefined;
+	apiVersion?: string | undefined;
 	/** Dependencies before dependents; members of a cycle are marked `recursive`. */
 	schemas: NamedSchema[];
 	aliases: Alias[];

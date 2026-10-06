@@ -21,6 +21,7 @@ export type NuxtEnv = { Bindings: NuxtBindings };
  * `E` adds to it, `createHonoApp<{ Variables: { user: User } }>()`, and
  * `options` are Hono's.
  */
+// biome-ignore lint/complexity/noBannedTypes: `{}` is an `Env` that adds nothing to Nuxt's, as Hono's own default is
 export function createHonoApp<E extends Env = {}>(
 	options?: HonoOptions<NuxtEnv & E>,
 ): Hono<NuxtEnv & E> {

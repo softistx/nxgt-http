@@ -38,7 +38,7 @@ const getItem = (client: HttpClient, init: CallOptions = {}) =>
 	client.get('/items/{id}', { param: { id: 1 }, responses, ...init });
 const item = () => Response.json({ id: 1, name: 'a' });
 const status = (code: number, headers?: HeadersInit) =>
-	new Response(null, { status: code, headers });
+	new Response(null, { status: code, ...(headers ? { headers } : {}) });
 const failure = (call: Promise<unknown>) =>
 	call.then(
 		() => undefined,

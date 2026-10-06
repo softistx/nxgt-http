@@ -152,10 +152,12 @@ export type ResponseFactory<R extends DeclaredReply> = (<
 
 /** The input of a call: `[input]`, `[input?]` or none. */
 type InputOf<Args> = Args extends readonly []
-	? {}
+	? // biome-ignore lint/complexity/noBannedTypes: `{}` is an input that adds no field to the request
+		{}
 	: Args extends readonly [(infer Input)?]
 		? NonNullable<Input>
-		: {};
+		: // biome-ignore lint/complexity/noBannedTypes: `{}` is an input that adds no field to the request
+			{};
 
 type KeysOf<U> = U extends unknown ? keyof U : never;
 
@@ -172,7 +174,8 @@ type Exclusive<U, All extends PropertyKey = KeysOf<U>> = U extends unknown
 type Part<Input, K extends PropertyKey> = Input extends unknown
 	? K extends keyof Input
 		? NonNullable<Input[K]>
-		: {}
+		: // biome-ignore lint/complexity/noBannedTypes: `{}` is a part that adds no field to the request
+			{}
 	: never;
 
 /**

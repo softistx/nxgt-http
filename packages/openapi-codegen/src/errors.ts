@@ -70,6 +70,7 @@ export function formatDiagnostic(d: Diagnostic, baseDir?: string): string {
  * split over forty files is fixed in one pass, not forty runs.
  */
 export class CodegenError extends Error {
+	override readonly name = 'CodegenError';
 	readonly diagnostics: readonly Diagnostic[];
 
 	constructor(diagnostics: readonly Diagnostic[], baseDir?: string) {
@@ -78,7 +79,6 @@ export class CodegenError extends Error {
 			`${errors.length} error(s) in the OpenAPI document:\n` +
 				errors.map((d) => `  ${formatDiagnostic(d, baseDir)}`).join('\n'),
 		);
-		this.name = 'CodegenError';
 		this.diagnostics = diagnostics;
 	}
 }

@@ -9,8 +9,8 @@ emitters.
 interface ApiIR {
 	openapi: string; // as written: '3.2.0'
 	version: '3.1' | '3.2';
-	title?: string; // info.title
-	apiVersion?: string; // info.version
+	title?: string | undefined; // info.title
+	apiVersion?: string | undefined; // info.version
 	schemas: NamedSchema[]; // dependencies first
 	aliases: Alias[];
 	operations: OperationIR[];

@@ -59,7 +59,7 @@ export interface GenerateOptions extends IROptions {
 	 * config file. Needs the optional peer `@redocly/openapi-core`. A lint
 	 * error stops the run; a lint warning comes back with the others.
 	 */
-	lint?: Lint;
+	lint?: Lint | undefined;
 	/**
 	 * Declare, on each operation that takes a parameter or a body, the 400
 	 * the server answers a request its validators refuse with, as

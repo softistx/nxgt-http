@@ -77,8 +77,8 @@ describe('unrefDeep', () => {
 			string,
 			unknown
 		>;
-		expect(read.at).toBe(at);
-		expect(read.blob).toBe(blob);
-		expect(read.form).toBe(form);
+		expect(read['at']).toBe(at);
+		expect(read['blob']).toBe(blob);
+		expect(read['form']).toBe(form);
 	});
 });

@@ -43,7 +43,9 @@ export async function lintSpec(
 		lint === true ? redocly.findConfig(dirname(input)) : resolve(cwd, lint);
 	let config: Awaited<ReturnType<typeof redocly.loadConfig>>;
 	try {
-		config = await redocly.loadConfig({ configPath });
+		config = await redocly.loadConfig(
+			configPath === undefined ? {} : { configPath },
+		);
 	} catch (error) {
 		return failed(
 			`lint: the Redocly config cannot be loaded: ${firstLine(error)}`,

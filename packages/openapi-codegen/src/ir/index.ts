@@ -35,8 +35,8 @@ export function buildIR(doc: LoadedDocument, options: IROptions = {}): ApiIR {
 	});
 
 	// Components first, so a component's key wins the name of what it names.
-	const components = isObject(doc.document.components)
-		? doc.document.components.schemas
+	const components = isObject(doc.document['components'])
+		? doc.document['components']['schemas']
 		: undefined;
 	if (isObject(components)) {
 		for (const [key, value] of Object.entries(components)) {
@@ -55,8 +55,8 @@ export function buildIR(doc: LoadedDocument, options: IROptions = {}): ApiIR {
 	const named = schemas.finalize();
 
 	if (
-		isObject(doc.document.webhooks) &&
-		Object.keys(doc.document.webhooks).length > 0
+		isObject(doc.document['webhooks']) &&
+		Object.keys(doc.document['webhooks']).length > 0
 	) {
 		diagnostics.warning(
 			'ignored',
@@ -66,12 +66,12 @@ export function buildIR(doc: LoadedDocument, options: IROptions = {}): ApiIR {
 	}
 	if (diagnostics.hasErrors) throw new CodegenError(diagnostics.list, rootDir);
 
-	const info = isObject(doc.document.info) ? doc.document.info : {};
+	const info = isObject(doc.document['info']) ? doc.document['info'] : {};
 	return {
 		openapi: doc.openapi,
 		version: doc.version,
-		title: asString(info.title),
-		apiVersion: asString(info.version),
+		title: asString(info['title']),
+		apiVersion: asString(info['version']),
 		schemas: named,
 		aliases: schemas.aliases,
 		operations,

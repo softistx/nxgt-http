@@ -439,7 +439,7 @@ describe('dates', () => {
 
 describe('the methods', () => {
 	it('are the spec’s only, and refuse a path it lacks', () => {
-		expect((mock as Record<string, unknown>).trace).toBeUndefined();
+		expect((mock as Record<string, unknown>)['trace']).toBeUndefined();
 		expect(() =>
 			(mock.get as (path: string, resolver: () => undefined) => unknown)(
 				'/nope',

@@ -584,7 +584,7 @@ interface GenerateOptions extends IROptions {
 	hono?: boolean;
 	alxia?: boolean;
 	dates?: Dates;
-	lint?: Lint;
+	lint?: Lint | undefined;
 	validationErrors?: boolean;
 }
 ```
@@ -752,7 +752,7 @@ as a type only.
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `fs` | `FileSystem`, optional | default `nodeFileSystem` |
+| `fs` | `FileSystem \| undefined`, optional | default `nodeFileSystem` |
 | `cwd` | `string`, optional | what a relative `path` resolves against; default `process.cwd()` |
 
 The second argument of `loadDocument`.
@@ -812,7 +812,7 @@ node that can be reported on carries one.
 | `location` | `Location` | where `value` really lives |
 | `id` | `string` | `file#pointer`: equal for every route to the same node |
 | `hops` | `Location[]` | where each hop landed, in order; empty when `value` was no reference |
-| `summary`, `description` | `string`, optional | written next to the outermost `$ref` that has one; they override the target's |
+| `summary`, `description` | `string \| undefined`, optional | written next to the outermost `$ref` that has one; they override the target's |
 
 What `Resolver.deref<T>()` returns: `Resolved<Schema>` is a schema and where
 it came from.
@@ -823,7 +823,7 @@ it came from.
 | --- | --- | --- |
 | `openapi` | `string` | the `openapi` field as written |
 | `version` | `'3.1' \| '3.2'` | |
-| `title`, `apiVersion` | `string`, optional | `info.title` and `info.version` |
+| `title`, `apiVersion` | `string \| undefined`, optional | `info.title` and `info.version` |
 | `schemas` | `NamedSchema[]` | dependencies before dependents; members of a cycle are marked `recursive` |
 | `aliases` | `Alias[]` | second `components.schemas` keys for a schema already named |
 | `operations` | `OperationIR[]` | |
@@ -868,12 +868,12 @@ A second `components.schemas` key standing for a schema already named, in
 | `method` | `HttpMethod` | |
 | `path` | `string` | as the spec writes it: `/employees/{id}` |
 | `honoPath` | `string` | as Hono routes it: `/employees/:id` |
-| `summary`, `description` | `string \| undefined` | |
+| `summary`, `description` | `string \| undefined`, optional | |
 | `deprecated` | `boolean` | |
 | `tags` | `string[]` | |
 | `parameters` | `ParamIR[]` | its path, query and header parameters |
 | `cookies` | `ParamIR[]` | its cookie parameters, apart: only `alxia.ts` validates them |
-| `body` | `BodyIR \| undefined` | |
+| `body` | `BodyIR \| undefined`, optional | |
 | `responses` | `ResponseIR[]` | |
 | `location` | `Location` | |
 
@@ -896,8 +896,8 @@ An operation's method, in `OperationIR.method`.
 | `required` | `boolean` | |
 | `explode` | `boolean` | a query list as `?a=1&a=2` (`true`) or `?a=1,2` (`false`) |
 | `schema` | `SchemaNode` | |
-| `description` | `string \| undefined` | |
-| `deprecated` | `boolean \| undefined` | |
+| `description` | `string \| undefined`, optional | |
+| `deprecated` | `boolean \| undefined`, optional | |
 | `location` | `Location` | |
 
 One parameter of `OperationIR.parameters`.
@@ -916,7 +916,7 @@ Where a parameter goes. A `cookie` parameter is kept in
 ```ts
 interface BodyIR {
 	required: boolean;
-	description?: string;
+	description?: string | undefined;
 	content: MediaIR[];
 }
 ```
@@ -928,7 +928,7 @@ A request body, in `OperationIR.body`.
 ```ts
 interface ResponseIR {
 	status: number;
-	description?: string;
+	description?: string | undefined;
 	content: MediaIR[];
 	location: Location;
 }
@@ -942,9 +942,9 @@ One response of `OperationIR.responses`, by exact status.
 | --- | --- | --- |
 | `mediaType` | `string` | `application/json`, `text/event-stream`… |
 | `kind` | `MediaKind` | |
-| `schema` | `SchemaNode \| undefined` | absent for binary content, passed through unvalidated, and for a stream |
-| `events` | `{ name: string; data?: SchemaNode }[] \| undefined` | `sse`: the events its `itemSchema` declares; `data` is absent when it is text. Absent: any event, as text |
-| `item` | `SchemaNode \| undefined` | `jsonl`: each item. Absent: any JSON |
+| `schema` | `SchemaNode \| undefined`, optional | absent for binary content, passed through unvalidated, and for a stream |
+| `events` | `{ name: string; data?: SchemaNode }[]`, optional | `sse`: the events its `itemSchema` declares; `data` is absent when it is text. Absent: any event, as text |
+| `item` | `SchemaNode`, optional | `jsonl`: each item. Absent: any JSON |
 
 One media type of a `BodyIR` or `ResponseIR`.
 
@@ -972,7 +972,7 @@ One schema, reduced to one shape; switch on `kind`.
 ```ts
 interface Annotations {
 	nullable?: boolean;
-	description?: string;
+	description?: string | undefined;
 	deprecated?: boolean;
 	readOnly?: boolean;
 	writeOnly?: boolean;

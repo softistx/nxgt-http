@@ -8,7 +8,7 @@ export type OpenApiVersion = '3.1' | '3.2';
 
 export interface LoadOptions {
 	/** Defaults to the real disk. */
-	fs?: FileSystem;
+	fs?: FileSystem | undefined;
 	/** What a relative entry path is resolved against. Defaults to `process.cwd()`. */
 	cwd?: string;
 }
@@ -51,7 +51,7 @@ export async function loadDocument(
 
 	return {
 		entry,
-		openapi: document.openapi as string,
+		openapi: document['openapi'] as string,
 		version,
 		document,
 		resolver,

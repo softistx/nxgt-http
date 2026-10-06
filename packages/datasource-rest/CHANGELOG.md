@@ -1,5 +1,13 @@
 # @nxgt/datasource-rest
 
+## 3.0.3
+
+### Patch Changes
+
+- [#96](https://github.com/softistx/nxgt-http/pull/96) [`df0cea6`](https://github.com/softistx/nxgt-http/commit/df0cea6c1f57616de55cc909f7e4faebcb65590d) Thanks [@SteveGT96](https://github.com/SteveGT96)! - Build and type-check under a stricter `tsconfig` — `exactOptionalPropertyTypes`, `noPropertyAccessFromIndexSignature`, `noImplicitReturns`, `noUnusedLocals` and the rest — so the published declarations compile under any of them in an application. Classes are now emitted with defined fields (`useDefineForClassFields`); no field's presence, order or value changes. A `Paginated`'s `data` and `metadata` take `undefined` as left out, so a page read through a generated client, whose optional fields are typed `T | undefined`, is a `Paginated` there too. `PageInfo`'s `startCursor` and `endCursor` are typed `string | undefined`, as `relayPaginate` writes them for a page without `metadata`. An application under `exactOptionalPropertyTypes` that copies these output fields (`PageInfo.startCursor` and `endCursor`, `Paginated.data` and `metadata`) into its own `?: T` field now sees the `undefined` they already held.
+- Updated dependencies [[`df0cea6`](https://github.com/softistx/nxgt-http/commit/df0cea6c1f57616de55cc909f7e4faebcb65590d)]:
+  - @nxgt/httpyz@0.3.3
+
 ## 3.0.2
 
 ### Patch Changes

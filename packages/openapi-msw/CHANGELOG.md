@@ -1,5 +1,13 @@
 # @nxgt/openapi-msw
 
+## 0.2.2
+
+### Patch Changes
+
+- [#96](https://github.com/softistx/nxgt-http/pull/96) [`df0cea6`](https://github.com/softistx/nxgt-http/commit/df0cea6c1f57616de55cc909f7e4faebcb65590d) Thanks [@SteveGT96](https://github.com/SteveGT96)! - Build and type-check under a stricter `tsconfig` — `exactOptionalPropertyTypes`, `noPropertyAccessFromIndexSignature`, `noImplicitReturns`, `noUnusedLocals` and the rest — so the published declarations compile under any of them in an application. Classes are now emitted with defined fields (`useDefineForClassFields`); no field's presence, order or value changes. `new Response()` is handed a `statusText` and `headers` only when they are given, which it reads the same.
+- Updated dependencies [[`df0cea6`](https://github.com/softistx/nxgt-http/commit/df0cea6c1f57616de55cc909f7e4faebcb65590d)]:
+  - @nxgt/httpyz@0.3.3
+
 ## 0.2.1
 
 ### Patch Changes

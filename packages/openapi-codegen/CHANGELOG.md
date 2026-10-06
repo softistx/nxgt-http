@@ -1,5 +1,11 @@
 # @nxgt/openapi-codegen
 
+## 0.7.1
+
+### Patch Changes
+
+- [#96](https://github.com/softistx/nxgt-http/pull/96) [`df0cea6`](https://github.com/softistx/nxgt-http/commit/df0cea6c1f57616de55cc909f7e4faebcb65590d) Thanks [@SteveGT96](https://github.com/SteveGT96)! - Build and type-check under a stricter `tsconfig` — `exactOptionalPropertyTypes`, `noPropertyAccessFromIndexSignature`, `noImplicitReturns`, `noUnusedLocals` and the rest — so the published declarations compile under any of them in an application. Classes are now emitted with defined fields (`useDefineForClassFields`); no field's presence, order or value changes. `lint` and `loadDocument`'s `fs` take `undefined` as left out. The fields `buildIR` and `Resolver.deref` write as `undefined` when the spec has none are typed `| undefined`, as they are: `ApiIR`'s `title` and `apiVersion`, an operation's `summary`, `description` and `body`, a parameter's, a body's and a response's `description`, a schema's `description` as a parameter's validated schema carries it, a parameter's `deprecated`, a media type's `schema`, and `Resolved`'s `summary` and `description`. Redocly's `loadConfig` is called with no `configPath` key rather than an `undefined` one when no `redocly.yaml` is found, which it reads the same. An application under `exactOptionalPropertyTypes` that copies these output fields (the IR's and `Resolved`'s) into its own `?: T` field now sees the `undefined` they already held.
+
 ## 0.7.0
 
 ### Minor Changes

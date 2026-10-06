@@ -1,35 +1,35 @@
 import { describe, expect, test } from 'bun:test';
-import { packageOf, undeclaredImports } from './imports';
+import { packageOf, scanFailure, undeclaredImports } from './imports';
 
 describe('packageOf', () => {
 	test('reads a scoped name and a plain one, without the subpath', () => {
-		expect(packageOf('@nxgt/httpyz/integration')).toBe('@nxgt/httpyz');
-		expect(packageOf('@nxgt/typespec')).toBe('@nxgt/typespec');
+		expect(packageOf('@nxgt/mongo/gridfs')).toBe('@nxgt/mongo');
+		expect(packageOf('@nxgt/redis')).toBe('@nxgt/redis');
 		expect(packageOf('lodash/fp')).toBe('lodash');
 	});
 });
 
 describe('undeclaredImports', () => {
-	const msw = { name: '@nxgt/openapi-msw' };
+	const kit = { name: '@nxgt/mongo-kit' };
 
 	test('refuses a sibling the manifest lists only as a devDependency', () => {
 		const manifest = {
-			...msw,
-			devDependencies: { '@nxgt/openapi-codegen': 'workspace:^' },
+			...kit,
+			devDependencies: { '@nxgt/redis': 'workspace:^' },
 		};
 		expect(
 			undeclaredImports(manifest, [
 				[
 					'dist/index.js',
-					'import { generate } from "@nxgt/openapi-codegen";\nexport { generate };',
+					'import { defineCache } from "@nxgt/redis";\nexport { defineCache };',
 				],
 			]),
-		).toEqual([['dist/index.js', '@nxgt/openapi-codegen']]);
+		).toEqual([['dist/index.js', '@nxgt/redis']]);
 	});
 
 	test('passes the runtime, relative files, chunks and the package itself', () => {
 		expect(
-			undeclaredImports(msw, [
+			undeclaredImports(kit, [
 				[
 					'dist/index.js',
 					[
@@ -38,7 +38,7 @@ describe('undeclaredImports', () => {
 						'import { lookup } from "node:dns";',
 						'import { readFileSync } from "fs";',
 						'import { reply } from "./chunks/reply-abc.js";',
-						'import x from "@nxgt/openapi-msw/package.json";',
+						'import x from "@nxgt/mongo-kit/package.json";',
 						'export { listen, Database, lookup, readFileSync, reply, x };',
 					].join('\n'),
 				],
@@ -46,99 +46,99 @@ describe('undeclaredImports', () => {
 		).toEqual([]);
 	});
 
-	test('reads a bin past its #! line', () => {
-		expect(
-			undeclaredImports(msw, [
-				[
-					'dist/cli.js',
-					'#!/usr/bin/env bun\nimport { generate } from "@nxgt/openapi-codegen";\ngenerate();',
-				],
-			]),
-		).toEqual([['dist/cli.js', '@nxgt/openapi-codegen']]);
-	});
-
-	test('reads a bin whose #! line ends in CRLF', () => {
-		expect(
-			undeclaredImports(msw, [
-				[
-					'dist/cli.js',
-					'#!/usr/bin/env bun\r\nimport "@nxgt/openapi-codegen";',
-				],
-			]),
-		).toEqual([['dist/cli.js', '@nxgt/openapi-codegen']]);
-	});
-
-	test('strips a #! only on the first line', () => {
-		expect(() =>
-			undeclaredImports(msw, [
-				['dist/cli.js', 'import "a";\n#!/usr/bin/env bun\n'],
-			]),
-		).toThrow();
-	});
-
 	test('passes a peer, a dependency and an optional dependency', () => {
 		expect(
 			undeclaredImports(
 				{
-					...msw,
-					peerDependencies: { '@nxgt/httpyz': '^0.1.0' },
+					...kit,
+					peerDependencies: { '@nxgt/mongo': '^0.1.0' },
 					dependencies: { a: '1' },
 					optionalDependencies: { b: '1' },
 				},
 				[
 					[
 						'dist/index.js',
-						'import "@nxgt/httpyz/integration";\nimport "a";\nimport "b/sub";',
+						'import "@nxgt/mongo/migrations";\nimport "a";\nimport "b/sub";',
 					],
 				],
 			),
 		).toEqual([]);
 	});
 
+	test("reads a bin past its #! line, which Bun's scanner refuses", () => {
+		expect(
+			undeclaredImports(kit, [
+				[
+					'dist/cli/index.js',
+					'#!/usr/bin/env bun\nimport { main } from "../chunks/main-abc.js";\nimport "left-pad";\nmain();',
+				],
+			]),
+		).toEqual([['dist/cli/index.js', 'left-pad']]);
+	});
+
 	test('catches a dynamic import, a require and a re-export too', () => {
 		expect(
-			undeclaredImports(msw, [
-				['dist/a.js', 'export * from "@nxgt/openapi-codegen";'],
-				[
-					'dist/b.js',
-					'export const load = () => import("@nxgt/openapi-hono");',
-				],
-				['dist/c.js', 'module.exports = require("@nxgt/typespec");'],
+			undeclaredImports(kit, [
+				['dist/a.js', 'export * from "@nxgt/redis";'],
+				['dist/b.js', 'export const load = () => import("@nxgt/redis-guard");'],
+				['dist/c.js', 'module.exports = require("@nxgt/s3");'],
 			]),
 		).toEqual([
-			['dist/a.js', '@nxgt/openapi-codegen'],
-			['dist/b.js', '@nxgt/openapi-hono'],
-			['dist/c.js', '@nxgt/typespec'],
+			['dist/a.js', '@nxgt/redis'],
+			['dist/b.js', '@nxgt/redis-guard'],
+			['dist/c.js', '@nxgt/s3'],
 		]);
 	});
 
 	test('catches the type-only imports a declaration file holds', () => {
 		expect(
-			undeclaredImports(msw, [
-				[
-					'dist/a.d.ts',
-					"export type { GenerateOptions } from '@nxgt/openapi-codegen';",
-				],
+			undeclaredImports(kit, [
+				['dist/a.d.ts', "export type { CacheDefinition } from '@nxgt/redis';"],
 				[
 					'dist/b.d.ts',
-					"import type { RuntimeOperation } from '@nxgt/openapi-hono';\nexport type J = RuntimeOperation;",
+					"import type { RateLimit } from '@nxgt/redis-guard';\nexport type J = RateLimit;",
 				],
-				[
-					'dist/c.d.ts',
-					"export type R = import('@nxgt/typespec').NxgtDecorators;",
-				],
+				['dist/c.d.ts', "export type R = import('@nxgt/s3').BucketDefinition;"],
 				['dist/d.d.ts', "export type { Reply } from './protocol/reply';"],
-				['dist/e.d.ts', '/// <reference types="@nxgt/httpyz-query" />'],
+				['dist/e.d.ts', '/// <reference types="@nxgt/meilisearch" />'],
 				[
 					'dist/f.d.ts',
 					"import type { Server } from 'bun';\nexport type S = Server;",
 				],
 			]),
 		).toEqual([
-			['dist/a.d.ts', '@nxgt/openapi-codegen'],
-			['dist/b.d.ts', '@nxgt/openapi-hono'],
-			['dist/c.d.ts', '@nxgt/typespec'],
-			['dist/e.d.ts', '@nxgt/httpyz-query'],
+			['dist/a.d.ts', '@nxgt/redis'],
+			['dist/b.d.ts', '@nxgt/redis-guard'],
+			['dist/c.d.ts', '@nxgt/s3'],
+			['dist/e.d.ts', '@nxgt/meilisearch'],
 		]);
+	});
+});
+
+describe('scanFailure', () => {
+	const kit = { name: '@nxgt/mongo-kit' };
+	const bad = ['dist/bad.js', 'import {{{ from'] as const;
+
+	test('a file the scanner cannot read throws from the scan', () => {
+		expect(() => undeclaredImports(kit, [bad])).toThrow();
+	});
+
+	test('names the file the scanner refused, and why', () => {
+		const bundles = [['dist/ok.js', 'import "a";'], bad] as const;
+		let error: unknown;
+		try {
+			undeclaredImports(kit, bundles);
+		} catch (each) {
+			error = each;
+		}
+		const report = scanFailure(bundles, error);
+		expect(report.startsWith('dist/bad.js could not be scanned: ')).toBe(true);
+		expect(report).not.toContain('dist/ok.js');
+	});
+
+	test('falls back to the error alone when no file refuses on its own', () => {
+		expect(
+			scanFailure([['dist/ok.js', 'import "a";']], new Error('boom')),
+		).toBe('could not be scanned: boom');
 	});
 });

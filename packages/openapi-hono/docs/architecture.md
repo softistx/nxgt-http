@@ -6,7 +6,14 @@ installed; `hono` is its peer because the types need it.
 
 | File | Holds |
 | --- | --- |
-| `engine.ts` | `createApi`: registration, request validation, reply checks |
+| `engine.ts` | the runtime table's types, `runningRoute`, and `createApi`, which puts the parts of `route/` in order |
+| `route/registry.ts` | an Api's state, its index by route, `missing` and `assertComplete` |
+| `route/routes.ts` | the routes object: a function per method, `operation`, `validate`, `with` |
+| `route/register.ts` | one registration: its checks, then `app.on()` |
+| `route/paths.ts` | a path under its prefix, and the shadowing check |
+| `route/validate.ts` | the validator of a route, over `route/parameters.ts`, `route/body.ts` and `route/check.ts` |
+| `route/reply.ts` | the handler, then the reply checks |
+| `route/media.ts`, `route/fail.ts`, `route/types.ts` | media types, a failed check, the types the parts share |
 | `streams.ts` | `streamEvents` and `streamLines`: a reply written an item at a time |
 | `errors.ts` | issues, failures, `validationErrorHandler` |
 | `types.ts` | the types of `routes`: `ApiSpec`, `Routes`, `Scope`, `RouteHandler` |

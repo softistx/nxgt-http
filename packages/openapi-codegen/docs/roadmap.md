@@ -10,12 +10,7 @@ Nothing in progress.
 
 ## Next
 
-- **`@nxgt/typespec`** — a TypeSpec library, in its own package, so a spec
-  gets the nxgt conventions by declaring them: the error envelope and the
-  standard error responses, cursor and offset pagination, bearer and
-  cookie-session auth, CRUD resource templates with filter, sort and field
-  selection, common scalars, and idempotency, ETag and rate-limit headers —
-  each proven through the same compile, generate, type-check and serve path.
+Nothing planned beyond what is under Later.
 
 ## Later
 
@@ -62,6 +57,10 @@ Nothing in progress.
 - **`alxia.ts`, every operation as the data an alxia app's `app.route()`
   takes** (`alxia` option): its method, its `:name` path and its schemas,
   with concrete Zod types — 0.6.0.
+- **`@nxgt/typespec`, as its own package** — the decorators and templates for
+  authoring a spec in TypeSpec ship apart from the generator, first released
+  as 0.1.0; its roadmap lives in
+  `packages/typespec/docs/roadmap.md`.
 - **Specs authored in TypeSpec** — a spec written in TypeSpec and compiled to
   OpenAPI 3.1 by `@typespec/openapi3` generates types, validators and routes
   like any other: such a project is one of the generator's fixtures, compiled,

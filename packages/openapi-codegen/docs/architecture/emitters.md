@@ -116,7 +116,12 @@ What both printers must agree on, computed once:
 - **Imports.** `Scope.uses` records every schema a printed expression names,
   which is how `operations.ts` imports exactly what it uses.
 
-## Operations (`src/emit/operations.ts`)
+## Operations (`src/emit/operations.ts`, `src/emit/operation/`)
+
+`operations.ts` puts the parts in order; each part lives in `operation/`, one
+role per file: `handler-types.ts`, `client-types.ts`, `stream-types.ts`,
+`table.ts`, `indexes.ts`, `spec-types.ts`, `from-string.ts`, the runtime
+`helpers.ts` and the shared IR readers in `read.ts`.
 
 - **`Operations`** is keyed by `operationId` and holds what a handler gets:
   parameters and bodies as validated, and the replies. What a caller sends
@@ -182,8 +187,9 @@ Written only with the `alxia` option: one `as const` object per operation,
 `{ method, path, schema }`, as `@alxia/core` 0.4's
 `app.route(operation, ...middlewares, handler)` reads it, then
 `operations`, below a comment saying how the route validates and checks
-replies (`USAGE`). It reuses `operations.ts`'s readers (`fromString`,
-`formObject`, `valueSchema` and its helpers) and `zod.ts`'s `expr`, so a
+replies (`USAGE`). It reuses the operation readers (`fromString` and
+`formObject` from `operation/from-string.ts`, `valueSchema` from
+`operation/read.ts`, the runtime helpers from `operation/helpers.ts`) and `zod.ts`'s `expr`, so a
 parameter or a form is read from text exactly as the Hono engine reads it.
 Only what alxia hands over differs:
 

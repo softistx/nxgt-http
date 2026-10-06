@@ -15,7 +15,8 @@
  */
 import type { OperationIR } from '../../ir/types';
 import type { EmitContext } from '../context';
-import { HELPERS, operationDocs } from '../operations';
+import { HELPERS } from '../operation/helpers';
+import { operationDocs } from '../operation/read';
 import { docComment, file, jsString, list, propertyKey } from '../printer';
 import { operationConst } from './names';
 import { type Issue, LOCALS, type Printing } from './printing';

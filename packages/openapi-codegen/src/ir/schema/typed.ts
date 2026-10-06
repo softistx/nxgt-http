@@ -41,7 +41,9 @@ export function typedNode(
 			variants: types.map((type) => typed(state, type, s, at)),
 		};
 	}
-	if (nullable && node.kind !== 'null') node.nullable = true;
+	// `unknown` already takes null, so it is never marked nullable.
+	if (nullable && node.kind !== 'null' && node.kind !== 'unknown')
+		node.nullable = true;
 	return node;
 }
 

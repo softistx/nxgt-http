@@ -142,14 +142,14 @@ describe('typedNode', () => {
 		).toMatchObject({ kind: 'union', nullable: true });
 	});
 
-	it('is `unknown`, still marked nullable, when every type is listed with `null`', () => {
+	it('is `unknown`, not marked nullable, when every type is listed with `null`', () => {
 		expect(
 			typedNode(
 				state(),
 				{ type: ['string', 'number', 'boolean', 'array', 'object', 'null'] },
 				at,
 			),
-		).toEqual({ kind: 'unknown', nullable: true });
+		).toEqual({ kind: 'unknown' });
 	});
 
 	it('is `unknown` for an invalid type and no other', () => {

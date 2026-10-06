@@ -181,11 +181,11 @@ describe('checkExtends', () => {
 		it('is an intersection too for a nullable parent, and for one that is missing', () => {
 			const nullable = object([], { extends: ['N'] });
 			run([nullable], { N: object([], { nullable: true }) });
-			expect(nullable.kind).toBe('intersection' as never);
+			expect((nullable as SchemaNode).kind).toBe('intersection');
 
 			const missing = object([], { extends: ['Gone'] });
 			run([missing]);
-			expect(missing.kind).toBe('intersection' as never);
+			expect((missing as SchemaNode).kind).toBe('intersection');
 		});
 
 		it('copies, as required, the property a parent declares and `requires` names', () => {
@@ -225,7 +225,7 @@ describe('checkExtends', () => {
 			Base: object(),
 		});
 		expect(gone).toEqual({ kind: 'string' });
-		expect(a.kind).toBe('intersection' as never);
+		expect((a as SchemaNode).kind).toBe('intersection');
 		expect(problems).toEqual([notChecked('`x`')]);
 	});
 });

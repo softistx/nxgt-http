@@ -14,8 +14,6 @@ import type { OperationState } from './operation/state';
 import type { SchemaBuilder } from './schemas';
 import type { OperationIR } from './types';
 
-export { mediaKind, sequentialKind } from './operation/media';
-
 export class OperationBuilder {
 	readonly #state: OperationState;
 

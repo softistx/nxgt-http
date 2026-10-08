@@ -36,20 +36,21 @@ describe('the scalars registry', () => {
 		);
 	});
 
-	it('has a category for each folder of lib/scalars/, and no other', async () => {
-		const folders = (await readdir(`${LIB}scalars`, { withFileTypes: true }))
-			.filter((entry) => entry.isDirectory())
-			.map((entry) => entry.name);
-		expect(folders.sort()).toEqual(Object.keys(CATEGORIES).sort());
+	it('has a category for each index of lib/scalars/, each imported', async () => {
+		const indexes = (await readdir(`${LIB}scalars`))
+			.filter((name) => name.endsWith('.tsp'))
+			.map((name) => name.slice(0, -'.tsp'.length));
+		expect(indexes.sort()).toEqual(Object.keys(CATEGORIES).sort());
 		const index = await readFile(`${LIB}scalars.tsp`, 'utf8');
-		for (const category of folders) {
+		for (const category of indexes) {
 			expect(index).toContain(`import "./scalars/${category}.tsp";`);
 		}
 	});
 
 	describe.each(categories)('the %s category', (category, list) => {
 		it('has one file per declared scalar, each imported by its index', async () => {
-			const files = await readdir(`${LIB}scalars/${category}`);
+			// A category of built-ins only has no folder.
+			const files = await readdir(`${LIB}scalars/${category}`).catch(() => []);
 			expect(files.sort()).toEqual(
 				list
 					.filter(declared)
@@ -100,49 +101,52 @@ describe.each([...VERSIONS])('the scalars, in OpenAPI %s', (version) => {
 		}
 	});
 
-	describe.each(categories)('POST /%s', (category, list) => {
-		const scalars = list.filter(declared);
-		const body = Object.fromEntries(
-			scalars.map((entry) => [entry.scalar, entry.accept[0]]),
-		);
-		const post = (value: unknown) => {
-			const app = new Hono();
-			const routes = served[version](app, { validateResponses: true });
-			// The route of each category echoes its body.
-			(routes as unknown as Hono).post(`/${category}`, async (c) =>
-				c.json(await c.req.json(), 200),
+	describe.each(categories.filter(([, list]) => list.some(declared)))(
+		'POST /%s',
+		(category, list) => {
+			const scalars = list.filter(declared);
+			const body = Object.fromEntries(
+				scalars.map((entry) => [entry.scalar, entry.accept[0]]),
 			);
-			return app.request(`/${category}`, {
-				method: 'POST',
-				body: JSON.stringify(value),
-				headers: { 'content-type': 'application/json' },
+			const post = (value: unknown) => {
+				const app = new Hono();
+				const routes = served[version](app, { validateResponses: true });
+				// The route of each category echoes its body.
+				(routes as unknown as Hono).post(`/${category}`, async (c) =>
+					c.json(await c.req.json(), 200),
+				);
+				return app.request(`/${category}`, {
+					method: 'POST',
+					body: JSON.stringify(value),
+					headers: { 'content-type': 'application/json' },
+				});
+			};
+
+			it('accepts every sample', async () => {
+				for (const entry of scalars) {
+					for (const sample of entry.accept) {
+						const sent = { ...body, [entry.scalar]: sample };
+						const reply = await post(sent);
+						expect({ [entry.name]: sample, status: reply.status }).toEqual({
+							[entry.name]: sample,
+							status: 200,
+						});
+						expect(await reply.json()).toEqual(sent);
+					}
+				}
 			});
-		};
 
-		it('accepts every sample', async () => {
-			for (const entry of scalars) {
-				for (const sample of entry.accept) {
-					const sent = { ...body, [entry.scalar]: sample };
-					const reply = await post(sent);
-					expect({ [entry.name]: sample, status: reply.status }).toEqual({
-						[entry.name]: sample,
-						status: 200,
-					});
-					expect(await reply.json()).toEqual(sent);
+			it('refuses every sample it should', async () => {
+				for (const entry of scalars) {
+					for (const sample of entry.refuse) {
+						const reply = await post({ ...body, [entry.scalar]: sample });
+						expect({ [entry.name]: sample, status: reply.status }).toEqual({
+							[entry.name]: sample,
+							status: 400,
+						});
+					}
 				}
-			}
-		});
-
-		it('refuses every sample it should', async () => {
-			for (const entry of scalars) {
-				for (const sample of entry.refuse) {
-					const reply = await post({ ...body, [entry.scalar]: sample });
-					expect({ [entry.name]: sample, status: reply.status }).toEqual({
-						[entry.name]: sample,
-						status: 400,
-					});
-				}
-			}
-		});
-	});
+			});
+		},
+	);
 });

@@ -142,19 +142,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/StringScalars'
-  /value:
-    post:
-      operationId: value
-      parameters: []
-      responses:
-        '200':
-          description: The request has succeeded.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ValueScalars'
 components:
   schemas:
     ColorScalars:
@@ -240,5 +227,3 @@ components:
 
         Specified by https://www.rfc-editor.org/rfc/rfc9562.
       x-nxgt-scalar: UUIDv7
-    ValueScalars:
-      type: object

@@ -13,7 +13,6 @@ import "./locale.tsp";
 import "./network.tsp";
 import "./number.tsp";
 import "./string.tsp";
-import "./value.tsp";
 
 using Http;
 

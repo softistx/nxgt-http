@@ -1,1 +1,2 @@
-// The value scalars, one file each under ./value/.
+// The value scalars: none is declared, TypeSpec writes `unknown`,
+// `Record<unknown>` and `void` (test/scalars/value.ts).

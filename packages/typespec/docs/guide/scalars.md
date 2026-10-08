@@ -217,10 +217,11 @@ CSS color syntax, in the comma form, one space after each comma.
 | `mac` | `MAC` | `mac` | `00:1a:2b:3c:4d:5e`; not the hyphen or dotted form | |
 | `phoneNumber` | `PhoneNumber` | `phone-number` | `+33612345678`: E.164, 7 to 15 digits, no separator | whether the number exists |
 
-`httpUrl` is for a page's address; it is generated as `zURL = z.url().regex(…)`,
-so `z.url()` checks the shape and the pattern keeps to `http:` and `https:`
-(`javascript:alert(1)` passes `z.url()` alone and is refused by the pattern).
-TypeSpec's own `url` takes any scheme and is generated as a bare `z.url()`.
+`httpUrl` is for a page's address; it is generated as
+`zURL = z.string().regex(…)`: the pattern is the rule, and keeps to `http:`
+and `https:` (`javascript:alert(1)` is refused). The generator leaves out
+`z.url()` for it, which trims its input. TypeSpec's own `url` takes any
+scheme and is generated as a bare `z.url()`.
 
 ## Locale
 
@@ -275,17 +276,9 @@ validator, the same as any other schema.
 
 ## Known gaps
 
-The pattern is an approximation. Four things a consumer meets:
+The pattern is an approximation. Three things a consumer meets:
 
-- The generated code also applies the standard format's Zod check, in front
-  of the pattern: `z.email()` for `format: email`, `z.url()` for `uri`,
-  `z.base64()` for `byte`, `z.guid()` for `uuid`. `z.email()` refuses
-  `ada@x.xn--p1ai` (and any top-level domain with a digit or hyphen), which
-  the pattern accepts, so that address is refused.
-- `long` is a string with `format: int64`, the OpenAPI idiom for an int64 sent as
-a string; `timestamp` and `safeInt` are JSON numbers with the same format.
-
-An integer scalar accepts `-0`.
+- An integer scalar accepts `-0`.
 - A scalar that depends on a list (`countryCode`, `currency`, `timeZone`, the
   `iban` checksum, the `locale` registry) accepts a well-shaped unknown value
   until the generator maps `x-nxgt-scalar` to `@nxgt/zod`.

@@ -292,7 +292,7 @@ model Post {
 | Name | Emitted as | Generated | drizzle |
 | --- | --- | --- | --- |
 | `uuid` | the schema `UUID`, `format: uuid`, a pattern for versions 1–8 | `UUID`, `z.guid().regex(…)` | `id()` |
-| `email` | `emailAddress`, the schema `EmailAddress`, `format: email` | `EmailAddress`, `z.email().regex(…)` | |
+| `email` | `emailAddress`, the schema `EmailAddress`, `format: email` | `EmailAddress`, `z.string().regex(…)` | |
 | `...Timestamps` | `createdAt`, `updatedAt`, read-only | left out of `Create<T>` and updates | `timestamps()` |
 | `...SoftDelete` | `deletedAt: utcDateTime \| null`, read-only | | `softDelete()` |
 | `...Versioned` | `version: integer`, read and update | kept in `MergePatchUpdate<T>` | `version()` |

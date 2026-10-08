@@ -543,24 +543,6 @@ if (!knownCountries.has(body.country)) {
 }
 ```
 
-## `` An address with a punycode top-level label is refused: `ada@x.xn--p1ai` ``
-
-**When:** a body, query or path carrying an `emailAddress` (or `email`) whose
-domain ends in an internationalised top-level label, `xn--…`, is answered
-`400` by the generated validator.
-
-**Why:** the pattern accepts it, but the generated schema is
-`z.email().regex(…)`, from `format: email`, and Zod's `z.email()` refuses a
-top-level label that is not letters.
-
-**Fix:** none in the spec: the format check is the generator's. Send the
-address with the domain in its ASCII form only when its top-level label is
-letters, or take such addresses as `string` and validate them yourself:
-
-```tsp
-model Invite { address: string; }
-```
-
 ## `An integer scalar accepts -0`
 
 **When:** a body carries `-0` for `positiveInt`, `nonNegativeInt`, `port`,

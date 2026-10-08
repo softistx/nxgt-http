@@ -33,7 +33,7 @@ export const CATEGORIES: Readonly<Record<string, readonly Entry[]>> = {
 };
 
 /**
- * The 65 scalars @nxgt/graphql-scalars 0.3.2 ships, by name: the parity the
+ * The 65 scalars @nxgt/graphql-scalars 0.3.2 to 0.4.0 ship (0.4.0 added no scalar), by name: the parity the
  * registry is held to. A scalar added there is added here, then to a category.
  */
 export const GRAPHQL_SCALARS = [

@@ -27,12 +27,19 @@ model Author {
 
 | Scalar | Emitted as | Generated | Refused |
 | --- | --- | --- | --- |
-| `uuid` | `$ref` to the schema `Uuid`: `type: string`, `format: uuid` | `type Uuid = string`, `zUuid = z.guid()` | `42`, in a path, a query or a body |
-| `email` | `$ref` to the schema `Email`: `format: email` | `type Email = string`, `zEmail = z.email()` | `not an address` |
+| `uuid` | `$ref` to the schema `UUID`: `type: string`, `format: uuid`, a pattern, `x-nxgt-scalar: UUID` | `type UUID = string`, `zUUID = z.guid().regex(…)` | `42`, a UUID with no hyphens or of version 9, in a path, a query or a body |
+| `email` | an alias of `emailAddress`: `$ref` to the schema `EmailAddress`, `format: email`, a pattern, `x-nxgt-scalar: EmailAddress` | `type EmailAddress = string`, `zEmailAddress = z.email().regex(…)` | `not an address`, `ada@localhost` |
 | `url` | TypeSpec's own: `format: uri`, inline | `z.url()` | `not a url` |
 
-`z.guid()` checks the shape of a UUID, as JSON Schema's `uuid` does, not
-the version and variant bits `z.uuid()` also checks.
+`uuid` takes an RFC 9562 UUID, any version 1 to 8 with the RFC variant, or
+the nil or the max UUID, in any case, as `@nxgt/graphql-scalars`' `UUID`
+does: the pattern adds those checks to the shape `z.guid()` checks. `uuidV4`,
+`uuidV7` and `guid` (any 8-4-4-4-12 hexadecimal) are the narrower and the
+looser ones. `email` is `emailAddress`, under the name it had first.
+
+The schema names changed in 0.10.0: `Uuid` and `Email` became `UUID` and
+`EmailAddress`, and a UUID of no known version is refused. A spec that needs
+the old shape-only id writes `guid`.
 
 ## Columns
 

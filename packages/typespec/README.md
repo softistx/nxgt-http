@@ -291,15 +291,17 @@ model Post {
 
 | Name | Emitted as | Generated | drizzle |
 | --- | --- | --- | --- |
-| `uuid` | the schema `Uuid`, `format: uuid` | `Uuid`, `z.guid()` | `id()` |
-| `email` | the schema `Email`, `format: email` | `Email`, `z.email()` | |
+| `uuid` | the schema `UUID`, `format: uuid`, a pattern for versions 1–8 | `UUID`, `z.guid().regex(…)` | `id()` |
+| `email` | `emailAddress`, the schema `EmailAddress`, `format: email` | `EmailAddress`, `z.email().regex(…)` | |
 | `...Timestamps` | `createdAt`, `updatedAt`, read-only | left out of `Create<T>` and updates | `timestamps()` |
 | `...SoftDelete` | `deletedAt: utcDateTime \| null`, read-only | | `softDelete()` |
 | `...Versioned` | `version: integer`, read and update | kept in `MergePatchUpdate<T>` | `version()` |
 | `...Actors<Id = uuid>` | `createdBy`, `updatedBy`, `deletedBy`, `Id \| null`, read-only | | `actors()` |
 
-TypeSpec's own `url` is the address of a page, `format: uri`, generated as
-`z.url()`. More in [Scalars and columns](docs/guide/columns.md).
+Every scalar is also an OpenAPI component named as in `@nxgt/graphql-scalars`
+(`UUID`, `EmailAddress`), with `x-nxgt-scalar` naming it, so generators know
+the rule. TypeSpec's own `url` is the address of a page, `format: uri`,
+generated as `z.url()`. More in [Scalars and columns](docs/guide/columns.md).
 
 ### Headers
 
@@ -503,8 +505,8 @@ In the ruleset `@nxgt/typespec/recommended`; each is a warning, and named
 
 | Name | What it is |
 | --- | --- |
-| `uuid` | a string, `format: uuid`; the schema `Uuid` |
-| `email` | a string, `format: email`; the schema `Email` |
+| `uuid` | an RFC 9562 UUID, `format: uuid` and a pattern; the schema `UUID` |
+| `email` | an alias of `emailAddress`, `format: email` and a pattern; the schema `EmailAddress` |
 | `Timestamps` | `createdAt`, `updatedAt: utcDateTime`, read-only |
 | `SoftDelete` | `deletedAt: utcDateTime \| null`, read-only |
 | `Versioned` | `version: integer`, read and update |

@@ -7,12 +7,14 @@ export const number: readonly Entry[] = [
 	{
 		name: 'BigInt',
 		scalar: 'bigInt',
+		format: 'big-int',
 		accept: ['0', '-1', '123456789012345678901234567890'],
 		refuse: ['007', '-0', '+1', '1.5', ' 1', '', 1],
 	},
 	{
 		name: 'Long',
 		scalar: 'long',
+		format: 'int64',
 		accept: ['0', '9223372036854775807', '-9223372036854775808'],
 		refuse: ['abc', '1.5', 'x', 1.5, true],
 	},

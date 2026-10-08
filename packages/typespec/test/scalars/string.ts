@@ -4,12 +4,14 @@ export const string: readonly Entry[] = [
 	{
 		name: 'NonEmptyString',
 		scalar: 'nonEmptyString',
+		format: 'non-empty-string',
 		accept: ['a', ' a '],
 		refuse: ['', '   ', '\n\t', '\u00a0'],
 	},
 	{
 		name: 'Emoji',
 		scalar: 'emoji',
+		format: 'emoji',
 		specifiedBy: 'https://www.unicode.org/reports/tr51/',
 		// `\u{1F600}\u{1F600}` (two emoji), a lone joiner or skin tone and the
 		// doubled variation selector are not all caught by a pattern that reads

@@ -9,6 +9,7 @@ namespace Nxgt;
  * trimmed. "White space" is ECMAScript's `\s`.
  */
 @friendlyName("NonEmptyString")
+@format("non-empty-string")
 @pattern("^\\s*\\S[\\s\\S]*$")
 @extension("x-nxgt-scalar", "NonEmptyString")
 scalar nonEmptyString extends string;

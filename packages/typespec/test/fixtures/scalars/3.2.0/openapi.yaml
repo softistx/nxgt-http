@@ -11,6 +11,10 @@ paths:
       responses:
         '200':
           description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ColorScalars'
       requestBody:
         required: true
         content:
@@ -19,11 +23,15 @@ paths:
               $ref: '#/components/schemas/ColorScalars'
   /date-time:
     post:
-      operationId: dateTime
+      operationId: postDateTimeScalars
       parameters: []
       responses:
         '200':
           description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DateTimeScalars'
       requestBody:
         required: true
         content:
@@ -54,6 +62,10 @@ paths:
       responses:
         '200':
           description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinanceScalars'
       requestBody:
         required: true
         content:
@@ -67,6 +79,10 @@ paths:
       responses:
         '200':
           description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeoScalars'
       requestBody:
         required: true
         content:
@@ -92,11 +108,15 @@ paths:
               $ref: '#/components/schemas/IdentifierScalars'
   /locale:
     post:
-      operationId: locale
+      operationId: postLocaleScalars
       parameters: []
       responses:
         '200':
           description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocaleScalars'
       requestBody:
         required: true
         content:
@@ -127,6 +147,10 @@ paths:
       responses:
         '200':
           description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NumberScalars'
       requestBody:
         required: true
         content:
@@ -173,8 +197,66 @@ components:
 
         Specified by https://www.rfc-editor.org/rfc/rfc4648#section-5.
       x-nxgt-scalar: Base64URL
+    BigInt:
+      type: string
+      pattern: ^(?:0|-?[1-9]\d*)$
+      format: big-int
+      description: |-
+        An integer of any size, written as a canonical decimal string: no leading
+        zero, no `+`, no `-0`, no spaces: `"123456789012345678901234567890"`.
+      x-nxgt-scalar: BigInt
+    CIDRv4:
+      type: string
+      pattern: ^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)/(?:3[0-2]|[12]?\d)$
+      format: cidr-v4
+      description: |-
+        An IPv4 block in CIDR notation: a dotted-quad address, `/` and a prefix
+        length from 0 to 32, kept as sent: `10.0.0.0/8`. Each part of the address
+        is 0 to 255 with no leading zero. The address need not be the first of the
+        block.
+
+        Specified by https://www.rfc-editor.org/rfc/rfc4632.
+      x-nxgt-scalar: CIDRv4
+    CIDRv6:
+      type: string
+      pattern: ^(?:(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,7}:|(?:[0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,5}(?::[0-9a-fA-F]{1,4}){1,2}|(?:[0-9a-fA-F]{1,4}:){1,4}(?::[0-9a-fA-F]{1,4}){1,3}|(?:[0-9a-fA-F]{1,4}:){1,3}(?::[0-9a-fA-F]{1,4}){1,4}|(?:[0-9a-fA-F]{1,4}:){1,2}(?::[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:(?::[0-9a-fA-F]{1,4}){1,6}|:(?:(?::[0-9a-fA-F]{1,4}){1,7}|:)|(?:[0-9a-fA-F]{1,4}:){6}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|::(?:[0-9a-fA-F]{1,4}:){0,5}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){1}:(?:[0-9a-fA-F]{1,4}:){0,4}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){2}:(?:[0-9a-fA-F]{1,4}:){0,3}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){3}:(?:[0-9a-fA-F]{1,4}:){0,2}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){4}:(?:[0-9a-fA-F]{1,4}:){0,1}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){5}:(?:[0-9a-fA-F]{1,4}:){0,0}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d))/(?:12[0-8]|1[01]\d|[1-9]?\d)$
+      format: cidr-v6
+      description: |-
+        An IPv6 block in CIDR notation: an IPv6 address, `/` and a prefix length
+        from 0 to 128, kept as sent: `2001:db8::/32`. The address takes every RFC
+        4291 text form, in any case, with no zone, and is not normalised.
+
+        Specified by https://www.rfc-editor.org/rfc/rfc4291.
+      x-nxgt-scalar: CIDRv6
     ColorScalars:
       type: object
+      required:
+        - hexColorCode
+        - hsl
+        - hsla
+        - rgb
+        - rgba
+      properties:
+        hexColorCode:
+          $ref: '#/components/schemas/HexColorCode'
+        hsl:
+          $ref: '#/components/schemas/HSL'
+        hsla:
+          $ref: '#/components/schemas/HSLA'
+        rgb:
+          $ref: '#/components/schemas/RGB'
+        rgba:
+          $ref: '#/components/schemas/RGBA'
+    CountryCode:
+      type: string
+      pattern: ^[A-Z]{2}$
+      format: country-code
+      description: |-
+        An ISO 3166-1 alpha-2 country code, uppercase: `FR`, `US`. The list of
+        assigned codes is not in the pattern: only the shape is.
+
+        Specified by https://www.iso.org/iso-3166-country-codes.html.
+      x-nxgt-scalar: CountryCode
     Cuid2:
       type: string
       pattern: ^[a-z][a-z0-9]{1,31}$
@@ -185,8 +267,79 @@ components:
 
         Specified by https://github.com/paralleldrive/cuid2.
       x-nxgt-scalar: Cuid2
+    Currency:
+      type: string
+      pattern: ^[A-Z]{3}$
+      format: currency
+      description: |-
+        An ISO 4217 currency code, uppercase: `EUR`, `USD`. The list of codes in
+        force is not in the pattern: only the shape is.
+
+        Specified by https://www.iso.org/iso-4217-currency-codes.html.
+      x-nxgt-scalar: Currency
+    Date:
+      type: string
+      pattern: ^(?:\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|02-(?:0[1-9]|1\d|2[0-8]))|(?:\d\d(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29)$
+      format: date
+      description: |-
+        A calendar date, `YYYY-MM-DD`, with no time and no time zone: `2024-02-29`. An impossible
+        day, such as `2023-02-29`, is refused.
+
+        Specified by https://www.rfc-editor.org/rfc/rfc3339#section-5.6.
+      x-nxgt-scalar: Date
+    DateTime:
+      type: string
+      pattern: ^(?:\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|02-(?:0[1-9]|1\d|2[0-8]))|(?:\d\d(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29)T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)(?:Z|\+(?:[01]\d|2[0-3]):[0-5]\d|-(?!00:00)(?:[01]\d|2[0-3]):[0-5]\d)$
+      format: date-time
+      description: |-
+        An RFC 3339 date-time with its offset, `Z` or `±hh:mm`, kept as sent: `2024-03-10T12:00:00+02:00`.
+        A time with no offset names no instant and is refused, and so is the offset `-00:00`:
+        write `Z` or `+00:00`. An impossible day is refused. The range 0000 to 9999 in UTC is
+        not in the pattern, nor is the leap second.
+
+        Specified by https://www.rfc-editor.org/rfc/rfc3339.
+      x-nxgt-scalar: DateTime
     DateTimeScalars:
       type: object
+      required:
+        - date
+        - dateTime
+        - isoDuration
+        - localDateTime
+        - localTime
+        - time
+        - timeZone
+        - timestamp
+        - utcOffset
+      properties:
+        date:
+          $ref: '#/components/schemas/Date'
+        dateTime:
+          $ref: '#/components/schemas/DateTime'
+        isoDuration:
+          $ref: '#/components/schemas/Duration'
+        localDateTime:
+          $ref: '#/components/schemas/LocalDateTime'
+        localTime:
+          $ref: '#/components/schemas/LocalTime'
+        time:
+          $ref: '#/components/schemas/Time'
+        timeZone:
+          $ref: '#/components/schemas/TimeZone'
+        timestamp:
+          $ref: '#/components/schemas/Timestamp'
+        utcOffset:
+          $ref: '#/components/schemas/UtcOffset'
+    Duration:
+      type: string
+      pattern: ^P(?:\d+W|(?!.*W)(?=\d|T\d)(?:\d+Y)?(?:\d+M)?(?:\d+D)?(?:T(?=\d)(?:\d+H)?(?:\d+M)?(?:\d+(?:[.,]\d+)?S)?)?)$
+      format: duration
+      description: |-
+        An ISO 8601 duration, kept as sent and not normalised: `P1DT2H`. Weeks are not mixed with
+        other units, and there is no sign. Named `isoDuration` because `duration` is TypeSpec's own.
+
+        Specified by https://www.iso.org/iso-8601-date-and-time-format.html.
+      x-nxgt-scalar: Duration
     EmailAddress:
       type: string
       pattern: ^[A-Za-z0-9_'+\-]+(?:\.[A-Za-z0-9_'+\-]+)*@(?=.{1,253}$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+(?:[A-Za-z]{1,63}|xn--[A-Za-z0-9-]{1,59})$
@@ -200,6 +353,7 @@ components:
     Emoji:
       type: string
       pattern: ^(?:\p{Regional_Indicator}{2}|[#*0-9]\uFE0F?\u20E3|\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier})?(?:\u200D\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier})?)*)$
+      format: emoji
       description: |-
         One emoji: `😀`, `👍🏽`, `👨‍👩‍👧`, `🇫🇷`, `1️⃣`. A pictograph with an optional variation
         selector or skin tone, joined to others by zero-width joiners; a
@@ -234,6 +388,14 @@ components:
           $ref: '#/components/schemas/SHA512'
     FinanceScalars:
       type: object
+      required:
+        - currency
+        - iban
+      properties:
+        currency:
+          $ref: '#/components/schemas/Currency'
+        iban:
+          $ref: '#/components/schemas/IBAN'
     GUID:
       type: string
       pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$
@@ -242,6 +404,46 @@ components:
       x-nxgt-scalar: GUID
     GeoScalars:
       type: object
+      required:
+        - latitude
+        - longitude
+      properties:
+        latitude:
+          $ref: '#/components/schemas/Latitude'
+        longitude:
+          $ref: '#/components/schemas/Longitude'
+    HSL:
+      type: string
+      pattern: ^hsl\((?:3[0-5]\d|[12]\d\d|[1-9]?\d), (?:100|[1-9]?\d)%, (?:100|[1-9]?\d)%\)$
+      format: hsl
+      description: |-
+        A CSS `hsl()` color in the comma syntax: `hsl(120, 100%, 50%)`. A hue from 0
+        to 359 with no unit (360 is written 0), then saturation and lightness as
+        integer percentages from 0% to 100%.
+
+        Specified by https://www.w3.org/TR/css-color-4/#the-hsl-notation.
+      x-nxgt-scalar: HSL
+    HSLA:
+      type: string
+      pattern: ^hsla\((?:3[0-5]\d|[12]\d\d|[1-9]?\d), (?:100|[1-9]?\d)%, (?:100|[1-9]?\d)%, (?:0|1|0\.\d*[1-9])\)$
+      format: hsla
+      description: |-
+        A CSS `hsla()` color in the comma syntax: `hsla(120, 100%, 50%, 0.5)`. As
+        `hsl` plus an alpha: `0`, `1`, or a fraction with no trailing zero and a
+        leading `0`.
+
+        Specified by https://www.w3.org/TR/css-color-4/#the-hsl-notation.
+      x-nxgt-scalar: HSLA
+    HexColorCode:
+      type: string
+      pattern: ^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$
+      format: hex-color-code
+      description: |-
+        A CSS hex color: `#` then 3, 4, 6 or 8 hexadecimal digits, in any case, kept
+        as sent: `#ff0000`. The 4 and 8 digit forms carry an alpha.
+
+        Specified by https://www.w3.org/TR/css-color-4/#hex-notation.
+      x-nxgt-scalar: HexColorCode
     Hexadecimal:
       type: string
       pattern: ^[0-9a-fA-F]+$
@@ -250,6 +452,63 @@ components:
         One or more hexadecimal digits, in any case, kept as sent. An odd length is
         fine; no `0x` prefix.
       x-nxgt-scalar: Hexadecimal
+    Hostname:
+      type: string
+      pattern: ^(?=.{1,253}\.?$)(?!(?:[A-Za-z0-9-]+\.)*(?:\d+|0[xX][0-9a-fA-F]*)\.?$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)*[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.?$
+      format: hostname
+      description: |-
+        A host name, kept as sent: `api.example.com`. Dot-separated labels of
+        letters, digits and hyphens, none starting or ending with a hyphen, each
+        up to 63 characters and 253 in all, with an optional trailing dot. The
+        last label is not a number (all digits, or `0x` and hex digits), so an
+        IPv4 address is not a host name. A single label (`localhost`) and punycode
+        are; a Unicode label is not. Nothing is resolved.
+
+        Specified by https://www.rfc-editor.org/rfc/rfc1123.
+      x-nxgt-scalar: Hostname
+    IBAN:
+      type: string
+      pattern: ^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$
+      format: iban
+      description: |-
+        An International Bank Account Number in its electronic form, uppercase, no
+        spaces: `FR1420041010050500013M02606`. Two letters, two check digits, then
+        11 to 30 letters or digits. The checksum (ISO 13616, mod 97) and the
+        country and its length are not in the pattern.
+
+        Specified by https://www.iso.org/standard/81090.html.
+      x-nxgt-scalar: IBAN
+    IP:
+      type: string
+      pattern: ^(?:(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,7}:|(?:[0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,5}(?::[0-9a-fA-F]{1,4}){1,2}|(?:[0-9a-fA-F]{1,4}:){1,4}(?::[0-9a-fA-F]{1,4}){1,3}|(?:[0-9a-fA-F]{1,4}:){1,3}(?::[0-9a-fA-F]{1,4}){1,4}|(?:[0-9a-fA-F]{1,4}:){1,2}(?::[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:(?::[0-9a-fA-F]{1,4}){1,6}|:(?:(?::[0-9a-fA-F]{1,4}){1,7}|:)|(?:[0-9a-fA-F]{1,4}:){6}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|::(?:[0-9a-fA-F]{1,4}:){0,5}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){1}:(?:[0-9a-fA-F]{1,4}:){0,4}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){2}:(?:[0-9a-fA-F]{1,4}:){0,3}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){3}:(?:[0-9a-fA-F]{1,4}:){0,2}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){4}:(?:[0-9a-fA-F]{1,4}:){0,1}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){5}:(?:[0-9a-fA-F]{1,4}:){0,0}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)))$
+      format: ip
+      description: |-
+        An IPv4 or an IPv6 address, as `ipV4` and `ipV6` take them, kept as sent:
+        `192.168.0.1`, `2001:db8::1`.
+
+        Specified by https://www.rfc-editor.org/rfc/rfc4291.
+      x-nxgt-scalar: IP
+    IPv4:
+      type: string
+      pattern: ^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$
+      format: ipv4
+      description: |-
+        An IPv4 address in dotted-quad form: `192.168.0.1`. Each part is 0 to 255
+        with no leading zero.
+
+        Specified by https://www.rfc-editor.org/rfc/rfc791.
+      x-nxgt-scalar: IPv4
+    IPv6:
+      type: string
+      pattern: ^(?:(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,7}:|(?:[0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,5}(?::[0-9a-fA-F]{1,4}){1,2}|(?:[0-9a-fA-F]{1,4}:){1,4}(?::[0-9a-fA-F]{1,4}){1,3}|(?:[0-9a-fA-F]{1,4}:){1,3}(?::[0-9a-fA-F]{1,4}){1,4}|(?:[0-9a-fA-F]{1,4}:){1,2}(?::[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:(?::[0-9a-fA-F]{1,4}){1,6}|:(?:(?::[0-9a-fA-F]{1,4}){1,7}|:)|(?:[0-9a-fA-F]{1,4}:){6}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|::(?:[0-9a-fA-F]{1,4}:){0,5}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){1}:(?:[0-9a-fA-F]{1,4}:){0,4}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){2}:(?:[0-9a-fA-F]{1,4}:){0,3}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){3}:(?:[0-9a-fA-F]{1,4}:){0,2}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){4}:(?:[0-9a-fA-F]{1,4}:){0,1}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){5}:(?:[0-9a-fA-F]{1,4}:){0,0}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d))$
+      format: ipv6
+      description: |-
+        An IPv6 address in any RFC 4291 text form, in any case, kept as sent and
+        never normalised: `2001:db8::1`, `::1`, `::ffff:192.0.2.1`. No zone
+        (`%eth0`).
+
+        Specified by https://www.rfc-editor.org/rfc/rfc4291.
+      x-nxgt-scalar: IPv6
     ISBN:
       type: string
       pattern: ^(?:\d{9}[\dX]|(?:978\d|979[1-9])\d{9})$
@@ -324,8 +583,78 @@ components:
 
         Specified by https://github.com/segmentio/ksuid.
       x-nxgt-scalar: KSUID
+    Latitude:
+      type: number
+      format: double
+      minimum: -90
+      maximum: 90
+      description: 'A latitude in decimal degrees, WGS 84, from -90 to 90: `48.8566`. A number, never a string.'
+      x-nxgt-scalar: Latitude
+    LocalDateTime:
+      type: string
+      pattern: ^(?:\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|02-(?:0[1-9]|1\d|2[0-8]))|(?:\d\d(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29)T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?$
+      format: local-date-time
+      description: |-
+        A date and a time on the wall clock, with no offset, not even `Z`: `2024-03-10T10:15:30`.
+        The seconds are optional. An impossible day is refused.
+      x-nxgt-scalar: LocalDateTime
+    LocalTime:
+      type: string
+      pattern: ^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?$
+      format: local-time
+      description: |-
+        A time of day with no offset, `HH:MM`, `HH:MM:SS` or with a fraction: `10:15`. It names no
+        instant until a date and a place are given; a `Z` or an offset is refused.
+      x-nxgt-scalar: LocalTime
+    Locale:
+      type: string
+      pattern: ^(?=.{1,255}$)[a-z]{2,3}(?:-[A-Z][a-z]{3})?(?:-(?:[A-Z]{2}|\d{3}))?(?:-(?:[a-z0-9]{5,8}|\d[a-z0-9]{3}))*(?:-[0-9a-wyz](?:-[a-z0-9]{2,8})+)*(?:-x(?:-[a-z0-9]{1,8})+)?$
+      format: locale
+      description: |-
+        A well-formed BCP 47 language tag in canonical case, kept as sent, at most
+        255 characters: `fr`, `fr-FR`, `zh-Hant-TW`, `en-US-u-ca-buddhist`. The
+        language is lowercase, a script Titlecase, a region uppercase, the rest
+        lowercase. The order of extensions and of `-u-` keywords is not in the
+        pattern, nor is the IANA registry.
+
+        Specified by https://www.rfc-editor.org/rfc/rfc5646.
+      x-nxgt-scalar: Locale
     LocaleScalars:
       type: object
+      required:
+        - countryCode
+        - locale
+      properties:
+        countryCode:
+          $ref: '#/components/schemas/CountryCode'
+        locale:
+          $ref: '#/components/schemas/Locale'
+    Long:
+      type: string
+      pattern: ^(?:0|[1-9]\d{0,17}|[1-8]\d{18}|9[0-1]\d{17}|92[0-1]\d{16}|922[0-2]\d{15}|9223[0-2]\d{14}|92233[0-6]\d{13}|922337[0-1]\d{12}|92233720[0-2]\d{10}|922337203[0-5]\d{9}|9223372036[0-7]\d{8}|92233720368[0-4]\d{7}|922337203685[0-3]\d{6}|9223372036854[0-6]\d{5}|92233720368547[0-6]\d{4}|922337203685477[0-4]\d{3}|9223372036854775[0-7]\d{2}|922337203685477580[0-7]|-[1-9]\d{0,17}|-(?:[1-8]\d{18}|9[0-1]\d{17}|92[0-1]\d{16}|922[0-2]\d{15}|9223[0-2]\d{14}|92233[0-6]\d{13}|922337[0-1]\d{12}|92233720[0-2]\d{10}|922337203[0-5]\d{9}|9223372036[0-7]\d{8}|92233720368[0-4]\d{7}|922337203685[0-3]\d{6}|9223372036854[0-6]\d{5}|92233720368547[0-6]\d{4}|922337203685477[0-4]\d{3}|9223372036854775[0-7]\d{2}|922337203685477580[0-8]))$
+      format: int64
+      description: |-
+        A signed 64-bit integer, -9223372036854775808 to 9223372036854775807, written
+        as a canonical decimal string, since JSON numbers lose precision past 2^53:
+        `"9223372036854775807"`. No leading zero, no `+`, no `-0`; the range is in
+        the pattern.
+      x-nxgt-scalar: Long
+    Longitude:
+      type: number
+      format: double
+      minimum: -180
+      maximum: 180
+      description: 'A longitude in decimal degrees, WGS 84, from -180 to 180: `2.3522`. A number, never a string.'
+      x-nxgt-scalar: Longitude
+    MAC:
+      type: string
+      pattern: ^(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$
+      format: mac
+      description: |-
+        A 48-bit MAC address: six hex pairs separated by `:`, in any case, kept as
+        sent: `00:1a:2b:3c:4d:5e`. The IEEE hyphen form and the dotted form are
+        refused.
+      x-nxgt-scalar: MAC
     NanoID:
       type: string
       pattern: ^[A-Za-z0-9_-]{21}$
@@ -335,22 +664,133 @@ components:
 
         Specified by https://github.com/ai/nanoid.
       x-nxgt-scalar: NanoID
+    NegativeFloat:
+      type: number
+      format: double
+      description: A finite number below 0.
+      exclusiveMaximum: 0
+      x-nxgt-scalar: NegativeFloat
+    NegativeInt:
+      type: integer
+      format: int32
+      minimum: -2147483648
+      maximum: -1
+      description: |-
+        An integer, as GraphQL's `Int` writes it: no float, whole or not, and no
+        `-0`, which JSON Schema cannot express. From -2147483648 to -1.
+      x-nxgt-scalar: NegativeInt
     NetworkScalars:
       type: object
       required:
+        - cidrV4
+        - cidrV6
         - emailAddress
+        - hostname
+        - httpUrl
+        - ip
+        - ipV4
+        - ipV6
+        - mac
+        - phoneNumber
       properties:
+        cidrV4:
+          $ref: '#/components/schemas/CIDRv4'
+        cidrV6:
+          $ref: '#/components/schemas/CIDRv6'
         emailAddress:
           $ref: '#/components/schemas/EmailAddress'
+        hostname:
+          $ref: '#/components/schemas/Hostname'
+        httpUrl:
+          $ref: '#/components/schemas/URL'
+        ip:
+          $ref: '#/components/schemas/IP'
+        ipV4:
+          $ref: '#/components/schemas/IPv4'
+        ipV6:
+          $ref: '#/components/schemas/IPv6'
+        mac:
+          $ref: '#/components/schemas/MAC'
+        phoneNumber:
+          $ref: '#/components/schemas/PhoneNumber'
     NonEmptyString:
       type: string
       pattern: ^\s*\S[\s\S]*$
+      format: non-empty-string
       description: |-
         A string with at least one non-white-space character, kept as sent, not
         trimmed. "White space" is ECMAScript's `\s`.
       x-nxgt-scalar: NonEmptyString
+    NonNegativeFloat:
+      type: number
+      format: double
+      minimum: 0
+      description: A finite number, 0 or above.
+      x-nxgt-scalar: NonNegativeFloat
+    NonNegativeInt:
+      type: integer
+      format: int32
+      minimum: 0
+      maximum: 2147483647
+      description: |-
+        An integer, as GraphQL's `Int` writes it: no float, whole or not, and no
+        `-0`, which JSON Schema cannot express. From 0 to 2147483647.
+      x-nxgt-scalar: NonNegativeInt
+    NonPositiveFloat:
+      type: number
+      format: double
+      maximum: 0
+      description: A finite number, 0 or below.
+      x-nxgt-scalar: NonPositiveFloat
+    NonPositiveInt:
+      type: integer
+      format: int32
+      minimum: -2147483648
+      maximum: 0
+      description: |-
+        An integer, as GraphQL's `Int` writes it: no float, whole or not, and no
+        `-0`, which JSON Schema cannot express. From -2147483648 to 0.
+      x-nxgt-scalar: NonPositiveInt
     NumberScalars:
       type: object
+      required:
+        - bigInt
+        - long
+        - negativeFloat
+        - negativeInt
+        - nonNegativeFloat
+        - nonNegativeInt
+        - nonPositiveFloat
+        - nonPositiveInt
+        - port
+        - positiveFloat
+        - positiveInt
+        - safeInt
+      properties:
+        bigInt:
+          $ref: '#/components/schemas/BigInt'
+        long:
+          $ref: '#/components/schemas/Long'
+        negativeFloat:
+          $ref: '#/components/schemas/NegativeFloat'
+        negativeInt:
+          $ref: '#/components/schemas/NegativeInt'
+        nonNegativeFloat:
+          $ref: '#/components/schemas/NonNegativeFloat'
+        nonNegativeInt:
+          $ref: '#/components/schemas/NonNegativeInt'
+        nonPositiveFloat:
+          $ref: '#/components/schemas/NonPositiveFloat'
+        nonPositiveInt:
+          $ref: '#/components/schemas/NonPositiveInt'
+        port:
+          $ref: '#/components/schemas/Port'
+        positiveFloat:
+          $ref: '#/components/schemas/PositiveFloat'
+        positiveInt:
+          $ref: '#/components/schemas/PositiveInt'
+        safeInt:
+          $ref: '#/components/schemas/SafeInt'
     ObjectID:
       type: string
       pattern: ^[0-9a-fA-F]{24}$
@@ -360,6 +800,61 @@ components:
 
         Specified by https://www.mongodb.com/docs/manual/reference/method/ObjectId/.
       x-nxgt-scalar: ObjectID
+    PhoneNumber:
+      type: string
+      pattern: ^\+[1-9]\d{6,14}$
+      format: phone-number
+      description: |-
+        A phone number in E.164 form: `+`, a country code that does not start with
+        0, and 7 to 15 digits in all, with no space or separator: `+33612345678`.
+        Only the shape is checked.
+
+        Specified by https://www.itu.int/rec/T-REC-E.164.
+      x-nxgt-scalar: PhoneNumber
+    Port:
+      type: integer
+      format: int32
+      minimum: 0
+      maximum: 65535
+      description: A TCP or UDP port, an integer from 0 to 65535.
+      x-nxgt-scalar: Port
+    PositiveFloat:
+      type: number
+      format: double
+      description: A finite number above 0.
+      exclusiveMinimum: 0
+      x-nxgt-scalar: PositiveFloat
+    PositiveInt:
+      type: integer
+      format: int32
+      minimum: 1
+      maximum: 2147483647
+      description: |-
+        An integer, as GraphQL's `Int` writes it: no float, whole or not, and no
+        `-0`, which JSON Schema cannot express. From 1 to 2147483647.
+      x-nxgt-scalar: PositiveInt
+    RGB:
+      type: string
+      pattern: ^rgb\((?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d), (?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d), (?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\)$
+      format: rgb
+      description: |-
+        A CSS `rgb()` color in the comma syntax: `rgb(255, 0, 0)`. Three integers
+        from 0 to 255, no leading zero, no percentage, a `, ` between them, the
+        function name in lower case.
+
+        Specified by https://www.w3.org/TR/css-color-4/#rgb-functions.
+      x-nxgt-scalar: RGB
+    RGBA:
+      type: string
+      pattern: ^rgba\((?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d), (?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d), (?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d), (?:0|1|0\.\d*[1-9])\)$
+      format: rgba
+      description: |-
+        A CSS `rgba()` color in the comma syntax: `rgba(255, 0, 0, 0.5)`. As `rgb`
+        plus an alpha: `0`, `1`, or a fraction with no trailing zero and a leading
+        `0`.
+
+        Specified by https://www.w3.org/TR/css-color-4/#rgb-functions.
+      x-nxgt-scalar: RGBA
     SHA256:
       type: string
       pattern: ^[0-9a-fA-F]{64}$
@@ -378,6 +873,16 @@ components:
 
         Specified by https://csrc.nist.gov/pubs/fips/180-4/upd1/final.
       x-nxgt-scalar: SHA512
+    SafeInt:
+      type: integer
+      format: int64
+      minimum: -9007199254740991
+      maximum: 9007199254740991
+      description: |-
+        An integer, as GraphQL's `Int` writes it: no float, whole or not, and no
+        `-0`, which JSON Schema cannot express. From -9007199254740991 to
+        9007199254740991, the integers JavaScript holds exactly.
+      x-nxgt-scalar: SafeInt
     SemVer:
       type: string
       pattern: ^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-(?:(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*)?$
@@ -398,6 +903,36 @@ components:
           $ref: '#/components/schemas/Emoji'
         nonEmptyString:
           $ref: '#/components/schemas/NonEmptyString'
+    Time:
+      type: string
+      pattern: ^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)(?:\.\d+)?(?:Z|\+(?:[01]\d|2[0-3]):[0-5]\d|-(?!00:00)(?:[01]\d|2[0-3]):[0-5]\d)$
+      format: time
+      description: |-
+        An RFC 3339 `full-time`, kept as sent: seconds, an optional fraction, then `Z` or `±hh:mm`,
+        such as `10:15:30+02:00`. A time with no offset is refused, and so is `-00:00`.
+
+        Specified by https://www.rfc-editor.org/rfc/rfc3339#section-5.6.
+      x-nxgt-scalar: Time
+    TimeZone:
+      type: string
+      pattern: ^[A-Z][A-Za-z0-9+\-_]*(?:/[A-Z][A-Za-z0-9+\-_]*){0,2}$
+      format: time-zone
+      description: |-
+        An IANA time zone name in its exact case, kept as sent: `Europe/Paris`, `UTC`. Only the shape
+        is checked, one to three words of letters, digits, `+`, `-` and `_`, each starting with a capital;
+        the list of names is not in the pattern.
+
+        Specified by https://www.iana.org/time-zones.
+      x-nxgt-scalar: TimeZone
+    Timestamp:
+      type: integer
+      format: int64
+      minimum: -8640000000000000
+      maximum: 8640000000000000
+      description: |-
+        An instant as an integer number of milliseconds since 1970-01-01T00:00:00Z, negative before
+        1970, within the range of a JavaScript `Date`, ±8640000000000000: `1710065730000`.
+      x-nxgt-scalar: Timestamp
     ULID:
       type: string
       pattern: ^[0-7][0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{25}$
@@ -408,6 +943,20 @@ components:
 
         Specified by https://github.com/ulid/spec.
       x-nxgt-scalar: ULID
+    URL:
+      type: string
+      pattern: ^https?://(?:(?=[A-Za-z0-9.-]{1,253}(?:[:/?#]|$))(?!(?:[A-Za-z0-9-]+\.)*(?:\d+|0[xX][0-9a-fA-F]*)\.?(?:[:/?#]|$))(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)*[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.?|(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|\[(?:(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,7}:|(?:[0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,5}(?::[0-9a-fA-F]{1,4}){1,2}|(?:[0-9a-fA-F]{1,4}:){1,4}(?::[0-9a-fA-F]{1,4}){1,3}|(?:[0-9a-fA-F]{1,4}:){1,3}(?::[0-9a-fA-F]{1,4}){1,4}|(?:[0-9a-fA-F]{1,4}:){1,2}(?::[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:(?::[0-9a-fA-F]{1,4}){1,6}|:(?:(?::[0-9a-fA-F]{1,4}){1,7}|:)|(?:[0-9a-fA-F]{1,4}:){6}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|::(?:[0-9a-fA-F]{1,4}:){0,5}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){1}:(?:[0-9a-fA-F]{1,4}:){0,4}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){2}:(?:[0-9a-fA-F]{1,4}:){0,3}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){3}:(?:[0-9a-fA-F]{1,4}:){0,2}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){4}:(?:[0-9a-fA-F]{1,4}:){0,1}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){5}:(?:[0-9a-fA-F]{1,4}:){0,0}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d))\])(?::(?:0|[1-9]\d{0,4}))?(?:[/?#][^\s\u0000-\u001f\u007f-\u009f\u00ad\u0600-\u0605\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u206f\ufeff]*)?$
+      format: uri
+      description: |-
+        An absolute `http:` or `https:` URL, kept as sent:
+        `https://example.com/a?b=c`. The scheme is lowercase; the host is a
+        `hostname`, a canonical IPv4 address or a bracketed IPv6 address, with no
+        user info; a port is digits with no leading zero. No white space, control
+        or invisible format character anywhere. Other schemes (`javascript:`,
+        `data:`) are refused. Named `httpUrl`, as `url` is a TypeSpec built-in.
+
+        Specified by https://url.spec.whatwg.org/.
+      x-nxgt-scalar: URL
     UUID:
       type: string
       pattern: ^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|0{8}-0{4}-0{4}-0{4}-0{12}|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$
@@ -436,6 +985,14 @@ components:
 
         Specified by https://www.rfc-editor.org/rfc/rfc9562.
       x-nxgt-scalar: UUIDv7
+    UtcOffset:
+      type: string
+      pattern: ^(?:\+(?:0\d|1[0-3]):[0-5]\d|\+14:00|-(?!00:00)(?:0\d|1[01]):[0-5]\d|-12:00)$
+      format: utc-offset
+      description: |-
+        A fixed offset from UTC, `±hh:mm`, from `-12:00` to `+14:00`: `+05:30`. It is not a place and
+        knows nothing of daylight saving. `-00:00` is refused: write `+00:00`.
+      x-nxgt-scalar: UtcOffset
     XID:
       type: string
       pattern: ^[0-9a-v]{19}[0g]$

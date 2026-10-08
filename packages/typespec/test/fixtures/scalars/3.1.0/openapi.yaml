@@ -11,6 +11,10 @@ paths:
       responses:
         '200':
           description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ColorScalars'
       requestBody:
         required: true
         content:
@@ -123,6 +127,10 @@ paths:
       responses:
         '200':
           description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NumberScalars'
       requestBody:
         required: true
         content:
@@ -144,8 +152,32 @@ paths:
               $ref: '#/components/schemas/StringScalars'
 components:
   schemas:
+    BigInt:
+      type: string
+      pattern: ^(?:0|-?[1-9]\d*)$
+      description: |-
+        An integer of any size, written as a canonical decimal string: no leading
+        zero, no `+`, no `-0`, no spaces: `"123456789012345678901234567890"`.
+      x-nxgt-scalar: BigInt
     ColorScalars:
       type: object
+      required:
+        - hexColorCode
+        - hsl
+        - hsla
+        - rgb
+        - rgba
+      properties:
+        hexColorCode:
+          $ref: '#/components/schemas/HexColorCode'
+        hsl:
+          $ref: '#/components/schemas/HSL'
+        hsla:
+          $ref: '#/components/schemas/HSLA'
+        rgb:
+          $ref: '#/components/schemas/RGB'
+        rgba:
+          $ref: '#/components/schemas/RGBA'
     DateTimeScalars:
       type: object
     EmailAddress:
@@ -170,6 +202,38 @@ components:
       x-nxgt-scalar: GUID
     GeoScalars:
       type: object
+    HSL:
+      type: string
+      pattern: ^hsl\((?:3[0-5]\d|[12]\d\d|[1-9]?\d), (?:100|[1-9]?\d)%, (?:100|[1-9]?\d)%\)$
+      format: hsl
+      description: |-
+        A CSS `hsl()` color in the comma syntax: `hsl(120, 100%, 50%)`. A hue from 0
+        to 359 with no unit (360 is written 0), then saturation and lightness as
+        integer percentages from 0% to 100%.
+
+        Specified by https://www.w3.org/TR/css-color-4/#the-hsl-notation.
+      x-nxgt-scalar: HSL
+    HSLA:
+      type: string
+      pattern: ^hsla\((?:3[0-5]\d|[12]\d\d|[1-9]?\d), (?:100|[1-9]?\d)%, (?:100|[1-9]?\d)%, (?:0|1|0\.\d*[1-9])\)$
+      format: hsla
+      description: |-
+        A CSS `hsla()` color in the comma syntax: `hsla(120, 100%, 50%, 0.5)`. As
+        `hsl` plus an alpha: `0`, `1`, or a fraction with no trailing zero and a
+        leading `0`.
+
+        Specified by https://www.w3.org/TR/css-color-4/#the-hsl-notation.
+      x-nxgt-scalar: HSLA
+    HexColorCode:
+      type: string
+      pattern: ^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$
+      format: hex-color-code
+      description: |-
+        A CSS hex color: `#` then 3, 4, 6 or 8 hexadecimal digits, in any case, kept
+        as sent: `#ff0000`. The 4 and 8 digit forms carry an alpha.
+
+        Specified by https://www.w3.org/TR/css-color-4/#hex-notation.
+      x-nxgt-scalar: HexColorCode
     IdentifierScalars:
       type: object
       required:
@@ -188,6 +252,30 @@ components:
           $ref: '#/components/schemas/UUIDv7'
     LocaleScalars:
       type: object
+    Long:
+      type: string
+      pattern: ^(?:0|[1-9]\d{0,17}|[1-8]\d{18}|9[0-1]\d{17}|92[0-1]\d{16}|922[0-2]\d{15}|9223[0-2]\d{14}|92233[0-6]\d{13}|922337[0-1]\d{12}|92233720[0-2]\d{10}|922337203[0-5]\d{9}|9223372036[0-7]\d{8}|92233720368[0-4]\d{7}|922337203685[0-3]\d{6}|9223372036854[0-6]\d{5}|92233720368547[0-6]\d{4}|922337203685477[0-4]\d{3}|9223372036854775[0-7]\d{2}|922337203685477580[0-7]|-[1-9]\d{0,17}|-(?:[1-8]\d{18}|9[0-1]\d{17}|92[0-1]\d{16}|922[0-2]\d{15}|9223[0-2]\d{14}|92233[0-6]\d{13}|922337[0-1]\d{12}|92233720[0-2]\d{10}|922337203[0-5]\d{9}|9223372036[0-7]\d{8}|92233720368[0-4]\d{7}|922337203685[0-3]\d{6}|9223372036854[0-6]\d{5}|92233720368547[0-6]\d{4}|922337203685477[0-4]\d{3}|9223372036854775[0-7]\d{2}|922337203685477580[0-8]))$
+      description: |-
+        A signed 64-bit integer, -9223372036854775808 to 9223372036854775807, written
+        as a canonical decimal string, since JSON numbers lose precision past 2^53:
+        `"9223372036854775807"`. No leading zero, no `+`, no `-0`; the range is in
+        the pattern.
+      x-nxgt-scalar: Long
+    NegativeFloat:
+      type: number
+      format: double
+      description: A finite number below 0.
+      exclusiveMaximum: 0
+      x-nxgt-scalar: NegativeFloat
+    NegativeInt:
+      type: integer
+      format: int32
+      minimum: -2147483648
+      maximum: -1
+      description: |-
+        An integer, as GraphQL's `Int` writes it: no float, whole or not, and no
+        `-0`, which JSON Schema cannot express. From -2147483648 to -1.
+      x-nxgt-scalar: NegativeInt
     NetworkScalars:
       type: object
       required:
@@ -195,8 +283,130 @@ components:
       properties:
         emailAddress:
           $ref: '#/components/schemas/EmailAddress'
+    NonNegativeFloat:
+      type: number
+      format: double
+      minimum: 0
+      description: A finite number, 0 or above.
+      x-nxgt-scalar: NonNegativeFloat
+    NonNegativeInt:
+      type: integer
+      format: int32
+      minimum: 0
+      maximum: 2147483647
+      description: |-
+        An integer, as GraphQL's `Int` writes it: no float, whole or not, and no
+        `-0`, which JSON Schema cannot express. From 0 to 2147483647.
+      x-nxgt-scalar: NonNegativeInt
+    NonPositiveFloat:
+      type: number
+      format: double
+      maximum: 0
+      description: A finite number, 0 or below.
+      x-nxgt-scalar: NonPositiveFloat
+    NonPositiveInt:
+      type: integer
+      format: int32
+      minimum: -2147483648
+      maximum: 0
+      description: |-
+        An integer, as GraphQL's `Int` writes it: no float, whole or not, and no
+        `-0`, which JSON Schema cannot express. From -2147483648 to 0.
+      x-nxgt-scalar: NonPositiveInt
     NumberScalars:
       type: object
+      required:
+        - bigInt
+        - long
+        - negativeFloat
+        - negativeInt
+        - nonNegativeFloat
+        - nonNegativeInt
+        - nonPositiveFloat
+        - nonPositiveInt
+        - port
+        - positiveFloat
+        - positiveInt
+        - safeInt
+      properties:
+        bigInt:
+          $ref: '#/components/schemas/BigInt'
+        long:
+          $ref: '#/components/schemas/Long'
+        negativeFloat:
+          $ref: '#/components/schemas/NegativeFloat'
+        negativeInt:
+          $ref: '#/components/schemas/NegativeInt'
+        nonNegativeFloat:
+          $ref: '#/components/schemas/NonNegativeFloat'
+        nonNegativeInt:
+          $ref: '#/components/schemas/NonNegativeInt'
+        nonPositiveFloat:
+          $ref: '#/components/schemas/NonPositiveFloat'
+        nonPositiveInt:
+          $ref: '#/components/schemas/NonPositiveInt'
+        port:
+          $ref: '#/components/schemas/Port'
+        positiveFloat:
+          $ref: '#/components/schemas/PositiveFloat'
+        positiveInt:
+          $ref: '#/components/schemas/PositiveInt'
+        safeInt:
+          $ref: '#/components/schemas/SafeInt'
+    Port:
+      type: integer
+      format: int32
+      minimum: 0
+      maximum: 65535
+      description: A TCP or UDP port, an integer from 0 to 65535.
+      x-nxgt-scalar: Port
+    PositiveFloat:
+      type: number
+      format: double
+      description: A finite number above 0.
+      exclusiveMinimum: 0
+      x-nxgt-scalar: PositiveFloat
+    PositiveInt:
+      type: integer
+      format: int32
+      minimum: 1
+      maximum: 2147483647
+      description: |-
+        An integer, as GraphQL's `Int` writes it: no float, whole or not, and no
+        `-0`, which JSON Schema cannot express. From 1 to 2147483647.
+      x-nxgt-scalar: PositiveInt
+    RGB:
+      type: string
+      pattern: ^rgb\((?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d), (?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d), (?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\)$
+      format: rgb
+      description: |-
+        A CSS `rgb()` color in the comma syntax: `rgb(255, 0, 0)`. Three integers
+        from 0 to 255, no leading zero, no percentage, a `, ` between them, the
+        function name in lower case.
+
+        Specified by https://www.w3.org/TR/css-color-4/#rgb-functions.
+      x-nxgt-scalar: RGB
+    RGBA:
+      type: string
+      pattern: ^rgba\((?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d), (?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d), (?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d), (?:0|1|0\.\d*[1-9])\)$
+      format: rgba
+      description: |-
+        A CSS `rgba()` color in the comma syntax: `rgba(255, 0, 0, 0.5)`. As `rgb`
+        plus an alpha: `0`, `1`, or a fraction with no trailing zero and a leading
+        `0`.
+
+        Specified by https://www.w3.org/TR/css-color-4/#rgb-functions.
+      x-nxgt-scalar: RGBA
+    SafeInt:
+      type: integer
+      format: int64
+      minimum: -9007199254740991
+      maximum: 9007199254740991
+      description: |-
+        An integer, as GraphQL's `Int` writes it: no float, whole or not, and no
+        `-0`, which JSON Schema cannot express. From -9007199254740991 to
+        9007199254740991, the integers JavaScript holds exactly.
+      x-nxgt-scalar: SafeInt
     StringScalars:
       type: object
     UUID:

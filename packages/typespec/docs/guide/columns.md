@@ -1,8 +1,9 @@
 # Scalars and columns
 
-Two scalars for the strings every API has, and the columns
+Scalars for the ids and addresses every API has, and the columns
 [`@nxgt/drizzle`](https://www.npmjs.com/package/@nxgt/drizzle) stamps a row
-with, as models to spread.
+with, as models to spread. The other scalars, by category, are in
+[Scalars](scalars.md).
 
 ## Scalars
 
@@ -18,7 +19,7 @@ namespace Blog;
 model Author {
   @visibility(Lifecycle.Read) id: uuid;
   email: email;
-  site?: url;
+  site?: httpUrl;
 }
 
 @route("/authors/{authorId}")
@@ -29,7 +30,10 @@ model Author {
 | --- | --- | --- | --- |
 | `uuid` | `$ref` to the schema `UUID`: `type: string`, `format: uuid`, a pattern, `x-nxgt-scalar: UUID` | `type UUID = string`, `zUUID = z.guid().regex(…)` | `42`, a UUID with no hyphens or of version 9, in a path, a query or a body |
 | `email` | an alias of `emailAddress`: `$ref` to the schema `EmailAddress`, `format: email`, a pattern, `x-nxgt-scalar: EmailAddress` | `type EmailAddress = string`, `zEmailAddress = z.email().regex(…)` | `not an address`, `ada@localhost` |
-| `url` | TypeSpec's own: `format: uri`, inline | `z.url()` | `not a url` |
+| `httpUrl` | `$ref` to the schema `URL`: `format: uri`, a pattern for `http:` and `https:`, `x-nxgt-scalar: URL` | `URL`, `z.url()` and the pattern | `not a url`, `javascript:alert(1)` |
+
+TypeSpec's own `url` takes any scheme, inline, as `z.url()`; `httpUrl` is
+the `http:` and `https:` page address.
 
 `uuid` takes an RFC 9562 UUID, any version 1 to 8 with the RFC variant, or
 the nil or the max UUID, in any case, as `@nxgt/graphql-scalars`' `UUID`
@@ -119,6 +123,6 @@ without it is not checked against the version.
 
 ## Names
 
-`Uuid` and `Email` are schemas of their own, and their names are global: a
-model named `Email` in a spec that also uses `email` collides with it
+`UUID` and `EmailAddress` are schemas of their own, and their names are global: a
+model named `EmailAddress` in a spec that also uses `email` collides with it
 ([troubleshooting](../troubleshooting.md)).

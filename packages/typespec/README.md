@@ -298,10 +298,27 @@ model Post {
 | `...Versioned` | `version: integer`, read and update | kept in `MergePatchUpdate<T>` | `version()` |
 | `...Actors<Id = uuid>` | `createdBy`, `updatedBy`, `deletedBy`, `Id \| null`, read-only | | `actors()` |
 
-Every scalar is also an OpenAPI component named as in `@nxgt/graphql-scalars`
-(`UUID`, `EmailAddress`), with `x-nxgt-scalar` naming it, so generators know
-the rule. TypeSpec's own `url` is the address of a page, `format: uri`,
-generated as `z.url()`. More in [Scalars and columns](docs/guide/columns.md).
+Every scalar of [`@nxgt/graphql-scalars`](https://www.npmjs.com/package/@nxgt/graphql-scalars)
+is declared too, as a camelCase scalar (`latitude`, `currency`, `positiveInt`,
+`httpUrl`, `ipV4`, `isoDuration`):
+
+```tsp
+model Place {
+  location: { latitude: latitude; longitude: longitude };
+  currency: currency;
+  openedOn: date;
+  homepage?: httpUrl;
+  seats: positiveInt;
+}
+```
+
+Each is an OpenAPI component named as in GraphQL (`Latitude`, `URL`), with a
+`format`, a pattern or bounds approximating the rule, and `x-nxgt-scalar`
+naming it. The exact rules (checksums, ISO and IANA lists) are outside the
+pattern. TypeSpec's own `url` takes any scheme; `httpUrl` takes `http:` and
+`https:`. Every scalar by category, in
+[Scalars](docs/guide/scalars.md); the ids, the addresses and the columns, in
+[Scalars and columns](docs/guide/columns.md).
 
 ### Headers
 
@@ -507,6 +524,13 @@ In the ruleset `@nxgt/typespec/recommended`; each is a warning, and named
 | --- | --- |
 | `uuid` | an RFC 9562 UUID, `format: uuid` and a pattern; the schema `UUID` |
 | `email` | an alias of `emailAddress`, `format: email` and a pattern; the schema `EmailAddress` |
+| `guid`, `uuidV4`, `uuidV7` | a UUID of any shape, of version 4, of version 7; `GUID`, `UUIDv4`, `UUIDv7` |
+| `positiveInt` … `safeInt`, `port`, `positiveFloat` …, `bigInt`, `long` | the numbers: `int32` bounds, JavaScript's safe integers, TCP ports, floats by sign, and 64-bit or larger integers as strings |
+| `date`, `dateTime`, `time`, `localDateTime`, `localTime`, `isoDuration`, `utcOffset`, `timeZone`, `timestamp` | dates, times and durations as RFC 3339 and ISO 8601 write them |
+| `latitude`, `longitude` | decimal degrees, as numbers |
+| `hexColorCode`, `rgb`, `rgba`, `hsl`, `hsla` | CSS colors |
+| `emailAddress`, `hostname`, `httpUrl`, `ipV4`, `ipV6`, `ip`, `cidrV4`, `cidrV6`, `mac`, `phoneNumber` | addresses; `httpUrl` is named so because `url` is TypeSpec's |
+| `countryCode`, `locale`, `currency`, `iban` | ISO and BCP 47 codes, by shape |
 | `Timestamps` | `createdAt`, `updatedAt: utcDateTime`, read-only |
 | `SoftDelete` | `deletedAt: utcDateTime \| null`, read-only |
 | `Versioned` | `version: integer`, read and update |
@@ -602,8 +626,8 @@ envelope and the rate limit's headers.
   `3.1.0/openapi.yaml` and `3.2.0/openapi.yaml`: point the generator's input
   at one of them.
 - **The library's schema names are global.** `BadRequestBody` …
-  `InternalServerErrorBody`, `ValidationIssue`, `ValidationTarget`, `Uuid`,
-  `Email`, and each `<Item>Page` and `<Item>CursorPage` are emitted under
+  `InternalServerErrorBody`, `ValidationIssue`, `ValidationTarget`, the scalars' components
+  (`UUID`, `EmailAddress`, `Latitude`, …), and each `<Item>Page` and `<Item>CursorPage` are emitted under
   those names, without a namespace, once the spec uses them. A model of the
   same name in your spec then fails with `duplicate-type-name`
   ([troubleshooting](docs/troubleshooting.md)).
@@ -618,6 +642,8 @@ envelope and the rate limit's headers.
   what a handler answers;
 - [Authentication](docs/guide/auth.md): `JanusAuth`, and the guards'
   replies without a body;
+- [Scalars](docs/guide/scalars.md): every scalar of `@nxgt/graphql-scalars`
+  by category, with what each takes and what its pattern leaves out;
 - [Scalars and columns](docs/guide/columns.md): `uuid`, `email`, and the
   columns `@nxgt/drizzle` stamps;
 - [Headers](docs/guide/headers.md): `Idempotency-Key`, the rate limit and

@@ -8,6 +8,7 @@ The [package README](../README.md) is the short version.
 | [Error replies](guide/errors.md) | declaring what an operation answers when it fails |
 | [Pagination](guide/pagination.md) | listing a collection a page at a time |
 | [Authentication](guide/auth.md) | protecting an operation with a `@nxgt/janus` session |
+| [Scalars](guide/scalars.md) | typing a latitude, a currency, an IP address or a port, and knowing what each pattern leaves out |
 | [Scalars and columns](guide/columns.md) | typing ids and addresses, and the columns a row carries |
 | [Headers](guide/headers.md) | making a write idempotent, or declaring a rate limit |
 | [Sorting](guide/sorting.md) | letting a client filter and sort a list |

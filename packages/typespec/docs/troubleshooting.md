@@ -92,8 +92,9 @@ In GitHub Actions, add `oven-sh/setup-bun@v2` before the step.
 
 **When:** `tsp compile` runs on a spec that declares its own model named like
 one of the library's: `BadRequestBody` … `InternalServerErrorBody`,
-`ValidationIssue`, `ValidationTarget`, `Uuid` or `Email` when the spec uses
-`uuid` or `email`, or the page of one of its models,
+`ValidationIssue`, `ValidationTarget`, `UUID` or `EmailAddress` when the spec
+uses `uuid` or `email` (or any other scalar, under its GraphQL name: `Latitude`,
+`Currency`), or the page of one of its models,
 such as `PostPage` beside `Page<Post>`, or `CommentCursorPage` beside
 `CursorPage<Comment>`.
 
@@ -487,6 +488,115 @@ linter:
     - '@nxgt/typespec/recommended'
   disable:
     '@nxgt/typespec/error-body-shape': 'the legacy routes answer their own errors'
+```
+
+## `@typespec/openapi3/invalid-model-property: 'Operation' cannot be specified as a model property.`
+
+**When:** `tsp compile` runs on a spec that has `using Nxgt` and declares, in
+its own namespace, something named like a scalar (`locale`, `date`, `time`,
+`port`, `hostname`…) and also uses the scalar of that name.
+
+```tsp
+using Nxgt;
+
+@get op locale(): string;
+model Page { language: locale; }
+```
+
+```text
+error @typespec/openapi3/invalid-model-property: 'Operation' cannot be specified as a model property.
+```
+
+**Why:** a declaration of the spec's own namespace shadows what `using Nxgt`
+brings in, without a word. With an operation the name resolves to the
+operation, and the emitter refuses it. With a model, `model date { … }` and
+`day: date`, the property silently gets the model, a `$ref` to `date` where
+`Date` was meant.
+
+**Fix:** write the scalar with its namespace, or rename your declaration:
+
+```tsp
+model Page { language: Nxgt.locale; }
+```
+
+## `` A value the GraphQL scalar refuses is accepted: `ZZ`, `ZZZ`, `Mars/Olympus`, a bad IBAN checksum ``
+
+**When:** a request carries a value that `@nxgt/graphql-scalars` refuses but
+the generated validator accepts and answers `2xx`: a country code that is not
+assigned (`ZZ`), a currency (`ZZZ`), an IBAN with a wrong checksum, an ISBN
+with a wrong check digit, a time zone (`Mars/Olympus`) or a locale that is not
+in the registry, a JWT whose segments are not a token, an `Emoji` that is not
+one.
+
+**Why:** the scalar's pattern checks the shape. A list (`countryCode`,
+`currency`, `timeZone`, `locale`) or a checksum (`iban`, ISBN) does not fit in
+a pattern. `x-nxgt-scalar` names the exact rule, but `@nxgt/openapi-codegen`
+does not map it to the `@nxgt/zod` schema yet ([roadmap](roadmap.md)).
+
+**Fix:** until it does, check the value in the handler against the exact
+rule, the list or the checksum, from `@nxgt/zod` or your own table, and answer
+`400` as the generated validator does:
+
+```ts
+if (!knownCountries.has(body.country)) {
+	return c.json({ status: 400, message: 'Unknown country code' }, 400);
+}
+```
+
+## `` An address with a punycode top-level label is refused: `ada@x.xn--p1ai` ``
+
+**When:** a body, query or path carrying an `emailAddress` (or `email`) whose
+domain ends in an internationalised top-level label, `xn--…`, is answered
+`400` by the generated validator.
+
+**Why:** the pattern accepts it, but the generated schema is
+`z.email().regex(…)`, from `format: email`, and Zod's `z.email()` refuses a
+top-level label that is not letters.
+
+**Fix:** none in the spec: the format check is the generator's. Send the
+address with the domain in its ASCII form only when its top-level label is
+letters, or take such addresses as `string` and validate them yourself:
+
+```tsp
+model Invite { address: string; }
+```
+
+## `An integer scalar accepts -0`
+
+**When:** a body carries `-0` for `positiveInt`, `nonNegativeInt`, `port`,
+`safeInt` and the other integer scalars, and the validator lets it through
+where `@nxgt/graphql-scalars` refuses it.
+
+**Why:** `-0` is a JSON number equal to `0`, which no JSON Schema keyword can
+tell from `0`. For `nonNegativeInt`, `nonPositiveInt`, `port`, the bound holds,
+so the value passes (`positiveInt` and `negativeInt` refuse it by their bound).
+
+**Fix:** normalise in the handler when the sign matters:
+
+```ts
+const quantity = Object.is(body.quantity, -0) ? 0 : body.quantity;
+```
+
+## `UUID`, `EmailAddress`: generated `Uuid` and `Email` are gone, and an id is answered 400
+
+**When:** after upgrading to 0.10.0, the generated code no longer exports
+`Uuid`, `zUuid`, `Email` or `zEmail` (`Module has no exported member 'Uuid'`),
+or a request whose id was accepted before is answered `400`.
+
+**Why:** the schemas follow `@nxgt/graphql-scalars`' names, `UUID` and
+`EmailAddress`, and `uuid` takes its rule: an RFC 9562 version 1 to 8 with the
+RFC variant, or the nil or max UUID. An id of no known version
+(`…-91d4-…`) is refused.
+
+**Fix:** rename the imports. For an id that is a shape only, write `guid`
+instead of `uuid`:
+
+```ts
+import { type UUID, zUUID, type EmailAddress, zEmailAddress } from './generated';
+```
+
+```tsp
+model Legacy { id: guid; }
 ```
 
 ## `Unknown decorator @operationId`

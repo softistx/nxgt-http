@@ -30,10 +30,13 @@ model Author {
 | --- | --- | --- | --- |
 | `uuid` | `$ref` to the schema `UUID`: `type: string`, `format: uuid`, a pattern, `x-nxgt-scalar: UUID` | `type UUID = string`, `zUUID = z.guid().regex(…)` | `42`, a UUID with no hyphens or of version 9, in a path, a query or a body |
 | `email` | an alias of `emailAddress`: `$ref` to the schema `EmailAddress`, `format: email`, a pattern, `x-nxgt-scalar: EmailAddress` | `type EmailAddress = string`, `zEmailAddress = z.email().regex(…)` | `not an address`, `ada@localhost` |
-| `httpUrl` | `$ref` to the schema `URL`: `format: uri`, a pattern for `http:` and `https:`, `x-nxgt-scalar: URL` | `URL`, `z.url()` and the pattern | `not a url`, `javascript:alert(1)` |
+| `httpUrl` | `$ref` to the schema `URL`: `format: uri`, a pattern for `http:` and `https:`, `x-nxgt-scalar: URL` | `type URL = string`, `zURL = z.url().regex(…)` | `not a url`, `javascript:alert(1)` |
 
 TypeSpec's own `url` takes any scheme, inline, as `z.url()`; `httpUrl` is
-the `http:` and `https:` page address.
+the `http:` and `https:` page address. `z.url()` accepts `javascript:alert(1)`
+on its own: it is the pattern after it that refuses it. Likewise `z.email()`
+refuses `ada@x.xn--p1ai`, an internationalised top-level domain the pattern
+accepts, so `email` refuses it too.
 
 `uuid` takes an RFC 9562 UUID, any version 1 to 8 with the RFC variant, or
 the nil or the max UUID, in any case, as `@nxgt/graphql-scalars`' `UUID`

@@ -525,7 +525,10 @@ In the ruleset `@nxgt/typespec/recommended`; each is a warning, and named
 | `uuid` | an RFC 9562 UUID, `format: uuid` and a pattern; the schema `UUID` |
 | `email` | an alias of `emailAddress`, `format: email` and a pattern; the schema `EmailAddress` |
 | `guid`, `uuidV4`, `uuidV7` | a UUID of any shape, of version 4, of version 7; `GUID`, `UUIDv4`, `UUIDv7` |
-| `positiveInt` … `safeInt`, `port`, `positiveFloat` …, `bigInt`, `long` | the numbers: `int32` bounds, JavaScript's safe integers, TCP ports, floats by sign, and 64-bit or larger integers as strings |
+| `ulid`, `cuid2`, `nanoId`, `ksuid`, `xid`, `objectId`, `isbn`, `semVer` | identifiers by shape: `ULID`, `Cuid2`, `NanoID`, `KSUID`, `XID`, `ObjectID`, `ISBN`, `SemVer` |
+| `base64`, `base64Url`, `hexadecimal`, `jwt`, `sha256`, `sha512` | encodings and digests; `base64` has the format `byte` and is generated as `z.base64()` |
+| `nonEmptyString`, `emoji` | a string with a visible character; one emoji |
+| `positiveInt`, `nonNegativeInt`, `negativeInt`, `nonPositiveInt`, `safeInt`, `port`, `positiveFloat`, `nonNegativeFloat`, `negativeFloat`, `nonPositiveFloat`, `bigInt`, `long` | the numbers: `int32` bounds, JavaScript's safe integers, TCP ports, floats by sign, and 64-bit (`long`, `format: int64`) or larger (`bigInt`) integers as strings |
 | `date`, `dateTime`, `time`, `localDateTime`, `localTime`, `isoDuration`, `utcOffset`, `timeZone`, `timestamp` | dates, times and durations as RFC 3339 and ISO 8601 write them |
 | `latitude`, `longitude` | decimal degrees, as numbers |
 | `hexColorCode`, `rgb`, `rgba`, `hsl`, `hsla` | CSS colors |

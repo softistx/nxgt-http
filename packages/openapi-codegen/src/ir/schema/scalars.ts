@@ -52,16 +52,18 @@ export function stringNode(
 		return { kind: 'binary' };
 	}
 	const node: StringNode = { kind: 'string' };
-	if (format === 'byte' || s['contentEncoding'] === 'base64')
+	// A scalar of @nxgt/typespec names its own rule: its `pattern` is that rule,
+	// and a Zod format validator would only second-guess it (`z.url()` trims,
+	// `z.email()` refuses a punycode top-level label). Its format is no surprise
+	// worth a warning either. `date-time` stays: the `dates: 'date'` option
+	// decodes through it, and `z.iso.datetime()` does not trim.
+	if (s['x-nxgt-scalar'] !== undefined) {
+		if (format === 'date-time') node.format = 'date-time';
+	} else if (format === 'byte' || s['contentEncoding'] === 'base64')
 		node.format = 'byte';
 	else if (format !== undefined) {
 		if (STRING_FORMATS.has(format)) node.format = format as StringFormat;
-		// A scalar of @nxgt/typespec names its own rule, which its pattern
-		// approximates: its format is no surprise worth a warning.
-		else if (
-			s['x-nxgt-scalar'] === undefined &&
-			!state.warnedFormats.has(format)
-		) {
+		else if (!state.warnedFormats.has(format)) {
 			state.warnedFormats.add(format);
 			state.diagnostics.warning(
 				'unknown_format',

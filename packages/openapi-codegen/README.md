@@ -1020,8 +1020,9 @@ type StringFormat =
 ```
 
 The string formats that are validated; `byte` is base64. Another format is
-an `unknown_format` warning, except on a schema with `x-nxgt-scalar`: a
-scalar of `@nxgt/typespec`, whose `pattern` carries its rule.
+an `unknown_format` warning. A schema with `x-nxgt-scalar`, a scalar of
+`@nxgt/typespec`, has no `format` in the node but `date-time`, and no warning:
+its `pattern` carries its rule, and the code is `z.string().regex(…)`.
 
 ##### `NumberNode`
 

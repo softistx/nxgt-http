@@ -56,7 +56,12 @@ export function stringNode(
 		node.format = 'byte';
 	else if (format !== undefined) {
 		if (STRING_FORMATS.has(format)) node.format = format as StringFormat;
-		else if (!state.warnedFormats.has(format)) {
+		// A scalar of @nxgt/typespec names its own rule, which its pattern
+		// approximates: its format is no surprise worth a warning.
+		else if (
+			s['x-nxgt-scalar'] === undefined &&
+			!state.warnedFormats.has(format)
+		) {
 			state.warnedFormats.add(format);
 			state.diagnostics.warning(
 				'unknown_format',

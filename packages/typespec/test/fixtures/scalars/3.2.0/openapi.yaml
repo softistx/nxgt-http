@@ -1,0 +1,244 @@
+openapi: 3.2.0
+info:
+  title: Scalars
+  version: 0.0.0
+tags: []
+paths:
+  /color:
+    post:
+      operationId: color
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ColorScalars'
+  /date-time:
+    post:
+      operationId: dateTime
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DateTimeScalars'
+  /encoding:
+    post:
+      operationId: encoding
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EncodingScalars'
+  /finance:
+    post:
+      operationId: finance
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FinanceScalars'
+  /geo:
+    post:
+      operationId: geo
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GeoScalars'
+  /identifier:
+    post:
+      operationId: identifier
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdentifierScalars'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IdentifierScalars'
+  /locale:
+    post:
+      operationId: locale
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocaleScalars'
+  /network:
+    post:
+      operationId: network
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NetworkScalars'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NetworkScalars'
+  /number:
+    post:
+      operationId: number
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NumberScalars'
+  /string:
+    post:
+      operationId: string
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StringScalars'
+  /value:
+    post:
+      operationId: value
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValueScalars'
+components:
+  schemas:
+    ColorScalars:
+      type: object
+    DateTimeScalars:
+      type: object
+    EmailAddress:
+      type: string
+      pattern: ^[A-Za-z0-9_'+\-]+(?:\.[A-Za-z0-9_'+\-]+)*@(?=.{1,253}$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+(?:[A-Za-z]{1,63}|xn--[A-Za-z0-9-]{1,59})$
+      format: email
+      description: |-
+        An e-mail address, in any case, kept as sent: `ada@example.com`. The local
+        part is letters, digits, `_`, `'`, `+`, `-` and dots between them, with no
+        quoted form; the domain is at least two labels, as `hostname` takes them,
+        the last of letters or `xn--`. Only the shape is checked.
+      x-nxgt-scalar: EmailAddress
+    EncodingScalars:
+      type: object
+    FinanceScalars:
+      type: object
+    GUID:
+      type: string
+      pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$
+      format: uuid
+      description: Any 8-4-4-4-12 hexadecimal string, no version or variant check, in any case, kept as sent.
+      x-nxgt-scalar: GUID
+    GeoScalars:
+      type: object
+    IdentifierScalars:
+      type: object
+      required:
+        - guid
+        - uuid
+        - uuidV4
+        - uuidV7
+      properties:
+        guid:
+          $ref: '#/components/schemas/GUID'
+        uuid:
+          $ref: '#/components/schemas/UUID'
+        uuidV4:
+          $ref: '#/components/schemas/UUIDv4'
+        uuidV7:
+          $ref: '#/components/schemas/UUIDv7'
+    LocaleScalars:
+      type: object
+    NetworkScalars:
+      type: object
+      required:
+        - emailAddress
+      properties:
+        emailAddress:
+          $ref: '#/components/schemas/EmailAddress'
+    NumberScalars:
+      type: object
+    StringScalars:
+      type: object
+    UUID:
+      type: string
+      pattern: ^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|0{8}-0{4}-0{4}-0{4}-0{12}|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$
+      format: uuid
+      description: |-
+        An RFC 9562 UUID, any version 1 to 8 with the RFC variant, or the nil or
+        the max UUID, in any case, kept as sent: `0b8e5c1e-2f4a-4c3b-9d6e-7f8a9b0c1d2e`.
+
+        Specified by https://www.rfc-editor.org/rfc/rfc9562.
+      x-nxgt-scalar: UUID
+    UUIDv4:
+      type: string
+      pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
+      format: uuid
+      description: |-
+        A version 4 (random) UUID with the RFC variant, in any case, kept as sent.
+
+        Specified by https://www.rfc-editor.org/rfc/rfc9562.
+      x-nxgt-scalar: UUIDv4
+    UUIDv7:
+      type: string
+      pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
+      format: uuid
+      description: |-
+        A version 7 (time-ordered) UUID with the RFC variant, in any case, kept as sent.
+
+        Specified by https://www.rfc-editor.org/rfc/rfc9562.
+      x-nxgt-scalar: UUIDv7
+    ValueScalars:
+      type: object

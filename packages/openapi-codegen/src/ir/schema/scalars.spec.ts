@@ -114,6 +114,18 @@ describe('stringNode', () => {
 		]);
 	});
 
+	it('does not warn of the format of an @nxgt/typespec scalar, and keeps its pattern', () => {
+		const s = state();
+		expect(
+			stringNode(
+				s,
+				{ format: 'iban', pattern: '^[A-Z]{2}', 'x-nxgt-scalar': 'IBAN' },
+				at,
+			),
+		).toEqual({ kind: 'string', pattern: '^[A-Z]{2}' });
+		expect(s.diagnostics.list).toEqual([]);
+	});
+
 	it('keeps the length bounds, and ignores one that is not a number', () => {
 		expect(stringNode(state(), { minLength: 0, maxLength: 9 }, at)).toEqual({
 			kind: 'string',

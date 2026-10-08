@@ -37,6 +37,10 @@ paths:
       responses:
         '200':
           description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EncodingScalars'
       requestBody:
         required: true
         content:
@@ -136,6 +140,10 @@ paths:
       responses:
         '200':
           description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StringScalars'
       requestBody:
         required: true
         content:
@@ -144,8 +152,39 @@ paths:
               $ref: '#/components/schemas/StringScalars'
 components:
   schemas:
+    Base64:
+      type: string
+      pattern: ^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/][AQgw]==|[A-Za-z0-9+/]{2}[AEIMQUYcgkosw048]=)?$
+      format: byte
+      description: |-
+        Standard base64 (RFC 4648, section 4) with its padding, in its one canonical
+        spelling: `YR==` decodes to the same byte as `YQ==` and is not taken. The
+        empty string is the encoding of no bytes.
+
+        Specified by https://www.rfc-editor.org/rfc/rfc4648#section-4.
+      x-nxgt-scalar: Base64
+    Base64URL:
+      type: string
+      pattern: ^(?:[A-Za-z0-9_-]{4})*(?:[A-Za-z0-9_-][AQgw]|[A-Za-z0-9_-]{2}[AEIMQUYcgkosw048])?$
+      format: base64-url
+      description: |-
+        URL-safe base64 (RFC 4648, section 5): `-` and `_`, no padding, in its one
+        canonical spelling. The empty string is the encoding of no bytes.
+
+        Specified by https://www.rfc-editor.org/rfc/rfc4648#section-5.
+      x-nxgt-scalar: Base64URL
     ColorScalars:
       type: object
+    Cuid2:
+      type: string
+      pattern: ^[a-z][a-z0-9]{1,31}$
+      format: cuid2
+      description: |-
+        A Cuid2: a lower-case letter, then lower-case letters and digits, 2 to 32
+        characters in all (24 by default).
+
+        Specified by https://github.com/paralleldrive/cuid2.
+      x-nxgt-scalar: Cuid2
     DateTimeScalars:
       type: object
     EmailAddress:
@@ -158,8 +197,41 @@ components:
         quoted form; the domain is at least two labels, as `hostname` takes them,
         the last of letters or `xn--`. Only the shape is checked.
       x-nxgt-scalar: EmailAddress
+    Emoji:
+      type: string
+      pattern: ^(?:\p{Regional_Indicator}{2}|[#*0-9]\uFE0F?\u20E3|\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier})?(?:\u200D\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier})?)*)$
+      description: |-
+        One emoji: `😀`, `👍🏽`, `👨‍👩‍👧`, `🇫🇷`, `1️⃣`. A pictograph with an optional variation
+        selector or skin tone, joined to others by zero-width joiners; a
+        pair of regional indicators (a flag); or a keycap. The pattern is an
+        approximation by Unicode properties, so it needs the `u` flag; it does not
+        segment user-perceived characters, takes no tag sequence (the flags of England,
+        Scotland and Wales) and has no 32 code points limit.
+
+        Specified by https://www.unicode.org/reports/tr51/.
+      x-nxgt-scalar: Emoji
     EncodingScalars:
       type: object
+      required:
+        - base64
+        - base64Url
+        - hexadecimal
+        - jwt
+        - sha256
+        - sha512
+      properties:
+        base64:
+          $ref: '#/components/schemas/Base64'
+        base64Url:
+          $ref: '#/components/schemas/Base64URL'
+        hexadecimal:
+          $ref: '#/components/schemas/Hexadecimal'
+        jwt:
+          $ref: '#/components/schemas/JWT'
+        sha256:
+          $ref: '#/components/schemas/SHA256'
+        sha512:
+          $ref: '#/components/schemas/SHA512'
     FinanceScalars:
       type: object
     GUID:
@@ -170,24 +242,99 @@ components:
       x-nxgt-scalar: GUID
     GeoScalars:
       type: object
+    Hexadecimal:
+      type: string
+      pattern: ^[0-9a-fA-F]+$
+      format: hexadecimal
+      description: |-
+        One or more hexadecimal digits, in any case, kept as sent. An odd length is
+        fine; no `0x` prefix.
+      x-nxgt-scalar: Hexadecimal
+    ISBN:
+      type: string
+      pattern: ^(?:\d{9}[\dX]|(?:978\d|979[1-9])\d{9})$
+      format: isbn
+      description: |-
+        An ISBN-10 or an ISBN-13, digits only (no hyphen or space). An ISBN-10 may end
+        in an uppercase `X`; an ISBN-13 starts with 978, or 979 followed by 1 to 9
+        (979-0 is the ISMN). The check digit is not in the pattern.
+
+        Specified by https://www.isbn-international.org/content/isbn-users-manual/29.
+      x-nxgt-scalar: ISBN
     IdentifierScalars:
       type: object
       required:
+        - cuid2
         - guid
+        - isbn
+        - ksuid
+        - nanoId
+        - objectId
+        - semVer
+        - ulid
         - uuid
         - uuidV4
         - uuidV7
+        - xid
       properties:
+        cuid2:
+          $ref: '#/components/schemas/Cuid2'
         guid:
           $ref: '#/components/schemas/GUID'
+        isbn:
+          $ref: '#/components/schemas/ISBN'
+        ksuid:
+          $ref: '#/components/schemas/KSUID'
+        nanoId:
+          $ref: '#/components/schemas/NanoID'
+        objectId:
+          $ref: '#/components/schemas/ObjectID'
+        semVer:
+          $ref: '#/components/schemas/SemVer'
+        ulid:
+          $ref: '#/components/schemas/ULID'
         uuid:
           $ref: '#/components/schemas/UUID'
         uuidV4:
           $ref: '#/components/schemas/UUIDv4'
         uuidV7:
           $ref: '#/components/schemas/UUIDv7'
+        xid:
+          $ref: '#/components/schemas/XID'
+    JWT:
+      type: string
+      pattern: ^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$
+      format: jwt
+      description: |-
+        A signed JSON Web Token in compact form: three base64url parts joined by `.`.
+        Only the shape is in the pattern: that each part is in its one canonical
+        spelling, that the header and the payload are JSON objects and that the
+        header's `alg` is not `none` are left out, and the signature is not verified.
+
+        Specified by https://www.rfc-editor.org/rfc/rfc7519.
+      x-nxgt-scalar: JWT
+    KSUID:
+      type: string
+      pattern: ^(?:[0-9A-Z][0-9A-Za-z]{26}|a[0-9A-V][0-9A-Za-z]{25}|aW[0-9A-Za-f][0-9A-Za-z]{24}|aWg[0-9A-D][0-9A-Za-z]{23}|aWgE[0-9A-O][0-9A-Za-z]{22}|aWgEP[0-9A-S][0-9A-Za-z]{21}|aWgEPT[0-9A-Za-k][0-9A-Za-z]{20}|aWgEPTl[0][0-9A-Za-z]{19}|aWgEPTl1[0-9A-Za-s][0-9A-Za-z]{18}|aWgEPTl1t[0-9A-Za-l][0-9A-Za-z]{17}|aWgEPTl1tm[0-9A-Za-d][0-9A-Za-z]{16}|aWgEPTl1tme[0-9A-Za][0-9A-Za-z]{15}|aWgEPTl1tmeb[0-9A-Za-e][0-9A-Za-z]{14}|aWgEPTl1tmebf[0-9A-Za-r][0-9A-Za-z]{13}|aWgEPTl1tmebfs[0-9A-P][0-9A-Za-z]{12}|aWgEPTl1tmebfsQ[0-9A-Za-y][0-9A-Za-z]{11}|aWgEPTl1tmebfsQz[0-9A-E][0-9A-Za-z]{10}|aWgEPTl1tmebfsQzF[0-9A-O][0-9A-Za-z]{9}|aWgEPTl1tmebfsQzFP[0-3][0-9A-Za-z]{8}|aWgEPTl1tmebfsQzFP4[0-9A-Za][0-9A-Za-z]{7}|aWgEPTl1tmebfsQzFP4b[0-9A-Za-w][0-9A-Za-z]{6}|aWgEPTl1tmebfsQzFP4bx[0-9A-Za-v][0-9A-Za-z]{5}|aWgEPTl1tmebfsQzFP4bxw[0-9A-Za-f][0-9A-Za-z]{4}|aWgEPTl1tmebfsQzFP4bxwg[0-9A-Za-x][0-9A-Za-z]{3}|aWgEPTl1tmebfsQzFP4bxwgy[0-7][0-9A-Za-z]{2}|aWgEPTl1tmebfsQzFP4bxwgy80[0-9A-U]|aWgEPTl1tmebfsQzFP4bxwgy80V)$
+      format: ksuid
+      description: |-
+        A KSUID: 27 characters of base62, at most `aWgEPTl1tmebfsQzFP4bxwgy80V` (160
+        bits). The alphabet is in ASCII order and the length fixed, so the pattern
+        bounds the value digit by digit.
+
+        Specified by https://github.com/segmentio/ksuid.
+      x-nxgt-scalar: KSUID
     LocaleScalars:
       type: object
+    NanoID:
+      type: string
+      pattern: ^[A-Za-z0-9_-]{21}$
+      format: nano-id
+      description: |-
+        A Nano ID of the default shape: 21 characters of `A-Za-z0-9_-`.
+
+        Specified by https://github.com/ai/nanoid.
+      x-nxgt-scalar: NanoID
     NetworkScalars:
       type: object
       required:
@@ -195,10 +342,72 @@ components:
       properties:
         emailAddress:
           $ref: '#/components/schemas/EmailAddress'
+    NonEmptyString:
+      type: string
+      pattern: ^\s*\S[\s\S]*$
+      description: |-
+        A string with at least one non-white-space character, kept as sent, not
+        trimmed. "White space" is ECMAScript's `\s`.
+      x-nxgt-scalar: NonEmptyString
     NumberScalars:
       type: object
+    ObjectID:
+      type: string
+      pattern: ^[0-9a-fA-F]{24}$
+      format: object-id
+      description: |-
+        A MongoDB ObjectId as text: 24 hexadecimal digits, in any case, kept as sent.
+
+        Specified by https://www.mongodb.com/docs/manual/reference/method/ObjectId/.
+      x-nxgt-scalar: ObjectID
+    SHA256:
+      type: string
+      pattern: ^[0-9a-fA-F]{64}$
+      format: sha256
+      description: |-
+        A SHA-256 digest: 64 hexadecimal digits, in any case, kept as sent.
+
+        Specified by https://csrc.nist.gov/pubs/fips/180-4/upd1/final.
+      x-nxgt-scalar: SHA256
+    SHA512:
+      type: string
+      pattern: ^[0-9a-fA-F]{128}$
+      format: sha512
+      description: |-
+        A SHA-512 digest: 128 hexadecimal digits, in any case, kept as sent.
+
+        Specified by https://csrc.nist.gov/pubs/fips/180-4/upd1/final.
+      x-nxgt-scalar: SHA512
+    SemVer:
+      type: string
+      pattern: ^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-(?:(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*)?$
+      format: sem-ver
+      description: |-
+        A Semantic Versioning 2.0.0 version, as semver.org's own regular expression
+        reads it: `1.2.3`, `1.0.0-rc.1+build.5`. No `v` prefix.
+
+        Specified by https://semver.org/spec/v2.0.0.html.
+      x-nxgt-scalar: SemVer
     StringScalars:
       type: object
+      required:
+        - emoji
+        - nonEmptyString
+      properties:
+        emoji:
+          $ref: '#/components/schemas/Emoji'
+        nonEmptyString:
+          $ref: '#/components/schemas/NonEmptyString'
+    ULID:
+      type: string
+      pattern: ^[0-7][0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{25}$
+      format: ulid
+      description: |-
+        A ULID: 26 characters of Crockford base32, the first 0 to 7 (128 bits), in any
+        case, kept as sent.
+
+        Specified by https://github.com/ulid/spec.
+      x-nxgt-scalar: ULID
     UUID:
       type: string
       pattern: ^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|0{8}-0{4}-0{4}-0{4}-0{12}|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$
@@ -227,3 +436,13 @@ components:
 
         Specified by https://www.rfc-editor.org/rfc/rfc9562.
       x-nxgt-scalar: UUIDv7
+    XID:
+      type: string
+      pattern: ^[0-9a-v]{19}[0g]$
+      format: xid
+      description: |-
+        An XID: 20 characters of lowercase base32hex (`0-9`, `a-v`). 12 bytes leave 4
+        bits unused, so the last character is `0` or `g`.
+
+        Specified by https://github.com/rs/xid.
+      x-nxgt-scalar: XID

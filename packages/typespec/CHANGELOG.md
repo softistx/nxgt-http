@@ -1,5 +1,13 @@
 # @nxgt/typespec
 
+## 0.10.0
+
+### Minor Changes
+
+- [#120](https://github.com/softistx/nxgt-http/pull/120) [`9375c00`](https://github.com/softistx/nxgt-http/commit/9375c00ff8fc8f855ed6200f53faf580022305a0) Thanks [@SteveGT96](https://github.com/SteveGT96)! - The scalars of `@nxgt/graphql-scalars`, under the same names: each one emits an OpenAPI component named as in GraphQL, a `format`, a pattern or bounds approximating the rule, and `x-nxgt-scalar`. See the scalars guide.
+  
+  Breaking: `uuid` emits the component `UUID`, not `Uuid`, and refuses a UUID of no known version (write `guid` for the shape only). `email` is now an alias of `emailAddress` and emits `EmailAddress`, not `Email`.
+
 ## 0.9.2
 
 ### Patch Changes

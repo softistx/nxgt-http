@@ -50,6 +50,10 @@ paths:
       responses:
         '200':
           description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinanceScalars'
       requestBody:
         required: true
         content:
@@ -88,11 +92,15 @@ paths:
               $ref: '#/components/schemas/IdentifierScalars'
   /locale:
     post:
-      operationId: locale
+      operationId: postLocaleScalars
       parameters: []
       responses:
         '200':
           description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocaleScalars'
       requestBody:
         required: true
         content:
@@ -144,8 +152,51 @@ paths:
               $ref: '#/components/schemas/StringScalars'
 components:
   schemas:
+    CIDRv4:
+      type: string
+      pattern: ^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)/(?:3[0-2]|[12]?\d)$
+      format: cidr-v4
+      description: |-
+        An IPv4 block in CIDR notation: a dotted-quad address, `/` and a prefix
+        length from 0 to 32, kept as sent: `10.0.0.0/8`. Each part of the address
+        is 0 to 255 with no leading zero. The address need not be the first of the
+        block.
+
+        Specified by https://www.rfc-editor.org/rfc/rfc4632.
+      x-nxgt-scalar: CIDRv4
+    CIDRv6:
+      type: string
+      pattern: ^(?:(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,7}:|(?:[0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,5}(?::[0-9a-fA-F]{1,4}){1,2}|(?:[0-9a-fA-F]{1,4}:){1,4}(?::[0-9a-fA-F]{1,4}){1,3}|(?:[0-9a-fA-F]{1,4}:){1,3}(?::[0-9a-fA-F]{1,4}){1,4}|(?:[0-9a-fA-F]{1,4}:){1,2}(?::[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:(?::[0-9a-fA-F]{1,4}){1,6}|:(?:(?::[0-9a-fA-F]{1,4}){1,7}|:)|(?:[0-9a-fA-F]{1,4}:){6}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|::(?:[0-9a-fA-F]{1,4}:){0,5}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){1}:(?:[0-9a-fA-F]{1,4}:){0,4}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){2}:(?:[0-9a-fA-F]{1,4}:){0,3}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){3}:(?:[0-9a-fA-F]{1,4}:){0,2}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){4}:(?:[0-9a-fA-F]{1,4}:){0,1}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){5}:(?:[0-9a-fA-F]{1,4}:){0,0}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d))/(?:12[0-8]|1[01]\d|[1-9]?\d)$
+      format: cidr-v6
+      description: |-
+        An IPv6 block in CIDR notation: an IPv6 address, `/` and a prefix length
+        from 0 to 128, kept as sent: `2001:db8::/32`. The address takes every RFC
+        4291 text form, in any case, with no zone, and is not normalised.
+
+        Specified by https://www.rfc-editor.org/rfc/rfc4291.
+      x-nxgt-scalar: CIDRv6
     ColorScalars:
       type: object
+    CountryCode:
+      type: string
+      pattern: ^[A-Z]{2}$
+      format: country-code
+      description: |-
+        An ISO 3166-1 alpha-2 country code, uppercase: `FR`, `US`. The list of
+        assigned codes is not in the pattern: only the shape is.
+
+        Specified by https://www.iso.org/iso-3166-country-codes.html.
+      x-nxgt-scalar: CountryCode
+    Currency:
+      type: string
+      pattern: ^[A-Z]{3}$
+      format: currency
+      description: |-
+        An ISO 4217 currency code, uppercase: `EUR`, `USD`. The list of codes in
+        force is not in the pattern: only the shape is.
+
+        Specified by https://www.iso.org/iso-4217-currency-codes.html.
+      x-nxgt-scalar: Currency
     DateTimeScalars:
       type: object
     EmailAddress:
@@ -162,6 +213,14 @@ components:
       type: object
     FinanceScalars:
       type: object
+      required:
+        - currency
+        - iban
+      properties:
+        currency:
+          $ref: '#/components/schemas/Currency'
+        iban:
+          $ref: '#/components/schemas/IBAN'
     GUID:
       type: string
       pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$
@@ -170,6 +229,63 @@ components:
       x-nxgt-scalar: GUID
     GeoScalars:
       type: object
+    Hostname:
+      type: string
+      pattern: ^(?=.{1,253}\.?$)(?!(?:[A-Za-z0-9-]+\.)*(?:\d+|0[xX][0-9a-fA-F]*)\.?$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)*[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.?$
+      format: hostname
+      description: |-
+        A host name, kept as sent: `api.example.com`. Dot-separated labels of
+        letters, digits and hyphens, none starting or ending with a hyphen, each
+        up to 63 characters and 253 in all, with an optional trailing dot. The
+        last label is not a number (all digits, or `0x` and hex digits), so an
+        IPv4 address is not a host name. A single label (`localhost`) and punycode
+        are; a Unicode label is not. Nothing is resolved.
+
+        Specified by https://www.rfc-editor.org/rfc/rfc1123.
+      x-nxgt-scalar: Hostname
+    IBAN:
+      type: string
+      pattern: ^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$
+      format: iban
+      description: |-
+        An International Bank Account Number in its electronic form, uppercase, no
+        spaces: `FR1420041010050500013M02606`. Two letters, two check digits, then
+        11 to 30 letters or digits. The checksum (ISO 13616, mod 97) and the
+        country and its length are not in the pattern.
+
+        Specified by https://www.iso.org/standard/81090.html.
+      x-nxgt-scalar: IBAN
+    IP:
+      type: string
+      pattern: ^(?:(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,7}:|(?:[0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,5}(?::[0-9a-fA-F]{1,4}){1,2}|(?:[0-9a-fA-F]{1,4}:){1,4}(?::[0-9a-fA-F]{1,4}){1,3}|(?:[0-9a-fA-F]{1,4}:){1,3}(?::[0-9a-fA-F]{1,4}){1,4}|(?:[0-9a-fA-F]{1,4}:){1,2}(?::[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:(?::[0-9a-fA-F]{1,4}){1,6}|:(?:(?::[0-9a-fA-F]{1,4}){1,7}|:)|(?:[0-9a-fA-F]{1,4}:){6}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|::(?:[0-9a-fA-F]{1,4}:){0,5}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){1}:(?:[0-9a-fA-F]{1,4}:){0,4}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){2}:(?:[0-9a-fA-F]{1,4}:){0,3}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){3}:(?:[0-9a-fA-F]{1,4}:){0,2}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){4}:(?:[0-9a-fA-F]{1,4}:){0,1}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){5}:(?:[0-9a-fA-F]{1,4}:){0,0}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)))$
+      format: ip
+      description: |-
+        An IPv4 or an IPv6 address, as `ipV4` and `ipV6` take them, kept as sent:
+        `192.168.0.1`, `2001:db8::1`.
+
+        Specified by https://www.rfc-editor.org/rfc/rfc4291.
+      x-nxgt-scalar: IP
+    IPv4:
+      type: string
+      pattern: ^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$
+      format: ipv4
+      description: |-
+        An IPv4 address in dotted-quad form: `192.168.0.1`. Each part is 0 to 255
+        with no leading zero.
+
+        Specified by https://www.rfc-editor.org/rfc/rfc791.
+      x-nxgt-scalar: IPv4
+    IPv6:
+      type: string
+      pattern: ^(?:(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,7}:|(?:[0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,5}(?::[0-9a-fA-F]{1,4}){1,2}|(?:[0-9a-fA-F]{1,4}:){1,4}(?::[0-9a-fA-F]{1,4}){1,3}|(?:[0-9a-fA-F]{1,4}:){1,3}(?::[0-9a-fA-F]{1,4}){1,4}|(?:[0-9a-fA-F]{1,4}:){1,2}(?::[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:(?::[0-9a-fA-F]{1,4}){1,6}|:(?:(?::[0-9a-fA-F]{1,4}){1,7}|:)|(?:[0-9a-fA-F]{1,4}:){6}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|::(?:[0-9a-fA-F]{1,4}:){0,5}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){1}:(?:[0-9a-fA-F]{1,4}:){0,4}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){2}:(?:[0-9a-fA-F]{1,4}:){0,3}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){3}:(?:[0-9a-fA-F]{1,4}:){0,2}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){4}:(?:[0-9a-fA-F]{1,4}:){0,1}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){5}:(?:[0-9a-fA-F]{1,4}:){0,0}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d))$
+      format: ipv6
+      description: |-
+        An IPv6 address in any RFC 4291 text form, in any case, kept as sent and
+        never normalised: `2001:db8::1`, `::1`, `::ffff:192.0.2.1`. No zone
+        (`%eth0`).
+
+        Specified by https://www.rfc-editor.org/rfc/rfc4291.
+      x-nxgt-scalar: IPv6
     IdentifierScalars:
       type: object
       required:
@@ -186,19 +302,101 @@ components:
           $ref: '#/components/schemas/UUIDv4'
         uuidV7:
           $ref: '#/components/schemas/UUIDv7'
+    Locale:
+      type: string
+      pattern: ^(?=.{1,255}$)[a-z]{2,3}(?:-[A-Z][a-z]{3})?(?:-(?:[A-Z]{2}|\d{3}))?(?:-(?:[a-z0-9]{5,8}|\d[a-z0-9]{3}))*(?:-[0-9a-wyz](?:-[a-z0-9]{2,8})+)*(?:-x(?:-[a-z0-9]{1,8})+)?$
+      format: locale
+      description: |-
+        A well-formed BCP 47 language tag in canonical case, kept as sent, at most
+        255 characters: `fr`, `fr-FR`, `zh-Hant-TW`, `en-US-u-ca-buddhist`. The
+        language is lowercase, a script Titlecase, a region uppercase, the rest
+        lowercase. The order of extensions and of `-u-` keywords is not in the
+        pattern, nor is the IANA registry.
+
+        Specified by https://www.rfc-editor.org/rfc/rfc5646.
+      x-nxgt-scalar: Locale
     LocaleScalars:
       type: object
+      required:
+        - countryCode
+        - locale
+      properties:
+        countryCode:
+          $ref: '#/components/schemas/CountryCode'
+        locale:
+          $ref: '#/components/schemas/Locale'
+    MAC:
+      type: string
+      pattern: ^(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$
+      format: mac
+      description: |-
+        A 48-bit MAC address: six hex pairs separated by `:`, in any case, kept as
+        sent: `00:1a:2b:3c:4d:5e`. The IEEE hyphen form and the dotted form are
+        refused.
+      x-nxgt-scalar: MAC
     NetworkScalars:
       type: object
       required:
+        - cidrV4
+        - cidrV6
         - emailAddress
+        - hostname
+        - httpUrl
+        - ip
+        - ipV4
+        - ipV6
+        - mac
+        - phoneNumber
       properties:
+        cidrV4:
+          $ref: '#/components/schemas/CIDRv4'
+        cidrV6:
+          $ref: '#/components/schemas/CIDRv6'
         emailAddress:
           $ref: '#/components/schemas/EmailAddress'
+        hostname:
+          $ref: '#/components/schemas/Hostname'
+        httpUrl:
+          $ref: '#/components/schemas/URL'
+        ip:
+          $ref: '#/components/schemas/IP'
+        ipV4:
+          $ref: '#/components/schemas/IPv4'
+        ipV6:
+          $ref: '#/components/schemas/IPv6'
+        mac:
+          $ref: '#/components/schemas/MAC'
+        phoneNumber:
+          $ref: '#/components/schemas/PhoneNumber'
     NumberScalars:
       type: object
+    PhoneNumber:
+      type: string
+      pattern: ^\+[1-9]\d{6,14}$
+      format: phone-number
+      description: |-
+        A phone number in E.164 form: `+`, a country code that does not start with
+        0, and 7 to 15 digits in all, with no space or separator: `+33612345678`.
+        Only the shape is checked.
+
+        Specified by https://www.itu.int/rec/T-REC-E.164.
+      x-nxgt-scalar: PhoneNumber
     StringScalars:
       type: object
+    URL:
+      type: string
+      pattern: ^https?://(?:(?=[A-Za-z0-9.-]{1,253}(?:[:/?#]|$))(?!(?:[A-Za-z0-9-]+\.)*(?:\d+|0[xX][0-9a-fA-F]*)\.?(?:[:/?#]|$))(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)*[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.?|(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|\[(?:(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,7}:|(?:[0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,5}(?::[0-9a-fA-F]{1,4}){1,2}|(?:[0-9a-fA-F]{1,4}:){1,4}(?::[0-9a-fA-F]{1,4}){1,3}|(?:[0-9a-fA-F]{1,4}:){1,3}(?::[0-9a-fA-F]{1,4}){1,4}|(?:[0-9a-fA-F]{1,4}:){1,2}(?::[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:(?::[0-9a-fA-F]{1,4}){1,6}|:(?:(?::[0-9a-fA-F]{1,4}){1,7}|:)|(?:[0-9a-fA-F]{1,4}:){6}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|::(?:[0-9a-fA-F]{1,4}:){0,5}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){1}:(?:[0-9a-fA-F]{1,4}:){0,4}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){2}:(?:[0-9a-fA-F]{1,4}:){0,3}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){3}:(?:[0-9a-fA-F]{1,4}:){0,2}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){4}:(?:[0-9a-fA-F]{1,4}:){0,1}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)|(?:[0-9a-fA-F]{1,4}:){5}:(?:[0-9a-fA-F]{1,4}:){0,0}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d))\])(?::(?:0|[1-9]\d{0,4}))?(?:[/?#][^\s\u0000-\u001f\u007f-\u009f\u00ad\u0600-\u0605\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u206f\ufeff]*)?$
+      format: uri
+      description: |-
+        An absolute `http:` or `https:` URL, kept as sent:
+        `https://example.com/a?b=c`. The scheme is lowercase; the host is a
+        `hostname`, a canonical IPv4 address or a bracketed IPv6 address, with no
+        user info; a port is digits with no leading zero. No white space, control
+        or invisible format character anywhere. Other schemes (`javascript:`,
+        `data:`) are refused. Named `httpUrl`, as `url` is a TypeSpec built-in.
+
+        Specified by https://url.spec.whatwg.org/.
+      x-nxgt-scalar: URL
     UUID:
       type: string
       pattern: ^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|0{8}-0{4}-0{4}-0{4}-0{12}|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$

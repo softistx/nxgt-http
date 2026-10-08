@@ -92,7 +92,7 @@ paths:
               $ref: '#/components/schemas/IdentifierScalars'
   /locale:
     post:
-      operationId: locale
+      operationId: postLocaleScalars
       parameters: []
       responses:
         '200':

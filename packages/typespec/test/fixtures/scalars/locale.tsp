@@ -7,7 +7,11 @@ namespace ScalarsFixture;
 
 model LocaleScalars {
   countryCode: countryCode;
+<<<<<<< HEAD
   locale: Nxgt.locale;
+=======
+  locale: locale;
+>>>>>>> feat/typespec-scalars-c
 }
 
-@route("/locale") @post op locale(@body body: LocaleScalars): LocaleScalars;
+@route("/locale") @post op postLocaleScalars(@body body: LocaleScalars): LocaleScalars;

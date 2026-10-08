@@ -1,5 +1,11 @@
 # @nxgt/openapi-codegen
 
+## 0.8.0
+
+### Minor Changes
+
+- [#120](https://github.com/softistx/nxgt-http/pull/120) [`3127d2b`](https://github.com/softistx/nxgt-http/commit/3127d2b08a239db9a35ed14949685d703fba7664) Thanks [@SteveGT96](https://github.com/SteveGT96)! - A string schema with `x-nxgt-scalar`, one of `@nxgt/typespec`'s scalars, is now generated as `z.string().regex(pattern)`: its `pattern` is the rule, and a Zod format validator would second-guess it (`z.url()` trims its input, `z.email()` refuses a punycode top-level label). Its `format` (`iban`, `country-code`, `email`, `uri`, `byte`…) is no longer read, so it no longer warns `unknown_format`. `date-time` is the exception: the `dates: 'date'` option decodes through it. The pattern is validated as before.
+
 ## 0.7.3
 
 ### Patch Changes

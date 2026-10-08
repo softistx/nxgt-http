@@ -19,7 +19,7 @@ approximated silently.
 | `format: ipv4`, `ipv6` | `string` | `z.ipv4()`, `z.ipv6()` |
 | `format: byte`, `contentEncoding: base64` | `string` | `z.base64()` |
 | `format: binary`, a non-text `contentMediaType` | `globalThis.File` | `z.file()` |
-| any other string `format` | `string` | `z.string()`, with an `unknown_format` warning |
+| any other string `format` | `string` | `z.string()`, with an `unknown_format` warning, except beside `x-nxgt-scalar` |
 | `type: integer` | `number` | `z.int()`; `format: int32` gives `z.int32()`, any other format is ignored |
 | `type: number` | `number` | `z.number()` |
 | `minimum`, `maximum` | | `.min()`, `.max()` |

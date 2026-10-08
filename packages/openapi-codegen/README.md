@@ -1020,7 +1020,8 @@ type StringFormat =
 ```
 
 The string formats that are validated; `byte` is base64. Another format is
-an `unknown_format` warning.
+an `unknown_format` warning, except on a schema with `x-nxgt-scalar`: a
+scalar of `@nxgt/typespec`, whose `pattern` carries its rule.
 
 ##### `NumberNode`
 

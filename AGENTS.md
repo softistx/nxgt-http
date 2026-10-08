@@ -416,8 +416,8 @@ publishes to npm.
 
 ## Known state
 
-`bun run test` is **910 pass, 0 fail** on 2026-10-06: datasource-rest 26, httpyz 90, httpyz-query 14,
-openapi-codegen 439, openapi-hono 31, openapi-httpyz 28, openapi-msw 21, openapi-nuxt 36, typespec 120,
+`bun run test` is **1108 pass, 0 fail** on 2026-10-08: datasource-rest 26, httpyz 90, httpyz-query 14,
+openapi-codegen 441, openapi-hono 31, openapi-httpyz 28, openapi-msw 21, openapi-nuxt 36, typespec 316,
 scripts 105. On macOS, run it with `TMPDIR` outside `/var/folders`: the
 generator's `shared-components` symlink spec fails where the temporary
 directory sits behind a symlink. It runs one process per package, through `scripts/workspace.ts`, and each

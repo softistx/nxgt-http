@@ -9,12 +9,14 @@
 import { describe, expect, it } from 'bun:test';
 import { readdir, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { compile, NodeHost } from '@typespec/compiler';
 import { Hono } from 'hono';
 import { spec, VERSIONS } from '../test/generate';
 import { createRoutes as routes31 } from '../test/generated/scalars/3.1.0/hono';
 import { createRoutes as routes32 } from '../test/generated/scalars/3.2.0/hono';
 import {
 	CATEGORIES,
+	type BuiltinEntry,
 	type Entry,
 	GRAPHQL_SCALARS,
 	type ScalarEntry,
@@ -44,6 +46,20 @@ describe('the scalars registry', () => {
 		const index = await readFile(`${LIB}scalars.tsp`, 'utf8');
 		for (const category of indexes) {
 			expect(index).toContain(`import "./scalars/${category}.tsp";`);
+		}
+	});
+
+	it('writes each built-in as its entry names it, in a program that compiles', async () => {
+		const main = fileURLToPath(
+			new URL('../test/programs/value-scalars.tsp', import.meta.url),
+		);
+		const program = await compile(NodeHost, main, { noEmit: true });
+		expect(program.diagnostics).toEqual([]);
+		const source = await readFile(main, 'utf8');
+		for (const entry of entries.filter((entry): entry is BuiltinEntry => !declared(entry))) {
+			expect({ [entry.name]: source.includes(entry.builtin) }).toEqual({
+				[entry.name]: true,
+			});
 		}
 	});
 
@@ -98,6 +114,44 @@ describe.each([...VERSIONS])('the scalars, in OpenAPI %s', (version) => {
 			expect(schema?.['description']).toContain(
 				`Specified by ${entry.specifiedBy}.`,
 			);
+		}
+	});
+
+	it('emits patterns that compile with and without the u flag, alike', async () => {
+		const schemas = await components();
+		for (const entry of entries.filter(declared)) {
+			const pattern = schemas[entry.name]?.['pattern'];
+			if (typeof pattern !== 'string') continue;
+			const unicode = new RegExp(pattern, 'u');
+			const legacy = new RegExp(pattern);
+			if (entry.unicode) continue;
+			for (const sample of [...entry.accept, ...entry.refuse]) {
+				if (typeof sample !== 'string') continue;
+				expect({
+					[entry.name]: sample,
+					same: unicode.test(sample) === legacy.test(sample),
+				}).toEqual({ [entry.name]: sample, same: true });
+			}
+		}
+	});
+
+	it('gives each declared scalar a pattern, or a bound for a number', async () => {
+		const schemas = await components();
+		const bounds = [
+			'minimum',
+			'maximum',
+			'exclusiveMinimum',
+			'exclusiveMaximum',
+		];
+		for (const entry of entries.filter(declared)) {
+			const schema = schemas[entry.name] ?? {};
+			const ruled =
+				schema['type'] === 'string'
+					? schema['pattern'] !== undefined
+					: bounds.some((bound) => schema[bound] !== undefined);
+			expect({ [entry.name]: ruled }).toEqual({
+				[entry.name]: true,
+			});
 		}
 	});
 

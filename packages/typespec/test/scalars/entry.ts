@@ -14,6 +14,11 @@ export interface ScalarEntry {
 	 * `Specified by <url>.`: the emitter writes no `externalDocs` for a scalar.
 	 */
 	readonly specifiedBy?: string;
+	/**
+	 * Its pattern needs the `u` flag (`\p{…}`), as ECMAScript and the generator
+	 * compile it; without it the pattern is not portable.
+	 */
+	readonly unicode?: true;
 	/** Values the generated validator accepts, the first sent in every body. */
 	readonly accept: readonly [unknown, ...unknown[]];
 	/** Values the generated validator refuses, each answered with a 400. */

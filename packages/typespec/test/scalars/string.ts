@@ -12,6 +12,7 @@ export const string: readonly Entry[] = [
 		name: 'Emoji',
 		scalar: 'emoji',
 		format: 'emoji',
+		unicode: true,
 		specifiedBy: 'https://www.unicode.org/reports/tr51/',
 		// `\u{1F600}\u{1F600}` (two emoji), a lone joiner or skin tone and the
 		// doubled variation selector are not all caught by a pattern that reads

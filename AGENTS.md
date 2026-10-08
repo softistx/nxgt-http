@@ -105,7 +105,12 @@ no relative import into one.
   each instance, never emitted, so the ids go to the interfaces extending
   it. A program the library must accept or refuse, without a fixture of its
   own, is a `.tsp` under `test/programs/`, compiled without emitting by its
-  spec. `templates/` is the `tsp init` template, shipped in the tarball:
+  spec. `lib/scalars/<category>/<kebab-name>.tsp` holds one scalar per file,
+  each category imported by `lib/scalars/<category>.tsp`. `test/scalars/` is
+  the registry that `src/scalars.spec.ts` holds them to (names, files,
+  imports, emitted component, samples served through `@nxgt/openapi-hono`). A
+  scalar added to `@nxgt/graphql-scalars` goes into `GRAPHQL_SCALARS`, then its
+  category. `templates/` is the `tsp init` template, shipped in the tarball:
   `src/template.spec.ts` fills in its placeholders into the gitignored
   `test/scaffolded/` and compiles it with the linter. Never run `tsp init`
   inside the repository: it writes `package.json`, `main.tsp` and the rest
@@ -385,6 +390,7 @@ publishes to npm.
 | How a request is read and refused, in `openapi-hono/src/route/` (`validate.ts`, `parameters.ts`, `body.ts`) and `openapi-msw/src/request/read-request.ts` | the mock answers with the server's 400, with the same issues in the same order. The engine reads through Hono's `Context`, which the mock has no use for, and the mock depending on the runtime would pull in Hono. Change both together |
 | The pinned `tsp compile` and its drift check, in `openapi-codegen/test/typespec.ts` and `typespec/test/generate.ts` | neither can import the other: `@nxgt/typespec` reaching into the generator's `test/` is a relative import into a sibling, and the generator depending on `@nxgt/typespec` is a cycle. Change both together |
 | alxia's `RouteOperation`, `StatusCode` and `eventStream` (one schema, or one per event name), in `openapi-codegen/test/alxia/core.ts`; its router's rules, in `openapi-codegen/src/emit/alxia/routable.ts`; and its `ValidationErrorBody`, `{ error: 'validation', issues }`, in `openapi-codegen/src/ir/validation-errors.ts` | alxia lives in `softistx/alxia`, and the generator depends on no framework it writes for: the stand-in types the fixtures' `alxia.ts` is checked against, the warning for a path alxia's `compilePath` would refuse, and the 400 the client files declare with `alxia` alone. Change them when alxia's `app/route-operation.ts`, `types/status.ts`, `sse/event-stream.ts`, `sse/named-events.ts`, `errors/errors.ts` or `router/router.ts` change |
+| `GRAPHQL_SCALARS`, in `packages/typespec/test/scalars/index.ts` | the names `@nxgt/graphql-scalars` ships, beside its `ScalarName`: the parity the registry spec holds `lib/scalars/` to. Importing the package would make a devDependency of a repository outside this one. Change it when that package adds or renames a scalar |
 | `openapi-codegen/test/fixtures/shared-components/` | a copy of the `openapi/components/` that nxgt-core's `@nxgt/shared-openapi` publishes: real split fragments for the loader and the `split` fixture. It is a fixture, not a dependency |
 
 ## Conventions
@@ -410,8 +416,8 @@ publishes to npm.
 
 ## Known state
 
-`bun run test` is **910 pass, 0 fail** on 2026-10-06: datasource-rest 26, httpyz 90, httpyz-query 14,
-openapi-codegen 439, openapi-hono 31, openapi-httpyz 28, openapi-msw 21, openapi-nuxt 36, typespec 120,
+`bun run test` is **1108 pass, 0 fail** on 2026-10-08: datasource-rest 26, httpyz 90, httpyz-query 14,
+openapi-codegen 441, openapi-hono 31, openapi-httpyz 28, openapi-msw 21, openapi-nuxt 36, typespec 316,
 scripts 105. On macOS, run it with `TMPDIR` outside `/var/folders`: the
 generator's `shared-components` symlink spec fails where the temporary
 directory sits behind a symlink. It runs one process per package, through `scripts/workspace.ts`, and each

@@ -1,12 +1,13 @@
-namespace Nxgt;
-
-// The id @nxgt/drizzle's id() and actors() columns hold by default.
-/** A UUID, such as `0b8e5c1e-2f4a-4c3b-9d6e-7f8a9b0c1d2e`. */
-@friendlyName("Uuid")
-@format("uuid")
-scalar uuid extends string;
-
-/** An e-mail address. */
-@friendlyName("Email")
-@format("email")
-scalar email extends string;
+// The scalars of @nxgt/graphql-scalars, one file per scalar under
+// scalars/<category>/, each category imported by its own index.
+import "./scalars/color.tsp";
+import "./scalars/date-time.tsp";
+import "./scalars/encoding.tsp";
+import "./scalars/finance.tsp";
+import "./scalars/geo.tsp";
+import "./scalars/identifier.tsp";
+import "./scalars/locale.tsp";
+import "./scalars/network.tsp";
+import "./scalars/number.tsp";
+import "./scalars/string.tsp";
+import "./scalars/value.tsp";

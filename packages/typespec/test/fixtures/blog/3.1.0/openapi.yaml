@@ -85,7 +85,7 @@ paths:
           in: path
           required: true
           schema:
-            $ref: '#/components/schemas/Uuid'
+            $ref: '#/components/schemas/UUID'
       responses:
         '200':
           description: The request has succeeded.
@@ -109,7 +109,7 @@ paths:
           in: path
           required: true
           schema:
-            $ref: '#/components/schemas/Uuid'
+            $ref: '#/components/schemas/UUID'
       responses:
         '200':
           description: The request has succeeded.
@@ -151,7 +151,7 @@ paths:
           in: path
           required: true
           schema:
-            $ref: '#/components/schemas/Uuid'
+            $ref: '#/components/schemas/UUID'
       responses:
         '204':
           description: There is no content to send for this request, but the headers may be useful.
@@ -177,7 +177,7 @@ paths:
           in: query
           required: false
           schema:
-            $ref: '#/components/schemas/Uuid'
+            $ref: '#/components/schemas/UUID'
           explode: false
         - $ref: '#/components/parameters/Nxgt.PageParameters.page'
         - $ref: '#/components/parameters/Nxgt.PageParameters.pageSize'
@@ -340,7 +340,7 @@ paths:
           in: path
           required: true
           schema:
-            $ref: '#/components/schemas/Uuid'
+            $ref: '#/components/schemas/UUID'
       responses:
         '200':
           description: The request has succeeded.
@@ -363,7 +363,7 @@ paths:
           in: path
           required: true
           schema:
-            $ref: '#/components/schemas/Uuid'
+            $ref: '#/components/schemas/UUID'
       responses:
         '200':
           description: The request has succeeded.
@@ -404,7 +404,7 @@ paths:
           in: path
           required: true
           schema:
-            $ref: '#/components/schemas/Uuid'
+            $ref: '#/components/schemas/UUID'
       responses:
         '204':
           description: There is no content to send for this request, but the headers may be useful.
@@ -430,7 +430,7 @@ paths:
           in: path
           required: true
           schema:
-            $ref: '#/components/schemas/Uuid'
+            $ref: '#/components/schemas/UUID'
         - $ref: '#/components/parameters/Nxgt.CursorPageParameters.after'
         - $ref: '#/components/parameters/Nxgt.CursorPageParameters.limit'
       responses:
@@ -461,7 +461,7 @@ paths:
           in: path
           required: true
           schema:
-            $ref: '#/components/schemas/Uuid'
+            $ref: '#/components/schemas/UUID'
       responses:
         '201':
           description: The request has succeeded and a new resource has been created as a result.
@@ -524,12 +524,12 @@ paths:
           in: path
           required: true
           schema:
-            $ref: '#/components/schemas/Uuid'
+            $ref: '#/components/schemas/UUID'
         - name: commentId
           in: path
           required: true
           schema:
-            $ref: '#/components/schemas/Uuid'
+            $ref: '#/components/schemas/UUID'
       responses:
         '204':
           description: There is no content to send for this request, but the headers may be useful.
@@ -616,14 +616,14 @@ components:
         - updatedAt
       properties:
         id:
-          $ref: '#/components/schemas/Uuid'
+          $ref: '#/components/schemas/UUID'
           readOnly: true
         name:
           type: string
           minLength: 1
           maxLength: 80
         email:
-          $ref: '#/components/schemas/Email'
+          $ref: '#/components/schemas/EmailAddress'
         createdAt:
           type: string
           format: date-time
@@ -641,7 +641,7 @@ components:
           minLength: 1
           maxLength: 80
         email:
-          $ref: '#/components/schemas/Email'
+          $ref: '#/components/schemas/EmailAddress'
       description: Someone who writes posts and comments.
     AuthorPage:
       type: object
@@ -707,13 +707,13 @@ components:
         - deletedAt
       properties:
         id:
-          $ref: '#/components/schemas/Uuid'
+          $ref: '#/components/schemas/UUID'
           readOnly: true
         postId:
-          $ref: '#/components/schemas/Uuid'
+          $ref: '#/components/schemas/UUID'
           readOnly: true
         authorId:
-          $ref: '#/components/schemas/Uuid'
+          $ref: '#/components/schemas/UUID'
         body:
           type: string
           minLength: 1
@@ -780,7 +780,7 @@ components:
           minLength: 1
           maxLength: 80
         email:
-          $ref: '#/components/schemas/Email'
+          $ref: '#/components/schemas/EmailAddress'
       description: Someone who writes posts and comments.
     CreateComment:
       type: object
@@ -789,7 +789,7 @@ components:
         - body
       properties:
         authorId:
-          $ref: '#/components/schemas/Uuid'
+          $ref: '#/components/schemas/UUID'
         body:
           type: string
           minLength: 1
@@ -804,7 +804,7 @@ components:
         - status
       properties:
         authorId:
-          $ref: '#/components/schemas/Uuid'
+          $ref: '#/components/schemas/UUID'
         title:
           type: string
           minLength: 1
@@ -818,10 +818,16 @@ components:
           items:
             type: string
       description: An article, by one author.
-    Email:
+    EmailAddress:
       type: string
+      pattern: ^(?:[A-Za-z0-9_'+\-]+\.)*[A-Za-z0-9_'+\-]*[A-Za-z0-9_+\-]@(?=.{1,253}$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+(?:[A-Za-z]{2,63}|xn--[A-Za-z0-9-]{1,59})$
       format: email
-      description: An e-mail address.
+      description: |-
+        An e-mail address, in any case, kept as sent: `ada@example.com`. The local
+        part is letters, digits, `_`, `'`, `+`, `-` and dots between them, with no
+        quoted form; the domain is at least two labels, as `hostname` takes them,
+        the last of letters or `xn--`. Only the shape is checked.
+      x-nxgt-scalar: EmailAddress
     ForbiddenBody:
       type: object
       required:
@@ -879,10 +885,10 @@ components:
         - deletedBy
       properties:
         id:
-          $ref: '#/components/schemas/Uuid'
+          $ref: '#/components/schemas/UUID'
           readOnly: true
         authorId:
-          $ref: '#/components/schemas/Uuid'
+          $ref: '#/components/schemas/UUID'
         title:
           type: string
           minLength: 1
@@ -914,17 +920,17 @@ components:
           minimum: 0
         createdBy:
           anyOf:
-            - $ref: '#/components/schemas/Uuid'
+            - $ref: '#/components/schemas/UUID'
             - type: 'null'
           readOnly: true
         updatedBy:
           anyOf:
-            - $ref: '#/components/schemas/Uuid'
+            - $ref: '#/components/schemas/UUID'
             - type: 'null'
           readOnly: true
         deletedBy:
           anyOf:
-            - $ref: '#/components/schemas/Uuid'
+            - $ref: '#/components/schemas/UUID'
             - type: 'null'
           readOnly: true
       description: An article, by one author.
@@ -932,7 +938,7 @@ components:
       type: object
       properties:
         authorId:
-          $ref: '#/components/schemas/Uuid'
+          $ref: '#/components/schemas/UUID'
         title:
           type: string
           minLength: 1
@@ -1003,6 +1009,16 @@ components:
           format: date-time
           description: When the error was answered.
       description: The body of an error reply, as `@nxgt/openapi-hono` sends it.
+    UUID:
+      type: string
+      pattern: ^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|0{8}-0{4}-0{4}-0{4}-0{12}|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$
+      format: uuid
+      description: |-
+        An RFC 9562 UUID, any version 1 to 8 with the RFC variant, or the nil or
+        the max UUID, in any case, kept as sent: `0b8e5c1e-2f4a-4c3b-9d6e-7f8a9b0c1d2e`.
+
+        Specified by https://www.rfc-editor.org/rfc/rfc9562.
+      x-nxgt-scalar: UUID
     UnprocessableEntityBody:
       type: object
       required:
@@ -1023,10 +1039,6 @@ components:
           format: date-time
           description: When the error was answered.
       description: The body of an error reply, as `@nxgt/openapi-hono` sends it.
-    Uuid:
-      type: string
-      format: uuid
-      description: A UUID, such as `0b8e5c1e-2f4a-4c3b-9d6e-7f8a9b0c1d2e`.
     ValidationIssue:
       type: object
       required:

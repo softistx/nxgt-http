@@ -17,7 +17,7 @@ import { $ } from 'bun';
 const TEST_DIR = fileURLToPath(new URL('./', import.meta.url));
 
 /** One per convention: each `.tsp` imports `@nxgt/typespec` as an app does. */
-export const CASES = ['errors', 'blog'] as const;
+export const CASES = ['errors', 'blog', 'scalars'] as const;
 
 /** Every fixture's `tspconfig.yaml` emits both, each in its own folder. */
 export const VERSIONS = ['3.1.0', '3.2.0'] as const;

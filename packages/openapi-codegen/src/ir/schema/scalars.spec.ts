@@ -114,6 +114,38 @@ describe('stringNode', () => {
 		]);
 	});
 
+	it('does not warn of the format of an @nxgt/typespec scalar, and keeps its pattern', () => {
+		const s = state();
+		expect(
+			stringNode(
+				s,
+				{ format: 'iban', pattern: '^[A-Z]{2}', 'x-nxgt-scalar': 'IBAN' },
+				at,
+			),
+		).toEqual({ kind: 'string', pattern: '^[A-Z]{2}' });
+		expect(s.diagnostics.list).toEqual([]);
+	});
+
+	it('leaves the standard format of an @nxgt/typespec scalar to its pattern, except date-time', () => {
+		const s = state();
+		const scalar = { 'x-nxgt-scalar': 'X', pattern: '^a$' };
+		for (const format of ['email', 'uri', 'uuid', 'ipv4', 'byte', 'date']) {
+			expect(stringNode(s, { ...scalar, format }, at)).toEqual({
+				kind: 'string',
+				pattern: '^a$',
+			});
+		}
+		expect(stringNode(s, { ...scalar, contentEncoding: 'base64' }, at)).toEqual(
+			{ kind: 'string', pattern: '^a$' },
+		);
+		expect(stringNode(s, { ...scalar, format: 'date-time' }, at)).toEqual({
+			kind: 'string',
+			format: 'date-time',
+			pattern: '^a$',
+		});
+		expect(s.diagnostics.list).toEqual([]);
+	});
+
 	it('keeps the length bounds, and ignores one that is not a number', () => {
 		expect(stringNode(state(), { minLength: 0, maxLength: 9 }, at)).toEqual({
 			kind: 'string',

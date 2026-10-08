@@ -12,7 +12,7 @@ namespace Nxgt;
  */
 @friendlyName("EmailAddress")
 @format("email")
-@pattern("^[A-Za-z0-9_'+\\-]+(?:\\.[A-Za-z0-9_'+\\-]+)*@(?=.{1,253}$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\\.)+(?:[A-Za-z]{1,63}|xn--[A-Za-z0-9-]{1,59})$")
+@pattern("^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+\\-]@(?=.{1,253}$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\\.)+(?:[A-Za-z]{2,63}|xn--[A-Za-z0-9-]{1,59})$")
 @extension("x-nxgt-scalar", "EmailAddress")
 scalar emailAddress extends string;
 

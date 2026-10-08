@@ -21,9 +21,7 @@ export const network: readonly Entry[] = [
 		name: 'EmailAddress',
 		scalar: 'emailAddress',
 		format: 'email',
-		// `ada@x.xn--p1ai` matches the pattern, but the generator's z.email(),
-		// for `format: email`, refuses a punycode top-level label.
-		accept: ['ada@example.com', 'a.b+c@sub.example.org'],
+		accept: ['ada@example.com', 'a.b+c@sub.example.org', 'ada@x.xn--p1ai'],
 		refuse: [
 			'ada',
 			'ada@',
@@ -31,6 +29,8 @@ export const network: readonly Entry[] = [
 			'ada@localhost',
 			'ada@a-.com',
 			'ada@x.c0m',
+			'a@b.c',
+			"a'@b.com",
 		],
 	},
 	{
@@ -79,6 +79,9 @@ export const network: readonly Entry[] = [
 			'https://user:pass@example.com',
 			'https://example.com:080',
 			'https://example.com:',
+			'https://example.com:65536',
+			' https://example.com',
+			'https://example.com\n',
 			'https://example.com/a b',
 			'https://bücher.example',
 		],

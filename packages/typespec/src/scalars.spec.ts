@@ -15,8 +15,8 @@ import { spec, VERSIONS } from '../test/generate';
 import { createRoutes as routes31 } from '../test/generated/scalars/3.1.0/hono';
 import { createRoutes as routes32 } from '../test/generated/scalars/3.2.0/hono';
 import {
-	CATEGORIES,
 	type BuiltinEntry,
+	CATEGORIES,
 	type Entry,
 	GRAPHQL_SCALARS,
 	type ScalarEntry,
@@ -56,7 +56,9 @@ describe('the scalars registry', () => {
 		const program = await compile(NodeHost, main, { noEmit: true });
 		expect(program.diagnostics).toEqual([]);
 		const source = await readFile(main, 'utf8');
-		for (const entry of entries.filter((entry): entry is BuiltinEntry => !declared(entry))) {
+		for (const entry of entries.filter(
+			(entry): entry is BuiltinEntry => !declared(entry),
+		)) {
 			expect({ [entry.name]: source.includes(entry.builtin) }).toEqual({
 				[entry.name]: true,
 			});

@@ -135,9 +135,9 @@ describe('stringNode', () => {
 				pattern: '^a$',
 			});
 		}
-		expect(
-			stringNode(s, { ...scalar, contentEncoding: 'base64' }, at),
-		).toEqual({ kind: 'string', pattern: '^a$' });
+		expect(stringNode(s, { ...scalar, contentEncoding: 'base64' }, at)).toEqual(
+			{ kind: 'string', pattern: '^a$' },
+		);
 		expect(stringNode(s, { ...scalar, format: 'date-time' }, at)).toEqual({
 			kind: 'string',
 			format: 'date-time',

@@ -20,4 +20,4 @@ model IdentifierScalars {
   xid: xid;
 }
 
-@route("/identifier") @post op identifier(@body body: IdentifierScalars): IdentifierScalars;
+@route("/identifier") @post op postIdentifierScalars(@body body: IdentifierScalars): IdentifierScalars;

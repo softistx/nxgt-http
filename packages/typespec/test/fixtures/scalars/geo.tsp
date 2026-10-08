@@ -10,4 +10,4 @@ model GeoScalars {
   longitude: longitude;
 }
 
-@route("/geo") @post op geo(@body body: GeoScalars): GeoScalars;
+@route("/geo") @post op postGeoScalars(@body body: GeoScalars): GeoScalars;

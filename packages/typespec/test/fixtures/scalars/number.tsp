@@ -20,4 +20,4 @@ model NumberScalars {
   safeInt: safeInt;
 }
 
-@route("/number") @post op number(@body body: NumberScalars): NumberScalars;
+@route("/number") @post op postNumberScalars(@body body: NumberScalars): NumberScalars;

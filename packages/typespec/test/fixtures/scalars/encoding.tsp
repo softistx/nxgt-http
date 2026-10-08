@@ -14,4 +14,4 @@ model EncodingScalars {
   sha512: sha512;
 }
 
-@route("/encoding") @post op encoding(@body body: EncodingScalars): EncodingScalars;
+@route("/encoding") @post op postEncodingScalars(@body body: EncodingScalars): EncodingScalars;

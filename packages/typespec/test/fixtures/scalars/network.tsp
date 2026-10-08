@@ -18,4 +18,4 @@ model NetworkScalars {
   phoneNumber: phoneNumber;
 }
 
-@route("/network") @post op network(@body body: NetworkScalars): NetworkScalars;
+@route("/network") @post op postNetworkScalars(@body body: NetworkScalars): NetworkScalars;

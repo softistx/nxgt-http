@@ -13,4 +13,4 @@ model ColorScalars {
   rgba: rgba;
 }
 
-@route("/color") @post op color(@body body: ColorScalars): ColorScalars;
+@route("/color") @post op postColorScalars(@body body: ColorScalars): ColorScalars;

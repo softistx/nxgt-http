@@ -10,4 +10,4 @@ model FinanceScalars {
   iban: iban;
 }
 
-@route("/finance") @post op finance(@body body: FinanceScalars): FinanceScalars;
+@route("/finance") @post op postFinanceScalars(@body body: FinanceScalars): FinanceScalars;

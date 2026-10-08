@@ -10,4 +10,4 @@ model StringScalars {
   nonEmptyString: nonEmptyString;
 }
 
-@route("/string") @post op string(@body body: StringScalars): StringScalars;
+@route("/string") @post op postStringScalars(@body body: StringScalars): StringScalars;

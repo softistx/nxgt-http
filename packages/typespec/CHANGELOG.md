@@ -1,5 +1,11 @@
 # @nxgt/typespec
 
+## 0.11.0
+
+### Minor Changes
+
+- [#123](https://github.com/softistx/nxgt-http/pull/123) [`6d29072`](https://github.com/softistx/nxgt-http/commit/6d29072e3969dc5691acbce0ebc47f7ea82589bb) Thanks [@SteveGT96](https://github.com/SteveGT96)! - `CreateRequest<T>`, `UpdateRequest<T>` and `PatchRequest<T>`: TypeSpec's `Create`, `Update` and `MergePatchUpdate`, named `Create<T>Request`, `Update<T>Request` and `Patch<T>Request`. The `tsp init` template now uses all three: `update` replaces a user with a `PUT`, `patch` changes some of it with a merge patch.
+
 ## 0.10.0
 
 ### Minor Changes

@@ -64,3 +64,17 @@ for (const version of VERSIONS) {
 		});
 	});
 }
+
+describe.each([...VERSIONS])('searchAuthors, in OpenAPI %s', (version) => {
+	it('is a POST the generated table marks a QUERY', async () => {
+		const { operations } = await import(
+			`../test/generated/blog/${version}/operations`
+		);
+		expect(operations.searchAuthors).toMatchObject({
+			method: 'post',
+			path: '/authors/search',
+			queryMethod: true,
+		});
+		expect(operations.createAuthor.queryMethod).toBeUndefined();
+	});
+});

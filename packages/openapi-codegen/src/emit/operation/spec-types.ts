@@ -28,6 +28,8 @@ export interface OperationSpec<Client = unknown> {
 	readonly method: ${HTTP_METHODS.map(jsString).join(' | ')};
 	readonly path: string;
 	readonly honoPath: string;
+	/** A \`QUERY\` sent as a \`POST\` (\`x-nxgt-method: query\`): safe, its criteria in the body. */
+	readonly queryMethod?: true;
 	readonly tags: readonly string[];
 	readonly parameters: readonly ParameterSpec[];
 	/** Validates the path parameters, each read as a string. */

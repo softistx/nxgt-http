@@ -9,12 +9,14 @@
 import type { Program } from '@typespec/compiler';
 import { validateOneReplyPerStatus } from './one-reply-per-status';
 import { operationIds, validateOperationIds } from './operation-ids';
+import { queryMethod, validateQueryMethods } from './query-method';
 import { validateVerbMethods } from './verb-methods';
 
 export { $lib } from './lib';
 export { $linter } from './linter';
 
 export function $onValidate(program: Program): void {
+	validateQueryMethods(program);
 	// Before the ids are set: only an `@operationId` written in the spec is
 	// one then, and the operation it names is not checked.
 	validateVerbMethods(program);
@@ -23,5 +25,5 @@ export function $onValidate(program: Program): void {
 }
 
 export const $decorators = {
-	Nxgt: { operationIds },
+	Nxgt: { operationIds, queryMethod },
 };

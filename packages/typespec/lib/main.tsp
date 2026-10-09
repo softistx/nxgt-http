@@ -10,3 +10,4 @@ import "./columns.tsp";
 import "./headers.tsp";
 import "./sorting.tsp";
 import "./requests.tsp";
+import "./query-method.tsp";

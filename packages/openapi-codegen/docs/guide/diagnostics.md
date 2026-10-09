@@ -57,7 +57,7 @@ to `baseDir`; the command line passes the current directory.
 | `path_parameter_mismatch` | error | `{name}` in the path and the `in: path` parameters disagree | declare every template variable, and only those |
 | `missing_operation_id` | warning | no `operationId`, so one was derived | add an `operationId`: the derived one changes if the path does |
 | `duplicate_operation_id` | error | two operations share an `operationId` | make it unique |
-| `ignored` | warning | present but not generated: `default` and `4XX` responses, callbacks, webhooks; with `hono`, an operation Hono cannot route (`HEAD`, a parameter sharing its path segment); with `alxia`, an operation `alxia.ts` leaves out (see [`alxia`](options.md#alxia)); a cookie parameter, which the client files leave out, since only `alxia.ts` validates it | nothing, unless you relied on it; see [Hono](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-hono/docs/guide.md#mistakes-caught-at-startup) |
+| `ignored` | warning | present but not generated: `default` and `4XX` responses, callbacks, webhooks; with `hono`, an operation Hono cannot route (`HEAD`, a parameter sharing its path segment); with `alxia`, an operation `alxia.ts` leaves out (see [`alxia`](options.md#alxia)); a cookie parameter, which the client files leave out, since only `alxia.ts` validates it; an `x-nxgt-method` that does not mark a `POST` as `query` (another value, another method, or a 3.2 `query` operation, a `QUERY` already) (see [A QUERY sent as a POST](typespec.md#a-query-sent-as-a-post)) | nothing, unless you relied on it; see [Hono](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-hono/docs/guide.md#mistakes-caught-at-startup) |
 
 ## Linting
 

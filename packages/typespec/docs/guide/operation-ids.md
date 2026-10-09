@@ -116,7 +116,7 @@ tells a cache, a proxy or a retry that the request is safe. An operation
 | Verb | Sent with |
 | --- | --- |
 | `list`, `read`, `find`, `count`, `get` | `GET` or `HEAD` |
-| `search`, `query` | `GET` or `POST`, for criteria too large for a query string |
+| `search`, `query` | `GET`, `POST`, or a `POST` marked [`@queryMethod`](#a-query-sent-as-a-post), for criteria too large for a query string |
 | `create`, `createMany` | `POST` |
 | `update`, `updateMany` | `PUT` or `PATCH` |
 | `patch` | `PATCH` |
@@ -171,10 +171,64 @@ Not checked:
   whatever it says;
 - an operation `@operationIds` does not name.
 
-`QUERY`, the HTTP method for a safe request with a body, is not one of
-`search` and `query`'s methods yet: `@typespec/http` 1.17 declares only
-`GET`, `PUT`, `POST`, `PATCH`, `DELETE` and `HEAD`
-([roadmap](../roadmap.md#later)).
+## A QUERY sent as a POST
+
+`QUERY` is the HTTP method for a safe request with a body, and
+`@typespec/http` 1.17 declares only `GET`, `PUT`, `POST`, `PATCH`, `DELETE`
+and `HEAD`. `@queryMethod` marks a `@post` as the `QUERY` it stands for:
+
+```tsp
+import "@typespec/http";
+import "@nxgt/typespec";
+
+using Http;
+using Nxgt;
+
+@service
+@operationIds
+namespace Shop;
+
+model UserCriteria {
+  names: string[];
+}
+
+@route("/users")
+interface Users {
+  @post @queryMethod @route("/search")
+  search(@body criteria: UserCriteria): string[]; // searchUsers
+}
+```
+
+On the wire it is a `POST`, which every server, proxy, `fetch` and CORS
+policy accepts. The OpenAPI document says what it is, on the operation:
+
+```yaml
+/users/search:
+  post:
+    operationId: searchUsers
+    x-nxgt-method: query
+```
+
+`@nxgt/openapi-codegen` reads `x-nxgt-method` and marks the operation in the
+generated `operations` table
+([TypeSpec](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-codegen/docs/guide/typespec.md)). When
+`@typespec/http` declares `QUERY`, the decorator is what changes, not your
+spec ([roadmap](../roadmap.md#later)).
+
+| Case | Result |
+| --- | --- |
+| `search` or `query` marked | no warning: a `QUERY` is one of their methods |
+| `findById`, `create` or another verb marked | `verb-method-mismatch`, with the method `QUERY`: `findById is sent with QUERY, where its verb find is sent with GET or HEAD` |
+| a name that is not a verb, marked | nothing to check |
+| marked and not a `@post` | the error `query-method-not-post` |
+
+```text
+error @nxgt/typespec/query-method-not-post: list is marked @queryMethod and sent with GET: a QUERY is sent as a POST until @typespec/http declares it. Make it a @post.
+```
+
+A search that answers an array also meets the linter's `list-returns-page`;
+return a `Page<Item>`, as `search` in the blog fixture does
+(`Page<Author> | BadRequest`).
 
 ## The resource
 

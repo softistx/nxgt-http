@@ -456,6 +456,29 @@ The verbs `verbs` adds are not checked, nor an operation with its own
 `@operationId`. More, with each verb's methods, in
 [Operation ids](docs/guide/operation-ids.md).
 
+### A search with a body
+
+`QUERY` is the HTTP method for a safe request with a body, and
+`@typespec/http` 1.17 declares none. Mark a `@post` with `@queryMethod`: it is
+still sent as a `POST`, which every server, proxy, `fetch` and CORS policy
+accepts, and the document says what it is with `x-nxgt-method: query`, which
+`@nxgt/openapi-codegen` reads:
+
+```tsp
+@route("/authors")
+interface Authors {
+  @post @queryMethod @route("/search")
+  search(@body criteria: AuthorCriteria): Page<Author> | BadRequest; // searchAuthors
+}
+```
+
+`search` and `query` accept a `GET`, a `POST` or a marked `POST` without the
+`verb-method-mismatch` warning; `findById` or `create` marked warn, as a
+`QUERY` is not their method. The decorator on anything but a `@post` is the
+error `query-method-not-post`. When `@typespec/http` declares `QUERY`, the
+decorator is what changes, not your spec. More, in
+[Operation ids](docs/guide/operation-ids.md#a-query-sent-as-a-post).
+
 ### Linter
 
 Extend the library's ruleset in `tspconfig.yaml`, and `tsp compile` warns
@@ -490,11 +513,14 @@ passing example of each rule, in [Linter](docs/guide/linter.md).
 
 | Decorator | On | What it does |
 | --- | --- | --- |
+| `@queryMethod` | an operation | marks a `@post` as a `QUERY`: it stays a `POST` on the wire and the document gets `x-nxgt-method: query`; `@operationIds` checks its verb as a `QUERY`'s |
 | `@operationIds(options?: OperationIdsOptions)` | a namespace or an interface | makes each operation's id its name, as written, or a known verb with the interface's resource (`list` in `Users` is `listUsers`), in the namespace however deep or in the interface, unless it has an `@operationId` |
 
 `OperationIdsOptions` is `#{ singular?: string, plural?: string, verbs?: Record<"singular" | "plural"> }`:
 `singular` and `plural` name an interface's resource, and `verbs` adds or
 overrides verbs, on a namespace or an interface.
+
+`@queryMethod` has no options.
 
 ### Diagnostics
 
@@ -504,7 +530,8 @@ overrides verbs, on a namespace or an interface.
 | `resource-name-on-namespace` | error: `@operationIds` on a namespace is given `singular` or `plural`, which name an interface's resource |
 | `duplicate-status-reply` | error: an operation declares a reply without a body and one with a body of one status, which the emitter merges, losing the one without a body |
 | `merged-status-reply` | warning: an operation declares two replies with a body of one status code, which the emitter merges under the first one's description |
-| `verb-method-mismatch` | warning: an operation `@operationIds` names after one of the library's verbs, in an interface, is sent with a method that verb does not name: `create` with a `GET` |
+| `verb-method-mismatch` | warning: an operation `@operationIds` names after one of the library's verbs, in an interface, is sent with a method that verb does not name: `create` with a `GET`, or marked `@queryMethod` |
+| `query-method-not-post` | error: an operation marked `@queryMethod` is not a `@post` |
 
 ### Linter rules
 
@@ -681,7 +708,7 @@ envelope and the rate limit's headers.
   and `PatchRequest`, and naming your own;
 - [Operation ids](docs/guide/operation-ids.md): `@operationIds`, each
   operation named as written or a verb with its resource, the method each
-  verb is sent with, the options, and the ids it refuses;
+  verb is sent with, `@queryMethod`, the options, and the ids it refuses;
 - [Linter](docs/guide/linter.md): the ruleset `@nxgt/typespec/recommended`,
   each rule with a failing and a passing spec, and how to turn one off;
 - [troubleshooting](docs/troubleshooting.md);

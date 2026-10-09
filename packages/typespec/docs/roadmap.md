@@ -16,15 +16,23 @@ Nothing in progress.
 
 ## Later
 
-- **`QUERY` for `search` and `query`.** The HTTP `QUERY` method, a safe
-  request with a body, joins `GET` and `POST` as a method of `search` and
-  `query` once `@typespec/http` declares it. `@nxgt/openapi-codegen`
-  already reads an OpenAPI 3.2 `query` operation.
+- **A real `QUERY`.** `@queryMethod` is sent as a `POST` and `search` and
+  `query` accept it; once `@typespec/http` declares the HTTP `QUERY`
+  method, the decorator sends a `QUERY` and a spec does not change.
+  `@nxgt/openapi-codegen` already reads an OpenAPI 3.2 `query` operation.
 - **`ETag` and conditional requests.** `ETag`, with `If-None-Match` and
   `If-Match`, once the `@nxgt/*` packages send one the same way. The
   optimistic lock is the body's `version` today (`Versioned`).
 
 ## Shipped
+
+### 0.12.0
+
+- **`@queryMethod`, a `QUERY` sent as a `POST`.** The decorator marks a
+  `@post` with `x-nxgt-method: query`, which `@nxgt/openapi-codegen` reads,
+  and `search` and `query` accept it: a safe request with a body, today, with
+  every server, proxy and `fetch`. On anything but a `@post` it is the error
+  `query-method-not-post`.
 
 ### 0.11.0
 

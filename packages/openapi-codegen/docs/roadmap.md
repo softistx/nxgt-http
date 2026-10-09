@@ -46,6 +46,10 @@ Nothing planned beyond what is under Later.
 
 ## Shipped
 
+- **A `QUERY` sent as a `POST`.** `x-nxgt-method: query` on a `post`
+  operation, which `@nxgt/typespec`'s `@queryMethod` writes, marks the
+  operation's entry in the `operations` table, `queryMethod: true`, and its
+  JSDoc; elsewhere it is ignored with a warning — 0.9.0.
 - **`alxia.ts` for `@alxia/core` 0.4's middleware model** —
   `app.route(operation, ...middlewares, handler)`, with `validate(operation)`
   and `responds(operation)` placed among the middlewares; cookie

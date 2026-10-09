@@ -13,6 +13,12 @@ model AuthorFilters {
   name?: string;
 }
 
+/** What an author search looks for. */
+model AuthorCriteria {
+  /** Authors with one of these names. */
+  names: string[];
+}
+
 // Verbs @operationIds completes: list is listAuthors, get is getAuthor.
 @route("/authors")
 @tag("Authors")
@@ -24,6 +30,15 @@ interface Authors {
     ...PageParameters,
     ...SortParameters<"name" | "createdAt">,
   ): Page<Author>;
+
+  /**
+   * The authors matching criteria too long for a query string: a QUERY, sent
+   * as a POST.
+   */
+  @post
+  @queryMethod
+  @route("/search")
+  search(@body criteria: AuthorCriteria): Page<Author> | BadRequest;
 
   /** One author. */
   @get

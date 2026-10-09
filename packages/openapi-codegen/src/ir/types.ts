@@ -240,6 +240,11 @@ export interface OperationIR {
 	summary?: string | undefined;
 	description?: string | undefined;
 	deprecated: boolean;
+	/**
+	 * A `POST` the spec marks `x-nxgt-method: query`: a `QUERY`, safe, its
+	 * criteria in the body, sent as a `POST` until `QUERY` is one everywhere.
+	 */
+	queryMethod: boolean;
 	tags: string[];
 	/** Its path, query and header parameters. */
 	parameters: ParamIR[];

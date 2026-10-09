@@ -28,6 +28,7 @@ export function operationTable(
 			`\t\tmethod: ${jsString(operation.method)},`,
 			`\t\tpath: ${jsString(operation.path)},`,
 			`\t\thonoPath: ${jsString(operation.honoPath)},`,
+			...(operation.queryMethod ? ['\t\tqueryMethod: true,'] : []),
 			`\t\ttags: ${list('[', operation.tags.map(jsString), ']', '\t\t')},`,
 			`\t\tparameters: ${list('[', parameters, ']', '\t\t')},`,
 			`\t\tparam: ${validator('param')},`,

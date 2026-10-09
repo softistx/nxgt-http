@@ -23,6 +23,12 @@ export const $lib = createTypeSpecLibrary({
 				default: paramMessage`${'operation'} is sent with ${'method'}, where its verb ${'verb'} is sent with ${'expected'}. Give it that method, or a name that is not a verb.`,
 			},
 		},
+		'query-method-not-post': {
+			severity: 'error',
+			messages: {
+				default: paramMessage`${'operation'} is marked @queryMethod and sent with ${'method'}: a QUERY is sent as a POST until @typespec/http declares it. Make it a @post.`,
+			},
+		},
 		'duplicate-status-reply': {
 			severity: 'error',
 			messages: {
@@ -37,6 +43,9 @@ export const $lib = createTypeSpecLibrary({
 		},
 	},
 	state: {
+		queryMethod: {
+			description: 'The operations marked with @queryMethod',
+		},
 		operationIds: {
 			description: 'The interfaces and namespaces marked with @operationIds',
 		},

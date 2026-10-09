@@ -7,12 +7,12 @@
  * where undocumented `@error` models share one description, they pass.
  * Bodies of different content types are one reply, negotiated, and pass.
  */
-import { isVoidType, type Operation, type Program } from '@typespec/compiler';
-import {
-	getAllHttpServices,
-	type HttpOperationResponse,
-	type HttpStatusCodesEntry,
+import { isVoidType, type Program } from '@typespec/compiler';
+import type {
+	HttpOperationResponse,
+	HttpStatusCodesEntry,
 } from '@typespec/http';
+import { eachHttpOperation } from './http-operations';
 import { $lib } from './lib';
 
 function statusOf(code: HttpStatusCodesEntry): string {
@@ -44,30 +44,20 @@ function mergeOf({
 	return undefined;
 }
 
-/**
- * Checks each operation of each service, as the emitter sees it, once: a
- * service nested in another is listed in both. The services' own
- * diagnostics are the emitter's to report.
- */
+/** Checks each operation of each service, as the emitter sees it, once. */
 export function validateOneReplyPerStatus(program: Program): void {
-	const [services] = getAllHttpServices(program);
-	const checked = new Set<Operation>();
-	for (const service of services) {
-		for (const operation of service.operations) {
-			if (checked.has(operation.operation)) continue;
-			checked.add(operation.operation);
-			for (const response of operation.responses) {
-				const code = mergeOf(response);
-				if (code === undefined) continue;
-				$lib.reportDiagnostic(program, {
-					code,
-					format: {
-						operation: operation.operation.name,
-						status: statusOf(response.statusCodes),
-					},
-					target: operation.operation,
-				});
-			}
+	eachHttpOperation(program, (operation) => {
+		for (const response of operation.responses) {
+			const code = mergeOf(response);
+			if (code === undefined) continue;
+			$lib.reportDiagnostic(program, {
+				code,
+				format: {
+					operation: operation.operation.name,
+					status: statusOf(response.statusCodes),
+				},
+				target: operation.operation,
+			});
 		}
-	}
+	});
 }

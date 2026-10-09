@@ -203,6 +203,70 @@ read-only properties. Name the visibility the body takes:
 
   `Page<Pet>` is then the schema `PetPage`.
 
+## A QUERY sent as a POST
+
+`QUERY` is the HTTP method for a safe request with a body.
+`@typespec/http` 1.17 declares none, so `@nxgt/typespec`'s `@queryMethod`
+marks a `@post` and the emitted operation carries `x-nxgt-method: query`:
+
+```tsp
+import "@typespec/http";
+import "@nxgt/typespec";
+
+using Http;
+using Nxgt;
+
+@route("/users")
+interface Users {
+  @post @queryMethod @route("/search")
+  search(@body criteria: UserCriteria): User[];
+}
+```
+
+```yaml
+/users/search:
+  post:
+    operationId: searchUsers
+    x-nxgt-method: query
+```
+
+The extension is plain OpenAPI, so a hand-written spec can set it on any
+`post` operation. The generator reads it and marks that operation's entry in
+the `operations` table, where the other entries do not have the key:
+
+```ts
+import { operations } from './generated/operations';
+
+operations.searchUsers.method; // 'post': what is sent
+operations.searchUsers.queryMethod; // true
+operations.createUser.queryMethod; // undefined
+```
+
+The entry is typed `readonly queryMethod?: true` on `OperationSpec`, and its
+JSDoc says "A `QUERY`, sent as a `POST`: it changes nothing, and its criteria
+are the body." Nothing else changes: the client, the Hono route and the
+validators treat it as the `POST` it is, with the criteria as its body.
+
+| `x-nxgt-method` | On | Result |
+| --- | --- | --- |
+| `query` | a `post` operation | `queryMethod: true` |
+| `query` | an OpenAPI 3.2 `query` operation | ignored, warning `ignored`: it is a `QUERY` already |
+| `query` | another method | ignored, warning `ignored` |
+| any other value | any operation | ignored, warning `ignored` |
+
+```text
+warning ignored: x-nxgt-method: query marks a POST as a QUERY, not a GET   (/paths/~1users/get/x-nxgt-method)
+warning ignored: x-nxgt-method takes only query: "search" is not it   (/paths/~1users/post/x-nxgt-method)
+warning ignored: x-nxgt-method: query on a QUERY: the operation is one already   (/paths/~1users~1search/query/x-nxgt-method)
+```
+
+This is not the OpenAPI 3.2 `query` operation, which the generator also
+reads: there `method` is `'query'`, and an OpenAPI 3.1 document with one is
+refused (`unsupported_operation`). `x-nxgt-method: query` works in 3.1 and
+3.2, on a `post`; on a 3.2 `query` operation it says nothing more, and is
+ignored with a warning. When `@typespec/http` declares `QUERY`, `@queryMethod`
+changes and a spec does not.
+
 ## When it fails
 
 [Troubleshooting](../troubleshooting.md) has each trap this path hits, with

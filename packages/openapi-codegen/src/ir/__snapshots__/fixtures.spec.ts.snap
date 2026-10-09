@@ -66,6 +66,7 @@ exports[`buildIR on whole specs builds a spec split across files and shared frag
         },
       ],
       "path": "/employees",
+      "queryMethod": false,
       "responses": [
         {
           "content": [
@@ -137,6 +138,7 @@ exports[`buildIR on whole specs builds a spec split across files and shared frag
       "operationId": "createEmployee",
       "parameters": [],
       "path": "/employees",
+      "queryMethod": false,
       "responses": [
         {
           "content": [
@@ -207,6 +209,7 @@ exports[`buildIR on whole specs builds a spec split across files and shared frag
         },
       ],
       "path": "/employees/{id}",
+      "queryMethod": false,
       "responses": [
         {
           "content": [
@@ -290,6 +293,7 @@ exports[`buildIR on whole specs builds a spec split across files and shared frag
         },
       ],
       "path": "/employees/{id}",
+      "queryMethod": false,
       "responses": [
         {
           "content": [
@@ -360,6 +364,7 @@ exports[`buildIR on whole specs builds a spec split across files and shared frag
         },
       ],
       "path": "/employees/{id}",
+      "queryMethod": false,
       "responses": [
         {
           "content": [],
@@ -591,6 +596,7 @@ exports[`buildIR on whole specs builds an OpenAPI 3.2 \`query\` operation 1`] = 
       "operationId": "searchEmployees",
       "parameters": [],
       "path": "/employees",
+      "queryMethod": false,
       "responses": [
         {
           "content": [

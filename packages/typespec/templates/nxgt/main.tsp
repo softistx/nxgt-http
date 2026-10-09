@@ -55,9 +55,16 @@ interface Users {
     @body user: User;
   } | CreateErrors;
 
-  /** Updates a user with a merge patch. */
-  @patch
+  /** Replaces a user: the whole body, as a `PUT` sends it. */
+  @put
   update(
+    @path id: uuid,
+    @body user: UpdateRequest<User>,
+  ): User | UpdateErrors;
+
+  /** Updates some of a user's properties, with a merge patch. */
+  @patch
+  patch(
     @path id: uuid,
     @body user: PatchRequest<User>,
   ): User | UpdateErrors;

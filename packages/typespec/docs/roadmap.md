@@ -26,6 +26,14 @@ Nothing in progress.
 
 ## Shipped
 
+### 0.11.0
+
+- **Request body aliases.** `CreateRequest<T>`, `UpdateRequest<T>` and
+  `PatchRequest<T>` are TypeSpec's `Create`, `Update` and `MergePatchUpdate`
+  named `Create<T>Request`, `Update<T>Request` and `Patch<T>Request`, so the
+  generated types and schemas share one convention. `Create<T>` and
+  `MergePatchUpdate<T>` stay usable.
+
 ### 0.10.0
 
 - **Every scalar of `@nxgt/graphql-scalars`.** The scalars, under the same

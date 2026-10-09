@@ -125,7 +125,7 @@ namespace Blog;
 @route("/posts")
 interface Posts {
   @get getPost(@path postId: string): Post | NotFound | Unauthorized;
-  @post createPost(@body post: Create<Post>): {
+  @post createPost(@body post: CreateRequest<Post>): {
     @statusCode _: 201;
     @body post: Post;
   } | BadRequest | Conflict | ErrorResponse<503>;
@@ -183,6 +183,26 @@ interface Users {
 
 An alias is exactly its union, so the OpenAPI it emits is the same as
 writing the responses out.
+
+### Request bodies
+
+`CreateRequest<T>`, `UpdateRequest<T>` and `PatchRequest<T>` are TypeSpec's own
+`Create`, `Update` and `MergePatchUpdate`, named so the generated types and
+schemas read `CreatePostRequest`, `UpdatePostRequest` and `PatchPostRequest`:
+
+```tsp
+@post createPost(@body post: CreateRequest<Post>): {
+  @statusCode _: 201;
+  @body post: Post;
+} | BadRequest;
+@put updatePost(@path postId: uuid, @body post: UpdateRequest<Post>): Post | BadRequest | NotFound;
+@patch patchPost(@path postId: uuid, @body post: PatchRequest<Post>): Post | BadRequest | NotFound;
+```
+
+A `PUT` body keeps each property as optional as the model declares it; a
+`PATCH` body is a JSON Merge Patch, `application/merge-patch+json`, with
+every property optional. `Create<Post, "New{name}">` names a body your own
+way. See [Request bodies](docs/guide/requests.md).
 
 ### Pagination
 
@@ -293,9 +313,9 @@ model Post {
 | --- | --- | --- | --- |
 | `uuid` | the schema `UUID`, `format: uuid`, a pattern for versions 1–8 | `UUID`, `z.guid().regex(…)` | `id()` |
 | `email` | `emailAddress`, the schema `EmailAddress`, `format: email` | `EmailAddress`, `z.string().regex(…)` | |
-| `...Timestamps` | `createdAt`, `updatedAt`, read-only | left out of `Create<T>` and updates | `timestamps()` |
+| `...Timestamps` | `createdAt`, `updatedAt`, read-only | left out of `CreateRequest<T>` and updates | `timestamps()` |
 | `...SoftDelete` | `deletedAt: utcDateTime \| null`, read-only | | `softDelete()` |
-| `...Versioned` | `version: integer`, read and update | kept in `MergePatchUpdate<T>` | `version()` |
+| `...Versioned` | `version: integer`, read and update | kept in `UpdateRequest<T>` and `PatchRequest<T>` | `version()` |
 | `...Actors<Id = uuid>` | `createdBy`, `updatedBy`, `deletedBy`, `Id \| null`, read-only | | `actors()` |
 
 Every scalar of [`@nxgt/graphql-scalars`](https://www.npmjs.com/package/@nxgt/graphql-scalars)
@@ -326,7 +346,7 @@ Spread the headers of an idempotent write and of a rate limit into an
 operation and its replies:
 
 ```tsp
-@post createPost(...IdempotencyKeyHeader, @body post: Create<Post>): {
+@post createPost(...IdempotencyKeyHeader, @body post: CreateRequest<Post>): {
   @statusCode _: 201;
   ...IdempotentReplayedHeader;
   ...RateLimitHeaders;
@@ -507,6 +527,9 @@ In the ruleset `@nxgt/typespec/recommended`; each is a warning, and named
 | `Page<Item>` | `{ items: Item[], total, page, pageSize, pageCount }`, the schema `<Item>Page` |
 | `CursorPageParameters` | the query `after` and `limit` |
 | `CursorPage<Item>` | `{ items: Item[], nextCursor: string \| null }`, the schema `<Item>CursorPage` |
+| `CreateRequest<T>` | `Create<T, "Create{name}Request">`: the body of a create, `CreatePostRequest` |
+| `UpdateRequest<T>` | `Update<T, "Update{name}Request">`: the body of a `PUT`, `UpdatePostRequest` |
+| `PatchRequest<T>` | `MergePatchUpdate<T, "Patch{name}Request">`: a merge patch, all optional, `PatchPostRequest` |
 | `ValidationIssue` | `{ target: ValidationTarget, path: (string \| integer)[], code: string, message: string }` |
 | `ValidationTarget` | `"param" \| "query" \| "header" \| "json" \| "form" \| "body" \| "response"` |
 

@@ -76,6 +76,7 @@ it('scaffolds a spec that compiles and passes the linter', async () => {
 		'deleteUser',
 		'getUser',
 		'listUsers',
+		'patchUser',
 		'updateUser',
 	]);
 });

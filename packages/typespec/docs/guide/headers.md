@@ -19,7 +19,7 @@ namespace Blog;
 
 @route("/posts")
 interface Posts {
-  @post createPost(...IdempotencyKeyHeader, @body post: Create<Post>): {
+  @post createPost(...IdempotencyKeyHeader, @body post: CreateRequest<Post>): {
     @statusCode _: 201;
     ...IdempotentReplayedHeader;
     @body post: Post;
@@ -48,7 +48,7 @@ lock, gets one 409 with the description of the first, and the library warns,
 ## A rate limit
 
 ```tsp
-@post createPost(@body post: Create<Post>): {
+@post createPost(@body post: CreateRequest<Post>): {
   @statusCode _: 201;
   ...RateLimitHeaders;
   @body post: Post;

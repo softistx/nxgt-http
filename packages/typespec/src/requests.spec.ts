@@ -63,6 +63,7 @@ describe.each([...VERSIONS])(
 				'CreateCommentRequest',
 				'CreateAuthorRequest',
 				'UpdatePostRequest',
+				'UpdateAuthorRequest',
 				'PatchPostRequest',
 				'PatchAuthorRequest',
 			]) {

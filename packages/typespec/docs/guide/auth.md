@@ -91,7 +91,7 @@ operation can declare the guard's 401 and the handler's 403:
 
 ```tsp
 @useAuth(JanusAuth)
-@post createPost(@body post: Create<Post>): {
+@post createPost(@body post: CreateRequest<Post>): {
   @statusCode _: 201;
   @body post: Post;
 } | BadRequest | AuthenticationRequired | Forbidden;

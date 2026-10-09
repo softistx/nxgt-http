@@ -80,9 +80,9 @@ model Post {
 | `Versioned` | `version: integer`, at least 0 | read, update | `version()` |
 | `Actors<Id = uuid>` | `createdBy`, `updatedBy`, `deletedBy: Id \| null` | read | `actors()` |
 
-The server sets every read-only column, so `Create<Post>` and
-`MergePatchUpdate<Post>` leave them out, and the generated `CreatePost` and
-`PostMergePatchUpdate` have no `createdAt` a client could send.
+The server sets every read-only column, so `CreateRequest<Post>` and
+`PatchRequest<Post>` leave them out, and the generated `CreatePostRequest` and
+`PatchPostRequest` have no `createdAt` a client could send.
 `Actors<string>` or `Actors<integer>` match `actors('text')` or
 `actors('integer')`.
 
@@ -94,7 +94,7 @@ that version, and throws `OptimisticLockError` otherwise. Declare the
 `Conflict` it becomes:
 
 ```tsp
-@patch updatePost(@path postId: uuid, @body post: MergePatchUpdate<Post>):
+@patch patchPost(@path postId: uuid, @body post: PatchRequest<Post>):
   Post | BadRequest | NotFound | Conflict;
 ```
 

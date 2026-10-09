@@ -24,13 +24,13 @@ interface Posts {
     ...RateLimitHeaders;
     @body post: Post;
   } | BadRequest | AuthenticationRequired | Forbidden | IdempotencyInProgress | IdempotencyKeyReused | TooManyRequests;
-  @patch updatePost(
-    @path postId: uuid,
-    @body post: PatchRequest<Post>,
-  ): Post | BadRequest | NotFound | Conflict;
-  @put replacePost(
+  @put updatePost(
     @path postId: uuid,
     @body post: UpdateRequest<Post>,
+  ): Post | BadRequest | NotFound | Conflict;
+  @patch patchPost(
+    @path postId: uuid,
+    @body post: PatchRequest<Post>,
   ): Post | BadRequest | NotFound | Conflict;
   @delete deletePost(@path postId: uuid): NoContentResponse | NotFound | Forbidden;
 }

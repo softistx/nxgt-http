@@ -101,9 +101,51 @@ paths:
                 $ref: '#/components/schemas/NotFoundBody'
       tags:
         - Authors
-    patch:
+    put:
       operationId: updateAuthor
-      description: Updates an author with a merge patch.
+      description: 'Replaces an author: the whole body, as a `PUT` sends it.'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Author'
+        '400':
+          description: The request is refused, by the validators or by a handler.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestBody'
+        '404':
+          description: Nothing is there.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundBody'
+        '409':
+          description: The request conflicts with the resource's state, such as a version that moved on.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictBody'
+      tags:
+        - Authors
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAuthorRequest'
+    patch:
+      operationId: patchAuthor
+      description: Updates some of an author's properties, with a merge patch.
       parameters:
         - name: id
           in: path
@@ -356,49 +398,8 @@ paths:
                 $ref: '#/components/schemas/NotFoundBody'
       tags:
         - Posts
-    patch:
-      operationId: updatePost
-      parameters:
-        - name: postId
-          in: path
-          required: true
-          schema:
-            $ref: '#/components/schemas/UUID'
-      responses:
-        '200':
-          description: The request has succeeded.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Post'
-        '400':
-          description: The request is refused, by the validators or by a handler.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BadRequestBody'
-        '404':
-          description: Nothing is there.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NotFoundBody'
-        '409':
-          description: The request conflicts with the resource's state, such as a version that moved on.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConflictBody'
-      tags:
-        - Posts
-      requestBody:
-        required: true
-        content:
-          application/merge-patch+json:
-            schema:
-              $ref: '#/components/schemas/PatchPostRequest'
     put:
-      operationId: replacePost
+      operationId: updatePost
       parameters:
         - name: postId
           in: path
@@ -438,6 +439,47 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/UpdatePostRequest'
+    patch:
+      operationId: patchPost
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          description: The request is refused, by the validators or by a handler.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestBody'
+        '404':
+          description: Nothing is there.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundBody'
+        '409':
+          description: The request conflicts with the resource's state, such as a version that moved on.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictBody'
+      tags:
+        - Posts
+      requestBody:
+        required: true
+        content:
+          application/merge-patch+json:
+            schema:
+              $ref: '#/components/schemas/PatchPostRequest'
     delete:
       operationId: deletePost
       parameters:
@@ -1080,6 +1122,19 @@ components:
           format: date-time
           description: When the error was answered.
       description: The body of an error reply, as `@nxgt/openapi-hono` sends it.
+    UpdateAuthorRequest:
+      type: object
+      required:
+        - name
+        - email
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        email:
+          $ref: '#/components/schemas/EmailAddress'
+      description: Someone who writes posts and comments.
     UpdatePostRequest:
       type: object
       required:

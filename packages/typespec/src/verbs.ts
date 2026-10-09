@@ -36,8 +36,8 @@ export const VERBS: Readonly<Record<string, Grammar>> = {
 /**
  * The HTTP methods each of the library's verbs is sent with: a read is a
  * `GET` (or a `HEAD`), a search may carry its criteria in a `POST` body, a
- * bulk delete its ids. `QUERY` joins `search` and `query` once
- * `@typespec/http` declares it.
+ * bulk delete its ids. A `QUERY`, a `POST` marked `@queryMethod`, is
+ * a search too.
  */
 export const METHODS: Readonly<Record<string, readonly string[]>> = {
 	list: ['get', 'head'],
@@ -45,8 +45,8 @@ export const METHODS: Readonly<Record<string, readonly string[]>> = {
 	find: ['get', 'head'],
 	count: ['get', 'head'],
 	get: ['get', 'head'],
-	search: ['get', 'post'],
-	query: ['get', 'post'],
+	search: ['get', 'post', 'query'],
+	query: ['get', 'post', 'query'],
 	create: ['post'],
 	createMany: ['post'],
 	update: ['put', 'patch'],

@@ -12,6 +12,7 @@ import { getAllHttpServices } from '@typespec/http';
 import { getOperationId } from '@typespec/openapi';
 import { $lib } from './lib';
 import { isNamed } from './operation-ids';
+import { isQueryMethod } from './query-method';
 import { verbOf } from './resource';
 import { METHODS } from './verbs';
 
@@ -25,10 +26,13 @@ export function validateVerbMethods(program: Program): void {
 	const [services] = getAllHttpServices(program);
 	const checked = new Set<Operation>();
 	for (const service of services) {
-		for (const { operation, verb: method } of service.operations) {
+		for (const { operation, verb: sent } of service.operations) {
 			if (checked.has(operation)) continue;
 			checked.add(operation);
 			if (!isNamed(program, operation)) continue;
+			// A `POST` marked `@queryMethod` is checked as the `QUERY` it is.
+			const method =
+				sent === 'post' && isQueryMethod(program, operation) ? 'query' : sent;
 			if (getOperationId(program, operation) !== undefined) continue;
 			const verb = verbOf(program, operation);
 			if (verb === undefined || !Object.hasOwn(METHODS, verb)) continue;

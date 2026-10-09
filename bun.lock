@@ -63,7 +63,7 @@
     },
     "packages/openapi-codegen": {
       "name": "@nxgt/openapi-codegen",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "bin": {
         "nxgt-openapi": "./dist/cli.js",
       },
@@ -178,7 +178,7 @@
     },
     "packages/typespec": {
       "name": "@nxgt/typespec",
-      "version": "0.11.0",
+      "version": "0.12.0",
       "devDependencies": {
         "@nxgt/openapi-codegen": "workspace:^",
         "@nxgt/openapi-hono": "workspace:^",

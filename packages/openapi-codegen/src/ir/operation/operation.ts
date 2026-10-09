@@ -35,6 +35,7 @@ export function operation(
 	const params = merged.filter((p) => p.in !== 'cookie');
 	const cookies = merged.filter((p) => p.in === 'cookie');
 	checkTemplate(state, path, params, at);
+	const queryMethod = isQueryMethod(state, method, raw, at);
 	if (raw['callbacks'] !== undefined) {
 		state.diagnostics.warning(
 			'ignored',
@@ -52,6 +53,7 @@ export function operation(
 		summary: asString(raw['summary']),
 		description: asString(raw['description']),
 		deprecated: raw['deprecated'] === true,
+		queryMethod,
 		tags: Array.isArray(raw['tags'])
 			? raw['tags'].filter((tag): tag is string => typeof tag === 'string')
 			: [],
@@ -64,6 +66,30 @@ export function operation(
 		responses: responses(state, raw['responses'], child(at, 'responses'), name),
 		location: at,
 	};
+}
+
+/**
+ * `x-nxgt-method: query`, as `@nxgt/typespec`'s `@queryMethod` writes it: a
+ * `POST` that is a `QUERY`. On another method, or with another value, it says
+ * nothing the generator can use, and is ignored with a warning.
+ */
+function isQueryMethod(
+	state: OperationState,
+	method: HttpMethod,
+	raw: Record<string, unknown>,
+	at: Location,
+): boolean {
+	const marked = raw['x-nxgt-method'];
+	if (marked === undefined) return false;
+	if (marked === 'query' && method === 'post') return true;
+	state.diagnostics.warning(
+		'ignored',
+		marked === 'query'
+			? `x-nxgt-method: query marks a POST as a QUERY, not a ${method.toUpperCase()}`
+			: `x-nxgt-method is query, or absent: ${JSON.stringify(marked)} is not one`,
+		child(at, 'x-nxgt-method'),
+	);
+	return false;
 }
 
 /**

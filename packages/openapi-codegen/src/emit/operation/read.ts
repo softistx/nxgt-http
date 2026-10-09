@@ -41,6 +41,12 @@ export function operationDocs(operation: OperationIR): string[] {
 		if (lines.length > 0) lines.push('');
 		lines.push(operation.description);
 	}
+	if (operation.queryMethod) {
+		if (lines.length > 0) lines.push('');
+		lines.push(
+			'A `QUERY`, sent as a `POST`: it changes nothing, and its criteria are the body.',
+		);
+	}
 	if (operation.deprecated) lines.push('@deprecated');
 	return lines;
 }

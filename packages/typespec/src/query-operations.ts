@@ -34,22 +34,25 @@ function moveQueries(document: Record<string, unknown>): boolean {
 	return moved;
 }
 
-/** The file's text with its queries moved, for a `.yaml`, `.yml` or `.json` document. */
-export function withQueryOperations(path: string, content: string): string {
-	if (path.endsWith('.json')) {
-		const document = JSON.parse(content) as Record<string, unknown>;
-		return moveQueries(document)
-			? `${JSON.stringify(document, null, 2)}\n`
-			: content;
-	}
-	if (!path.endsWith('.yaml') && !path.endsWith('.yml')) return content;
-	const document = parse(content) as Record<string, unknown>;
-	if (!moveQueries(document)) return content;
-	// `@typespec/openapi3`'s own options, so the rest of the text is unchanged.
-	return stringify(document, {
-		singleQuote: true,
-		aliasDuplicateObjects: false,
-		lineWidth: 0,
-		compat: 'yaml-1.1',
-	});
+/**
+ * The document's text with its queries moved. The format is the text's:
+ * `@typespec/openapi3` writes YAML whatever the file is named, unless
+ * `file-type` says JSON. Line endings stay as written: `new-line: crlf`
+ * reaches here already applied.
+ */
+export function withQueryOperations(content: string): string {
+	const json = content.trimStart().startsWith('{');
+	const document = (json ? JSON.parse(content) : parse(content)) as unknown;
+	if (typeof document !== 'object' || document === null) return content;
+	if (!moveQueries(document as Record<string, unknown>)) return content;
+	const text = json
+		? `${JSON.stringify(document, null, 2)}\n`
+		: // `@typespec/openapi3`'s own options, so the rest of the text is unchanged.
+			stringify(document, {
+				singleQuote: true,
+				aliasDuplicateObjects: false,
+				lineWidth: 0,
+				compat: 'yaml-1.1',
+			});
+	return content.includes('\r\n') ? text.replace(/\n/g, '\r\n') : text;
 }

@@ -23,7 +23,15 @@ export function isQueryMethod(program: Program, operation: Operation): boolean {
 	return program.stateSet($lib.stateKeys.queryMethod).has(operation);
 }
 
-/** Each marked operation is a `POST`, as the emitter sends it. */
+/** The operations marked with `@queryMethod`, each once. */
+export function queryMethods(program: Program): Operation[] {
+	return [...program.stateSet($lib.stateKeys.queryMethod)] as Operation[];
+}
+
+/**
+ * Each marked operation is a `POST`, as the emitter sends it, and is emitted
+ * by `@nxgt/typespec`: `@typespec/openapi3` alone would write the `POST`.
+ */
 export function validateQueryMethods(program: Program): void {
 	eachHttpOperation(program, ({ operation, verb: method }) => {
 		if (!isQueryMethod(program, operation) || method === 'post') return;
@@ -33,4 +41,14 @@ export function validateQueryMethods(program: Program): void {
 			target: operation,
 		});
 	});
+	if (!(program.compilerOptions.emit ?? []).includes('@typespec/openapi3')) {
+		return;
+	}
+	for (const operation of queryMethods(program)) {
+		$lib.reportDiagnostic(program, {
+			code: 'query-method-needs-nxgt-emitter',
+			format: { operation: operation.name },
+			target: operation,
+		});
+	}
 }

@@ -1,6 +1,5 @@
 // A search too long for a query string, marked @queryMethod and emitted by
-// the emitter @nxgt/typespec: a real QUERY in OpenAPI 3.2, a POST marked
-// x-nxgt-method: query in 3.1, which has no QUERY.
+// the emitter @nxgt/typespec as a real QUERY, in OpenAPI 3.2 only.
 import "@typespec/http";
 import "@nxgt/typespec";
 
@@ -30,7 +29,7 @@ interface Books {
   @route("/search")
   search(@body criteria: BookCriteria): Page<Book> | BadRequest;
 
-  /** Creates a book: a POST, unmarked, in both versions. */
+  /** Creates a book: a POST, unmarked. */
   @post
   create(@body book: CreateRequest<Book>): {
     @statusCode _: 201;

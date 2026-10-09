@@ -1,13 +1,12 @@
 /**
  * The emitter `@nxgt/typespec` on the queries fixture: a `POST` marked
  * `@queryMethod` is a real `QUERY` in OpenAPI 3.2, generated and served as
- * one, and in 3.1, which has no `QUERY`, a `POST` the table marks.
+ * one. An older version is refused (`emitter.spec.ts`).
  */
 import { describe, expect, it } from 'bun:test';
 import { readFile } from 'node:fs/promises';
 import { Hono } from 'hono';
 import { spec } from '../test/generate';
-import { operations as operations31 } from '../test/generated/queries/3.1.0/operations';
 import { createRoutes as routes32 } from '../test/generated/queries/3.2.0/hono';
 import { operations as operations32 } from '../test/generated/queries/3.2.0/operations';
 
@@ -54,21 +53,5 @@ describe('OpenAPI 3.2', () => {
 		});
 		expect(reply.status).toBe(200);
 		expect(await reply.json()).toMatchObject({ total: 2 });
-	});
-});
-
-describe('OpenAPI 3.1', () => {
-	it('keeps the POST and its mark', async () => {
-		const search = (await paths('3.1.0'))['/books/search'];
-		expect(Object.keys(search ?? {})).toEqual(['post']);
-		expect(search?.['post']?.['x-nxgt-method']).toBe('query');
-	});
-
-	it('generates a POST the table marks a QUERY', () => {
-		expect(operations31.searchBooks).toMatchObject({
-			method: 'post',
-			queryMethod: true,
-		});
-		expect(operations31.createBook).not.toHaveProperty('queryMethod');
 	});
 });

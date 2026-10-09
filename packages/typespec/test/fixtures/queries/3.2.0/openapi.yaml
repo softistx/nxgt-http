@@ -7,7 +7,7 @@ paths:
   /books:
     post:
       operationId: createBook
-      description: 'Creates a book: a POST, unmarked, in both versions.'
+      description: 'Creates a book: a POST, unmarked.'
       parameters: []
       responses:
         '201':

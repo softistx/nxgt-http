@@ -1,11 +1,13 @@
 # Compiled by test/generate.ts with the TypeSpec pinned in package.json, to
-# 3.1.0/openapi.yaml and 3.2.0/openapi.yaml. The case's spec fails when they
+# 3.2.0/openapi.yaml only: a @queryMethod is a QUERY, which only OpenAPI 3.2
+# has; 3.1 would be the error query-method-needs-openapi-3.2. The case's spec fails when they
 # are not what this file and main.tsp emit (src/fixtures.spec.ts). To accept a change:
 # bun run fixtures:typespec
 emit:
   - '@nxgt/typespec'
 options:
   '@nxgt/typespec':
-    openapi-versions: ['3.1.0', '3.2.0']
+    openapi-versions: ['3.2.0']
     emitter-output-dir: '{project-root}'
-    output-file: openapi.yaml
+    # One version: @typespec/openapi3 adds no version folder of its own.
+    output-file: 3.2.0/openapi.yaml

@@ -68,7 +68,7 @@ it('checks its verb as a QUERY, and refuses it off a POST', async () => {
 			code: '@nxgt/typespec/query-method-not-post',
 			severity: 'error',
 			message:
-				'list is marked @queryMethod and sent with GET: a QUERY is sent as a POST until @typespec/http declares it. Make it a @post.',
+				'list is marked @queryMethod and sent with GET: @queryMethod marks a @post, which @nxgt/typespec writes as a QUERY in OpenAPI 3.2. Make it a @post.',
 		},
 		...[
 			['findById', 'find', 'GET or HEAD'],

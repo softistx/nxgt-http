@@ -147,7 +147,7 @@ Give the operation its verb's method, or a name that is not a verb, which
 is then its id as written:
 
 ```tsp
-@patch @route("/{id}") update(@path id: uuid, @body user: User): User;  // updateUser
+@put @route("/{id}") update(@path id: uuid, @body user: User): User;    // updateUser
 @post @route("/lookup") lookUpUser(@body id: uuid): User;                // lookUpUser
 ```
 

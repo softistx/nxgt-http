@@ -175,8 +175,9 @@ an alias leaves out:
 interface Users {
   @get list(...PageParameters): Page<User> | ListErrors;
   @get get(@path id: uuid): User | GetErrors;
-  @post create(@body user: User): User | CreateErrors | AuthErrors | TooManyRequests;
-  @patch update(@path id: uuid, @body user: User): User | UpdateErrors;
+  @post create(@body user: CreateRequest<User>): User | CreateErrors | AuthErrors | TooManyRequests;
+  @put update(@path id: uuid, @body user: UpdateRequest<User>): User | UpdateErrors;
+  @patch patch(@path id: uuid, @body user: PatchRequest<User>): User | UpdateErrors;
   @delete delete(@path id: uuid): NoContentResponse | DeleteErrors;
 }
 ```
@@ -676,6 +677,8 @@ envelope and the rate limit's headers.
   `Retry-After`;
 - [Sorting](docs/guide/sorting.md): `orderBy` and `direction` beside a
   list's filters, and the `@nxgt/drizzle` call they map to;
+- [Request bodies](docs/guide/requests.md): `CreateRequest`, `UpdateRequest`
+  and `PatchRequest`, and naming your own.
 - [Operation ids](docs/guide/operation-ids.md): `@operationIds`, each
   operation named as written or a verb with its resource, the method each
   verb is sent with, the options, and the ids it refuses;

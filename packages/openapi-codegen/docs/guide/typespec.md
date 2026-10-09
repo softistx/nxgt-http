@@ -29,7 +29,7 @@ bun add zod hono @nxgt/openapi-hono
 generates below. Leave them out, with the option, if you do not serve the
 spec with Hono.
 
-The generator's CI runs TypeSpec 1.16. `@typespec/openapi` holds
+The generator's CI runs TypeSpec 1.17. `@typespec/openapi` holds
 `@operationId`, imported with `import "@typespec/openapi"` and
 `using OpenAPI`.
 

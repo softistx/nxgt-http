@@ -678,7 +678,7 @@ envelope and the rate limit's headers.
 - [Sorting](docs/guide/sorting.md): `orderBy` and `direction` beside a
   list's filters, and the `@nxgt/drizzle` call they map to;
 - [Request bodies](docs/guide/requests.md): `CreateRequest`, `UpdateRequest`
-  and `PatchRequest`, and naming your own.
+  and `PatchRequest`, and naming your own;
 - [Operation ids](docs/guide/operation-ids.md): `@operationIds`, each
   operation named as written or a verb with its resource, the method each
   verb is sent with, the options, and the ids it refuses;

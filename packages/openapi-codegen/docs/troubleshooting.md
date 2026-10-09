@@ -144,6 +144,21 @@ nothing to mark, and the operation is generated as it is.
 **Fix:** make the operation a `post`, or remove the key. A `GET` needs no
 mark, and an OpenAPI 3.2 document can declare a real `query` operation.
 
+### `ignored`: `x-nxgt-method: query on a QUERY: the operation is one already`
+
+**When:** an OpenAPI 3.2 `query` operation carries `x-nxgt-method: query`.
+
+**Why:** the key marks a `POST` as a `QUERY`; a `query` operation is one
+already, and is generated with `method: 'query'`.
+
+**Fix:** remove the key.
+
+```yaml
+/users/search:
+  query:
+    operationId: searchUsers
+```
+
 ### `ignored`: `x-nxgt-method takes only query: "search" is not it`
 
 **When:** an operation carries `x-nxgt-method` with a value other than

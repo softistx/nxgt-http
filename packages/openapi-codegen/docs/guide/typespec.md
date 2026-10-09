@@ -250,18 +250,21 @@ validators treat it as the `POST` it is, with the criteria as its body.
 | `x-nxgt-method` | On | Result |
 | --- | --- | --- |
 | `query` | a `post` operation | `queryMethod: true` |
+| `query` | an OpenAPI 3.2 `query` operation | ignored, warning `ignored`: it is a `QUERY` already |
 | `query` | another method | ignored, warning `ignored` |
 | any other value | any operation | ignored, warning `ignored` |
 
 ```text
 warning ignored: x-nxgt-method: query marks a POST as a QUERY, not a GET   (/paths/~1users/get/x-nxgt-method)
 warning ignored: x-nxgt-method takes only query: "search" is not it   (/paths/~1users/post/x-nxgt-method)
+warning ignored: x-nxgt-method: query on a QUERY: the operation is one already   (/paths/~1users~1search/query/x-nxgt-method)
 ```
 
 This is not the OpenAPI 3.2 `query` operation, which the generator also
 reads: there `method` is `'query'`, and an OpenAPI 3.1 document with one is
 refused (`unsupported_operation`). `x-nxgt-method: query` works in 3.1 and
-3.2, on a `post`. When `@typespec/http` declares `QUERY`, `@queryMethod`
+3.2, on a `post`; on a 3.2 `query` operation it says nothing more, and is
+ignored with a warning. When `@typespec/http` declares `QUERY`, `@queryMethod`
 changes and a spec does not.
 
 ## When it fails

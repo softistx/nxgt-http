@@ -5,8 +5,8 @@
  * `x-nxgt-method: query`, for `@nxgt/openapi-codegen`.
  */
 import type { DecoratorContext, Operation, Program } from '@typespec/compiler';
-import { getAllHttpServices } from '@typespec/http';
 import { setExtension } from '@typespec/openapi';
+import { eachHttpOperation } from './http-operations';
 import { $lib } from './lib';
 
 export function queryMethod(
@@ -25,18 +25,12 @@ export function isQueryMethod(program: Program, operation: Operation): boolean {
 
 /** Each marked operation is a `POST`, as the emitter sends it. */
 export function validateQueryMethods(program: Program): void {
-	const [services] = getAllHttpServices(program);
-	const checked = new Set<Operation>();
-	for (const service of services) {
-		for (const { operation, verb: method } of service.operations) {
-			if (checked.has(operation)) continue;
-			checked.add(operation);
-			if (!isQueryMethod(program, operation) || method === 'post') continue;
-			$lib.reportDiagnostic(program, {
-				code: 'query-method-not-post',
-				format: { operation: operation.name, method: method.toUpperCase() },
-				target: operation,
-			});
-		}
-	}
+	eachHttpOperation(program, ({ operation, verb: method }) => {
+		if (!isQueryMethod(program, operation) || method === 'post') return;
+		$lib.reportDiagnostic(program, {
+			code: 'query-method-not-post',
+			format: { operation: operation.name, method: method.toUpperCase() },
+			target: operation,
+		});
+	});
 }

@@ -293,6 +293,48 @@ Or silence that one operation with a reason:
 @post @route("/find") findById(@body id: uuid): User;
 ```
 
+## `list is marked @queryMethod and sent with GET: a QUERY is sent as a POST until @typespec/http declares it. Make it a @post.`
+
+**When:** an error, `query-method-not-post`: an operation marked
+`@queryMethod` is sent with a method other than `POST`. The method may be
+implicit, `@get` or none.
+
+```tsp
+@route("/users")
+interface Users {
+  @get @queryMethod list(): string[];
+}
+```
+
+**Why:** `@queryMethod` stands for a `QUERY` sent as a `POST`, because
+`@typespec/http` declares no `QUERY`; on a `GET`, a `PUT` or a `DELETE` it
+has nothing to stand for.
+
+**Fix:** make it a `@post`, with the criteria in the body:
+
+```tsp
+@post @queryMethod @route("/search") search(@body names: string[]): string[];
+```
+
+Or drop `@queryMethod`: a `GET` needs no mark. More, in
+[Operation ids](guide/operation-ids.md#a-query-sent-as-a-post).
+
+## `findById is sent with QUERY, where its verb find is sent with GET or HEAD`
+
+**When:** a warning, `verb-method-mismatch`: an operation named after one of
+the library's verbs other than `search` and `query` is marked `@queryMethod`.
+
+**Why:** a marked `POST` is checked as the `QUERY` it is, and only `search`
+and `query` are sent with `QUERY`.
+
+**Fix:** name it `search` or `query`, a name that is not a verb, or take off
+`@queryMethod` and give the verb its own method, as in the entry on
+[`findById is sent with POST`](#findbyid-is-sent-with-post-where-its-verb-find-is-sent-with-get-or-head).
+
+```tsp
+@post @queryMethod @route("/search") searchByName(@body names: string[]): User[]; // searchUserByName
+```
+
 ## `declares a reply without a body and one with a body of status …`
 
 **When:** an operation declares, for one status, a reply without a body and

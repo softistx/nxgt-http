@@ -131,6 +131,36 @@ lost precision before any validator sees it.
 `@format("uuid") id: string`, or a `string` holding the digits. Use `int64`
 only for values that stay within 2^53.
 
+### `ignored`: `x-nxgt-method: query marks a POST as a QUERY, not a GET`
+
+**When:** an operation carries `x-nxgt-method: query` and is not a `post`,
+for instance a `@get` marked with `@nxgt/typespec`'s `@queryMethod` (the
+compiler refuses that with `query-method-not-post`), or a spec written by
+hand. The method in the message is the operation's.
+
+**Why:** the key says a `POST` is a `QUERY`; on another method there is
+nothing to mark, and the operation is generated as it is.
+
+**Fix:** make the operation a `post`, or remove the key. A `GET` needs no
+mark, and an OpenAPI 3.2 document can declare a real `query` operation.
+
+### `ignored`: `x-nxgt-method takes only query: "search" is not it`
+
+**When:** an operation carries `x-nxgt-method` with a value other than
+`query`.
+
+**Why:** `query` is the only value the generator reads; the operation is
+generated as it is.
+
+**Fix:** write `x-nxgt-method: query` on a `post`, or remove the key.
+
+```yaml
+/users/search:
+  post:
+    operationId: searchUsers
+    x-nxgt-method: query
+```
+
 ## Routes for alxia
 
 What the [`alxia` option](guide/options.md#alxia) runs into.

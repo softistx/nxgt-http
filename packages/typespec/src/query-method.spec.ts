@@ -41,6 +41,20 @@ it('marks the operation x-nxgt-method: query', async () => {
 	expect(method(program, shop(program).operations.get('lookUp'))).toBe('query');
 });
 
+it('follows the operation into an `op is`, an extending interface and a template instance', async () => {
+	const program = await compile(NodeHost, main, { noEmit: true });
+	const from = (name: string) => {
+		const found = shop(program).interfaces.get(name);
+		if (found === undefined) throw new Error(`no ${name} interface`);
+		return found.operations.get('search');
+	};
+	expect(method(program, shop(program).operations.get('lookUpAgain'))).toBe(
+		'query',
+	);
+	expect(method(program, from('Teams'))).toBe('query');
+	expect(method(program, from('Books'))).toBe('query');
+});
+
 it('checks its verb as a QUERY, and refuses it off a POST', async () => {
 	const program = await compile(NodeHost, main, { noEmit: true });
 	expect(

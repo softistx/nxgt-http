@@ -18,9 +18,9 @@ const criteria = {
 	content: { 'application/json': { schema: { type: 'string' } } },
 };
 
-async function generated(paths: Record<string, unknown>) {
+async function generated(paths: Record<string, unknown>, openapi = '3.1.0') {
 	const spec = JSON.stringify({
-		openapi: '3.1.0',
+		openapi,
 		info: { title: 't', version: '1' },
 		paths,
 	});
@@ -94,8 +94,32 @@ it('ignores it, with a warning, off a POST or with another value', async () => {
 		},
 		{
 			code: 'ignored',
-			message: 'x-nxgt-method is query, or absent: "search" is not one',
+			message: 'x-nxgt-method takes only query: "search" is not it',
 			pointer: '/paths/~1users/post/x-nxgt-method',
+		},
+	]);
+});
+
+it('ignores it, with a warning, on an OpenAPI 3.2 QUERY, which is one already', async () => {
+	const { operations, warnings } = await generated(
+		{
+			'/users/search': {
+				query: {
+					operationId: 'searchUsers',
+					'x-nxgt-method': 'query',
+					requestBody: criteria,
+					responses: reply,
+				},
+			},
+		},
+		'3.2.0',
+	);
+	expect(operations).toContain("method: 'query',");
+	expect(operations).not.toContain('queryMethod: true');
+	expect(warnings.map(({ code, message }) => ({ code, message }))).toEqual([
+		{
+			code: 'ignored',
+			message: 'x-nxgt-method: query on a QUERY: the operation is one already',
 		},
 	]);
 });

@@ -7,9 +7,9 @@
  * own `@operationId` is an id that is no verb. It runs before
  * `validateOperationIds` sets the others.
  */
-import type { Operation, Program } from '@typespec/compiler';
-import { getAllHttpServices } from '@typespec/http';
+import type { Program } from '@typespec/compiler';
 import { getOperationId } from '@typespec/openapi';
+import { eachHttpOperation } from './http-operations';
 import { $lib } from './lib';
 import { isNamed } from './operation-ids';
 import { isQueryMethod } from './query-method';
@@ -23,31 +23,25 @@ function methodsOf(methods: readonly string[]): string {
 
 /** Checks each operation of each service once, as the emitter sends it. */
 export function validateVerbMethods(program: Program): void {
-	const [services] = getAllHttpServices(program);
-	const checked = new Set<Operation>();
-	for (const service of services) {
-		for (const { operation, verb: sent } of service.operations) {
-			if (checked.has(operation)) continue;
-			checked.add(operation);
-			if (!isNamed(program, operation)) continue;
-			// A `POST` marked `@queryMethod` is checked as the `QUERY` it is.
-			const method =
-				sent === 'post' && isQueryMethod(program, operation) ? 'query' : sent;
-			if (getOperationId(program, operation) !== undefined) continue;
-			const verb = verbOf(program, operation);
-			if (verb === undefined || !Object.hasOwn(METHODS, verb)) continue;
-			const expected = METHODS[verb] as readonly string[];
-			if (expected.includes(method)) continue;
-			$lib.reportDiagnostic(program, {
-				code: 'verb-method-mismatch',
-				format: {
-					operation: operation.name,
-					method: method.toUpperCase(),
-					verb,
-					expected: methodsOf(expected),
-				},
-				target: operation,
-			});
-		}
-	}
+	eachHttpOperation(program, ({ operation, verb: sent }) => {
+		if (!isNamed(program, operation)) return;
+		if (getOperationId(program, operation) !== undefined) return;
+		const verb = verbOf(program, operation);
+		if (verb === undefined || !Object.hasOwn(METHODS, verb)) return;
+		// A `POST` marked `@queryMethod` is checked as the `QUERY` it is.
+		const method =
+			sent === 'post' && isQueryMethod(program, operation) ? 'query' : sent;
+		const expected = METHODS[verb] as readonly string[];
+		if (expected.includes(method)) return;
+		$lib.reportDiagnostic(program, {
+			code: 'verb-method-mismatch',
+			format: {
+				operation: operation.name,
+				method: method.toUpperCase(),
+				verb,
+				expected: methodsOf(expected),
+			},
+			target: operation,
+		});
+	});
 }

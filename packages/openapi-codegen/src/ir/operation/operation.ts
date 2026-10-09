@@ -84,9 +84,11 @@ function isQueryMethod(
 	if (marked === 'query' && method === 'post') return true;
 	state.diagnostics.warning(
 		'ignored',
-		marked === 'query'
-			? `x-nxgt-method: query marks a POST as a QUERY, not a ${method.toUpperCase()}`
-			: `x-nxgt-method is query, or absent: ${JSON.stringify(marked)} is not one`,
+		marked !== 'query'
+			? `x-nxgt-method takes only query: ${JSON.stringify(marked)} is not it`
+			: method === 'query'
+				? 'x-nxgt-method: query on a QUERY: the operation is one already'
+				: `x-nxgt-method: query marks a POST as a QUERY, not a ${method.toUpperCase()}`,
 		child(at, 'x-nxgt-method'),
 	);
 	return false;

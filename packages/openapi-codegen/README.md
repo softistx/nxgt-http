@@ -270,6 +270,12 @@ operation ids, and everything downstream reads the spec as it reads any
 other. [Authoring the spec in TypeSpec](docs/guide/typespec.md) has what each
 construct becomes, and how to name operations and templates.
 
+A `POST` that is a safe request with a body, which `@nxgt/typespec`'s
+`@queryMethod` marks `x-nxgt-method: query` (a hand-written spec can set it
+too), gets `queryMethod: true` in its `operations` entry. The method stays
+`'post'`, as it is sent; see
+[A QUERY sent as a POST](docs/guide/typespec.md#a-query-sent-as-a-post).
+
 ### Report what cannot be generated
 
 ```ts
@@ -1239,6 +1245,7 @@ interface OperationSpec<Client = unknown> {
 	readonly method: 'get' | 'put' | 'post' | 'delete' | 'options' | 'head' | 'patch' | 'trace' | 'query';
 	readonly path: string;
 	readonly honoPath: string;
+	readonly queryMethod?: true; // a POST that is a QUERY (x-nxgt-method: query)
 	readonly tags: readonly string[];
 	readonly parameters: readonly ParameterSpec[];
 	readonly param: z.ZodType; // path parameters, each read as a string

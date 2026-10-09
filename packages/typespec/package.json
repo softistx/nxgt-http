@@ -45,11 +45,20 @@
 			"src/index.ts"
 		]
 	},
+	"dependencies": {
+		"yaml": "^2.9.0"
+	},
 	"peerDependencies": {
 		"@typespec/compiler": "^1.16.0",
 		"@typespec/http": "^1.16.0",
 		"@typespec/openapi": "^1.16.0",
-		"typescript": "^6.0.3 || ^7.0.0"
+		"typescript": "^6.0.3 || ^7.0.0",
+		"@typespec/openapi3": "^1.16.0"
+	},
+	"peerDependenciesMeta": {
+		"@typespec/openapi3": {
+			"optional": true
+		}
 	},
 	"devDependencies": {
 		"@nxgt/openapi-codegen": "workspace:^",

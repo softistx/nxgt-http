@@ -17,7 +17,7 @@ import { $ } from 'bun';
 const TEST_DIR = fileURLToPath(new URL('./', import.meta.url));
 
 /** One per convention: each `.tsp` imports `@nxgt/typespec` as an app does. */
-export const CASES = ['errors', 'blog', 'scalars'] as const;
+export const CASES = ['errors', 'blog', 'scalars', 'queries'] as const;
 
 /** Every fixture's `tspconfig.yaml` emits both, each in its own folder. */
 export const VERSIONS = ['3.1.0', '3.2.0'] as const;
@@ -35,7 +35,7 @@ export const spec = (name: string, version: string) =>
  */
 export async function compile(name: string, outputDir: string): Promise<void> {
 	const result =
-		await $`bunx --no-install tsp compile ${project(name)} --warn-as-error --option ${`@typespec/openapi3.emitter-output-dir=${outputDir}`}`
+		await $`bunx --no-install tsp compile ${project(name)} --warn-as-error --option ${`@nxgt/typespec.emitter-output-dir=${outputDir}`}`
 			.cwd(project(name))
 			.quiet()
 			.nothrow();

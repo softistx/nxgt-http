@@ -47,7 +47,8 @@ it('lists files that exist, and the packages they import', async () => {
 	}
 	expect(libraries).toContain('@nxgt/typespec');
 	expect(libraries).toContain('@nxgt/openapi-codegen');
-	expect(Object.keys(emitters)).toEqual(['@typespec/openapi3']);
+	expect(libraries).toContain('@typespec/openapi3');
+	expect(Object.keys(emitters)).toEqual(['@nxgt/typespec']);
 });
 
 it('scaffolds a spec that compiles and passes the linter', async () => {
@@ -79,4 +80,33 @@ it('scaffolds a spec that compiles and passes the linter', async () => {
 		'patchUser',
 		'updateUser',
 	]);
+});
+
+it("emits the spec with its emitter and that emitter's options", async () => {
+	const { files, emitters } = await template();
+	await mkdir(directory, { recursive: true });
+	for (const { path, destination } of files) {
+		const text = rendered(await readFile(new URL(path, templates), 'utf8'));
+		await writeFile(new URL(destination, directory), text);
+	}
+	const [[emitter, settings]] = Object.entries(emitters) as [
+		[string, { options: Record<string, unknown> }],
+	];
+	const output = new URL('openapi/', directory);
+	const program = await compile(
+		NodeHost,
+		fileURLToPath(new URL('main.tsp', directory)),
+		{
+			emit: [emitter],
+			options: {
+				[emitter]: {
+					...settings.options,
+					'emitter-output-dir': fileURLToPath(output),
+				},
+			},
+		},
+	);
+	expect(program.diagnostics).toEqual([]);
+	const emitted = await readFile(new URL('openapi.yaml', output), 'utf8');
+	expect(emitted).toStartWith('openapi: 3.1.0\n');
 });

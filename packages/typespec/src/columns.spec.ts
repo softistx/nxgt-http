@@ -12,9 +12,10 @@ import { VERSIONS } from '../test/generate';
 import { createRoutes as routes31 } from '../test/generated/blog/3.1.0/hono';
 import type {
 	Author,
-	CreateComment,
+	CreateCommentRequest,
+	PatchPostRequest,
 	Post,
-	PostMergePatchUpdate,
+	UpdatePostRequest,
 } from '../test/generated/blog/3.1.0/types';
 import { createRoutes as routes32 } from '../test/generated/blog/3.2.0/hono';
 
@@ -122,15 +123,26 @@ for (const version of VERSIONS) {
 
 it('leaves the read-only columns out of what a client sends', () => {
 	// @ts-expect-error: createdAt is the server's
-	const created: keyof CreateComment = 'createdAt';
+	const created: keyof CreateCommentRequest = 'createdAt';
 	// @ts-expect-error: createdBy is the server's
-	const stamped: keyof PostMergePatchUpdate = 'createdBy';
+	const stamped: keyof PatchPostRequest = 'createdBy';
 	// @ts-expect-error: deletedAt is the server's
-	const deleted: keyof CreateComment = 'deletedAt';
+	const deleted: keyof CreateCommentRequest = 'deletedAt';
 	// @ts-expect-error: updatedAt is the server's
-	const touched: keyof PostMergePatchUpdate = 'updatedAt';
-	const locked: keyof PostMergePatchUpdate = 'version';
-	expect([created, stamped, deleted, touched, locked]).toHaveLength(5);
+	const touched: keyof PatchPostRequest = 'updatedAt';
+	const locked: keyof PatchPostRequest = 'version';
+	// @ts-expect-error: createdAt is the server's
+	const replaced: keyof UpdatePostRequest = 'createdAt';
+	const replacedVersion: keyof UpdatePostRequest = 'version';
+	expect([
+		created,
+		stamped,
+		deleted,
+		touched,
+		locked,
+		replaced,
+		replacedVersion,
+	]).toHaveLength(7);
 });
 
 it('types the actors with another id, as actors("integer")', async () => {

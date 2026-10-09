@@ -50,7 +50,7 @@ interface Users {
 
   /** Creates a user. */
   @post
-  create(@body user: Create<User>): {
+  create(@body user: CreateRequest<User>): {
     @statusCode _: 201;
     @body user: User;
   } | CreateErrors;
@@ -59,7 +59,7 @@ interface Users {
   @patch
   update(
     @path id: uuid,
-    @body user: MergePatchUpdate<User>,
+    @body user: PatchRequest<User>,
   ): User | UpdateErrors;
 
   /** Deletes a user. */

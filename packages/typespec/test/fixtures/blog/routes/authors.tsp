@@ -31,7 +31,7 @@ interface Authors {
 
   /** Creates an author. */
   @post
-  create(@body author: Create<Author>): {
+  create(@body author: CreateRequest<Author>): {
     @statusCode _: 201;
     @body author: Author;
   } | CreateErrors;
@@ -40,7 +40,7 @@ interface Authors {
   @patch
   update(
     @path id: uuid,
-    @body author: MergePatchUpdate<Author>,
+    @body author: PatchRequest<Author>,
   ): Author | UpdateErrors;
 
   /** Deletes an author. */

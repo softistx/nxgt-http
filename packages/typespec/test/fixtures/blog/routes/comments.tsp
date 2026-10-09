@@ -16,7 +16,7 @@ interface Comments {
   ): CursorPage<Comment> | BadRequest | NotFound;
   @post createPostComment(
     @path postId: uuid,
-    @body comment: Create<Comment>,
+    @body comment: CreateRequest<Comment>,
   ): {
     @statusCode _: 201;
     @body comment: Comment;

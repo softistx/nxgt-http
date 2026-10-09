@@ -18,15 +18,19 @@ interface Posts {
   // session({ required: true }) refuses a missing session; the handler, a user
   // who may not write, with the envelope.
   @useAuth(JanusAuth)
-  @post createPost(...IdempotencyKeyHeader, @body post: Create<Post>): {
+  @post createPost(...IdempotencyKeyHeader, @body post: CreateRequest<Post>): {
     @statusCode _: 201;
     ...IdempotentReplayedHeader;
     ...RateLimitHeaders;
     @body post: Post;
   } | BadRequest | AuthenticationRequired | Forbidden | IdempotencyInProgress | IdempotencyKeyReused | TooManyRequests;
-  @patch updatePost(
+  @put updatePost(
     @path postId: uuid,
-    @body post: MergePatchUpdate<Post>,
+    @body post: UpdateRequest<Post>,
+  ): Post | BadRequest | NotFound | Conflict;
+  @patch patchPost(
+    @path postId: uuid,
+    @body post: PatchRequest<Post>,
   ): Post | BadRequest | NotFound | Conflict;
   @delete deletePost(@path postId: uuid): NoContentResponse | NotFound | Forbidden;
 }

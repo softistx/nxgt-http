@@ -75,7 +75,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateAuthor'
+              $ref: '#/components/schemas/CreateAuthorRequest'
   /authors/{id}:
     get:
       operationId: getAuthor
@@ -101,9 +101,51 @@ paths:
                 $ref: '#/components/schemas/NotFoundBody'
       tags:
         - Authors
-    patch:
+    put:
       operationId: updateAuthor
-      description: Updates an author with a merge patch.
+      description: 'Replaces an author: the whole body, as a `PUT` sends it.'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Author'
+        '400':
+          description: The request is refused, by the validators or by a handler.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestBody'
+        '404':
+          description: Nothing is there.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundBody'
+        '409':
+          description: The request conflicts with the resource's state, such as a version that moved on.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictBody'
+      tags:
+        - Authors
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAuthorRequest'
+    patch:
+      operationId: patchAuthor
+      description: Updates some of an author's properties, with a merge patch.
       parameters:
         - name: id
           in: path
@@ -142,7 +184,7 @@ paths:
         content:
           application/merge-patch+json:
             schema:
-              $ref: '#/components/schemas/AuthorMergePatchUpdate'
+              $ref: '#/components/schemas/PatchAuthorRequest'
     delete:
       operationId: deleteAuthor
       description: Deletes an author.
@@ -327,7 +369,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreatePost'
+              $ref: '#/components/schemas/CreatePostRequest'
       security:
         - BearerAuth: []
         - SessionTokenAuth: []
@@ -356,8 +398,49 @@ paths:
                 $ref: '#/components/schemas/NotFoundBody'
       tags:
         - Posts
-    patch:
+    put:
       operationId: updatePost
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          description: The request is refused, by the validators or by a handler.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestBody'
+        '404':
+          description: Nothing is there.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundBody'
+        '409':
+          description: The request conflicts with the resource's state, such as a version that moved on.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictBody'
+      tags:
+        - Posts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePostRequest'
+    patch:
+      operationId: patchPost
       parameters:
         - name: postId
           in: path
@@ -396,7 +479,7 @@ paths:
         content:
           application/merge-patch+json:
             schema:
-              $ref: '#/components/schemas/PostMergePatchUpdate'
+              $ref: '#/components/schemas/PatchPostRequest'
     delete:
       operationId: deletePost
       parameters:
@@ -515,7 +598,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateComment'
+              $ref: '#/components/schemas/CreateCommentRequest'
   /posts/{postId}/comments/{commentId}:
     delete:
       operationId: deletePostComment
@@ -632,16 +715,6 @@ components:
           type: string
           format: date-time
           readOnly: true
-      description: Someone who writes posts and comments.
-    AuthorMergePatchUpdate:
-      type: object
-      properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 80
-        email:
-          $ref: '#/components/schemas/EmailAddress'
       description: Someone who writes posts and comments.
     AuthorPage:
       type: object
@@ -769,7 +842,7 @@ components:
           format: date-time
           description: When the error was answered.
       description: The body of an error reply, as `@nxgt/openapi-hono` sends it.
-    CreateAuthor:
+    CreateAuthorRequest:
       type: object
       required:
         - name
@@ -782,7 +855,7 @@ components:
         email:
           $ref: '#/components/schemas/EmailAddress'
       description: Someone who writes posts and comments.
-    CreateComment:
+    CreateCommentRequest:
       type: object
       required:
         - authorId
@@ -795,7 +868,7 @@ components:
           minLength: 1
           maxLength: 2000
       description: A reply to a post.
-    CreatePost:
+    CreatePostRequest:
       type: object
       required:
         - authorId
@@ -868,6 +941,39 @@ components:
           format: date-time
           description: When the error was answered.
       description: The body of an error reply, as `@nxgt/openapi-hono` sends it.
+    PatchAuthorRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        email:
+          $ref: '#/components/schemas/EmailAddress'
+      description: Someone who writes posts and comments.
+    PatchPostRequest:
+      type: object
+      properties:
+        authorId:
+          $ref: '#/components/schemas/UUID'
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        body:
+          type: string
+        status:
+          $ref: '#/components/schemas/PostStatus'
+        tags:
+          anyOf:
+            - type: array
+              items:
+                type: string
+            - type: 'null'
+        version:
+          type: integer
+          minimum: 0
+      description: An article, by one author.
     Post:
       type: object
       required:
@@ -933,29 +1039,6 @@ components:
             - $ref: '#/components/schemas/UUID'
             - type: 'null'
           readOnly: true
-      description: An article, by one author.
-    PostMergePatchUpdate:
-      type: object
-      properties:
-        authorId:
-          $ref: '#/components/schemas/UUID'
-        title:
-          type: string
-          minLength: 1
-          maxLength: 200
-        body:
-          type: string
-        status:
-          $ref: '#/components/schemas/PostStatus'
-        tags:
-          anyOf:
-            - type: array
-              items:
-                type: string
-            - type: 'null'
-        version:
-          type: integer
-          minimum: 0
       description: An article, by one author.
     PostPage:
       type: object
@@ -1039,6 +1122,46 @@ components:
           format: date-time
           description: When the error was answered.
       description: The body of an error reply, as `@nxgt/openapi-hono` sends it.
+    UpdateAuthorRequest:
+      type: object
+      required:
+        - name
+        - email
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        email:
+          $ref: '#/components/schemas/EmailAddress'
+      description: Someone who writes posts and comments.
+    UpdatePostRequest:
+      type: object
+      required:
+        - authorId
+        - title
+        - body
+        - status
+        - version
+      properties:
+        authorId:
+          $ref: '#/components/schemas/UUID'
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        body:
+          type: string
+        status:
+          $ref: '#/components/schemas/PostStatus'
+        tags:
+          type: array
+          items:
+            type: string
+        version:
+          type: integer
+          minimum: 0
+      description: An article, by one author.
     ValidationIssue:
       type: object
       required:

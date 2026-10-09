@@ -39,6 +39,8 @@ it.each([
 		'getPost',
 		'listAuthors',
 		'listPosts',
+		'patchAuthor',
+		'patchPost',
 		'updateAuthor',
 		'updatePost',
 	]);

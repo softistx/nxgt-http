@@ -31,16 +31,23 @@ interface Authors {
 
   /** Creates an author. */
   @post
-  create(@body author: Create<Author>): {
+  create(@body author: CreateRequest<Author>): {
     @statusCode _: 201;
     @body author: Author;
   } | CreateErrors;
 
-  /** Updates an author with a merge patch. */
-  @patch
+  /** Replaces an author: the whole body, as a `PUT` sends it. */
+  @put
   update(
     @path id: uuid,
-    @body author: MergePatchUpdate<Author>,
+    @body author: UpdateRequest<Author>,
+  ): Author | UpdateErrors;
+
+  /** Updates some of an author's properties, with a merge patch. */
+  @patch
+  patch(
+    @path id: uuid,
+    @body author: PatchRequest<Author>,
   ): Author | UpdateErrors;
 
   /** Deletes an author. */

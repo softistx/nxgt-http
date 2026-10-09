@@ -99,13 +99,16 @@ interface Users {
   get(@path id: uuid): User | GetErrors;
 
   @post
-  create(@body user: Create<User>): {
+  create(@body user: CreateRequest<User>): {
     @statusCode _: 201;
     @body user: User;
   } | CreateErrors;
 
+  @put
+  update(@path id: uuid, @body user: UpdateRequest<User>): User | UpdateErrors;
+
   @patch
-  update(@path id: uuid, @body user: MergePatchUpdate<User>): User | UpdateErrors;
+  patch(@path id: uuid, @body user: PatchRequest<User>): User | UpdateErrors;
 
   @delete
   delete(@path id: uuid): NoContentResponse | DeleteErrors;
@@ -113,7 +116,10 @@ interface Users {
 ```
 
 `@operationIds` names the operations `listUsers`, `getUser`, `createUser`,
-`updateUser` and `deleteUser` ([Operation ids](operation-ids.md)).
+`updateUser`, `patchUser` and `deleteUser` ([Operation ids](operation-ids.md)).
+`update` replaces the whole user with a `PUT` (`UpdateRequest`), `patch`
+changes some of it with a merge patch (`PatchRequest`); see
+[Request bodies](requests.md).
 
 ```ts
 // openapi-codegen.config.ts
@@ -250,13 +256,16 @@ interface Pets {
   get(@path id: uuid): Pet | GetErrors;
 
   @post
-  create(@body pet: Create<Pet>): {
+  create(@body pet: CreateRequest<Pet>): {
     @statusCode _: 201;
     @body pet: Pet;
   } | CreateErrors;
 
+  @put
+  update(@path id: uuid, @body pet: UpdateRequest<Pet>): Pet | UpdateErrors;
+
   @patch
-  update(@path id: uuid, @body pet: MergePatchUpdate<Pet>): Pet | UpdateErrors;
+  patch(@path id: uuid, @body pet: PatchRequest<Pet>): Pet | UpdateErrors;
 
   @delete
   delete(@path id: uuid): NoContentResponse | DeleteErrors;
@@ -264,8 +273,8 @@ interface Pets {
 ```
 
 The operation names stay; `@operationIds` takes the resource from the
-interface, so the ids become `listPets`, `getPet`, `createPet`, `updatePet`
-and `deletePet`. Run `tsp compile .` and `nxgt-openapi generate` again, and
+interface, so the ids become `listPets`, `getPet`, `createPet`, `updatePet`,
+`patchPet` and `deletePet`. Run `tsp compile .` and `nxgt-openapi generate` again, and
 the generated types, `Pet` and `PetPage`, follow. A name the singular rule
 does not know takes `@operationIds(#{ singular: "…" })` on the interface
 ([Operation ids](operation-ids.md)).

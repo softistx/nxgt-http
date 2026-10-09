@@ -50,16 +50,23 @@ interface Users {
 
   /** Creates a user. */
   @post
-  create(@body user: Create<User>): {
+  create(@body user: CreateRequest<User>): {
     @statusCode _: 201;
     @body user: User;
   } | CreateErrors;
 
-  /** Updates a user with a merge patch. */
-  @patch
+  /** Replaces a user: the whole body, as a `PUT` sends it. */
+  @put
   update(
     @path id: uuid,
-    @body user: MergePatchUpdate<User>,
+    @body user: UpdateRequest<User>,
+  ): User | UpdateErrors;
+
+  /** Updates some of a user's properties, with a merge patch. */
+  @patch
+  patch(
+    @path id: uuid,
+    @body user: PatchRequest<User>,
   ): User | UpdateErrors;
 
   /** Deletes a user. */

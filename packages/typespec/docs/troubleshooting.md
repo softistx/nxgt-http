@@ -13,7 +13,7 @@ one name with `name_collision`.
 optional, and the generator adds its own 400 beside it.
 
 ```tsp
-@patch updatePost(@path postId: string, @body post: MergePatchUpdate<Post>): Post | BadRequest;
+@patch patchPost(@path postId: string, @body post: PatchRequest<Post>): Post | BadRequest;
 ```
 
 ## `Couldn't resolve import "@nxgt/typespec"`

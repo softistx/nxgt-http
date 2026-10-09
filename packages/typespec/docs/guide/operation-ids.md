@@ -172,7 +172,7 @@ Not checked:
 - an operation `@operationIds` does not name.
 
 `QUERY`, the HTTP method for a safe request with a body, is not one of
-`search` and `query`'s methods yet: `@typespec/http` 1.16 declares only
+`search` and `query`'s methods yet: `@typespec/http` 1.17 declares only
 `GET`, `PUT`, `POST`, `PATCH`, `DELETE` and `HEAD`
 ([roadmap](../roadmap.md#later)).
 

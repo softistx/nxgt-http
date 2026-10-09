@@ -48,10 +48,10 @@
 	"devDependencies": {
 		"@redocly/openapi-core": "^2.52.1",
 		"@types/bun": "^1.4.0",
-		"@typespec/compiler": "1.16.0",
-		"@typespec/http": "1.16.0",
-		"@typespec/openapi": "1.16.0",
-		"@typespec/openapi3": "1.16.0",
+		"@typespec/compiler": "1.17.0",
+		"@typespec/http": "1.17.0",
+		"@typespec/openapi": "1.17.0",
+		"@typespec/openapi3": "1.17.0",
 		"hono": "^4.13.4",
 		"openapi-fetch": "^0.17.0",
 		"zod": "^4.5.4"

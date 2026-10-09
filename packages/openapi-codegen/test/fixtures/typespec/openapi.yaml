@@ -221,7 +221,7 @@ components:
           description: Free-form labels.
         vaccines:
           type: object
-          unevaluatedProperties:
+          additionalProperties:
             type: integer
             format: int32
           description: Counts per vaccine.
@@ -290,7 +290,7 @@ components:
           description: Free-form labels.
         vaccines:
           type: object
-          unevaluatedProperties:
+          additionalProperties:
             type: integer
             format: int32
           description: Counts per vaccine.
@@ -334,7 +334,7 @@ components:
         vaccines:
           anyOf:
             - type: object
-              unevaluatedProperties:
+              additionalProperties:
                 type: integer
                 format: int32
             - type: 'null'

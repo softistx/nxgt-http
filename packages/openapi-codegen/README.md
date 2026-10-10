@@ -270,11 +270,12 @@ operation ids, and everything downstream reads the spec as it reads any
 other. [Authoring the spec in TypeSpec](docs/guide/typespec.md) has what each
 construct becomes, and how to name operations and templates.
 
-A `POST` that is a safe request with a body, which `@nxgt/typespec`'s
-`@queryMethod` marks `x-nxgt-method: query` (a hand-written spec can set it
-too), gets `queryMethod: true` in its `operations` entry. The method stays
+A `@queryMethod` of `@nxgt/typespec`, emitted by its own emitter, is an
+OpenAPI 3.2 `query` operation, generated with `method: 'query'`. A
+hand-written document can mark a `post` with `x-nxgt-method: query` instead:
+its `operations` entry gets `queryMethod: true`, and the method stays
 `'post'`, as it is sent; see
-[A QUERY sent as a POST](docs/guide/typespec.md#a-query-sent-as-a-post).
+[A QUERY](docs/guide/typespec.md#a-query-real-in-32-a-marked-post-by-hand).
 
 ### Report what cannot be generated
 

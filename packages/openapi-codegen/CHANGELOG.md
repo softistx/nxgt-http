@@ -1,5 +1,11 @@
 # @nxgt/openapi-codegen
 
+## 0.9.1
+
+### Patch Changes
+
+- [#128](https://github.com/softistx/nxgt-http/pull/128) [`7420ccf`](https://github.com/softistx/nxgt-http/commit/7420ccf3ede30c654a37de9c08a98e9596bc2b11) Thanks [@SteveGT96](https://github.com/SteveGT96)! - Docs: a `@queryMethod` of `@nxgt/typespec`, emitted by its own emitter, is an OpenAPI 3.2 `query` operation; `x-nxgt-method` and `queryMethod: true` are for documents written by hand.
+
 ## 0.9.0
 
 ### Minor Changes

@@ -5,6 +5,7 @@ The [package README](../README.md) is the short version.
 | Page | Read it when |
 | --- | --- |
 | [Getting started](guide/getting-started.md) | starting a new API project from the `tsp init` template, up to a Hono route |
+| [The emitter](guide/emitter.md) | emitting the spec with `@nxgt/typespec` in `tspconfig.yaml`, or getting a real `QUERY` from a `@queryMethod`, which needs OpenAPI 3.2 |
 | [Request bodies](guide/requests.md) | naming the body of a create, a `PUT` and a `PATCH`: `CreatePostRequest`, `UpdatePostRequest`, `PatchPostRequest` |
 | [Error replies](guide/errors.md) | declaring what an operation answers when it fails |
 | [Pagination](guide/pagination.md) | listing a collection a page at a time |

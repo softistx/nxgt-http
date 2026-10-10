@@ -16,22 +16,33 @@ Nothing in progress.
 
 ## Later
 
-- **A real `QUERY`.** `@queryMethod` is sent as a `POST` and `search` and
-  `query` accept it; once `@typespec/http` declares the HTTP `QUERY`
-  method, the decorator sends a `QUERY` and a spec does not change.
-  `@nxgt/openapi-codegen` already reads an OpenAPI 3.2 `query` operation.
+- **A `QUERY` without a mark.** A real `QUERY` is done: the emitter
+  `@nxgt/typespec` writes a `@queryMethod` as a `query` operation in OpenAPI
+  3.2. What is left is a native `@query`-like verb, once `@typespec/http`
+  declares `QUERY`, so a spec stops needing `@post @queryMethod` and does not
+  otherwise change.
 - **`ETag` and conditional requests.** `ETag`, with `If-None-Match` and
   `If-Match`, once the `@nxgt/*` packages send one the same way. The
   optimistic lock is the body's `version` today (`Versioned`).
 
 ## Shipped
 
+### 0.13.0
+
+- **The emitter `@nxgt/typespec`.** `emit: ["@nxgt/typespec"]` runs
+  `@typespec/openapi3` with the same options and files, and in an OpenAPI 3.2
+  document writes each `@queryMethod` as a real `query` operation, which
+  `@nxgt/openapi-codegen` generates as `method: 'query'` and
+  `@nxgt/openapi-hono` serves. A marked operation with an older version, or
+  with plain `@typespec/openapi3`, is an error. `@typespec/openapi3` is an optional peer, and the
+  `tsp init` template emits with the new emitter.
+
 ### 0.12.0
 
 - **`@queryMethod`, a `QUERY` sent as a `POST`.** The decorator marks a
   `@post` with `x-nxgt-method: query`, which `@nxgt/openapi-codegen` reads,
-  and `search` and `query` accept it: a safe request with a body, today, with
-  every server, proxy and `fetch`. On anything but a `@post` it is the error
+  and `search` and `query` accept it: a safe request with a body, with every
+  server, proxy and `fetch`. On anything but a `@post` it is the error
   `query-method-not-post`.
 
 ### 0.11.0

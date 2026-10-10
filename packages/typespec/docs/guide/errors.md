@@ -8,9 +8,9 @@ spec names them instead of describing them again.
 ```yaml
 # api/tspconfig.yaml
 emit:
-  - '@typespec/openapi3'
+  - '@nxgt/typespec'
 options:
-  '@typespec/openapi3':
+  '@nxgt/typespec':
     openapi-versions: ['3.1.0']
     emitter-output-dir: '{project-root}/../openapi'
     output-file: openapi.yaml

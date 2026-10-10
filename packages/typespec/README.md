@@ -2,7 +2,8 @@
 
 nxgt's HTTP conventions as a [TypeSpec](https://typespec.io) library, so an
 API spec states them in one word instead of rewriting them. Compile the spec to
-OpenAPI 3.1 or 3.2 with `@typespec/openapi3`, then generate the code with
+OpenAPI 3.1 or 3.2 with its emitter, `@nxgt/typespec` (`@typespec/openapi3`, and a
+real `QUERY` in 3.2), then generate the code with
 [`@nxgt/openapi-codegen`](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-codegen/README.md).
 Each shape here is one the `@nxgt/*` packages already send on the wire.
 
@@ -18,20 +19,22 @@ bun add -d @nxgt/typespec @typespec/compiler @typespec/http @typespec/openapi @t
 
 `@typespec/compiler`, `@typespec/http` and `@typespec/openapi` 1.16 or later
 are peer dependencies,
-and `typescript` 6 or 7 too, as for every `@nxgt` package. `@typespec/openapi3`
-compiles the spec, and `@nxgt/openapi-codegen` generates the code from it.
+and `typescript` 6 or 7 too, as for every `@nxgt` package.
+`@typespec/openapi3` 1.16 or later is an optional peer, loaded only when the
+spec is emitted: install it to compile the spec to OpenAPI.
+`@nxgt/openapi-codegen` generates the code from the document.
 The generator's CLI, `nxgt-openapi`, runs on [Bun](https://bun.sh): it needs
 `bun` on the PATH, even when called through `npx` or an npm script.
-Emit OpenAPI 3.1 or 3.2 in `tspconfig.yaml`: `@typespec/openapi3` emits 3.0
-by default, and the generator refuses it. Every convention here is compiled
+Emit OpenAPI 3.1 or 3.2 in `tspconfig.yaml` with this package's emitter:
+`@typespec/openapi3` emits 3.0 by default, and the generator refuses it. Every convention here is compiled
 to both in CI, and generates the same code from either.
 
 ```yaml
 # api/tspconfig.yaml
 emit:
-  - '@typespec/openapi3'
+  - '@nxgt/typespec'
 options:
-  '@typespec/openapi3':
+  '@nxgt/typespec':
     openapi-versions: ['3.1.0']
     emitter-output-dir: '{project-root}/../openapi'
     output-file: openapi.yaml
@@ -56,7 +59,7 @@ It installs the compiler, `@typespec/http`, `@typespec/openapi`,
 `@typespec/openapi3`, this package and `@nxgt/openapi-codegen`, and writes:
 
 - `tspconfig.yaml`: the linter's recommended rules, and OpenAPI 3.1 written
-  to `openapi/openapi.yaml`;
+  to `openapi/openapi.yaml` by the emitter `@nxgt/typespec`;
 - `main.tsp`: the service in the namespace `Api`, with `@operationIds`, and a
   `Users` resource with a paged, sorted list, `get`, `create`, `update` and
   `delete`, and their error aliases;
@@ -459,10 +462,12 @@ The verbs `verbs` adds are not checked, nor an operation with its own
 ### A search with a body
 
 `QUERY` is the HTTP method for a safe request with a body, and
-`@typespec/http` 1.17 declares none. Mark a `@post` with `@queryMethod`: it is
-still sent as a `POST`, which every server, proxy, `fetch` and CORS policy
-accepts, and the document says what it is with `x-nxgt-method: query`, which
-`@nxgt/openapi-codegen` reads:
+`@typespec/http` 1.17 declares none. Mark a `@post` with `@queryMethod`, and
+emit OpenAPI 3.2 with the emitter [`@nxgt/typespec`](#the-emitter): the
+document gets a real `query` operation. Only 3.2 has one, so the mark with
+any older version in `openapi-versions`, or with the plain `@typespec/openapi3`
+emitter, is an error, not a `POST`: `query-method-needs-openapi-3.2`,
+`query-method-needs-nxgt-emitter`.
 
 ```tsp
 @route("/authors")
@@ -477,7 +482,34 @@ interface Authors {
 `QUERY` is not their method. The decorator on anything but a `@post` is the
 error `query-method-not-post`. When `@typespec/http` declares `QUERY`, the
 decorator is what changes, not your spec. More, in
-[Operation ids](docs/guide/operation-ids.md#a-query-sent-as-a-post).
+[Operation ids](docs/guide/operation-ids.md#a-query-in-openapi-32) and
+[The emitter](docs/guide/emitter.md).
+
+### The emitter
+
+`@nxgt/typespec` is also a TypeSpec emitter. It runs `@typespec/openapi3` with
+the options and the files you give that one, and in an OpenAPI 3.2 document
+moves each `@post` marked `@queryMethod` to a `query` operation, in place and
+without `x-nxgt-method`. Without a marked operation its output is
+byte-identical to `@typespec/openapi3`'s. With a marked operation and an
+older version in `openapi-versions` (unset means 3.0), it reports
+`query-method-needs-openapi-3.2` and emits nothing.
+
+```yaml
+# api/tspconfig.yaml
+emit:
+  - '@nxgt/typespec'
+options:
+  '@nxgt/typespec':
+    openapi-versions: ['3.2.0']   # 3.1.0 is an error beside a @queryMethod
+    emitter-output-dir: '{project-root}/../openapi'
+    output-file: openapi.yaml
+```
+
+`@nxgt/openapi-codegen` then generates `method: 'query'`, `@nxgt/openapi-hono`
+serves `.query(...)`, and the `@nxgt/httpyz` client sends `QUERY`. A real
+`QUERY` needs a server stack that accepts the method, and a preflight under
+CORS: [The emitter](docs/guide/emitter.md#a-query-on-the-wire).
 
 ### Linter
 
@@ -513,7 +545,7 @@ passing example of each rule, in [Linter](docs/guide/linter.md).
 
 | Decorator | On | What it does |
 | --- | --- | --- |
-| `@queryMethod` | an operation | marks a `@post` as a `QUERY`: it stays a `POST` on the wire and the document gets `x-nxgt-method: query`; `@operationIds` checks its verb as a `QUERY`'s |
+| `@queryMethod` | an operation | marks a `@post` as a `QUERY`: needs the emitter `@nxgt/typespec` and OpenAPI 3.2, where the document gets a `query` operation, and is an error otherwise; `@operationIds` checks its verb as a `QUERY`'s |
 | `@operationIds(options?: OperationIdsOptions)` | a namespace or an interface | makes each operation's id its name, as written, or a known verb with the interface's resource (`list` in `Users` is `listUsers`), in the namespace however deep or in the interface, unless it has an `@operationId` |
 
 `OperationIdsOptions` is `#{ singular?: string, plural?: string, verbs?: Record<"singular" | "plural"> }`:
@@ -521,6 +553,12 @@ passing example of each rule, in [Linter](docs/guide/linter.md).
 overrides verbs, on a namespace or an interface.
 
 `@queryMethod` has no options.
+
+### Emitter
+
+| Name | In | What it does |
+| --- | --- | --- |
+| `@nxgt/typespec` | `emit:` in `tspconfig.yaml` | `@typespec/openapi3` with its options and files; each marked `@post` becomes a `query` operation in a 3.2 document, and a marked one with an older version is an error. Needs the optional peer `@typespec/openapi3` |
 
 ### Diagnostics
 
@@ -532,6 +570,9 @@ overrides verbs, on a namespace or an interface.
 | `merged-status-reply` | warning: an operation declares two replies with a body of one status code, which the emitter merges under the first one's description |
 | `verb-method-mismatch` | warning: an operation `@operationIds` names after one of the library's verbs, in an interface, is sent with a method that verb does not name: `create` with a `GET`, or marked `@queryMethod` |
 | `query-method-not-post` | error: an operation marked `@queryMethod` is not a `@post` |
+| `query-method-needs-openapi-3.2` | error: the emitter `@nxgt/typespec` is asked for a version below 3.2 (or none, which is 3.0) beside a `@queryMethod`; nothing is emitted |
+| `query-method-needs-nxgt-emitter` | error: `@typespec/openapi3` is in `emit` beside a `@queryMethod` |
+| `openapi3-missing` | error: the emitter `@nxgt/typespec` runs `@typespec/openapi3`, which is not installed |
 
 ### Linter rules
 
@@ -690,6 +731,8 @@ envelope and the rate limit's headers.
 
 - [Getting started](docs/guide/getting-started.md): the `tsp init`
   template, the files it writes, and the steps from the spec to a Hono route;
+- [The emitter](docs/guide/emitter.md): `@nxgt/typespec` in `tspconfig.yaml`,
+  a `@queryMethod` as a real `QUERY` in OpenAPI 3.2, and what that needs;
 - [Error replies](docs/guide/errors.md): the envelope, each response, the
   aliases by verb, and what the generator makes of them;
 - [Pagination](docs/guide/pagination.md): offset and cursor pages, and

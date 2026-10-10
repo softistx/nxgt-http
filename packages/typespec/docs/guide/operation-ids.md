@@ -116,7 +116,7 @@ tells a cache, a proxy or a retry that the request is safe. An operation
 | Verb | Sent with |
 | --- | --- |
 | `list`, `read`, `find`, `count`, `get` | `GET` or `HEAD` |
-| `search`, `query` | `GET`, `POST`, or a `POST` marked [`@queryMethod`](#a-query-sent-as-a-post), for criteria too large for a query string |
+| `search`, `query` | `GET`, `POST`, or a `POST` marked [`@queryMethod`](#a-query-in-openapi-32), for criteria too large for a query string |
 | `create`, `createMany` | `POST` |
 | `update`, `updateMany` | `PUT` or `PATCH` |
 | `patch` | `PATCH` |
@@ -171,7 +171,7 @@ Not checked:
   whatever it says;
 - an operation `@operationIds` does not name.
 
-## A QUERY sent as a POST
+## A QUERY in OpenAPI 3.2
 
 `QUERY` is the HTTP method for a safe request with a body, and
 `@typespec/http` 1.17 declares only `GET`, `PUT`, `POST`, `PATCH`, `DELETE`
@@ -199,21 +199,24 @@ interface Users {
 }
 ```
 
-On the wire it is a `POST`, which every server, proxy, `fetch` and CORS
-policy accepts. The OpenAPI document says what it is, on the operation:
+With the emitter `@nxgt/typespec` and OpenAPI 3.2 the document gets a real
+`QUERY`, the only version that has one:
 
 ```yaml
 /users/search:
-  post:
+  query:
     operationId: searchUsers
-    x-nxgt-method: query
 ```
 
-`@nxgt/openapi-codegen` reads `x-nxgt-method` and marks the operation in the
-generated `operations` table
-([TypeSpec](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-codegen/docs/guide/typespec.md)). When
-`@typespec/http` declares `QUERY`, the decorator is what changes, not your
-spec ([roadmap](../roadmap.md#later)).
+Anything else is an error, not a `POST` with a mark: an older version in
+`openapi-versions` (or none, which defaults to 3.0) is `query-method-needs-openapi-3.2`, and the plain
+`@typespec/openapi3` emitter is `query-method-needs-nxgt-emitter`
+([troubleshooting](../troubleshooting.md)). `@nxgt/openapi-codegen`
+generates `method: 'query'` from it
+([TypeSpec](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-codegen/docs/guide/typespec.md)).
+The emitter and what a real `QUERY` needs are in [The emitter](emitter.md).
+When `@typespec/http` declares `QUERY`, the decorator is what changes, not
+your spec ([roadmap](../roadmap.md#later)).
 
 | Case | Result |
 | --- | --- |
@@ -223,12 +226,12 @@ spec ([roadmap](../roadmap.md#later)).
 | marked and not a `@post` | the error `query-method-not-post` |
 
 ```text
-error @nxgt/typespec/query-method-not-post: list is marked @queryMethod and sent with GET: a QUERY is sent as a POST until @typespec/http declares it. Make it a @post.
+error @nxgt/typespec/query-method-not-post: list is marked @queryMethod and sent with GET: @queryMethod marks a @post, which @nxgt/typespec writes as a QUERY in OpenAPI 3.2. Make it a @post.
 ```
 
 A search that answers an array also meets the linter's `list-returns-page`;
-return a `Page<Item>`, as `search` in the blog fixture does
-(`Page<Author> | BadRequest`).
+return a `Page<Item>`, as `search` above could
+(`Page<User> | BadRequest`).
 
 ## The resource
 

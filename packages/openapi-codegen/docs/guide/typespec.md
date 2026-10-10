@@ -230,6 +230,12 @@ interface Users {
     x-nxgt-method: query
 ```
 
+A TypeSpec spec goes through the emitter `@nxgt/typespec`
+(`emit: ["@nxgt/typespec"]`, `openapi-versions: ['3.2.0']`) to a real 3.2
+`query` operation, and a `@queryMethod` with 3.1 or with
+`@typespec/openapi3` is a compile error. `x-nxgt-method` is for OpenAPI
+documents written by hand: the rest of this section is about it.
+
 The extension is plain OpenAPI, so a hand-written spec can set it on any
 `post` operation. The generator reads it and marks that operation's entry in
 the `operations` table, where the other entries do not have the key:

@@ -11,12 +11,12 @@ Extend the ruleset in `tspconfig.yaml`, beside the emitter:
 ```yaml
 # api/tspconfig.yaml
 emit:
-  - '@typespec/openapi3'
+  - '@nxgt/typespec'
 linter:
   extends:
     - '@nxgt/typespec/recommended'
 options:
-  '@typespec/openapi3':
+  '@nxgt/typespec':
     openapi-versions: ['3.1.0']
 ```
 

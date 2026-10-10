@@ -293,7 +293,7 @@ Or silence that one operation with a reason:
 @post @route("/find") findById(@body id: uuid): User;
 ```
 
-## `list is marked @queryMethod and sent with GET: a QUERY is sent as a POST until @typespec/http declares it. Make it a @post.`
+## `list is marked @queryMethod and sent with GET: @queryMethod marks a @post, which @nxgt/typespec writes as a QUERY in OpenAPI 3.2. Make it a @post.`
 
 **When:** an error, `query-method-not-post`: an operation marked
 `@queryMethod` is sent with a method other than `POST`. The method may be
@@ -306,9 +306,10 @@ interface Users {
 }
 ```
 
-**Why:** `@queryMethod` stands for a `QUERY` sent as a `POST`, because
-`@typespec/http` declares no `QUERY`; on a `GET`, a `PUT` or a `DELETE` it
-has nothing to stand for.
+**Why:** `@queryMethod` stands for a `QUERY` that `@typespec/http` cannot
+declare, so the spec writes a `@post` and the emitter writes the `QUERY`
+([The emitter](guide/emitter.md)); on a `GET`, a `PUT` or a `DELETE` it has
+nothing to stand for.
 
 **Fix:** make it a `@post`, with the criteria in the body:
 
@@ -317,7 +318,62 @@ has nothing to stand for.
 ```
 
 Or drop `@queryMethod`: a `GET` needs no mark. More, in
-[Operation ids](guide/operation-ids.md#a-query-sent-as-a-post).
+[Operation ids](guide/operation-ids.md#a-query-in-openapi-32).
+
+## `search is marked @queryMethod: only OpenAPI 3.2 has a QUERY operation, and openapi-versions asks for 3.1.0. Emit 3.2 only, or take off @queryMethod.`
+
+**When:** `tsp compile` with the emitter `@nxgt/typespec`; the error
+`query-method-needs-openapi-3.2` on each marked operation. Nothing is emitted.
+
+**Why:** OpenAPI 3.1 and older have no `QUERY` operation, and the emitter
+does not turn the operation into a `POST`. `openapi-versions` holds a version
+below 3.2, or is unset, which means 3.0.0; the message names the first such
+version.
+
+**Fix:** emit 3.2 only, or take off `@queryMethod` and use a plain `@post`
+or `@get`:
+
+```yaml
+options:
+  '@nxgt/typespec':
+    openapi-versions: ['3.2.0']
+```
+
+An `openapi-versions` with 3.2 beside an older version fails the same way:
+list only 3.2. More, in [The emitter](guide/emitter.md).
+
+## `search is marked @queryMethod: emit with @nxgt/typespec, which writes it as a QUERY; @typespec/openapi3 would write a POST.`
+
+**When:** `tsp compile` with `@typespec/openapi3` in `emit`; the error
+`query-method-needs-nxgt-emitter` on each marked operation. Since 0.13.0; in
+0.12.0 this compiled to a `post` with `x-nxgt-method: query`.
+
+**Why:** only the emitter `@nxgt/typespec` writes a `@queryMethod` as a
+`QUERY`.
+
+**Fix:** emit with it, and ask for 3.2:
+
+```yaml
+emit:
+  - '@nxgt/typespec'
+options:
+  '@nxgt/typespec':
+    openapi-versions: ['3.2.0']
+```
+
+## `The emitter @nxgt/typespec runs @typespec/openapi3, which is not installed: add it beside @nxgt/typespec.`
+
+**When:** `tsp compile` with `@nxgt/typespec` in `emit`; the error
+`openapi3-missing`. Nothing is emitted.
+
+**Why:** `@typespec/openapi3` is an optional peer of `@nxgt/typespec`, loaded
+only when the spec is emitted, so installing the library does not install it.
+
+**Fix:**
+
+```sh
+bun add -d @typespec/openapi3
+```
 
 ## `findById is sent with QUERY, where its verb find is sent with GET or HEAD`
 
@@ -642,7 +698,9 @@ using OpenAPI;
 
 **When:** you generate from what `tsp compile` emitted.
 
-**Why:** `@typespec/openapi3` emits OpenAPI 3.0 by default.
+**Why:** `@typespec/openapi3`, and so `@nxgt/typespec` which runs it, emits
+OpenAPI 3.0 by default.
 
 **Fix:** in `tspconfig.yaml`, set `openapi-versions: ['3.1.0']` or
-`['3.2.0']` under the `@typespec/openapi3` options.
+`['3.2.0']` under the options of the emitter you use, `@nxgt/typespec`
+or `@typespec/openapi3`.

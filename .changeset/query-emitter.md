@@ -1,0 +1,7 @@
+---
+'@nxgt/typespec': minor
+---
+
+Add the emitter `@nxgt/typespec`, `emit: ["@nxgt/typespec"]` in `tspconfig.yaml`. It runs `@typespec/openapi3` with the same options (checked by its schema, so a typo is `invalid-schema`) and files, and in an OpenAPI 3.2 document writes each `@post` marked `@queryMethod` as a real `query` operation, in place and without `x-nxgt-method`; `@nxgt/openapi-codegen` generates `method: 'query'` from it and `@nxgt/openapi-hono` serves it. Without a marked operation the output is byte-identical to `@typespec/openapi3`'s. `@typespec/openapi3` becomes an optional peer (`^1.16.0`), loaded only when emitting (`openapi3-missing` when it is not installed), and `yaml` a dependency. The `tsp init` template now emits with `@nxgt/typespec`, still OpenAPI 3.1 by default.
+
+`@queryMethod` now needs the emitter and OpenAPI 3.2. A spec from 0.12.0 that uses it with OpenAPI 3.1 (or an unset `openapi-versions`, which is 3.0), or with `@typespec/openapi3` in `emit`, no longer compiles to a `post` marked `x-nxgt-method: query`: it fails with `query-method-needs-openapi-3.2` or `query-method-needs-nxgt-emitter`, and emits nothing. To fix it, emit with `@nxgt/typespec` and set `openapi-versions: ['3.2.0']`, or take off `@queryMethod`. The message of `query-method-not-post` changes too. The emitter's default output folder is `tsp-output/@nxgt/typespec` instead of `tsp-output/@typespec/openapi3` when `emitter-output-dir` is unset.

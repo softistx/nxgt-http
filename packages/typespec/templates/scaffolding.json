@@ -6,6 +6,7 @@
 		"libraries": [
 			"@typespec/http",
 			"@typespec/openapi",
+			"@typespec/openapi3",
 			"@nxgt/typespec",
 			"@nxgt/openapi-codegen"
 		],
@@ -15,9 +16,9 @@
 			}
 		},
 		"emitters": {
-			"@typespec/openapi3": {
+			"@nxgt/typespec": {
 				"selected": true,
-				"label": "OpenAPI 3.1 document",
+				"label": "OpenAPI 3.1 document (@typespec/openapi3; in 3.2, a @queryMethod is a QUERY)",
 				"options": {
 					"emitter-output-dir": "{project-root}/openapi",
 					"openapi-versions": ["3.1.0"],

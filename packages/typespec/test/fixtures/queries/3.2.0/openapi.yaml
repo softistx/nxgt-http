@@ -1,0 +1,186 @@
+openapi: 3.2.0
+info:
+  title: Library
+  version: 0.0.0
+tags: []
+paths:
+  /books:
+    post:
+      operationId: createBook
+      description: 'Creates a book: a POST, unmarked.'
+      parameters: []
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+        '400':
+          description: The request is refused, by the validators or by a handler.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestBody'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBookRequest'
+  /books/search:
+    query:
+      operationId: searchBooks
+      description: The books matching criteria too long for a query string.
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookPage'
+        '400':
+          description: The request is refused, by the validators or by a handler.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestBody'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookCriteria'
+components:
+  schemas:
+    BadRequestBody:
+      type: object
+      required:
+        - status
+        - message
+        - timestamp
+      properties:
+        status:
+          type: number
+          enum:
+            - 400
+          description: The reply's status, repeated in the body.
+        message:
+          type: string
+          description: An i18n key, such as `errors.not-found`, not a sentence.
+        timestamp:
+          type: string
+          format: date-time
+          description: When the error was answered.
+        issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationIssue'
+          description: Every value the validators refused, from every target at once.
+      description: |-
+        The 400. `@nxgt/openapi-hono` sends it with the `issues` when its
+        validators refuse a request; a handler sends it without them.
+    Book:
+      type: object
+      required:
+        - id
+        - title
+      properties:
+        id:
+          $ref: '#/components/schemas/UUID'
+          readOnly: true
+        title:
+          type: string
+    BookCriteria:
+      type: object
+      required:
+        - titles
+      properties:
+        titles:
+          type: array
+          items:
+            type: string
+          description: Books with one of these titles.
+      description: What a book search looks for.
+    BookPage:
+      type: object
+      required:
+        - items
+        - total
+        - page
+        - pageSize
+        - pageCount
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Book'
+        total:
+          type: integer
+          description: Every item that matches, across all pages.
+        page:
+          type: integer
+          description: 1-based.
+        pageSize:
+          type: integer
+        pageCount:
+          type: integer
+          description: '`ceil(total / pageSize)`: 0 when nothing matches.'
+      description: One page of an offset pagination.
+    CreateBookRequest:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+    UUID:
+      type: string
+      pattern: ^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|0{8}-0{4}-0{4}-0{4}-0{12}|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$
+      format: uuid
+      description: |-
+        An RFC 9562 UUID, any version 1 to 8 with the RFC variant, or the nil or
+        the max UUID, in any case, kept as sent: `0b8e5c1e-2f4a-4c3b-9d6e-7f8a9b0c1d2e`.
+
+        Specified by https://www.rfc-editor.org/rfc/rfc9562.
+      x-nxgt-scalar: UUID
+    ValidationIssue:
+      type: object
+      required:
+        - target
+        - path
+        - code
+        - message
+      properties:
+        target:
+          $ref: '#/components/schemas/ValidationTarget'
+        path:
+          type: array
+          items:
+            anyOf:
+              - type: string
+              - type: integer
+          description: 'Inside the target: `["items", 0, "name"]`, or `[]` for the whole of it.'
+        code:
+          type: string
+          description: |-
+            Zod's issue code, or one of the engine's own: `invalid_json`,
+            `invalid_form`, `invalid_content_type`, `missing_body`,
+            `repeated_parameter`, `undeclared_status`.
+        message:
+          type: string
+      description: One value `@nxgt/openapi-hono` refused, and why.
+    ValidationTarget:
+      type: string
+      enum:
+        - param
+        - query
+        - header
+        - json
+        - form
+        - body
+        - response
+      description: |-
+        Where `@nxgt/openapi-hono` found a request value wrong: a request location,
+        or `response` for a reply the spec does not declare.

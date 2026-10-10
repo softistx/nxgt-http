@@ -3,7 +3,10 @@
 [TypeSpec](https://typespec.io) is a language for writing API specs: models,
 templates and decorators instead of hand-written YAML. It does not replace the
 generator. It sits upstream of it: TypeSpec compiles the spec to OpenAPI 3.1,
-and the generator reads that file like any other.
+and the generator reads that file like any other. `@nxgt/typespec` has its
+own emitter too, which runs `@typespec/openapi3` and writes a `@queryMethod`
+as an OpenAPI 3.2 `query` operation ([its guide](https://github.com/softistx/nxgt-http/blob/develop/packages/typespec/docs/guide/emitter.md); see
+[A QUERY](#a-query-real-in-32-a-marked-post-by-hand)).
 
 ```
 main.tsp ──tsp compile──▶ openapi.yaml (3.1) ──nxgt-openapi generate──▶ types.ts, zod.ts, operations.ts, paths.ts, hono.ts
@@ -203,11 +206,12 @@ read-only properties. Name the visibility the body takes:
 
   `Page<Pet>` is then the schema `PetPage`.
 
-## A QUERY sent as a POST
+## A QUERY: real in 3.2, a marked POST by hand
 
 `QUERY` is the HTTP method for a safe request with a body.
 `@typespec/http` 1.17 declares none, so `@nxgt/typespec`'s `@queryMethod`
-marks a `@post` and the emitted operation carries `x-nxgt-method: query`:
+marks a `@post`, and its emitter (`emit: ["@nxgt/typespec"]`,
+`openapi-versions: ['3.2.0']`) writes it as a real 3.2 `query` operation:
 
 ```tsp
 import "@typespec/http";
@@ -225,13 +229,28 @@ interface Users {
 
 ```yaml
 /users/search:
+  query:
+    operationId: searchUsers
+```
+
+The generator reads it like any 3.2 `query` operation: `method` is
+`'query'`, the client sends a `QUERY` and the Hono route serves one. A
+`@queryMethod` with OpenAPI 3.1, or emitted by `@typespec/openapi3`, is a
+compile error ([the emitter's guide](https://github.com/softistx/nxgt-http/blob/develop/packages/typespec/docs/guide/emitter.md)).
+
+### `x-nxgt-method`, in a document written by hand
+
+A hand-written OpenAPI 3.1 document has no `query` operation; it can mark a
+`post` instead:
+
+```yaml
+/users/search:
   post:
     operationId: searchUsers
     x-nxgt-method: query
 ```
 
-The extension is plain OpenAPI, so a hand-written spec can set it on any
-`post` operation. The generator reads it and marks that operation's entry in
+The generator reads it and marks that operation's entry in
 the `operations` table, where the other entries do not have the key:
 
 ```ts

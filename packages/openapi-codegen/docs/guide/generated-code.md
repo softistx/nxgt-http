@@ -286,7 +286,7 @@ op.responses[200]?.['application/json']?.schema?.parse(body);
 
 Each entry, keyed by `operationId`, holds:
 - `method`, `path`, `honoPath` and `tags`, and `queryMethod: true` on a `POST`
-  that is a `QUERY` ([TypeSpec](typespec.md#a-query-sent-as-a-post));
+  a hand-written document marks a `QUERY` ([TypeSpec](typespec.md#a-query-real-in-32-a-marked-post-by-hand));
 - a `parameters` list;
 - the `param`, `query` and `header` validators;
 - the `body` media types with their validators, and the same for each

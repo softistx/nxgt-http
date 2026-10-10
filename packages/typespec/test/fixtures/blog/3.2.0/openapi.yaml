@@ -76,35 +76,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/CreateAuthorRequest'
-  /authors/search:
-    post:
-      operationId: searchAuthors
-      description: |-
-        The authors matching criteria too long for a query string: a QUERY, sent
-        as a POST.
-      parameters: []
-      responses:
-        '200':
-          description: The request has succeeded.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AuthorPage'
-        '400':
-          description: The request is refused, by the validators or by a handler.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BadRequestBody'
-      tags:
-        - Authors
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AuthorCriteria'
-      x-nxgt-method: query
   /authors/{id}:
     get:
       operationId: getAuthor
@@ -745,17 +716,6 @@ components:
           format: date-time
           readOnly: true
       description: Someone who writes posts and comments.
-    AuthorCriteria:
-      type: object
-      required:
-        - names
-      properties:
-        names:
-          type: array
-          items:
-            type: string
-          description: Authors with one of these names.
-      description: What an author search looks for.
     AuthorPage:
       type: object
       required:

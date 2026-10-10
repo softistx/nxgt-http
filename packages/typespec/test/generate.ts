@@ -17,10 +17,14 @@ import { $ } from 'bun';
 const TEST_DIR = fileURLToPath(new URL('./', import.meta.url));
 
 /** One per convention: each `.tsp` imports `@nxgt/typespec` as an app does. */
-export const CASES = ['errors', 'blog', 'scalars'] as const;
+export const CASES = ['errors', 'blog', 'scalars', 'queries'] as const;
 
-/** Every fixture's `tspconfig.yaml` emits both, each in its own folder. */
+/** Every fixture's `tspconfig.yaml` emits both, each in its own folder... */
 export const VERSIONS = ['3.1.0', '3.2.0'] as const;
+
+/** ...but `queries`: a `@queryMethod` is a `QUERY`, which only 3.2 has. */
+export const versionsOf = (name: string): readonly string[] =>
+	name === 'queries' ? ['3.2.0'] : VERSIONS;
 
 export const project = (name: string) => `${TEST_DIR}fixtures/${name}/`;
 
@@ -35,7 +39,7 @@ export const spec = (name: string, version: string) =>
  */
 export async function compile(name: string, outputDir: string): Promise<void> {
 	const result =
-		await $`bunx --no-install tsp compile ${project(name)} --warn-as-error --option ${`@typespec/openapi3.emitter-output-dir=${outputDir}`}`
+		await $`bunx --no-install tsp compile ${project(name)} --warn-as-error --option ${`@nxgt/typespec.emitter-output-dir=${outputDir}`}`
 			.cwd(project(name))
 			.quiet()
 			.nothrow();
@@ -52,7 +56,7 @@ export async function emitted(name: string): Promise<Record<string, string>> {
 	try {
 		await compile(name, outputDir);
 		const specs: Record<string, string> = {};
-		for (const version of VERSIONS) {
+		for (const version of versionsOf(name)) {
 			specs[version] = await readFile(
 				join(outputDir, version, 'openapi.yaml'),
 				'utf8',
@@ -70,7 +74,7 @@ if (import.meta.main) {
 	await rm(`${TEST_DIR}generated`, { recursive: true, force: true });
 	for (const name of CASES) {
 		if (accept) await compile(name, project(name));
-		for (const version of VERSIONS) {
+		for (const version of versionsOf(name)) {
 			await generate(
 				{
 					input: spec(name, version),

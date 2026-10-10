@@ -12,6 +12,7 @@ import { operationIds, validateOperationIds } from './operation-ids';
 import { queryMethod, validateQueryMethods } from './query-method';
 import { validateVerbMethods } from './verb-methods';
 
+export { $onEmit } from './emitter';
 export { $lib } from './lib';
 export { $linter } from './linter';
 

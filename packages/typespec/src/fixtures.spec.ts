@@ -7,17 +7,17 @@
 import { describe, expect, it } from 'bun:test';
 import { readFile } from 'node:fs/promises';
 import { generateFiles } from '@nxgt/openapi-codegen';
-import { CASES, emitted, spec, VERSIONS } from '../test/generate';
+import { CASES, emitted, spec, versionsOf } from '../test/generate';
 
 describe.each([...CASES])('the %s fixture', (name) => {
 	it('compiles to the committed specs', async () => {
 		const now = await emitted(name);
-		for (const version of VERSIONS) {
+		for (const version of versionsOf(name)) {
 			expect(now[version]).toBe(await readFile(spec(name, version), 'utf8'));
 		}
 	}, 30_000);
 
-	it.each([...VERSIONS])(
+	it.each([...versionsOf(name)])(
 		'generates from OpenAPI %s with no warning',
 		async (version) => {
 			const { warnings } = await generateFiles({

@@ -26,7 +26,26 @@ export const $lib = createTypeSpecLibrary({
 		'query-method-not-post': {
 			severity: 'error',
 			messages: {
-				default: paramMessage`${'operation'} is marked @queryMethod and sent with ${'method'}: a QUERY is sent as a POST until @typespec/http declares it. Make it a @post.`,
+				default: paramMessage`${'operation'} is marked @queryMethod and sent with ${'method'}: @queryMethod marks a @post, which @nxgt/typespec writes as a QUERY in OpenAPI 3.2. Make it a @post.`,
+			},
+		},
+		'query-method-needs-openapi-3.2': {
+			severity: 'error',
+			messages: {
+				default: paramMessage`${'operation'} is marked @queryMethod: only OpenAPI 3.2 has a QUERY operation, and openapi-versions asks for ${'version'}. Emit 3.2 only, or take off @queryMethod.`,
+			},
+		},
+		'query-method-needs-nxgt-emitter': {
+			severity: 'error',
+			messages: {
+				default: paramMessage`${'operation'} is marked @queryMethod: emit with @nxgt/typespec, which writes it as a QUERY; @typespec/openapi3 would write a POST.`,
+			},
+		},
+		'openapi3-missing': {
+			severity: 'error',
+			messages: {
+				default:
+					'The emitter @nxgt/typespec runs @typespec/openapi3, which is not installed: add it beside @nxgt/typespec.',
 			},
 		},
 		'duplicate-status-reply': {
@@ -42,6 +61,8 @@ export const $lib = createTypeSpecLibrary({
 			},
 		},
 	},
+	// `@typespec/openapi3` returns before writing anything on a dry run.
+	capabilities: { dryRun: true },
 	state: {
 		queryMethod: {
 			description: 'The operations marked with @queryMethod',

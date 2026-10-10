@@ -179,6 +179,9 @@
     "packages/typespec": {
       "name": "@nxgt/typespec",
       "version": "0.12.0",
+      "dependencies": {
+        "yaml": "^2.9.0",
+      },
       "devDependencies": {
         "@nxgt/openapi-codegen": "workspace:^",
         "@nxgt/openapi-hono": "workspace:^",
@@ -194,8 +197,12 @@
         "@typespec/compiler": "^1.16.0",
         "@typespec/http": "^1.16.0",
         "@typespec/openapi": "^1.16.0",
+        "@typespec/openapi3": "^1.16.0",
         "typescript": "^6.0.3 || ^7.0.0",
       },
+      "optionalPeers": [
+        "@typespec/openapi3",
+      ],
     },
   },
   "overrides": {

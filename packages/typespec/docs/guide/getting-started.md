@@ -38,14 +38,18 @@ network, fails before anything is written
 | File | What it holds |
 | --- | --- |
 | `package.json` | the compiler, `@typespec/http`, `@typespec/openapi`, `@typespec/openapi3`, `@nxgt/typespec` and `@nxgt/openapi-codegen`, at their latest versions |
-| `tspconfig.yaml` | the linter's recommended rules, and OpenAPI 3.1 written to `openapi/openapi.yaml` |
+| `tspconfig.yaml` | the linter's recommended rules, and OpenAPI 3.1 written to `openapi/openapi.yaml` by the emitter `@nxgt/typespec` |
 | `main.tsp` | the service, marked with `@operationIds`, and a `Users` resource |
 | `openapi-codegen.config.ts` | the generator's input and output, with the Hono routes on |
 | `README.md` | the commands below, and the scripts to add |
 | `.gitignore` | `node_modules/`, and TypeSpec's default output |
 
-`tspconfig.yaml` turns the linter on and emits OpenAPI 3.1, which
-`@nxgt/openapi-codegen` reads (it refuses 3.0, the emitter's default):
+`tspconfig.yaml` turns the linter on and emits OpenAPI 3.1 with
+`@nxgt/typespec`, which runs `@typespec/openapi3` and reads the same options.
+`@nxgt/openapi-codegen` reads 3.1 (it refuses 3.0, the default of
+`@typespec/openapi3`). The template has no `@queryMethod`; using one requires
+`openapi-versions: ["3.2.0"]`, as 3.1 is an error beside it
+([The emitter](emitter.md)):
 
 ```yaml
 # tspconfig.yaml
@@ -53,9 +57,9 @@ linter:
   extends:
     - "@nxgt/typespec/recommended"
 emit:
-  - "@typespec/openapi3"
+  - "@nxgt/typespec"
 options:
-  "@typespec/openapi3":
+  "@nxgt/typespec":
     emitter-output-dir: "{project-root}/openapi"
     openapi-versions:
       - 3.1.0

@@ -1229,23 +1229,30 @@ function createSseParser(lastEventId?: string): SseParser;
 
 interface SseParser {
 	push(chunk: string): ServerEvent[];
+	end(): ServerEvent[];
 	readonly retry: number | undefined;
 	readonly lastEventId: string | undefined;
 }
-
-interface ServerEvent {
-	readonly event: string; // `message` when the stream names none
-	readonly data: string; // its `data:` lines, joined with a line feed
-	readonly id: string | undefined;
-}
 ```
 
-The parser `events()` reads a stream with, parsed as `EventSource` does:
-`push` takes a chunk of text and returns the events it completed.
+The parser `events()` reads a stream with, parsed as `EventSource` does. It
+yields [`ServerEvent`](#serverevent), a type you can import from both
+`@nxgt/httpyz` and `@nxgt/httpyz/integration`.
+
+- `push(chunk)` takes a chunk of text and returns only the events a blank
+  line ended. A body that stops after `data: {...}\n` completes nothing yet.
+- `end()` is for a body the server has finished: it reads an unterminated last
+  line, then dispatches the event still pending. `EventSource` discards an
+  incomplete event at the end of a stream, so a live stream does not call it.
+  After a complete event it returns `[]`, so it never repeats one.
+- `retry` is the last `retry:` the stream set, in milliseconds.
+- `lastEventId` is the ID of the last event dispatched: what `Last-Event-ID`
+  sends. The argument seeds it, to carry it over from an earlier connection.
+
 `events()` throws `UndeclaredStatusError` for an error status, with the body
 unread; a server such as graphql-yoga sends the reason there as events (a 404
 whose stream holds a `next` event for an unknown persisted query). Read the
-body from the error's `response` and feed the parser:
+body from the error's `response`, then `push` and `end` it:
 
 ```ts
 import { UndeclaredStatusError } from '@nxgt/httpyz';
@@ -1258,7 +1265,8 @@ try {
 } catch (error) {
 	if (!(error instanceof UndeclaredStatusError)) throw error;
 	const parser = createSseParser();
-	const [first] = parser.push(await error.response.text());
+	const text = await error.response.text();
+	const [first] = [...parser.push(text), ...parser.end()];
 	// first: { event: 'next', data: '{"errors":[...]}', id: undefined }
 	if (first) console.log(error.status, JSON.parse(first.data));
 }

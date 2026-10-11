@@ -11,7 +11,12 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { GeneratedFile } from '../src/emit';
-import { type Dates, EmitContext, paramGroups } from '../src/emit/context';
+import {
+	type Dates,
+	EmitContext,
+	paramGroups,
+	type Scalars,
+} from '../src/emit/context';
 import { file, jsString } from '../src/emit/printer';
 import { generateFiles } from '../src/generate';
 import { buildIR } from '../src/ir';
@@ -23,6 +28,7 @@ export const CASES = [
 	'query',
 	'kitchen-sink',
 	'dates',
+	'scalars',
 	'streams',
 	// Generated with alxia alone: cookies, named events, alxia's 400.
 	'alxia',
@@ -40,8 +46,11 @@ export const CONFORMANCE = [
 ] as const;
 
 /** What a case is generated with, beside `hono` and `alxia`. */
-const OPTIONS: { [name: string]: { dates?: Dates; hono?: boolean } } = {
+const OPTIONS: {
+	[name: string]: { dates?: Dates; scalars?: Scalars; hono?: boolean };
+} = {
 	dates: { dates: 'date' },
+	scalars: { scalars: 'exact' },
 	// Dated, so a stream's items are typed both decoded and as JSON carries them.
 	streams: { dates: 'date' },
 	// The client files then declare alxia's 400, not @nxgt/openapi-hono's.
@@ -71,7 +80,7 @@ export async function fixtureFiles(name: string): Promise<GeneratedFile[]> {
 
 async function agreement(
 	input: string,
-	options: { dates?: Dates; hono?: boolean },
+	options: { dates?: Dates; scalars?: Scalars; hono?: boolean },
 ): Promise<string> {
 	const ir = buildIR(await loadDocument(input));
 	const ctx = new EmitContext(ir, {

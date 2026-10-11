@@ -21,6 +21,7 @@ export type DiagnosticCode =
 	| 'unsupported_keyword'
 	| 'legacy_nullable'
 	| 'unknown_format'
+	| 'unknown_scalar'
 	| 'not_enforced'
 	| 'discriminator_fallback'
 	| 'name_collision'

@@ -12,6 +12,7 @@
  * puts them in order.
  */
 import { type EmitContext, paramGroups } from './context';
+import { nxgtImport } from './nxgt-zod';
 import { clientOperationsType } from './operation/client-types';
 import { formObject, paramObject } from './operation/from-string';
 import { operationsType } from './operation/handler-types';
@@ -88,7 +89,7 @@ export function emitOperations(ctx: EmitContext): {
 	if (codecs.has('isoDate')) helpers.add('isoDate');
 
 	const ext = ctx.options.importExtension;
-	const imports = ["import { z } from 'zod';"];
+	const imports = ["import { z } from 'zod';", ...nxgtImport(codecs)];
 	if (uses.size > 0) {
 		const names = [...uses].map((id) => `z${ctx.schema(id).name}`).sort();
 		imports.push(`import ${list('{ ', names, ' }', '')} from './zod${ext}';`);

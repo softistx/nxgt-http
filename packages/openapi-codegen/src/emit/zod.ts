@@ -18,6 +18,7 @@ import type {
 	UnionNode,
 } from '../ir/types';
 import { appliesDefault, type EmitContext, type ObjectMode } from './context';
+import { nxgtImport, nxgtImportMark } from './nxgt-zod';
 import {
 	docComment,
 	docLines,
@@ -37,7 +38,10 @@ export interface Scope {
 	indent: string;
 	/** Collects the schemas referenced, for a file that imports them. */
 	uses?: Set<string>;
-	/** Collects the helpers used, for a file that declares them: `isoDate`. */
+	/**
+	 * Collects what a file declares or imports for its schemas: the helper
+	 * `isoDate`, and the marks of the `@nxgt/zod` exports (see `nxgtImportMark`).
+	 */
 	helpers: Set<string>;
 }
 
@@ -103,7 +107,11 @@ export function emitZod(ctx: EmitContext): string {
 	// A spec with no schema: no `z` to import, which an app's `noUnusedLocals`
 	// refuses, but still a module, which `operations.ts` imports.
 	if (blocks.length === 0) return file([ctx.header, 'export {};']);
-	const imports = [`import { z } from 'zod';`];
+	const imports = [];
+	if (ctx.options.scalars !== 'exact' || blocks.some((b) => /\bz\./.test(b))) {
+		imports.push(`import { z } from 'zod';`);
+	}
+	imports.push(...nxgtImport(helpers));
 	if (values.size > 0) {
 		imports.push(
 			`import ${list('{ ', [...values].sort(), ' }', '')} from './types${ctx.options.importExtension}';`,
@@ -177,7 +185,27 @@ export const bounds = (min?: number, max?: number): string =>
 	(min === undefined ? '' : `.min(${min})`) +
 	(max === undefined ? '' : `.max(${max})`);
 
+/**
+ * The length bounds of a string as checks. A `@nxgt/zod` schema is not always
+ * a `ZodString` (`ipSchema` is a union, `emojiSchema` a pipe), and only a
+ * `ZodString` has `.min()` and `.max()`: `.check()` is on every schema.
+ */
+const lengthChecks = (node: StringNode): string => {
+	const checks = [
+		...(node.minLength === undefined ? [] : [`z.minLength(${node.minLength})`]),
+		...(node.maxLength === undefined ? [] : [`z.maxLength(${node.maxLength})`]),
+	];
+	return checks.length === 0 ? '' : `.check(${checks.join(', ')})`;
+};
+
 function string(ctx: EmitContext, node: StringNode, scope: Scope): string {
+	// The scalar's own schema is its whole rule, `pattern` included: the
+	// `pattern` of the spec only restates it.
+	const exact = ctx.exactScalar(node);
+	if (exact !== undefined) {
+		scope.helpers.add(nxgtImportMark(exact));
+		return exact + lengthChecks(node);
+	}
 	let out = node.format ? STRING_FORMATS[node.format] : 'z.string()';
 	out += bounds(node.minLength, node.maxLength);
 	if (node.pattern !== undefined) {

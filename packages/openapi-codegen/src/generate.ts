@@ -1,6 +1,6 @@
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { emitFiles, FILE_NAMES, type GeneratedFile } from './emit';
-import type { Dates, Enums, UnknownKeys } from './emit/context';
+import type { Dates, Enums, Scalars, UnknownKeys } from './emit/context';
 import { CodegenError, type Diagnostic } from './errors';
 import { buildIR, type IROptions } from './ir';
 import {
@@ -54,6 +54,15 @@ export interface GenerateOptions extends IROptions {
 	 */
 	dates?: Dates;
 	/**
+	 * A scalar of `@nxgt/typespec` (`x-nxgt-scalar`): checked by its `pattern`
+	 * (`pattern`, the default), or by its own schema from `@nxgt/zod`
+	 * (`exact`), imported by the generated code, which then needs that
+	 * optional peer. `DateTime`, `Timestamp`, `BigInt` and `Long` decode to
+	 * another type, and the numeric scalars are not covered yet: they keep
+	 * their pattern or bounds either way.
+	 */
+	scalars?: Scalars;
+	/**
 	 * Lint the spec with Redocly before generating: `true` uses the
 	 * `redocly.yaml` beside `input`, or Redocly's defaults; a string names the
 	 * config file. Needs the optional peer `@redocly/openapi-core`. A lint
@@ -92,6 +101,7 @@ const UNKNOWN_KEYS: readonly string[] = ['strip', 'strict', 'loose'];
 const EXTENSIONS: readonly string[] = ['', '.js', '.ts'];
 const ENUMS: readonly string[] = ['object', 'union'];
 const DATES: readonly string[] = ['string', 'date'];
+const SCALARS: readonly string[] = ['pattern', 'exact'];
 
 const invalid = (message: string): CodegenError =>
 	new CodegenError([{ severity: 'error', code: 'invalid_option', message }]);
@@ -141,6 +151,10 @@ export async function generateFiles(
 	if (!DATES.includes(dates)) {
 		throw invalid(`dates must be string or date, not ${dates}`);
 	}
+	const scalars = options.scalars ?? 'pattern';
+	if (!SCALARS.includes(scalars)) {
+		throw invalid(`scalars must be pattern or exact, not ${scalars}`);
+	}
 	const lint = options.lint ?? false;
 	if (typeof lint !== 'boolean' && (typeof lint !== 'string' || lint === '')) {
 		throw invalid(
@@ -176,6 +190,7 @@ export async function generateFiles(
 			hono,
 			alxia,
 			dates,
+			scalars,
 			source: relative(output, input).split(sep).join('/'),
 			rootDir: dirname(doc.entry.file),
 		},

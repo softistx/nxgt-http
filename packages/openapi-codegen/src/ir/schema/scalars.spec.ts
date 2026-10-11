@@ -122,24 +122,59 @@ describe('stringNode', () => {
 				{ format: 'iban', pattern: '^[A-Z]{2}', 'x-nxgt-scalar': 'IBAN' },
 				at,
 			),
-		).toEqual({ kind: 'string', pattern: '^[A-Z]{2}' });
+		).toEqual({ kind: 'string', scalar: 'IBAN', pattern: '^[A-Z]{2}' });
 		expect(s.diagnostics.list).toEqual([]);
+	});
+
+	it('carries the name of a scalar, whatever else the schema holds', () => {
+		const s = state();
+		for (const name of ['IBAN', 'DateTime', 'PositiveInt']) {
+			expect(stringNode(s, { 'x-nxgt-scalar': name }, at)).toMatchObject({
+				kind: 'string',
+				scalar: name,
+			});
+		}
+		expect(s.diagnostics.list).toEqual([]);
+	});
+
+	it('warns once of a scalar @nxgt/typespec does not declare, and still carries it', () => {
+		const s = state();
+		const node = stringNode(s, { 'x-nxgt-scalar': 'Iban' }, at);
+		stringNode(s, { 'x-nxgt-scalar': 'Iban' }, at);
+		expect(node).toEqual({ kind: 'string', scalar: 'Iban' });
+		expect(report(s.diagnostics)).toEqual([
+			{
+				severity: 'warning',
+				code: 'unknown_scalar',
+				message:
+					'`x-nxgt-scalar: Iban` is not a scalar of @nxgt/typespec; it is checked by its `pattern` alone',
+				pointer: '/s/x-nxgt-scalar',
+			},
+		]);
+	});
+
+	it('has no scalar for a plain string', () => {
+		expect(stringNode(state(), { type: 'string' }, at)).not.toHaveProperty(
+			'scalar',
+		);
 	});
 
 	it('leaves the standard format of an @nxgt/typespec scalar to its pattern, except date-time', () => {
 		const s = state();
-		const scalar = { 'x-nxgt-scalar': 'X', pattern: '^a$' };
+		const scalar = { 'x-nxgt-scalar': 'IBAN', pattern: '^a$' };
 		for (const format of ['email', 'uri', 'uuid', 'ipv4', 'byte', 'date']) {
 			expect(stringNode(s, { ...scalar, format }, at)).toEqual({
 				kind: 'string',
+				scalar: 'IBAN',
 				pattern: '^a$',
 			});
 		}
 		expect(stringNode(s, { ...scalar, contentEncoding: 'base64' }, at)).toEqual(
-			{ kind: 'string', pattern: '^a$' },
+			{ kind: 'string', scalar: 'IBAN', pattern: '^a$' },
 		);
 		expect(stringNode(s, { ...scalar, format: 'date-time' }, at)).toEqual({
 			kind: 'string',
+			scalar: 'IBAN',
 			format: 'date-time',
 			pattern: '^a$',
 		});

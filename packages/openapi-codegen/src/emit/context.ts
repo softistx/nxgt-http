@@ -12,6 +12,7 @@ import type {
 } from '../ir/types';
 import type { Location } from '../loader/location';
 import { ALXIA_NAMES, operationConst } from './alxia/names';
+import { exactSchema } from './nxgt-zod';
 
 /** What an object does with keys it does not declare, when the spec does not say. */
 export type UnknownKeys = 'strip' | 'strict' | 'loose';
@@ -21,6 +22,9 @@ export type Enums = 'object' | 'union';
 
 /** A `date-time` as the string JSON carries, or decoded to a `Date`. */
 export type Dates = 'string' | 'date';
+
+/** How a scalar of `@nxgt/typespec` is validated: by its `pattern`, or by the schema of `@nxgt/zod`. */
+export type Scalars = 'pattern' | 'exact';
 
 /** What an object does with undeclared keys once the `unknownKeys` default is applied. */
 export type ObjectMode = UnknownKeys | { schema: SchemaNode };
@@ -40,6 +44,8 @@ export interface EmitOptions {
 	alxia?: boolean;
 	/** `date-time` as a string (the default), or decoded to a `Date` by a codec. */
 	dates?: Dates;
+	/** A scalar of `@nxgt/typespec` by its pattern (the default), or by its `@nxgt/zod` schema. */
+	scalars?: Scalars;
 }
 
 /** A property whose default the validator fills in: optional going in, present coming out. */
@@ -240,6 +246,15 @@ export class EmitContext {
 			node.kind === 'object' &&
 			node.extends.every((target) => this.isZodObject({ kind: 'ref', target }))
 		);
+	}
+
+	/** The `@nxgt/zod` export that validates the node, with `scalars: 'exact'` and a scalar that has one. */
+	exactScalar(node: SchemaNode): string | undefined {
+		return this.options.scalars === 'exact' &&
+			node.kind === 'string' &&
+			node.scalar !== undefined
+			? exactSchema(node.scalar)
+			: undefined;
 	}
 
 	/** A `date-time` that the validator decodes to a `Date`: with `dates: 'date'` only. */

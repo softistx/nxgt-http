@@ -15,6 +15,7 @@
  */
 import type { OperationIR } from '../../ir/types';
 import type { EmitContext } from '../context';
+import { nxgtImport } from '../nxgt-zod';
 import { HELPERS } from '../operation/helpers';
 import { operationDocs } from '../operation/read';
 import { docComment, file, jsString, list, propertyKey } from '../printer';
@@ -131,6 +132,7 @@ function preamble(printing: Printing): string[] {
 	if (printing.zod || helpers.some((h) => h === 'numeric' || h === 'flag')) {
 		imports.push("import { z } from 'zod';");
 	}
+	imports.push(...nxgtImport(printing.codecs));
 	if (printing.uses.size > 0) {
 		const names = [...printing.uses]
 			.map((id) => `z${ctx.schema(id).name}`)

@@ -1,8 +1,16 @@
-import { describe, expect, test } from 'bun:test';
+import { afterAll, describe, expect, test } from 'bun:test';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { declarationsResolve, fixtureSource, ownErrors } from './nodenext';
 
 const REL =
 	'/tmp/w/node_modules/@nxgt/httpyz/dist/index.d.ts(1,30): error TS2834: Relative import paths need explicit file extensions.';
+
+const dirs: string[] = [];
+afterAll(() =>
+	Promise.all(dirs.map((dir) => rm(dir, { recursive: true, force: true }))),
+);
 
 describe('fixtureSource', () => {
 	test('imports every subpath and keeps the unknown-option case for httpyz', () => {
@@ -34,13 +42,30 @@ describe('ownErrors', () => {
 describe('declarationsResolve', () => {
 	test('fails on an error in a package and passes on none', async () => {
 		const pkgs = [{ name: '@nxgt/httpyz', subpaths: ['@nxgt/httpyz'] }];
-		const dir = await Bun.$`mktemp -d`.text();
+		const dir = await mkdtemp(join(tmpdir(), 'nxgt-http-nodenext-'));
+		dirs.push(dir);
 		const run = (output: string) =>
-			declarationsResolve(dir.trim(), pkgs, async () => ({
+			declarationsResolve(dir, pkgs, async () => ({
 				exitCode: output ? 2 : 0,
 				output,
 			}));
 		expect(await run('')).toBe(true);
 		expect(await run(REL)).toBe(false);
+	});
+
+	test('fails when tsc did not run, with no diagnostic to read', async () => {
+		const dir = await mkdtemp(join(tmpdir(), 'nxgt-http-nodenext-'));
+		dirs.push(dir);
+		const pkgs = [{ name: '@nxgt/httpyz', subpaths: ['@nxgt/httpyz'] }];
+		const ok = await declarationsResolve(dir, pkgs, async () => ({
+			exitCode: 1,
+			output: 'error: could not find tsc',
+		}));
+		expect(ok).toBe(false);
+	});
+
+	test('a global error at column 0 is ours to report', async () => {
+		const global = "error TS6053: File 'x.ts' not found.";
+		expect(ownErrors(global)).toEqual([global]);
 	});
 });

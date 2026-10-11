@@ -51,7 +51,7 @@ export function ownErrors(output: string): string[] {
 		.split('\n')
 		.filter(
 			(line) =>
-				/ error TS\d+:/.test(line) &&
+				/(^|\s)error TS\d+:/.test(line) &&
 				(line.includes('node_modules/@nxgt/') ||
 					!line.includes('node_modules/')),
 		);
@@ -90,7 +90,14 @@ export async function declarationsResolve(
 			join(dir, `${pkg.name.replace('/', '__')}.ts`),
 			fixtureSource(pkg),
 		);
-	const { output } = await tsc(dir);
+	const { exitCode, output } = await tsc(dir);
+	// The exit code alone is 2 whenever a dependency's own declarations fail
+	// (nuxt's do), so it only counts when tsc said nothing in `error TS` form:
+	// a tsc that did not start ("error: could not find tsc") checked nothing.
+	if (exitCode !== 0 && !/(^|\s)error TS\d+:/m.test(output)) {
+		console.error(`\ntsc failed without a diagnostic:\n${output.trim()}`);
+		return false;
+	}
 	const errors = ownErrors(output);
 	for (const pkg of packages) {
 		const file = `${pkg.name.replace('/', '__')}.ts`;

@@ -55,7 +55,7 @@ export const http = createHttpClient({
 | Import | For |
 | --- | --- |
 | `@nxgt/httpyz` | the client, its types and its errors |
-| `@nxgt/httpyz/integration` | for bindings such as `@nxgt/openapi-httpyz` only: the helpers that write and check requests exactly as the client does. An app has no use for it |
+| `@nxgt/httpyz/integration` | the helpers that write and check requests exactly as the client does, for bindings such as `@nxgt/openapi-httpyz`; and `createSseParser`, which an app uses to read the events of an error reply's body |
 
 ## Calls
 
@@ -1213,8 +1213,8 @@ type Out = InferOutput<typeof Item>; // { createdAt: Date }
 
 ### `@nxgt/httpyz/integration`
 
-For bindings only: the pieces a binding reuses so that the requests it
-writes and checks match the client's own.
+The pieces a binding reuses so that the requests it writes and checks match
+the client's own, and `createSseParser`, which an app can use too.
 
 #### Constants
 
@@ -1228,6 +1228,56 @@ The nine methods, in order: `get`, `put`, `post`, `delete`, `options`,
 `head`, `patch`, `trace`, `query`.
 
 #### Functions
+
+##### `createSseParser`
+
+```ts
+function createSseParser(lastEventId?: string): SseParser;
+
+interface SseParser {
+	push(chunk: string): ServerEvent[];
+	end(): ServerEvent[];
+	readonly retry: number | undefined;
+	readonly lastEventId: string | undefined;
+}
+```
+
+The parser `events()` reads a stream with, parsed as `EventSource` does. It
+yields [`ServerEvent`](#serverevent), a type you can import from both
+`@nxgt/httpyz` and `@nxgt/httpyz/integration`.
+
+- `push(chunk)` takes a chunk of text and returns only the events a blank
+  line ended. A body that stops after `data: {...}\n` completes nothing yet.
+- `end()` is for a body the server has finished: it reads an unterminated last
+  line, then dispatches the event still pending. `EventSource` discards an
+  incomplete event at the end of a stream, so a live stream does not call it.
+  After a complete event it returns `[]`, so it never repeats one.
+- `retry` is the last `retry:` the stream set, in milliseconds.
+- `lastEventId` is the ID of the last event dispatched: what `Last-Event-ID`
+  sends. The argument seeds it, to carry it over from an earlier connection.
+
+`events()` throws `UndeclaredStatusError` for an error status, with the body
+unread; a server such as graphql-yoga sends the reason there as events (a 404
+whose stream holds a `next` event for an unknown persisted query). Read the
+body from the error's `response`, then `push` and `end` it:
+
+```ts
+import { UndeclaredStatusError } from '@nxgt/httpyz';
+import { createSseParser } from '@nxgt/httpyz/integration';
+
+try {
+	for await (const event of http.events('/graphql', { body })) {
+		// ...
+	}
+} catch (error) {
+	if (!(error instanceof UndeclaredStatusError)) throw error;
+	const parser = createSseParser();
+	const text = await error.response.text();
+	const [first] = [...parser.push(text), ...parser.end()];
+	// first: { event: 'next', data: '{"errors":[...]}', id: undefined }
+	if (first) console.log(error.status, JSON.parse(first.data));
+}
+```
 
 ##### `text`
 

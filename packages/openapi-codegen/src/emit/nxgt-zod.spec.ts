@@ -43,8 +43,14 @@ describe('lengthChecks', () => {
 });
 
 describe('patternChecks', () => {
-	it('adds nothing: the scalar is the whole rule', () => {
-		expect(patternChecks({ kind: 'string', pattern: '^a$' })).toBe('');
+	it('is nothing without a pattern', () => {
+		expect(patternChecks({ kind: 'string' })).toBe('');
+	});
+
+	it('keeps the pattern of the spec as a check, on top of the scalar', () => {
+		expect(patternChecks({ kind: 'string', pattern: '^FR\\d+$' })).toBe(
+			'.check(z.regex(/^FR\\d+$/u))',
+		);
 	});
 });
 

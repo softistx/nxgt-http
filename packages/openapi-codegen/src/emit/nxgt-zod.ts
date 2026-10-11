@@ -6,7 +6,7 @@
 import { exactSchema } from '../ir/schema/nxgt-scalars';
 import type { SchemaNode, StringNode } from '../ir/types';
 import type { EmitOptions } from './context';
-import { jsString, list } from './printer';
+import { jsString, list, regexLiteral } from './printer';
 
 /** The `@nxgt/zod` export that validates the node, with `scalars: 'exact'` and a scalar that has one. */
 export const exactScalar = (
@@ -40,12 +40,16 @@ export function lengthChecks(node: StringNode): string {
 }
 
 /**
- * What the spec's own `pattern` adds to the scalar's schema, which is the
- * whole rule: nothing, for now. The owner's decision on a pattern that
- * differs from the scalar's plugs in here, as `.check(z.regex(…))` or a
- * diagnostic.
+ * The spec's own `pattern`, kept on top of the scalar's schema (the owner's
+ * decision, 2026-10-11): a scalar narrowed by a pattern of its own
+ * (`@pattern("^FR.*$") scalar FrIban extends Nxgt.IBAN`) is then never
+ * validated more loosely than the spec says, and the canonical pattern is
+ * checked besides, redundantly.
  */
-export const patternChecks = (_node: StringNode): string => '';
+export const patternChecks = (node: StringNode): string =>
+	node.pattern === undefined
+		? ''
+		: `.check(z.regex(${regexLiteral(node.pattern)}))`;
 
 /** The line importing the `@nxgt/zod` exports among a file's imports (`z` is Zod's), or none. */
 export function nxgtImport(imports: Iterable<string>): string[] {

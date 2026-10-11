@@ -75,7 +75,9 @@ describe('scalars: pattern', () => {
 describe('scalars: exact', () => {
 	it('prints the schema of @nxgt/zod, imported by name where it is used', async () => {
 		const files = await generated('exact');
-		expect(files['zod.ts']).toContain('export const zIBAN = ibanSchema;');
+		expect(files['zod.ts']).toContain(
+			'export const zIBAN = ibanSchema.check(z.regex(/^[A-Z]{2}\\d{2}[A-Z0-9]{1,30}$/u));',
+		);
 		expect(files['zod.ts']).toContain(
 			"import { emailAddressSchema, emojiSchema, ibanSchema, ipSchema, uuidSchema } from '@nxgt/zod';",
 		);
@@ -92,11 +94,22 @@ describe('scalars: exact', () => {
 	it('adds the bounds of the spec as checks, which every schema takes', async () => {
 		const { 'zod.ts': zod } = await generated('exact');
 		expect(zod).toContain(
-			"bounded: ibanSchema.check(z.minLength(15, 'Too small: expected string to have >=15 characters'), z.maxLength(24, 'Too big: expected string to have <=24 characters')).optional()",
+			"bounded: ibanSchema.check(z.minLength(15, 'Too small: expected string to have >=15 characters'), z.maxLength(24, 'Too big: expected string to have <=24 characters')).check(z.regex(/^[A-Z]{2}\\d{2}[A-Z0-9]{1,30}$/u)).optional()",
 		);
 		expect(zod).toContain(
 			"ipSchema.check(z.maxLength(45, 'Too big: expected string to have <=45 characters')).nullable()",
 		);
+	});
+
+	it('keeps the pattern of the spec on top of the scalar, so a narrowed scalar stays narrow', () => {
+		const be = 'BE68539007547034';
+		const fr = 'FR1420041010050500013M02606';
+		// A plain scalar checks its canonical pattern too, redundantly.
+		expect(ok(Z.zIBAN, fr)).toBe(true);
+		expect(ok(Z.zIBAN, be)).toBe(true);
+		// FrIban: x-nxgt-scalar IBAN, narrowed to ^FR.
+		expect(ok(Z.zFrIban, fr)).toBe(true);
+		expect(ok(Z.zFrIban, be)).toBe(false);
 	});
 
 	it('leaves a codec and an unknown scalar to their pattern', async () => {

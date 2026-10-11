@@ -22,6 +22,9 @@ export type Enums = 'object' | 'union';
 /** A `date-time` as the string JSON carries, or decoded to a `Date`. */
 export type Dates = 'string' | 'date';
 
+/** How a scalar of `@nxgt/typespec` is validated: by its `pattern`, or by the schema of `@nxgt/zod`. */
+export type Scalars = 'pattern' | 'exact';
+
 /** What an object does with undeclared keys once the `unknownKeys` default is applied. */
 export type ObjectMode = UnknownKeys | { schema: SchemaNode };
 
@@ -40,6 +43,12 @@ export interface EmitOptions {
 	alxia?: boolean;
 	/** `date-time` as a string (the default), or decoded to a `Date` by a codec. */
 	dates?: Dates;
+	/**
+	 * A scalar of `@nxgt/typespec` by its pattern (the default), or by its
+	 * `@nxgt/zod` schema, the spec's `pattern` and length bounds kept on top as
+	 * `.check()`s.
+	 */
+	scalars?: Scalars;
 }
 
 /** A property whose default the validator fills in: optional going in, present coming out. */

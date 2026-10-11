@@ -12,6 +12,7 @@ await generate({
 	hono: false,
 	alxia: false,
 	dates: 'string',
+	scalars: 'pattern',
 	lint: false,
 	names: { 'components/schemas/Error.yaml': 'ApiError' },
 	legacyNullable: 'warn',
@@ -29,6 +30,7 @@ await generate({
 | [`hono`](#hono) | `false` | also write `hono.ts`: typed routes for a Hono app |
 | [`alxia`](#alxia) | `false` | also write `alxia.ts`: each operation as the data an alxia app's `app.route(operation, ...middlewares, handler)` takes |
 | [`dates`](#dates) | `'string'` | a `date-time` as its string, or decoded to a `Date` |
+| [`scalars`](#scalars) | `'pattern'` | a string scalar of `@nxgt/typespec` checked by its `pattern`, or by its schema from `@nxgt/zod` |
 | [`lint`](#lint) | `false` | lint the spec with Redocly before generating |
 | [`names`](#names) | `{}` | renames schemas |
 | [`legacyNullable`](#legacynullable) | `'warn'` | tolerate or refuse 3.0's `nullable: true` |
@@ -183,6 +185,36 @@ With `'date'`:
 
 `format: date` stays a string: a day is not an instant, and `new Date()`
 would pin it to a time zone.
+
+## `scalars`
+
+A schema with `x-nxgt-scalar`, a scalar of [`@nxgt/typespec`](typespec.md):
+
+| Value | Validator of `IBAN` |
+| --- | --- |
+| `'pattern'` | `z.string().regex(/^[A-Z]{2}…/)`, the scalar's `pattern` |
+| `'exact'` | `ibanSchema`, the scalar's own schema, imported from `@nxgt/zod` |
+
+With `'exact'`:
+- **Install `@nxgt/zod` (`^0.1.3`)**, an optional peer: the generated code
+  imports it, the generator never does. It peers on `zod` `>=4.6.5`, so
+  that is the oldest `zod` the generated code can run on, where `'pattern'`
+  needs only the generator's `^4.5.4`.
+- **The spec's `pattern` is kept on top of the scalar's rule**, as
+  `ibanSchema.check(z.regex(/^[A-Z]{2}…/u))`, so the validator is never looser
+  than the spec: a scalar narrowed in TypeSpec
+  (`@pattern("^FR.*$") scalar FrIban extends iban`) still refuses a Belgian
+  IBAN. For a scalar as `@nxgt/typespec` declares it, the canonical pattern is
+  checked besides the schema, redundantly. A `minLength` or `maxLength` the
+  spec adds is kept too, as
+  `ibanSchema.check(z.maxLength(34, 'Too big: expected string to have <=34 characters'))`:
+  `.check()` works on every schema, and the message is Zod's own, written out
+  because a scalar's schema answers with its own (`Invalid IBAN`) otherwise.
+- **Only the string scalars are covered.** `DateTime`, `Timestamp`, `BigInt`
+  and `Long` decode to another type, and the numeric scalars are not covered
+  yet: they keep their `pattern` or bounds, as `'pattern'` writes them.
+- **An `x-nxgt-scalar` that `@nxgt/typespec` does not declare** gets an
+  `unknown_scalar` warning, and is checked by its `pattern`.
 
 ## `lint`
 

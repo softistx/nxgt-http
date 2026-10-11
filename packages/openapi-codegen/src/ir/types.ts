@@ -45,6 +45,8 @@ export interface RefNode extends Annotations {
 export interface StringNode extends Annotations {
 	kind: 'string';
 	format?: StringFormat;
+	/** The `x-nxgt-scalar` of a scalar of `@nxgt/typespec`, such as `IBAN`. */
+	scalar?: string;
 	minLength?: number;
 	maxLength?: number;
 	pattern?: string;

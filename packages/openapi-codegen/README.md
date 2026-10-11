@@ -344,6 +344,7 @@ this one does not, when it still starts with the generated header. See
 | `hono` | `boolean` | `false` | also write `hono.ts`; `hono` and `@nxgt/openapi-hono` become runtime dependencies ([more](docs/guide/options.md#hono)) |
 | `alxia` | `boolean` | `false` | also write `alxia.ts`: each operation as the data `@alxia/core` 0.4's `app.route(operation, ...middlewares, handler)` takes; imports `@alxia/core` only for a reply of server-sent events ([more](docs/guide/options.md#alxia)) |
 | `dates` | `'string' \| 'date'` | `'string'` | a `date-time` kept as its string, or decoded to a `Date` by a `z.codec` ([more](docs/guide/options.md#dates)) |
+| `scalars` | `'pattern' \| 'exact'` | `'pattern'` | a string scalar of `@nxgt/typespec` checked by its `pattern`, or by its schema from `@nxgt/zod`, the pattern kept on top ([more](docs/guide/options.md#scalars)) |
 | `lint` | `boolean \| string` | `false` | lint with Redocly first: `true` uses the `redocly.yaml` beside `input` or Redocly's defaults, a string names the config file. Needs `@redocly/openapi-core`; cannot be combined with `context.fs` ([more](docs/guide/options.md#lint)) |
 | `names` | `Record<string, string>` | `{}` | renames schemas, keyed by file relative to the root document plus `#pointer` when the schema is not the whole file ([more](docs/guide/options.md#names)) |
 | `legacyNullable` | `'warn' \| 'error'` | `'warn'` | OpenAPI 3.0's `nullable: true`: read with a warning, or refused ([more](docs/guide/options.md#legacynullable)) |
@@ -591,6 +592,7 @@ interface GenerateOptions extends IROptions {
 	hono?: boolean;
 	alxia?: boolean;
 	dates?: Dates;
+	scalars?: Scalars;
 	lint?: Lint | undefined;
 	validationErrors?: boolean;
 }
@@ -681,6 +683,7 @@ The `enums` option.
 
 ```ts
 type Dates = 'string' | 'date';
+type Scalars = 'pattern' | 'exact';
 ```
 
 The `dates` option.
@@ -724,7 +727,7 @@ type DiagnosticCode =
 	| 'remote_ref' | 'pointer_not_found' | 'ref_cycle' | 'missing_version'
 	| 'unsupported_version' | 'invalid_schema' | 'invalid_option'
 	| 'invalid_config' | 'unsupported_keyword' | 'legacy_nullable'
-	| 'unknown_format' | 'not_enforced' | 'discriminator_fallback'
+	| 'unknown_format' | 'unknown_scalar' | 'not_enforced' | 'discriminator_fallback'
 	| 'name_collision' | 'invalid_operation' | 'unsupported_operation'
 	| 'unsupported_parameter' | 'path_parameter_mismatch'
 	| 'missing_operation_id' | 'duplicate_operation_id' | 'ignored'
@@ -1010,6 +1013,7 @@ declare.
 interface StringNode extends Annotations {
 	kind: 'string';
 	format?: StringFormat;
+	scalar?: string;
 	minLength?: number;
 	maxLength?: number;
 	pattern?: string;
@@ -1029,7 +1033,11 @@ type StringFormat =
 The string formats that are validated; `byte` is base64. Another format is
 an `unknown_format` warning. A schema with `x-nxgt-scalar`, a scalar of
 `@nxgt/typespec`, has no `format` in the node but `date-time`, and no warning:
-its `pattern` carries its rule, and the code is `z.string().regex(…)`.
+its name is the node's `scalar`, and its `pattern` carries its rule, so the
+code is `z.string().regex(…)`, or, with `scalars: 'exact'`, the scalar's
+schema from `@nxgt/zod` (`ibanSchema`) with the `pattern` kept on top as
+`.check(z.regex(…))`. A `scalar` that `@nxgt/typespec` does
+not declare is an `unknown_scalar` warning.
 
 ##### `NumberNode`
 

@@ -15,16 +15,14 @@
  */
 import type { OperationIR } from '../../ir/types';
 import type { EmitContext } from '../context';
-import { HELPERS } from '../operation/helpers';
 import { operationDocs } from '../operation/read';
 import { docComment, file, jsString, list, propertyKey } from '../printer';
 import { operationConst } from './names';
-import { type Issue, LOCALS, type Printing } from './printing';
+import { preamble } from './preamble';
+import type { Issue, Printing } from './printing';
 import { replySchema } from './reply';
 import { bodySchema, paramsObject } from './request';
 import { METHODS, STATUSES, shapeOf, unroutable } from './routable';
-
-const RUNTIME = '@alxia/core';
 
 /** Each location's part of alxia's route schema, in the order alxia validates them. */
 const PARTS = [
@@ -41,13 +39,17 @@ const blank = (ctx: EmitContext): Printing => ({
 	locals: new Set(),
 	uses: new Set(),
 	codecs: new Set(),
+	imports: new Set(),
 	declared: new Set(ctx.ir.schemas.map((schema) => schema.id)),
 	zod: false,
 	eventStream: false,
 });
 
+/** The sets of a printing that `merge` unions. */
+const MERGED = ['helpers', 'locals', 'uses', 'codecs', 'imports'] as const;
+
 function merge(into: Printing, from: Printing): void {
-	for (const key of ['helpers', 'locals', 'uses', 'codecs'] as const) {
+	for (const key of MERGED) {
 		for (const value of from[key]) (into[key] as Set<string>).add(value);
 	}
 	into.zod ||= from.zod;
@@ -119,32 +121,6 @@ const USAGE = `/**
  * \`matchesSpec(app, operations)\`, from \`@alxia/openapi\`, fails while an
  * operation has no route.
  */`;
-
-/** The imports, then the helpers the schemas call. */
-function preamble(printing: Printing): string[] {
-	const { ctx } = printing;
-	const imports: string[] = [];
-	if (printing.eventStream) {
-		imports.push(`import { eventStream } from '${RUNTIME}';`);
-	}
-	const helpers = [...printing.helpers];
-	if (printing.zod || helpers.some((h) => h === 'numeric' || h === 'flag')) {
-		imports.push("import { z } from 'zod';");
-	}
-	if (printing.uses.size > 0) {
-		const names = [...printing.uses]
-			.map((id) => `z${ctx.schema(id).name}`)
-			.sort();
-		const ext = ctx.options.importExtension;
-		imports.push(`import ${list('{ ', names, ' }', '')} from './zod${ext}';`);
-	}
-	if (printing.codecs.has('isoDate')) helpers.push('isoDate');
-	return [
-		...(imports.length > 0 ? [imports.join('\n')] : []),
-		...helpers.sort().map((helper) => HELPERS[helper]),
-		...[...printing.locals].sort().map((local) => LOCALS[local]),
-	];
-}
 
 /** `operations`, every constant by its operationId. */
 function table(kept: readonly OperationIR[]): string {

@@ -31,6 +31,8 @@ export interface Printing {
 	uses: Set<string>;
 	/** What `expr` needs declared: the date codec. */
 	codecs: Set<string>;
+	/** The `@nxgt/zod` exports (and `z`) the schemas call. */
+	imports: Set<string>;
 	declared: ReadonlySet<string>;
 	/** Whether a printed schema calls `z.` itself, so `z` is imported. */
 	zod: boolean;
@@ -47,6 +49,7 @@ export function scope(printing: Printing, indent: string): Scope {
 		indent,
 		uses: printing.uses,
 		helpers: printing.codecs,
+		imports: printing.imports,
 	};
 }
 

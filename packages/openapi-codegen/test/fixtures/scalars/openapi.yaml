@@ -1,0 +1,124 @@
+openapi: 3.1.0
+info:
+  title: Scalars
+  version: '1'
+  description: >-
+    Generated with `scalars: 'exact'`. Scalars of @nxgt/typespec as a schema, a
+    property, a parameter, an item and an inline body: each is the schema of
+    @nxgt/zod, with the bounds the spec adds. A codec and an unknown scalar keep
+    their pattern.
+paths:
+  /accounts:
+    get:
+      operationId: listAccounts
+      parameters:
+        - name: iban
+          in: query
+          schema: { $ref: '#/components/schemas/IBAN' }
+        - name: ids
+          in: query
+          schema:
+            type: array
+            items: { $ref: '#/components/schemas/UUID' }
+        - name: owner
+          in: query
+          description: An inline scalar, maxLength added by the spec.
+          schema:
+            type: string
+            format: email
+            pattern: ^[^@]+@[^@]+$
+            maxLength: 254
+            x-nxgt-scalar: EmailAddress
+        - name: x-client-ip
+          in: header
+          schema: { $ref: '#/components/schemas/IP' }
+      responses:
+        '200':
+          description: The accounts.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Account' }
+    post:
+      operationId: openAccount
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [owner]
+              properties:
+                owner:
+                  type: string
+                  format: email
+                  pattern: ^[^@]+@[^@]+$
+                  x-nxgt-scalar: EmailAddress
+      responses:
+        '201':
+          description: Opened.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Account' }
+components:
+  schemas:
+    IBAN:
+      type: string
+      format: iban
+      pattern: ^[A-Z]{2}\d{2}[A-Z0-9]{1,30}$
+      x-nxgt-scalar: IBAN
+    FrIban:
+      description: An IBAN narrowed to France, as `@pattern("^FR.*$") scalar FrIban extends iban`.
+      type: string
+      format: iban
+      pattern: ^FR.*$
+      x-nxgt-scalar: IBAN
+    UUID:
+      type: string
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      x-nxgt-scalar: UUID
+    IP:
+      type: string
+      format: ip
+      pattern: ^[0-9a-f.:]+$
+      x-nxgt-scalar: IP
+    DateTime:
+      type: string
+      format: date-time
+      pattern: ^\d{4}-\d{2}-\d{2}T.*$
+      x-nxgt-scalar: DateTime
+    Account:
+      type: object
+      required: [id, iban, openedAt]
+      properties:
+        id: { $ref: '#/components/schemas/UUID' }
+        iban:
+          description: The IBAN, at most 24 characters here.
+          allOf:
+            - { $ref: '#/components/schemas/IBAN' }
+        bounded:
+          type: string
+          format: iban
+          pattern: ^[A-Z]{2}\d{2}[A-Z0-9]{1,30}$
+          minLength: 15
+          maxLength: 24
+          x-nxgt-scalar: IBAN
+        mood:
+          type: string
+          minLength: 1
+          maxLength: 8
+          x-nxgt-scalar: Emoji
+        lastIp:
+          type: [string, 'null']
+          maxLength: 45
+          x-nxgt-scalar: IP
+        peers:
+          type: array
+          items: { $ref: '#/components/schemas/IP' }
+        openedAt: { $ref: '#/components/schemas/DateTime' }
+        legacy:
+          type: string
+          pattern: ^L-\d+$
+          x-nxgt-scalar: Legacy

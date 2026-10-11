@@ -13,7 +13,12 @@
  *     and an `instanceof` that fails for one of them.
  *   - Declarations, from `tsc --emitDeclarationOnly` against
  *     `tsconfig.build.json`, which excludes the `*.spec.ts` files that
- *     `tsconfig.json` still typechecks.
+ *     `tsconfig.json` still typechecks. Their relative imports are then
+ *     given the `.js` (or `/index.js`) Node needs: tsc keeps the sources'
+ *     extensionless `./client/types`, which a consumer under `nodenext`
+ *     cannot resolve, so every type re-exported through it is `any`
+ *     (softistx/nxgt-http#132). The emitted JavaScript is bundled, and
+ *     imports its chunks with their extension, so it needs nothing.
  *
  * Hand-written `.d.ts` files are copied, not emitted: tsc passes them through
  * untouched, so an ambient module augmentation would otherwise never reach
@@ -23,6 +28,8 @@
 import { readdir, rm } from 'node:fs/promises';
 import { dirname, join, relative, resolve } from 'node:path';
 import { $ } from 'bun';
+import { declarationSpecifiers } from './scripts/artifacts/declarations';
+import { withExtensions } from './scripts/artifacts/dts-imports';
 
 const pkg = await Bun.file('package.json').json();
 const name: string = pkg.name;
@@ -82,6 +89,32 @@ for (const line of listed.split('\n')) {
 	if (line.startsWith('TSFILE: ')) written.add(resolve(line.slice(8).trim()));
 }
 const emitted = new Set(written);
+
+// Node needs the extension tsc leaves off (`withExtensions`).
+for (const file of emitted) {
+	if (!file.endsWith('.d.ts')) continue;
+	const text = await Bun.file(file).text();
+	const fixed = withExtensions(text, file, emitted);
+	if (fixed.unmatched.length > 0) {
+		console.error(
+			`${name}: ${file} imports ${fixed.unmatched.join(', ')}, which no emitted declaration matches`,
+		);
+		process.exit(1);
+	}
+	if (fixed.text !== text) await Bun.write(file, fixed.text);
+	// The scanner verify:artifacts reads imports with, strings and template
+	// types handled, is the judge: a relative import it finds without `.js`
+	// is one the rewrite missed, and would fail under `nodenext`.
+	const missed = declarationSpecifiers(fixed.text).filter(
+		(path) => path.startsWith('.') && !/\.[cm]?js$/.test(path),
+	);
+	if (missed.length > 0) {
+		console.error(
+			`${name}: ${file} still imports ${missed.join(', ')} without an extension`,
+		);
+		process.exit(1);
+	}
+}
 
 // Copy hand-written declarations, preserving their path under src/.
 async function* walk(dir: string): AsyncGenerator<string> {

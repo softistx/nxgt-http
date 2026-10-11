@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { $ } from 'bun';
-import type { Pkg } from './packages';
+import { type Pkg, ROOT } from './packages';
 import { onRegistry } from './registry';
 import { readTarball, type Tarball } from './tarball';
 
@@ -60,6 +60,24 @@ async function optionalPeersOf({
 }
 
 /**
+ * The `typescript` the probe installs: the workspace's own, its root
+ * `devDependencies` range. Left to Bun, the probe would take the newest
+ * version the packages' `^6.0.3 || ^7.0.0` peer allows, so the fixture emit
+ * (`emit.ts`) would run TypeScript 7 in every job and 6 in none. With the
+ * root's range it runs 6 (`~6.0.3`) in CI's main job, and 7 in "Newest
+ * peers", whose `newest-peers.ts` rewrites that range to `^7.0.0`. Empty
+ * when the root names no `typescript`.
+ */
+export function workspaceTypeScript(
+	root: Record<string, unknown>,
+): Record<string, string> {
+	const range = (
+		root['devDependencies'] as Record<string, string> | undefined
+	)?.['typescript'];
+	return range === undefined ? {} : { typescript: range };
+}
+
+/**
  * Installs the tarballs in `workdir` as a consumer would; false if the install
  * fails. `overrides` makes the packages resolve to each other's tarballs, not
  * to the registry's published versions.
@@ -69,12 +87,19 @@ export async function installAsConsumer(
 	packed: Packed,
 ): Promise<boolean> {
 	const { overrides } = packed;
+	const typescript = workspaceTypeScript(
+		await Bun.file(join(ROOT, 'package.json')).json(),
+	);
 	const probe = {
 		name: 'nxgt-http-artifact-probe',
 		private: true,
 		version: '0.0.0',
 		type: 'module',
-		dependencies: { ...(await optionalPeersOf(packed)), ...overrides },
+		dependencies: {
+			...(await optionalPeersOf(packed)),
+			...typescript,
+			...overrides,
+		},
 		overrides,
 		resolutions: overrides,
 	};
@@ -85,7 +110,15 @@ export async function installAsConsumer(
 
 	console.log('Installing them as a consumer would…');
 	const install = await $`bun install`.cwd(workdir).quiet().nothrow();
-	if (install.exitCode === 0) return true;
+	if (install.exitCode === 0) {
+		const installed = Bun.file(
+			join(workdir, 'node_modules/typescript/package.json'),
+		);
+		if (await installed.exists()) {
+			console.log(`  typescript ${(await installed.json()).version}`);
+		}
+		return true;
+	}
 	console.error(`\n${install.stderr.toString().trim()}`);
 	console.error(
 		'\nThe install failed. A required peer on a package that is on no\n' +

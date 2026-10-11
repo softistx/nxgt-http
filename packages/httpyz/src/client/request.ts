@@ -1,5 +1,6 @@
 /** A call that reads its reply: built, dispatched, and read against `responses`. */
-import { joinSignals } from '../cancel/abort';
+import { isAbortError, joinSignals } from '../cancel/abort';
+import { TimeoutError } from '../errors/errors';
 import type { Middleware } from '../middleware/compose';
 import { readReply, toSpec } from '../reply/read-reply';
 import type { Responses } from '../reply/types';
@@ -24,10 +25,8 @@ export const request = async (
 	const { responses, validate = true, decode = true, latest, ...call } = given;
 	const replaced = latestSignal(state, latest);
 	const built = await build(state, method, path, call);
-	const { deadline, signal } = withDeadline(
-		built.timeout,
-		joinSignals(built.signal, replaced),
-	);
+	const caller = joinSignals(built.signal, replaced);
+	const { deadline, signal } = withDeadline(built.timeout, caller);
 	const response = await dispatch(
 		state,
 		new Request(built.url, { ...built.init, signal: signal ?? null }),
@@ -39,10 +38,25 @@ export const request = async (
 			added,
 		},
 	);
-	return readReply(
-		built.context,
-		responses === undefined ? undefined : toSpec(responses),
-		response,
-		{ validate, decode },
-	);
+	try {
+		return await readReply(
+			built.context,
+			responses === undefined ? undefined : toSpec(responses),
+			response,
+			{ validate, decode },
+		);
+	} catch (error) {
+		// The deadline covers the body too: fetch resolves at the headers, and
+		// the signal then errors the body read with its own DOMException.
+		// A caller's abort that came first stays as it is.
+		if (
+			built.timeout !== undefined &&
+			deadline?.aborted &&
+			!caller?.aborted &&
+			isAbortError(error)
+		) {
+			throw new TimeoutError(built.context, built.timeout, { cause: error });
+		}
+		throw error;
+	}
 };

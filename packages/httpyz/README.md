@@ -344,7 +344,9 @@ The wait before each retry is random, up to 300 ms doubled at each retry. A
 reply's `Retry-After`, in seconds or as a date, wins over it. A `Retry-After`
 longer than `maxDelay` is not waited for: that reply is the reply. The wait
 ends early when the call times out or is aborted: `timeout` bounds the whole
-call, its retries and their waits included.
+call, its retries and their waits included. It covers reading the reply's
+body too: a body that stalls past `timeout` fails with the same `TimeoutError`
+as a reply that never came (a stream is bounded until its headers only).
 
 | `RetryOptions` | Default |
 | --- | --- |

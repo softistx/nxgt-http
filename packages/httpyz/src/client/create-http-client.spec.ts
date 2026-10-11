@@ -316,6 +316,44 @@ describe('errors', () => {
 		expect(late).toBeInstanceOf(TimeoutError);
 	});
 
+	/** Headers at once, then the start of a JSON body that stalls until the signal aborts, as fetch's does. */
+	const stalled = async (request: Request) => {
+		const body = new ReadableStream<Uint8Array>({
+			start(controller) {
+				controller.enqueue(new TextEncoder().encode('{"data":'));
+				request.signal.addEventListener('abort', () =>
+					controller.error(request.signal.reason),
+				);
+			},
+		});
+		return new Response(body, {
+			headers: { 'content-type': 'application/json' },
+		});
+	};
+
+	it('throws a TimeoutError when the deadline fires while the body is read', async () => {
+		const late = await failure(
+			stub(stalled, { timeout: 20 }).post('/health', {}),
+		);
+		expect(late).toBeInstanceOf(TimeoutError);
+		expect((late as TimeoutError).timeout).toBe(20);
+		expect((late as TimeoutError).method).toBe('post');
+		expect((late as TimeoutError).cause).toBeInstanceOf(DOMException);
+	});
+
+	it('lets a caller abort during the body read through as it is', async () => {
+		const controller = new AbortController();
+		const pending = failure(
+			stub(stalled, { timeout: 5000 }).post('/health', {
+				signal: controller.signal,
+			}),
+		);
+		setTimeout(() => controller.abort(), 10);
+		const aborted = await pending;
+		expect(aborted).not.toBeInstanceOf(TimeoutError);
+		expect((aborted as Error).name).toBe('AbortError');
+	});
+
 	it('lets an abort the caller asked for through as it is', async () => {
 		const controller = new AbortController();
 		const pending = failure(

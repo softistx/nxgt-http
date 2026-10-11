@@ -8,11 +8,10 @@ on:
     # CI at all — no tests, no artifact check.
     branches: [develop, main, 'feat/**']
   # On `develop` as well, as nxgt-data does: a merge into `develop` gets a run
-  # of its own — the Version PR's merge and two PRs merged back to back are
-  # otherwise never tested together — and the bun cache it writes under
-  # `refs/heads/develop` is one every pull request can read (a cache a pull
-  # request writes is scoped to its merge ref, readable by no other). The
-  # minutes are free here, as the `runs-on` comment says.
+  # of its own. The Version PR's merge, and two pull requests merged back to
+  # back, are otherwise never tested together. (nxgt-data's other reason, its
+  # caches, does not apply: this workflow caches nothing.) The minutes are
+  # free here, as the `runs-on` comment says.
   push:
     branches: [develop]
 
@@ -75,8 +74,9 @@ jobs:
       # own output. Requiring a changeset there would mean requiring one for
       # the act of releasing.
       - name: Changeset present
-        # Only on a pull request: on a push to `develop` there is no base to
-        # compare with, and the changesets were checked on the way in.
+        # Only on a pull request: on a push to `develop` the diff against
+        # origin/develop is empty, so the step could only pass; the changesets
+        # were checked on the way in.
         if: >-
           github.event_name == 'pull_request' &&
           github.head_ref != 'changeset-release/develop'

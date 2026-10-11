@@ -58,10 +58,11 @@ export interface GenerateOptions extends IROptions {
 	 * A scalar of `@nxgt/typespec` (`x-nxgt-scalar`): checked by its `pattern`
 	 * (`pattern`, the default), or by its own schema from `@nxgt/zod`
 	 * (`exact`), imported by the generated code, which then needs that
-	 * optional peer. The spec's own `pattern` and length bounds are kept on
-	 * top of that schema, as `.check()`s. `DateTime`, `Timestamp`, `BigInt`
-	 * and `Long` decode to another type, and the numeric scalars are not
-	 * covered yet: they keep their pattern or bounds either way.
+	 * optional peer. The spec's own `pattern`, length bounds and, for a
+	 * number, the bounds and `multipleOf` the schema does not already
+	 * enforce are kept on top of it, as `.check()`s. `DateTime`, `Timestamp`,
+	 * `BigInt` and `Long` decode to another type: they keep their pattern
+	 * either way.
 	 */
 	scalars?: Scalars;
 	/**

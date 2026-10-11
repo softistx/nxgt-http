@@ -30,7 +30,7 @@ await generate({
 | [`hono`](#hono) | `false` | also write `hono.ts`: typed routes for a Hono app |
 | [`alxia`](#alxia) | `false` | also write `alxia.ts`: each operation as the data an alxia app's `app.route(operation, ...middlewares, handler)` takes |
 | [`dates`](#dates) | `'string'` | a `date-time` as its string, or decoded to a `Date` |
-| [`scalars`](#scalars) | `'pattern'` | a string scalar of `@nxgt/typespec` checked by its `pattern`, or by its schema from `@nxgt/zod` |
+| [`scalars`](#scalars) | `'pattern'` | a string or numeric scalar of `@nxgt/typespec` checked by its `pattern`, or by its schema from `@nxgt/zod` |
 | [`lint`](#lint) | `false` | lint the spec with Redocly before generating |
 | [`names`](#names) | `{}` | renames schemas |
 | [`legacyNullable`](#legacynullable) | `'warn'` | tolerate or refuse 3.0's `nullable: true` |
@@ -210,11 +210,28 @@ With `'exact'`:
   `ibanSchema.check(z.maxLength(34, 'Too big: expected string to have <=34 characters'))`:
   `.check()` works on every schema, and the message is Zod's own, written out
   because a scalar's schema answers with its own (`Invalid IBAN`) otherwise.
-- **Only the string scalars are covered.** `DateTime`, `Timestamp`, `BigInt`
-  and `Long` decode to another type, and the numeric scalars are not covered
-  yet: they keep their `pattern` or bounds, as `'pattern'` writes them.
+- **The numeric scalars are covered too** (`Latitude`, `Longitude`, `Port`,
+  `PositiveInt`, `SafeInt` and the other `Negative`/`NonNegative`/`NonPositive`/
+  `Positive` ones): `portSchema` instead of `z.int32().min(0).max(65535)`. A
+  bound the schema already enforces is not written again, so a scalar the
+  spec leaves as `@nxgt/typespec` declares it is the bare `portSchema`, which
+  also keeps one violation from being reported twice. A bound the spec
+  narrows (`@maxValue(1023) scalar WellKnownPort extends port`), and a
+  `multipleOf`, stay on top as `.check()`, with Zod's own messages:
+  `portSchema.check(z.lte(1023, 'Too big: expected number to be <=1023'))`.
+  A spec that says `integer` of a float scalar, or the reverse, is not that
+  scalar and keeps its bounds. One difference in what is accepted: **`-0`**.
+  JSON Schema cannot refuse it, so `'pattern'` accepts it everywhere, and
+  the schemas of `@nxgt/zod` refuse it for an integer scalar (`Port`,
+  `SafeInt`, `NonNegativeInt`, `NonPositiveInt`, as GraphQL's `Int` does);
+  a float scalar that admits `0` (`NonNegativeFloat`, `Latitude`, …) still
+  accepts it. The messages of a refused value can differ too, as the
+  schema's own bounds answer, not the spec's.
+- **`DateTime`, `Timestamp`, `BigInt` and `Long` stay out.** They decode to
+  another type, so they keep their `pattern`, as `'pattern'` writes it.
 - **An `x-nxgt-scalar` that `@nxgt/typespec` does not declare** gets an
-  `unknown_scalar` warning, and is checked by its `pattern`.
+  `unknown_scalar` warning, and is checked by its `pattern` (a string) or
+  its bounds (a number).
 
 ## `lint`
 

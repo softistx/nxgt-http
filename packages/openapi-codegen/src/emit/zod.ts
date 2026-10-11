@@ -21,6 +21,7 @@ import { appliesDefault, type EmitContext, type ObjectMode } from './context';
 import {
 	exactScalar,
 	lengthChecks,
+	numberChecks,
 	patternChecks,
 	printsWithoutZ,
 	zodImports,
@@ -165,7 +166,7 @@ function bare(ctx: EmitContext, node: SchemaNode, scope: Scope): string {
 		case 'string':
 			return string(ctx, node, scope);
 		case 'number':
-			return number(node);
+			return number(ctx, node, scope);
 		case 'boolean':
 			return 'z.boolean()';
 		case 'null':
@@ -226,7 +227,13 @@ function string(ctx: EmitContext, node: StringNode, scope: Scope): string {
 	return `z.codec(${out}, z.date(), isoDate)`;
 }
 
-function number(node: NumberNode): string {
+function number(ctx: EmitContext, node: NumberNode, scope: Scope): string {
+	// The scalar's schema first, then the spec's bounds kept on top of it.
+	const exact = exactScalar(ctx.options, node);
+	if (exact !== undefined) {
+		scope.imports.add(exact);
+		return exact + numberChecks(node);
+	}
 	let out = !node.integer
 		? 'z.number()'
 		: node.format === 'int32'

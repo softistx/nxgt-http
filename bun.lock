@@ -188,6 +188,7 @@
       "devDependencies": {
         "@nxgt/openapi-codegen": "workspace:^",
         "@nxgt/openapi-hono": "workspace:^",
+        "@nxgt/zod": "^0.1.3",
         "@types/bun": "^1.4.0",
         "@typespec/compiler": "1.17.0",
         "@typespec/http": "1.17.0",

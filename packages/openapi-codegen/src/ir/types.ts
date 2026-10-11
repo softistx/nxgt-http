@@ -55,6 +55,8 @@ export interface StringNode extends Annotations {
 export interface NumberNode extends Annotations {
 	kind: 'number';
 	integer: boolean;
+	/** The `x-nxgt-scalar` of a scalar of `@nxgt/typespec`, such as `Port`. */
+	scalar?: string;
 	format?: NumberFormat;
 	minimum?: number;
 	maximum?: number;

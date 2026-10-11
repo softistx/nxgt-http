@@ -36,18 +36,19 @@ const isRegExp = (pattern: string): boolean =>
 		}
 	});
 
-/** A scalar name `@nxgt/typespec` does not declare is checked by its `pattern` alone. */
+/** A scalar name `@nxgt/typespec` does not declare is checked by its `pattern` (a string) or bounds (a number) alone. */
 function warnUnknownScalar(
 	state: ScalarState,
 	scalar: string,
 	at: Location,
+	rule: 'pattern' | 'bounds' = 'pattern',
 ): void {
 	const key = `x-nxgt-scalar:${scalar}`;
 	if (isNxgtScalar(scalar) || state.warnedFormats.has(key)) return;
 	state.warnedFormats.add(key);
 	state.diagnostics.warning(
 		'unknown_scalar',
-		`\`x-nxgt-scalar: ${scalar}\` is not a scalar of @nxgt/typespec; it is checked by its \`pattern\` alone`,
+		`\`x-nxgt-scalar: ${scalar}\` is not a scalar of @nxgt/typespec; it is checked by its \`${rule}\` alone`,
 		child(at, 'x-nxgt-scalar'),
 	);
 }
@@ -120,6 +121,11 @@ export function numberNode(
 	at: Location,
 ): SchemaNode {
 	const node: NumberNode = { kind: 'number', integer };
+	const scalar = asString(s['x-nxgt-scalar']);
+	if (scalar !== undefined) {
+		node.scalar = scalar;
+		warnUnknownScalar(state, scalar, at, 'bounds');
+	}
 	const format = asString(s['format']);
 	if (format !== undefined) {
 		if (NUMBER_FORMATS.has(format)) node.format = format as NumberFormat;

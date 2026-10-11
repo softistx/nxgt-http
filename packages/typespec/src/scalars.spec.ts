@@ -23,6 +23,21 @@ import {
 	type ScalarEntry,
 } from '../test/scalars';
 
+/** The numeric scalars the generator maps (`NUMBER_SCALARS` of its IR). */
+const NUMBER_SCALARS = [
+	'Latitude',
+	'Longitude',
+	'NegativeFloat',
+	'NegativeInt',
+	'NonNegativeFloat',
+	'NonNegativeInt',
+	'NonPositiveFloat',
+	'NonPositiveInt',
+	'Port',
+	'PositiveFloat',
+	'PositiveInt',
+	'SafeInt',
+];
 const LIB = fileURLToPath(new URL('../lib/', import.meta.url));
 const served = { '3.1.0': routes31, '3.2.0': routes32 };
 
@@ -223,4 +238,56 @@ describe('the scalars the generator knows', () => {
 			});
 		}
 	}
+});
+
+describe('the numeric scalars, with scalars: exact', () => {
+	// The schemas of @nxgt/zod, not the bounds of the spec: generated beside the
+	// fixtures (git ignores them), then each sample of the registry is run.
+	const output = 'test/generated/scalars-exact';
+	const numeric = entries.filter(
+		(entry): entry is ScalarEntry =>
+			declared(entry) &&
+			(NUMBER_SCALARS as readonly string[]).includes(entry.name),
+	);
+
+	it('accepts and refuses what scalars: pattern does, but -0 of an integer', async () => {
+		await generate({
+			input: spec('scalars', '3.1.0'),
+			output,
+			scalars: 'exact',
+		});
+		const zod = (await import(
+			fileURLToPath(new URL(`../${output}/zod.ts`, import.meta.url))
+		)) as Record<string, { safeParse(value: unknown): { success: boolean } }>;
+		expect(numeric.length).toBe(12);
+		for (const entry of numeric) {
+			const schema = zod[`z${entry.name}`];
+			for (const sample of entry.accept) {
+				expect({
+					[entry.name]: sample,
+					ok: schema?.safeParse(sample).success,
+				}).toEqual({ [entry.name]: sample, ok: true });
+			}
+			for (const sample of entry.refuse) {
+				expect({
+					[entry.name]: sample,
+					ok: schema?.safeParse(sample).success,
+				}).toEqual({ [entry.name]: sample, ok: false });
+			}
+		}
+		// `-0`: no JSON Schema can refuse it, and the schemas of @nxgt/zod do
+		// for an integer, as GraphQL's `Int` does.
+		for (const name of [
+			'NonNegativeInt',
+			'NonPositiveInt',
+			'Port',
+			'SafeInt',
+		]) {
+			expect(zod[`z${name}`]?.safeParse(-0).success, name).toBe(false);
+			expect(zod[`z${name}`]?.safeParse(0).success, name).toBe(true);
+		}
+		for (const name of ['NonNegativeFloat', 'NonPositiveFloat', 'Latitude']) {
+			expect(zod[`z${name}`]?.safeParse(-0).success, name).toBe(true);
+		}
+	});
 });

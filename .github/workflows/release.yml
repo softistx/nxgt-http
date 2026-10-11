@@ -32,6 +32,9 @@ jobs:
     # on, and the concurrency group above never cancels one under way — this
     # only stops a run that has hung.
     timeout-minutes: 10
+    outputs:
+      published: ${{ steps.changesets.outputs.published }}
+      published-packages: ${{ steps.changesets.outputs.published-packages }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -44,6 +47,7 @@ jobs:
       # No npmrc step: `bunfig.toml` reads $NPM_TOKEN from the environment.
       # v2 of the action no longer writes one from NPM_TOKEN either.
       - name: Version or publish
+        id: changesets
         uses: changesets/action@v2
         with:
           version-script: bun run changeset:version
@@ -57,3 +61,31 @@ jobs:
           # NPM_TOKEN publishes, read through bunfig.toml.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  # A job of its own, so `issues: write` reaches it alone and not the job that
+  # holds the publish token. `!cancelled()` lets it run when the release failed
+  # after publishing (the outputs are still set); `continue-on-error` keeps a
+  # failure here from turning the release red.
+  close-issues:
+    name: Close released issues
+    needs: release
+    if: ${{ !cancelled() && needs.release.outputs.published == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup
+        uses: ./.github/actions/setup
+      - name: Close the issues this release fixed
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PUBLISHED: ${{ needs.release.outputs.published-packages }}
+        run: bun scripts/close-released-issues.ts --published "$PUBLISHED"

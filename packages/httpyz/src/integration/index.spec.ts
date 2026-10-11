@@ -13,7 +13,7 @@ const nextEvent: ServerEvent = {
 /** The README's example, as written: the error's body through push and end. */
 async function readError(body: string) {
 	const error = new UndeclaredStatusError(
-		{ method: 'post', path: '/graphql' } as never,
+		{ method: 'post', path: '/graphql' },
 		new Response(body, {
 			status: 404,
 			headers: { 'content-type': 'text/event-stream' },

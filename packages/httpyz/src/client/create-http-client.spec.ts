@@ -338,7 +338,20 @@ describe('errors', () => {
 		expect(late).toBeInstanceOf(TimeoutError);
 		expect((late as TimeoutError).timeout).toBe(20);
 		expect((late as TimeoutError).method).toBe('post');
+		expect((late as TimeoutError).path).toBe('/health');
+		expect((late as Error).message).toBe(
+			'POST /health: reply body not read within 20 ms',
+		);
 		expect((late as TimeoutError).cause).toBeInstanceOf(DOMException);
+	});
+
+	it('throws a TimeoutError with a caller signal that never aborts', async () => {
+		const late = await failure(
+			stub(stalled, { timeout: 20 }).post('/health', {
+				signal: new AbortController().signal,
+			}),
+		);
+		expect(late).toBeInstanceOf(TimeoutError);
 	});
 
 	it('lets a caller abort during the body read through as it is', async () => {

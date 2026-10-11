@@ -5,7 +5,7 @@ import type { Middleware } from '../middleware/compose';
 import { readReply, toSpec } from '../reply/read-reply';
 import type { Responses } from '../reply/types';
 import { build, type Given } from './build';
-import { dispatch, withDeadline } from './dispatch';
+import { dispatch, timedOut, withDeadline } from './dispatch';
 import { type ClientState, latestSignal } from './state';
 import type { Method } from './types';
 
@@ -25,8 +25,10 @@ export const request = async (
 	const { responses, validate = true, decode = true, latest, ...call } = given;
 	const replaced = latestSignal(state, latest);
 	const built = await build(state, method, path, call);
-	const caller = joinSignals(built.signal, replaced);
-	const { deadline, signal } = withDeadline(built.timeout, caller);
+	const { deadline, signal } = withDeadline(
+		built.timeout,
+		joinSignals(built.signal, replaced),
+	);
 	const response = await dispatch(
 		state,
 		new Request(built.url, { ...built.init, signal: signal ?? null }),
@@ -51,11 +53,15 @@ export const request = async (
 		// A caller's abort that came first stays as it is.
 		if (
 			built.timeout !== undefined &&
-			deadline?.aborted &&
-			!caller?.aborted &&
+			timedOut(deadline, signal) &&
 			isAbortError(error)
 		) {
-			throw new TimeoutError(built.context, built.timeout, { cause: error });
+			throw new TimeoutError(
+				built.context,
+				built.timeout,
+				{ cause: error },
+				'body',
+			);
 		}
 		throw error;
 	}

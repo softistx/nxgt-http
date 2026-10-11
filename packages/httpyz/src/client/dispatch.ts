@@ -38,6 +38,18 @@ export const withDeadline = (
 };
 
 /**
+ * Whether the deadline, and not the caller, ended the call: the combined
+ * signal's reason is the first source's to abort, so it is the deadline's own.
+ */
+export const timedOut = (
+	deadline: AbortSignal | undefined,
+	signal: AbortSignal | undefined,
+): boolean =>
+	deadline?.aborted === true &&
+	signal?.aborted === true &&
+	signal.reason === deadline.reason;
+
+/**
  * Through `retry`, `auth`, `use` and then `added`, what `use()` added, to
  * `fetch`: fetch's failure and the deadline made errors.
  */
@@ -68,7 +80,7 @@ export const dispatch = async (
 	try {
 		return await compose(layers, send, context)(request);
 	} catch (error) {
-		if (deadline?.aborted && timeout !== undefined) {
+		if (timeout !== undefined && timedOut(deadline, request.signal)) {
 			throw new TimeoutError(context, timeout, { cause: error });
 		}
 		throw error;

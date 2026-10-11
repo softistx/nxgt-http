@@ -432,8 +432,9 @@ the library from `dist/`, so after pulling `develop` without building, about
 (`missing-implementation: Extern declaration must have an implementation in
 JS file`). The package's `test` script therefore runs
 `scripts/check-dist-fresh.ts` first, which fails with "dist is older than
-`<file>`: run `bun run build` first" when a non-spec file under `src/` or
-`lib/` is newer than `dist/index.js`, or `dist` is missing. CI builds before
+`<file>`: run `bun run build` first" when a non-spec file under `src/` is
+newer than `dist/index.js`, or `dist` is missing (`lib/*.tsp` is read in
+place, so it never makes `dist` stale). CI builds before
 it tests, so it never trips there. The script is in the root `scripts/`, not
 in the package, so it is not published.
 

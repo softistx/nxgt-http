@@ -60,7 +60,9 @@ function exists(path: string): boolean {
 if (import.meta.main) {
 	const [pkg = '.', ...rest] = process.argv.slice(2);
 	const root = resolve(pkg);
-	const dirs = rest.length > 0 ? rest : ['src', 'lib'];
+	// `src/` only: the `.tsp` files under `lib/` are read in place by the
+	// compiler, so editing one never makes `dist` stale.
+	const dirs = rest.length > 0 ? rest : ['src'];
 	const entry = join(root, 'dist', 'index.js');
 	const dist = exists(entry)
 		? { file: entry, mtimeMs: statSync(entry).mtimeMs }

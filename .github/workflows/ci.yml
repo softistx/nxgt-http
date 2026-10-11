@@ -7,12 +7,18 @@ on:
     # are merged without waiting for a human. Without this they merged with no
     # CI at all — no tests, no artifact check.
     branches: [develop, main, 'feat/**']
+  # On `develop` as well, as nxgt-data does: a merge into `develop` gets a run
+  # of its own — the Version PR's merge and two PRs merged back to back are
+  # otherwise never tested together — and the bun cache it writes under
+  # `refs/heads/develop` is one every pull request can read (a cache a pull
+  # request writes is scoped to its merge ref, readable by no other). The
+  # minutes are free here, as the `runs-on` comment says.
+  push:
+    branches: [develop]
 
 # A pull request's new push supersedes its run in progress. A push to
-# `develop` never would: each one is in a group of its own, by run id. This
-# workflow runs on pull requests alone today, so that half only matters if a
-# `push` trigger is added — nxgt-janus runs on develop to fill its caches,
-# and there a cancelled develop run is a cold cache for every pull request.
+# `develop` never does: each one is in a group of its own, by run id, so a
+# merge right after another does not cancel the first one's run.
 # The same group as nxgt-janus's.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref != 'refs/heads/develop' && github.ref || github.run_id }}
@@ -69,7 +75,11 @@ jobs:
       # own output. Requiring a changeset there would mean requiring one for
       # the act of releasing.
       - name: Changeset present
-        if: github.head_ref != 'changeset-release/develop'
+        # Only on a pull request: on a push to `develop` there is no base to
+        # compare with, and the changesets were checked on the way in.
+        if: >-
+          github.event_name == 'pull_request' &&
+          github.head_ref != 'changeset-release/develop'
         run: bun run changeset:status
 
   newest-peers:

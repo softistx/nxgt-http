@@ -21,8 +21,9 @@ import { appliesDefault, type EmitContext, type ObjectMode } from './context';
 import {
 	exactScalar,
 	lengthChecks,
-	nxgtImport,
 	patternChecks,
+	printsWithoutZ,
+	zodImports,
 } from './nxgt-zod';
 import {
 	docComment,
@@ -126,9 +127,7 @@ export function emitZod(ctx: EmitContext): string {
 	// A spec with no schema: no `z` to import, which an app's `noUnusedLocals`
 	// refuses, but still a module, which `operations.ts` imports.
 	if (blocks.length === 0) return file([ctx.header, 'export {};']);
-	const lines = [];
-	if (imports.has('z')) lines.push(`import { z } from 'zod';`);
-	lines.push(...nxgtImport(imports));
+	const lines = zodImports(imports);
 	if (values.size > 0) {
 		lines.push(
 			`import ${list('{ ', [...values].sort(), ' }', '')} from './types${ctx.options.importExtension}';`,
@@ -154,15 +153,10 @@ export function expr(ctx: EmitContext, node: SchemaNode, scope: Scope): string {
 }
 
 /** Whether the printed node calls `z`: a reference, or a bare `@nxgt/zod` schema, does not. */
-function callsZ(ctx: EmitContext, node: SchemaNode, scope: Scope): boolean {
-	if (node.kind === 'ref') {
-		return !(scope.lazy || scope.declared.has(node.target));
-	}
-	return (
-		exactScalar(ctx.options, node) === undefined ||
-		(node.kind === 'string' && lengthChecks(node) + patternChecks(node) !== '')
-	);
-}
+const callsZ = (ctx: EmitContext, node: SchemaNode, scope: Scope): boolean =>
+	node.kind === 'ref'
+		? !(scope.lazy || scope.declared.has(node.target))
+		: !printsWithoutZ(ctx.options, node);
 
 function bare(ctx: EmitContext, node: SchemaNode, scope: Scope): string {
 	switch (node.kind) {
@@ -215,8 +209,8 @@ export const bounds = (min?: number, max?: number): string =>
 	(max === undefined ? '' : `.max(${max})`);
 
 function string(ctx: EmitContext, node: StringNode, scope: Scope): string {
-	// The scalar's own schema is its whole rule, `pattern` included: the
-	// `pattern` of the spec only restates it.
+	// The scalar's schema first, then the spec's bounds and pattern kept on
+	// top of it (see `patternChecks`).
 	const exact = exactScalar(ctx.options, node);
 	if (exact !== undefined) {
 		scope.imports.add(exact);

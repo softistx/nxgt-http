@@ -43,7 +43,11 @@ export interface EmitOptions {
 	alxia?: boolean;
 	/** `date-time` as a string (the default), or decoded to a `Date` by a codec. */
 	dates?: Dates;
-	/** A scalar of `@nxgt/typespec` by its pattern (the default), or by its `@nxgt/zod` schema. */
+	/**
+	 * A scalar of `@nxgt/typespec` by its pattern (the default), or by its
+	 * `@nxgt/zod` schema, the spec's `pattern` and length bounds kept on top as
+	 * `.check()`s.
+	 */
 	scalars?: Scalars;
 }
 

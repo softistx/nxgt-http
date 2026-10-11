@@ -42,14 +42,32 @@ export function lengthChecks(node: StringNode): string {
 /**
  * The spec's own `pattern`, kept on top of the scalar's schema (the owner's
  * decision, 2026-10-11): a scalar narrowed by a pattern of its own
- * (`@pattern("^FR.*$") scalar FrIban extends Nxgt.IBAN`) is then never
+ * (`@pattern("^FR.*$") scalar FrIban extends Nxgt.iban`) is then never
  * validated more loosely than the spec says, and the canonical pattern is
- * checked besides, redundantly.
+ * checked besides, redundantly. The message is Zod's own for `.regex()`,
+ * since the scalar's schema answers with its own (`Invalid IBAN`) otherwise.
  */
-export const patternChecks = (node: StringNode): string =>
-	node.pattern === undefined
-		? ''
-		: `.check(z.regex(${regexLiteral(node.pattern)}))`;
+export function patternChecks(node: StringNode): string {
+	if (node.pattern === undefined) return '';
+	const regex = regexLiteral(node.pattern);
+	const message = `Invalid string: must match pattern ${regex}`;
+	return `.check(z.regex(${regex}, ${jsString(message)}))`;
+}
+
+/** Whether the node prints as a bare `@nxgt/zod` schema, with no call of `z`. */
+export const printsWithoutZ = (
+	options: Pick<EmitOptions, 'scalars'>,
+	node: SchemaNode,
+): boolean =>
+	exactScalar(options, node) !== undefined &&
+	node.kind === 'string' &&
+	lengthChecks(node) + patternChecks(node) === '';
+
+/** The import lines of a file's schemas: Zod when one calls `z`, then `@nxgt/zod`. */
+export const zodImports = (imports: ReadonlySet<string>): string[] => [
+	...(imports.has('z') ? ["import { z } from 'zod';"] : []),
+	...nxgtImport(imports),
+];
 
 /** The line importing the `@nxgt/zod` exports among a file's imports (`z` is Zod's), or none. */
 export function nxgtImport(imports: Iterable<string>): string[] {

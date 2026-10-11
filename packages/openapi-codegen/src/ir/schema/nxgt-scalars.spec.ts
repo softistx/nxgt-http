@@ -1,4 +1,4 @@
-/** The table of `nxgt-zod.ts` against the package it names, which the generator never imports. */
+/** The table of `nxgt-scalars.ts` against the package it names, which the generator never imports. */
 import { describe, expect, it } from 'bun:test';
 import * as nxgtZod from '@nxgt/zod';
 import { scalarSchemas } from '@nxgt/zod';

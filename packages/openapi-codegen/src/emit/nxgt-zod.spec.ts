@@ -49,7 +49,7 @@ describe('patternChecks', () => {
 
 	it('keeps the pattern of the spec as a check, on top of the scalar', () => {
 		expect(patternChecks({ kind: 'string', pattern: '^FR\\d+$' })).toBe(
-			'.check(z.regex(/^FR\\d+$/u))',
+			".check(z.regex(/^FR\\d+$/u, 'Invalid string: must match pattern /^FR\\\\d+$/u'))",
 		);
 	});
 });

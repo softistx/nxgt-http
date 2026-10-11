@@ -217,7 +217,13 @@ Rules carried over from nxgt-core, each learned from a shipped defect:
   nxgt-core. `httpyz`'s fixture covers the client, a group, declared
   replies, `unwrap`, `ok`, `cache`, `events` and `lines`; a builder that
   adds a type to what an app exports gets a case there. The folder is
-  typechecked with its package and never built or shipped.
+  typechecked with its package and never built or shipped. Left to Bun, the
+  probe would install the newest `typescript` the peers allow, 7 in both CI
+  jobs; `workspaceTypeScript` in `scripts/artifacts/install.ts` installs the
+  root `devDependencies` range instead, so the emit runs tsc 6 in the main job
+  and tsc 7 in "Newest peers", which rewrites that range. This is
+  nxgt-core's change (its a887fe9), and `install.ts` with `install.spec.ts` is
+  now a copy beside it.
 - **Build before typecheck and tests.** `exports` points at `dist/`, so on a
   clean checkout `@nxgt/httpyz` resolves to nothing for the binding. CI builds
   first. `bun run build`, `typecheck` and `test` run the packages through

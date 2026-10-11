@@ -62,8 +62,20 @@ export class TimeoutError extends ClientError {
 	override name = 'TimeoutError';
 	readonly timeout: number;
 
-	constructor(context: CallContext, timeout: number, options?: ErrorOptions) {
-		super(context, `no reply within ${timeout} ms`, options);
+	/** `body`: the headers came, and the body was not read in time. */
+	constructor(
+		context: CallContext,
+		timeout: number,
+		options?: ErrorOptions,
+		stage: 'reply' | 'body' = 'reply',
+	) {
+		super(
+			context,
+			stage === 'body'
+				? `reply body not read within ${timeout} ms`
+				: `no reply within ${timeout} ms`,
+			options,
+		);
 		this.timeout = timeout;
 	}
 }

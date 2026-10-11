@@ -1,5 +1,14 @@
 # @nxgt/openapi-msw
 
+## 0.2.3
+
+### Patch Changes
+
+- [#135](https://github.com/softistx/nxgt-http/pull/135) [`4119aab`](https://github.com/softistx/nxgt-http/commit/4119aabe54168123513f993690fc685da90eba9e) Thanks [@SteveGT96](https://github.com/SteveGT96)! - Types resolve under `moduleResolution: nodenext` (and `node16`). The published `.d.ts` files imported their siblings without an extension (`from './client/types'`), which those resolutions do not follow in an ES module package, so `HttpClient`, `HttpClientOptions` and every other type read through such an import were `any` there, and `skipLibCheck: true` hid it. The declarations now name their files (`./client/types.js`); `bundler` resolution reads them the same. A project that builds on these types under nodenext gets real checking, so it may report errors it did not before.
+- Updated dependencies [[`2032544`](https://github.com/softistx/nxgt-http/commit/20325446fdab8ce2695e101a615375dc91986480), [`4119aab`](https://github.com/softistx/nxgt-http/commit/4119aabe54168123513f993690fc685da90eba9e), [`3bc404c`](https://github.com/softistx/nxgt-http/commit/3bc404c0d57dce1152bd5dc07503ec3344dc8efe)]:
+  - @nxgt/httpyz@0.4.0
+  - @nxgt/openapi-httpyz@0.3.2
+
 ## 0.2.2
 
 ### Patch Changes

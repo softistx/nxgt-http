@@ -1,5 +1,34 @@
 # @nxgt/httpyz
 
+## 0.4.0
+
+### Minor Changes
+
+- [#137](https://github.com/softistx/nxgt-http/pull/137) [`3bc404c`](https://github.com/softistx/nxgt-http/commit/3bc404c0d57dce1152bd5dc07503ec3344dc8efe) Thanks [@SteveGT96](https://github.com/SteveGT96)! - Export `createSseParser`, with the types `SseParser` and `ServerEvent`, and an `end()` on the parser, from `@nxgt/httpyz/integration`: the parser `events()` reads a stream with, so an app can read the events of a stream the server answered with an error status. `events()` is unchanged: it still throws `UndeclaredStatusError` with the body unread, and the error's `response` is that body to read. `push` returns only the events a blank line ended, and `end()` finishes a body the server has closed: it reads an unterminated last line and dispatches the pending event, and returns nothing after a complete one. Feed the text to both, as graphql-yoga's `404` for an unknown persisted query carries a `next` event:
+  
+  ```ts
+  import { UndeclaredStatusError } from '@nxgt/httpyz';
+  import { createSseParser } from '@nxgt/httpyz/integration';
+  
+  try {
+    for await (const event of http.events('/graphql', { body })) {
+      // ...
+    }
+  } catch (error) {
+    if (!(error instanceof UndeclaredStatusError)) throw error;
+    const parser = createSseParser();
+    const text = await error.response.text();
+    const [first] = [...parser.push(text), ...parser.end()];
+    if (first) console.log(error.status, JSON.parse(first.data));
+  }
+  ```
+
+### Patch Changes
+
+- [#133](https://github.com/softistx/nxgt-http/pull/133) [`2032544`](https://github.com/softistx/nxgt-http/commit/20325446fdab8ce2695e101a615375dc91986480) Thanks [@SteveGT96](https://github.com/SteveGT96)! - A `timeout` that fires while the reply body is still being read now rejects with httpyz's `TimeoutError` (with `timeout`, `method` and `path`, and the signal's `DOMException` as `cause`), as it does when it fires before the headers. It used to reject with the `DOMException` named `TimeoutError`, so `error instanceof TimeoutError` was false for a body that stalled. A caller's own abort during the body read still rejects with the `AbortError`, unchanged.
+
+- [#135](https://github.com/softistx/nxgt-http/pull/135) [`4119aab`](https://github.com/softistx/nxgt-http/commit/4119aabe54168123513f993690fc685da90eba9e) Thanks [@SteveGT96](https://github.com/SteveGT96)! - Types resolve under `moduleResolution: nodenext` (and `node16`). The published `.d.ts` files imported their siblings without an extension (`from './client/types'`), which those resolutions do not follow in an ES module package, so `HttpClient`, `HttpClientOptions` and every other type read through such an import were `any` there, and `skipLibCheck: true` hid it. The declarations now name their files (`./client/types.js`); `bundler` resolution reads them the same. A project that builds on these types under nodenext gets real checking, so it may report errors it did not before.
+
 ## 0.3.3
 
 ### Patch Changes

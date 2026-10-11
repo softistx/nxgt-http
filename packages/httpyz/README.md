@@ -45,7 +45,7 @@ export const http = createHttpClient({
 | `fetch` | `globalThis.fetch`, looked up at each call | anything that takes a `Request` and returns a `Response`, or a promise of one: a Hono app's `app.fetch`, in tests. `fetch: undefined` is the same as leaving it out |
 | `headers` | none | sent with every request: an object, or a function run before each one |
 | `init` | none | fetch options for every request: `credentials`, `mode`, `cache`… |
-| `timeout` | none | milliseconds before a call fails with `TimeoutError` |
+| `timeout` | none | milliseconds before a call fails with `TimeoutError`; a typed call's reply body read is inside it |
 | `auth` | none | `{ token, refresh, scheme }`. See [Auth](#auth) |
 | `retry` | never | a number of retries, `RetryOptions`, or `false`. See [Retries](#retries) |
 | `use` | none | middleware around each request. See [Middleware](#middleware) |
@@ -137,6 +137,10 @@ and:
 `send` takes a `Request` and returns its `Response` unread. The request goes
 through the client's `retry`, `auth`, `use` and timeout, and the client's
 `headers` are added to it; its own headers win.
+
+`send` returns the `Response` unread, with the deadline still on its signal:
+reading that body after `timeout` rejects with the signal's `DOMException`
+named `TimeoutError`, not httpyz's `TimeoutError`.
 
 ```ts
 const response = await http.send(new Request('https://api.example.com/export'), {
@@ -344,7 +348,10 @@ The wait before each retry is random, up to 300 ms doubled at each retry. A
 reply's `Retry-After`, in seconds or as a date, wins over it. A `Retry-After`
 longer than `maxDelay` is not waited for: that reply is the reply. The wait
 ends early when the call times out or is aborted: `timeout` bounds the whole
-call, its retries and their waits included.
+call, its retries and their waits included. It covers reading the reply's
+body too: a body that stalls past `timeout` fails with the same `TimeoutError`
+as a reply that never came (a stream is bounded until its headers only). `send` does not read the body
+for you: see [A `Request` of your own](#a-request-of-your-own).
 
 | `RetryOptions` | Default |
 | --- | --- |
@@ -522,7 +529,7 @@ come from its calls. See [Setup](#setup).
 | `fetch` | `(request: Request) => Response \| Promise<Response>` | `globalThis.fetch`, looked up at each call | sends each request; it may answer at once, as `app.fetch` of Hono does |
 | `headers` | `HeadersInit \| (() => HeadersInit \| Promise<HeadersInit>)` | none | sent with every request; a function runs before each one |
 | `init` | `Omit<RequestInit, 'method' \| 'body' \| 'headers' \| 'signal'>` | none | fetch options for every request |
-| `timeout` | `number` | none | milliseconds before a call fails with a `TimeoutError` |
+| `timeout` | `number` | none | milliseconds before a call fails with a `TimeoutError`; a typed call's reply body read is inside it |
 | `auth` | `AuthOptions` | none | a token on every request, refreshed once on a 401 |
 | `retry` | `number \| RetryOptions \| false` | never | sends a request again after a failure that may pass |
 | `use` | `readonly Middleware[]` | none | around every request, the first outermost |
@@ -632,7 +639,7 @@ class TimeoutError extends ClientError {
 }
 ```
 
-No reply within the call's `timeout`, retries included; for a stream, no
+No reply, or its body not read, within the call's `timeout`, retries included; for a stream, no
 headers within it on one connection. `timeout` is the limit in milliseconds,
 and the message ends `no reply within 10000 ms`. `isAbortError` is false for
 it.

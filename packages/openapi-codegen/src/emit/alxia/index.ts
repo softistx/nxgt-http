@@ -42,13 +42,20 @@ const blank = (ctx: EmitContext): Printing => ({
 	locals: new Set(),
 	uses: new Set(),
 	codecs: new Set(),
+	imports: new Set(),
 	declared: new Set(ctx.ir.schemas.map((schema) => schema.id)),
 	zod: false,
 	eventStream: false,
 });
 
 function merge(into: Printing, from: Printing): void {
-	for (const key of ['helpers', 'locals', 'uses', 'codecs'] as const) {
+	for (const key of [
+		'helpers',
+		'locals',
+		'uses',
+		'codecs',
+		'imports',
+	] as const) {
 		for (const value of from[key]) (into[key] as Set<string>).add(value);
 	}
 	into.zod ||= from.zod;
@@ -132,7 +139,7 @@ function preamble(printing: Printing): string[] {
 	if (printing.zod || helpers.some((h) => h === 'numeric' || h === 'flag')) {
 		imports.push("import { z } from 'zod';");
 	}
-	imports.push(...nxgtImport(printing.codecs));
+	imports.push(...nxgtImport(printing.imports));
 	if (printing.uses.size > 0) {
 		const names = [...printing.uses]
 			.map((id) => `z${ctx.schema(id).name}`)

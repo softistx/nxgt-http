@@ -1,77 +1,59 @@
-/** The table of `nxgt-zod.ts` against the package it names, which the generator never imports. */
 import { describe, expect, it } from 'bun:test';
-import * as nxgtZod from '@nxgt/zod';
-import { scalarSchemas } from '@nxgt/zod';
 import {
-	CODEC_SCALARS,
-	exactSchema,
-	isNxgtScalar,
-	NUMBER_SCALARS,
+	exactScalar,
+	lengthChecks,
 	nxgtImport,
-	nxgtImportMark,
-	STRING_SCALARS,
+	patternChecks,
 } from './nxgt-zod';
 
-/** Declared by @nxgt/zod, but no scalar of @nxgt/typespec: JSON values and `void`. */
-const BUILTINS = ['JSON', 'JSONObject', 'Void'];
+describe('exactScalar', () => {
+	const iban = { kind: 'string', scalar: 'IBAN' } as const;
 
-const names = Object.keys(scalarSchemas);
-
-describe('STRING_SCALARS', () => {
-	it('is every scalar of @nxgt/zod, but the builtins, the codecs and the numbers', () => {
-		const left = new Set([...BUILTINS, ...CODEC_SCALARS, ...NUMBER_SCALARS]);
-		expect(Object.keys(STRING_SCALARS).sort()).toEqual(
-			names.filter((name) => !left.has(name)).sort(),
-		);
+	it('is the export of a string scalar, in exact mode only', () => {
+		expect(exactScalar({ scalars: 'exact' }, iban)).toBe('ibanSchema');
+		expect(exactScalar({ scalars: 'pattern' }, iban)).toBeUndefined();
+		expect(exactScalar({}, iban)).toBeUndefined();
 	});
 
-	it('names, for each scalar, the export that is its schema', () => {
-		const exports = nxgtZod as Record<string, unknown>;
-		for (const [name, exported] of Object.entries(STRING_SCALARS)) {
-			expect(exported, name).toMatch(/^[a-z][A-Za-z0-9]*Schema$/);
-			expect(exports[exported], name).toBe(
-				(scalarSchemas as Record<string, unknown>)[name],
-			);
-		}
-	});
-
-	it('leaves the codecs and the numbers out, and knows them', () => {
-		for (const name of [...CODEC_SCALARS, ...NUMBER_SCALARS]) {
-			expect(names, name).toContain(name);
-			expect(exactSchema(name), name).toBeUndefined();
-			expect(isNxgtScalar(name), name).toBe(true);
-		}
-	});
-
-	it('leaves out what is not a string schema: a codec changes the output type', () => {
-		for (const name of CODEC_SCALARS) {
-			expect(
-				scalarSchemas[name as keyof typeof scalarSchemas]._zod.def.type,
-			).toBe('pipe');
-		}
+	it('is none for a codec, a plain string, an unknown scalar or another kind', () => {
+		const exact = { scalars: 'exact' } as const;
+		expect(
+			exactScalar(exact, { kind: 'string', scalar: 'DateTime' }),
+		).toBeUndefined();
+		expect(exactScalar(exact, { kind: 'string' })).toBeUndefined();
+		expect(
+			exactScalar(exact, { kind: 'string', scalar: 'Nope' }),
+		).toBeUndefined();
+		expect(
+			exactScalar(exact, { kind: 'number', integer: true }),
+		).toBeUndefined();
 	});
 });
 
-describe('exactSchema and isNxgtScalar', () => {
-	it('know a name exactly', () => {
-		expect(exactSchema('IBAN')).toBe('ibanSchema');
-		expect(exactSchema('iban')).toBeUndefined();
-		expect(exactSchema('toString')).toBeUndefined();
-		expect(isNxgtScalar('IBAN')).toBe(true);
-		expect(isNxgtScalar('Iban')).toBe(false);
+describe('lengthChecks', () => {
+	it('is nothing without a bound', () => {
+		expect(lengthChecks({ kind: 'string' })).toBe('');
+	});
+
+	it('is a check per bound, with the message Zod gives, which the scalar would override', () => {
+		expect(lengthChecks({ kind: 'string', minLength: 2, maxLength: 9 })).toBe(
+			".check(z.minLength(2, 'Too small: expected string to have >=2 characters'), z.maxLength(9, 'Too big: expected string to have <=9 characters'))",
+		);
+	});
+});
+
+describe('patternChecks', () => {
+	it('adds nothing: the scalar is the whole rule', () => {
+		expect(patternChecks({ kind: 'string', pattern: '^a$' })).toBe('');
 	});
 });
 
 describe('nxgtImport', () => {
-	it('is one sorted import of what was marked, and nothing otherwise', () => {
-		expect(nxgtImport(['isoDate'])).toEqual([]);
-		expect(
-			nxgtImport([
-				'isoDate',
-				nxgtImportMark('ipSchema'),
-				nxgtImportMark('ibanSchema'),
-				nxgtImportMark('ipSchema'),
-			]),
-		).toEqual(["import { ibanSchema, ipSchema } from '@nxgt/zod';"]);
+	it('is one sorted import of the @nxgt/zod exports, without z, and nothing otherwise', () => {
+		expect(nxgtImport(['z'])).toEqual([]);
+		expect(nxgtImport([])).toEqual([]);
+		expect(nxgtImport(['z', 'ipSchema', 'ibanSchema', 'ipSchema'])).toEqual([
+			"import { ibanSchema, ipSchema } from '@nxgt/zod';",
+		]);
 	});
 });

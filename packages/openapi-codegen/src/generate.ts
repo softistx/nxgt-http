@@ -10,6 +10,7 @@ import {
 import { type Lint, lintSpec } from './lint';
 import { loadDocument } from './loader/document';
 import type { FileSystem } from './loader/fs';
+import { validateOptions } from './validate-options';
 import { type WriteResult, writeFiles } from './writer/write';
 
 export interface GenerateOptions extends IROptions {
@@ -97,15 +98,6 @@ export interface GenerateResult extends WriteResult {
 /** Where the files go when no `output` is given, relative to `cwd`. */
 export const DEFAULT_OUTPUT = 'generated/openapi';
 
-const UNKNOWN_KEYS: readonly string[] = ['strip', 'strict', 'loose'];
-const EXTENSIONS: readonly string[] = ['', '.js', '.ts'];
-const ENUMS: readonly string[] = ['object', 'union'];
-const DATES: readonly string[] = ['string', 'date'];
-const SCALARS: readonly string[] = ['pattern', 'exact'];
-
-const invalid = (message: string): CodegenError =>
-	new CodegenError([{ severity: 'error', code: 'invalid_option', message }]);
-
 /**
  * Whose 400 `validationErrors` declares: alxia's with `alxia` alone, either
  * with `hono` beside it, since a client cannot tell which one serves the
@@ -123,53 +115,17 @@ export async function generateFiles(
 	options: GenerateOptions,
 	{ cwd = process.cwd(), fs }: GenerateContext = {},
 ): Promise<{ files: GeneratedFile[]; warnings: Diagnostic[] }> {
-	const unknownKeys = options.unknownKeys ?? 'strip';
-	if (!UNKNOWN_KEYS.includes(unknownKeys)) {
-		throw invalid(
-			`unknownKeys must be strip, strict or loose, not ${unknownKeys}`,
-		);
-	}
-	const importExtension = options.importExtension ?? '';
-	if (!EXTENSIONS.includes(importExtension)) {
-		throw invalid(
-			`importExtension must be '', '.js' or '.ts', not ${importExtension}`,
-		);
-	}
-	const enums = options.enums ?? 'object';
-	if (!ENUMS.includes(enums)) {
-		throw invalid(`enums must be object or union, not ${enums}`);
-	}
-	const hono = options.hono ?? false;
-	if (typeof hono !== 'boolean') {
-		throw invalid(`hono must be true or false, not ${String(hono)}`);
-	}
-	const alxia = options.alxia ?? false;
-	if (typeof alxia !== 'boolean') {
-		throw invalid(`alxia must be true or false, not ${String(alxia)}`);
-	}
-	const dates = options.dates ?? 'string';
-	if (!DATES.includes(dates)) {
-		throw invalid(`dates must be string or date, not ${dates}`);
-	}
-	const scalars = options.scalars ?? 'pattern';
-	if (!SCALARS.includes(scalars)) {
-		throw invalid(`scalars must be pattern or exact, not ${scalars}`);
-	}
-	const lint = options.lint ?? false;
-	if (typeof lint !== 'boolean' && (typeof lint !== 'string' || lint === '')) {
-		throw invalid(
-			`lint must be true, false or a Redocly config file, not ${String(lint)}`,
-		);
-	}
-	const validationErrors = options.validationErrors ?? true;
-	if (typeof validationErrors !== 'boolean') {
-		throw invalid(
-			`validationErrors must be true or false, not ${String(validationErrors)}`,
-		);
-	}
-	if (lint !== false && fs !== undefined) {
-		throw invalid('lint reads the spec from disk: it cannot be used with fs');
-	}
+	const {
+		unknownKeys,
+		importExtension,
+		enums,
+		hono,
+		alxia,
+		dates,
+		scalars,
+		lint,
+		validationErrors,
+	} = validateOptions(options, fs !== undefined);
 	const input = resolve(cwd, options.input);
 	const output = resolve(cwd, options.output ?? DEFAULT_OUTPUT);
 	const doc = await loadDocument(input, { fs, cwd });

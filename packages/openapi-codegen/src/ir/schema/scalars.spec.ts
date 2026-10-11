@@ -153,6 +153,17 @@ describe('stringNode', () => {
 		]);
 	});
 
+	it('carries no scalar when x-nxgt-scalar is not a name, and a number node has none', () => {
+		const s = state();
+		expect(stringNode(s, { 'x-nxgt-scalar': 5 }, at)).toEqual({
+			kind: 'string',
+		});
+		expect(
+			numberNode(s, true, { 'x-nxgt-scalar': 'PositiveInt', minimum: 1 }, at),
+		).toEqual({ kind: 'number', integer: true, minimum: 1 });
+		expect(s.diagnostics.list).toEqual([]);
+	});
+
 	it('has no scalar for a plain string', () => {
 		expect(stringNode(state(), { type: 'string' }, at)).not.toHaveProperty(
 			'scalar',

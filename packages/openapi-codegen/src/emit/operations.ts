@@ -54,6 +54,8 @@ export function emitOperations(ctx: EmitContext): {
 	const uses = new Set<string>();
 	/** What `expr` needs declared: the date codec. */
 	const codecs = new Set<string>();
+	/** The `@nxgt/zod` exports (and `z`) the schemas call. */
+	const calls = new Set<string>();
 	const declared = new Set(ctx.ir.schemas.map((schema) => schema.id));
 	const scope = (indent: string): Scope => ({
 		declared,
@@ -61,6 +63,7 @@ export function emitOperations(ctx: EmitContext): {
 		indent,
 		uses,
 		helpers: codecs,
+		imports: calls,
 	});
 
 	const validators: string[] = [];
@@ -89,7 +92,7 @@ export function emitOperations(ctx: EmitContext): {
 	if (codecs.has('isoDate')) helpers.add('isoDate');
 
 	const ext = ctx.options.importExtension;
-	const imports = ["import { z } from 'zod';", ...nxgtImport(codecs)];
+	const imports = ["import { z } from 'zod';", ...nxgtImport(calls)];
 	if (uses.size > 0) {
 		const names = [...uses].map((id) => `z${ctx.schema(id).name}`).sort();
 		imports.push(`import ${list('{ ', names, ' }', '')} from './zod${ext}';`);

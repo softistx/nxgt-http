@@ -1013,6 +1013,7 @@ declare.
 interface StringNode extends Annotations {
 	kind: 'string';
 	format?: StringFormat;
+	scalar?: string;
 	minLength?: number;
 	maxLength?: number;
 	pattern?: string;
@@ -1032,7 +1033,10 @@ type StringFormat =
 The string formats that are validated; `byte` is base64. Another format is
 an `unknown_format` warning. A schema with `x-nxgt-scalar`, a scalar of
 `@nxgt/typespec`, has no `format` in the node but `date-time`, and no warning:
-its `pattern` carries its rule, and the code is `z.string().regex(…)`.
+its name is the node's `scalar`, and its `pattern` carries its rule, so the
+code is `z.string().regex(…)`, or, with `scalars: 'exact'`, the scalar's
+schema from `@nxgt/zod` (`ibanSchema`). A `scalar` that `@nxgt/typespec` does
+not declare is an `unknown_scalar` warning.
 
 ##### `NumberNode`
 

@@ -9,6 +9,7 @@
 import { describe, expect, it } from 'bun:test';
 import { readdir, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { generate } from '@nxgt/openapi-codegen';
 import { compile, NodeHost } from '@typespec/compiler';
 import { Hono } from 'hono';
 import { spec, VERSIONS } from '../test/generate';
@@ -205,4 +206,21 @@ describe.each([...VERSIONS])('the scalars, in OpenAPI %s', (version) => {
 			});
 		},
 	);
+});
+
+describe('the scalars the generator knows', () => {
+	for (const version of VERSIONS) {
+		for (const scalars of ['pattern', 'exact'] as const) {
+			it(`warns of no unknown_scalar in the fixture, ${version}, scalars: '${scalars}'`, async () => {
+				// `check` writes nothing: the files are only compared with the disk.
+				const { warnings } = await generate({
+					input: spec('scalars', version),
+					output: '/nowhere/generated',
+					scalars,
+					check: true,
+				});
+				expect(warnings.filter((w) => w.code === 'unknown_scalar')).toEqual([]);
+			});
+		}
+	}
 });

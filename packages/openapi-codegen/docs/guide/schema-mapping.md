@@ -18,9 +18,9 @@ approximated silently.
 | `format: uuid` | `string` | `z.guid()` |
 | `format: ipv4`, `ipv6` | `string` | `z.ipv4()`, `z.ipv6()` |
 | `format: byte`, `contentEncoding: base64` | `string` | `z.base64()` |
-| any `format` beside `x-nxgt-scalar`, except `date-time` | `string` | `z.string().regex(…)`: the scalar's `pattern` is its rule (a format validator would trim a URL or refuse a punycode domain) |
+| any `format` beside `x-nxgt-scalar`, except `date-time` | `string` | `z.string().regex(…)`: the scalar's `pattern` is its rule (a format validator would trim a URL or refuse a punycode domain); with [`scalars: 'exact'`](options.md#scalars), the scalar's schema from `@nxgt/zod` (`ibanSchema`), but for `DateTime`, `Timestamp`, `BigInt` and `Long` |
 | `format: binary`, a non-text `contentMediaType` | `globalThis.File` | `z.file()` |
-| any other string `format` | `string` | `z.string()`, with an `unknown_format` warning, except beside `x-nxgt-scalar` |
+| any other string `format` | `string` | `z.string()`, with an `unknown_format` warning, except beside `x-nxgt-scalar`, which has `unknown_scalar` for a name `@nxgt/typespec` does not declare |
 | `type: integer` | `number` | `z.int()`; `format: int32` gives `z.int32()`, any other format is ignored |
 | `type: number` | `number` | `z.number()` |
 | `minimum`, `maximum` | | `.min()`, `.max()` |

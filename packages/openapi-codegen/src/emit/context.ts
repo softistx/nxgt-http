@@ -12,7 +12,6 @@ import type {
 } from '../ir/types';
 import type { Location } from '../loader/location';
 import { ALXIA_NAMES, operationConst } from './alxia/names';
-import { exactSchema } from './nxgt-zod';
 
 /** What an object does with keys it does not declare, when the spec does not say. */
 export type UnknownKeys = 'strip' | 'strict' | 'loose';
@@ -246,15 +245,6 @@ export class EmitContext {
 			node.kind === 'object' &&
 			node.extends.every((target) => this.isZodObject({ kind: 'ref', target }))
 		);
-	}
-
-	/** The `@nxgt/zod` export that validates the node, with `scalars: 'exact'` and a scalar that has one. */
-	exactScalar(node: SchemaNode): string | undefined {
-		return this.options.scalars === 'exact' &&
-			node.kind === 'string' &&
-			node.scalar !== undefined
-			? exactSchema(node.scalar)
-			: undefined;
 	}
 
 	/** A `date-time` that the validator decodes to a `Date`: with `dates: 'date'` only. */

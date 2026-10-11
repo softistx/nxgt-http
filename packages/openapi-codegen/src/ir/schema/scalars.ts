@@ -1,4 +1,3 @@
-import { isNxgtScalar } from '../../emit/nxgt-zod';
 import { child, type Location } from '../../loader/location';
 import { asNumber, asString } from '../../util';
 import type {
@@ -8,6 +7,7 @@ import type {
 	StringFormat,
 	StringNode,
 } from '../types';
+import { isNxgtScalar } from './nxgt-scalars';
 import type { SchemaState } from './state';
 
 type ScalarState = Pick<SchemaState, 'diagnostics' | 'warnedFormats'>;

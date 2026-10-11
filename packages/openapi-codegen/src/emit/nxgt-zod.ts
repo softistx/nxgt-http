@@ -1,118 +1,55 @@
-import { list } from './printer';
+/**
+ * `scalars: 'exact'`: a string scalar of `@nxgt/typespec` printed as the
+ * schema of `@nxgt/zod`, imported by name. The table of names is the IR's
+ * (`ir/schema/nxgt-scalars.ts`).
+ */
+import { exactSchema } from '../ir/schema/nxgt-scalars';
+import type { SchemaNode, StringNode } from '../ir/types';
+import type { EmitOptions } from './context';
+import { jsString, list } from './printer';
+
+/** The `@nxgt/zod` export that validates the node, with `scalars: 'exact'` and a scalar that has one. */
+export const exactScalar = (
+	options: Pick<EmitOptions, 'scalars'>,
+	node: SchemaNode,
+): string | undefined =>
+	options.scalars === 'exact' &&
+	node.kind === 'string' &&
+	node.scalar !== undefined
+		? exactSchema(node.scalar)
+		: undefined;
 
 /**
- * The scalars of `@nxgt/typespec` that `scalars: 'exact'` validates with the
- * schema of `@nxgt/zod`, by their `x-nxgt-scalar` name: the export to import.
- *
- * Hardcoded on purpose, so that the generator never imports `@nxgt/zod`, an
- * optional peer that only the generated code needs. `nxgt-zod.spec.ts` holds it
- * to the package's own `scalarSchemas`.
+ * The length bounds of a string as checks, with the message Zod gives its own
+ * (an `@nxgt/zod` schema has an error of its own, `Invalid IBAN`, which would
+ * answer a length otherwise). A schema is not always a `ZodString`
+ * (`ipSchema` is a union, `emojiSchema` a pipe), and only a `ZodString` has
+ * `.min()` and `.max()`: `.check()` is on every schema.
  */
-export const STRING_SCALARS: Readonly<Record<string, string>> = {
-	Base64: 'base64Schema',
-	Base64URL: 'base64UrlSchema',
-	CIDRv4: 'cidrv4Schema',
-	CIDRv6: 'cidrv6Schema',
-	CountryCode: 'countryCodeSchema',
-	Cuid2: 'cuid2Schema',
-	Currency: 'currencySchema',
-	Date: 'dateSchema',
-	Duration: 'durationSchema',
-	EmailAddress: 'emailAddressSchema',
-	Emoji: 'emojiSchema',
-	GUID: 'guidSchema',
-	HSLA: 'hslaSchema',
-	HSL: 'hslSchema',
-	HexColorCode: 'hexColorCodeSchema',
-	Hexadecimal: 'hexadecimalSchema',
-	Hostname: 'hostnameSchema',
-	IBAN: 'ibanSchema',
-	IP: 'ipSchema',
-	IPv4: 'ipv4Schema',
-	IPv6: 'ipv6Schema',
-	ISBN: 'isbnSchema',
-	JWT: 'jwtSchema',
-	KSUID: 'ksuidSchema',
-	LocalDateTime: 'localDateTimeSchema',
-	LocalTime: 'localTimeSchema',
-	Locale: 'localeSchema',
-	MAC: 'macSchema',
-	NanoID: 'nanoIdSchema',
-	NonEmptyString: 'nonEmptyStringSchema',
-	ObjectID: 'objectIdSchema',
-	PhoneNumber: 'phoneNumberSchema',
-	RGBA: 'rgbaSchema',
-	RGB: 'rgbSchema',
-	SHA256: 'sha256Schema',
-	SHA512: 'sha512Schema',
-	SemVer: 'semverSchema',
-	Time: 'timeSchema',
-	TimeZone: 'timeZoneSchema',
-	ULID: 'ulidSchema',
-	URL: 'urlSchema',
-	UUID: 'uuidSchema',
-	UUIDv4: 'uuidv4Schema',
-	UUIDv7: 'uuidv7Schema',
-	UtcOffset: 'utcOffsetSchema',
-	XID: 'xidSchema',
-};
+export function lengthChecks(node: StringNode): string {
+	const checks: string[] = [];
+	if (node.minLength !== undefined) {
+		const message = `Too small: expected string to have >=${node.minLength} characters`;
+		checks.push(`z.minLength(${node.minLength}, ${jsString(message)})`);
+	}
+	if (node.maxLength !== undefined) {
+		const message = `Too big: expected string to have <=${node.maxLength} characters`;
+		checks.push(`z.maxLength(${node.maxLength}, ${jsString(message)})`);
+	}
+	return checks.length === 0 ? '' : `.check(${checks.join(', ')})`;
+}
 
 /**
- * The codecs of `@nxgt/zod`, which change the output type (`DateTime` and
- * `Timestamp` decode to a `Date`, `BigInt` and `Long` to a `bigint`): they stay
- * on their `pattern`, as an exact schema would not be a drop-in replacement.
+ * What the spec's own `pattern` adds to the scalar's schema, which is the
+ * whole rule: nothing, for now. The owner's decision on a pattern that
+ * differs from the scalar's plugs in here, as `.check(z.regex(…))` or a
+ * diagnostic.
  */
-export const CODEC_SCALARS: readonly string[] = [
-	'BigInt',
-	'DateTime',
-	'Long',
-	'Timestamp',
-];
+export const patternChecks = (_node: StringNode): string => '';
 
-/** The numeric scalars, which `scalars: 'exact'` does not cover yet. */
-export const NUMBER_SCALARS: readonly string[] = [
-	'Latitude',
-	'Longitude',
-	'NegativeFloat',
-	'NegativeInt',
-	'NonNegativeFloat',
-	'NonNegativeInt',
-	'NonPositiveFloat',
-	'NonPositiveInt',
-	'Port',
-	'PositiveFloat',
-	'PositiveInt',
-	'SafeInt',
-];
-
-const KNOWN = new Set([
-	...Object.keys(STRING_SCALARS),
-	...CODEC_SCALARS,
-	...NUMBER_SCALARS,
-]);
-
-/** Whether `name` is an `x-nxgt-scalar` that `@nxgt/typespec` declares. */
-export const isNxgtScalar = (name: string): boolean => KNOWN.has(name);
-
-/** The `@nxgt/zod` export that validates the scalar `name`, if it has an exact one. */
-export const exactSchema = (name: string): string | undefined =>
-	Object.hasOwn(STRING_SCALARS, name) ? STRING_SCALARS[name] : undefined;
-
-/** What a scope records, ahead of the export, when a schema needs it imported. */
-const IMPORT_PREFIX = '@nxgt/zod:';
-
-/** The mark that a printed schema calls the export `name`. */
-export const nxgtImportMark = (name: string): string => IMPORT_PREFIX + name;
-
-/**
- * The `import { … } from '@nxgt/zod';` line for what a file's scope recorded,
- * or none when it used no exact schema.
- */
-export function nxgtImport(marks: Iterable<string>): string[] {
-	const names = [...new Set(marks)]
-		.filter((mark) => mark.startsWith(IMPORT_PREFIX))
-		.map((mark) => mark.slice(IMPORT_PREFIX.length))
-		.sort();
+/** The line importing the `@nxgt/zod` exports among a file's imports (`z` is Zod's), or none. */
+export function nxgtImport(imports: Iterable<string>): string[] {
+	const names = [...new Set(imports)].filter((name) => name !== 'z').sort();
 	return names.length === 0
 		? []
 		: [`import ${list('{ ', names, ' }', '')} from '@nxgt/zod';`];

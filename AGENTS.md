@@ -122,10 +122,10 @@ no relative import into one.
   `src`, not a build of it.
 - `@nxgt/openapi-codegen` depends on no sibling. `@nxgt/zod` (`^0.1.3`), from outside the repository, is its optional peer
   and a devDependency: the code generated with `scalars: 'exact'` imports it,
-  the generator never does. `src/emit/nxgt-zod.ts` hardcodes the scalar-name to
-  export table, and `nxgt-zod.spec.ts` holds it to `@nxgt/zod`'s
-  `scalarSchemas`. The IR imports that data-only module for the
-  `unknown_scalar` warning. Its fixtures' `hono.ts` is
+  the generator never does. `src/ir/schema/nxgt-scalars.ts` hardcodes the scalar-name to export table
+  (the IR reads it for the `unknown_scalar` warning, so the table sits below
+  the emitter that prints it, `src/emit/nxgt-zod.ts`), and `nxgt-scalars.spec.ts`
+  holds it to `@nxgt/zod`'s `scalarSchemas`. Its fixtures' `hono.ts` is
   excluded from its typecheck, and `@nxgt/openapi-hono` type-checks and runs
   the same files against itself. `typecheck:generated` checks them all, the
   conformance ones included, against the runtime's built declarations; `hono`
@@ -450,9 +450,9 @@ publishes to npm.
 
 ## Known state
 
-`bun run test` is **1167 pass, 0 fail** on 2026-10-11: datasource-rest 26, httpyz 90, httpyz-query 14,
-openapi-codegen 444, openapi-hono 31, openapi-httpyz 28, openapi-msw 21, openapi-nuxt 36, typespec 340,
-scripts 164 (105 plus the 59 of the close-released-issues spec). On macOS, run it with `TMPDIR` outside `/var/folders`: the
+`bun run test` is **1270 pass, 0 fail** on 2026-10-11: datasource-rest 26, httpyz 99, httpyz-query 14,
+openapi-codegen 473, openapi-hono 31, openapi-httpyz 28, openapi-msw 21, openapi-nuxt 36, typespec 344,
+scripts 198 (the 59 of the close-released-issues spec and the 16 of the check-nxgt-versions spec included). On macOS, run it with `TMPDIR` outside `/var/folders`: the
 generator's `shared-components` symlink spec fails where the temporary
 directory sits behind a symlink. It runs one process per package, through `scripts/workspace.ts`, and each
 package's `test` script writes the generated fixtures its specs import first;

@@ -197,10 +197,14 @@ A schema with `x-nxgt-scalar`, a scalar of [`@nxgt/typespec`](typespec.md):
 
 With `'exact'`:
 - **Install `@nxgt/zod` (`^0.1.3`)**, an optional peer: the generated code
-  imports it, the generator never does.
+  imports it, the generator never does. It peers on `zod` `>=4.6.5`, so
+  that is the oldest `zod` the generated code can run on, where `'pattern'`
+  needs only the generator's `^4.5.4`.
 - **The scalar's `pattern` is not repeated**: its schema is the whole rule.
   A `minLength` or `maxLength` the spec adds is kept, as
-  `ibanSchema.check(z.maxLength(34))`, which works on every schema.
+  `ibanSchema.check(z.maxLength(34, 'Too big: expected string to have <=34 characters'))`:
+  `.check()` works on every schema, and the message is Zod's own, written out
+  because a scalar's schema answers with its own (`Invalid IBAN`) otherwise.
 - **Only the string scalars are covered.** `DateTime`, `Timestamp`, `BigInt`
   and `Long` decode to another type, and the numeric scalars are not covered
   yet: they keep their `pattern` or bounds, as `'pattern'` writes them.

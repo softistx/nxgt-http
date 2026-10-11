@@ -55,7 +55,7 @@ export const http = createHttpClient({
 | Import | For |
 | --- | --- |
 | `@nxgt/httpyz` | the client, its types and its errors |
-| `@nxgt/httpyz/integration` | for bindings such as `@nxgt/openapi-httpyz` only: the helpers that write and check requests exactly as the client does. An app has no use for it |
+| `@nxgt/httpyz/integration` | the helpers that write and check requests exactly as the client does, for bindings such as `@nxgt/openapi-httpyz`; and `createSseParser`, which an app uses to read the events of an error reply's body |
 
 ## Calls
 
@@ -1206,8 +1206,8 @@ type Out = InferOutput<typeof Item>; // { createdAt: Date }
 
 ### `@nxgt/httpyz/integration`
 
-For bindings only: the pieces a binding reuses so that the requests it
-writes and checks match the client's own.
+The pieces a binding reuses so that the requests it writes and checks match
+the client's own, and `createSseParser`, which an app can use too.
 
 #### Constants
 
@@ -1221,6 +1221,48 @@ The nine methods, in order: `get`, `put`, `post`, `delete`, `options`,
 `head`, `patch`, `trace`, `query`.
 
 #### Functions
+
+##### `createSseParser`
+
+```ts
+function createSseParser(lastEventId?: string): SseParser;
+
+interface SseParser {
+	push(chunk: string): ServerEvent[];
+	readonly retry: number | undefined;
+	readonly lastEventId: string | undefined;
+}
+
+interface ServerEvent {
+	readonly event: string; // `message` when the stream names none
+	readonly data: string; // its `data:` lines, joined with a line feed
+	readonly id: string | undefined;
+}
+```
+
+The parser `events()` reads a stream with, parsed as `EventSource` does:
+`push` takes a chunk of text and returns the events it completed.
+`events()` throws `UndeclaredStatusError` for an error status, with the body
+unread; a server such as graphql-yoga sends the reason there as events (a 404
+whose stream holds a `next` event for an unknown persisted query). Read the
+body from the error's `response` and feed the parser:
+
+```ts
+import { UndeclaredStatusError } from '@nxgt/httpyz';
+import { createSseParser } from '@nxgt/httpyz/integration';
+
+try {
+	for await (const event of http.events('/graphql', { body })) {
+		// ...
+	}
+} catch (error) {
+	if (!(error instanceof UndeclaredStatusError)) throw error;
+	const parser = createSseParser();
+	const [first] = parser.push(await error.response.text());
+	// first: { event: 'next', data: '{"errors":[...]}', id: undefined }
+	if (first) console.log(error.status, JSON.parse(first.data));
+}
+```
 
 ##### `text`
 

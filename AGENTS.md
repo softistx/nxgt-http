@@ -454,6 +454,18 @@ package's `test` script writes the generated fixtures its specs import first;
 then `bun test ./scripts/` runs the repository scripts' own specs.
 Treat any failure as yours.
 
+**A stale `packages/typespec/dist` is a trap.** The TypeSpec compiler loads
+the library from `dist/`, so after pulling `develop` without building, about
+42 typespec specs fail with errors that name no cause
+(`missing-implementation: Extern declaration must have an implementation in
+JS file`). The package's `test` script therefore runs
+`scripts/check-dist-fresh.ts` first, which fails with "dist is older than
+`<file>`: run `bun run build` first" when a non-spec file under `src/` is
+newer than `dist/index.js`, or `dist` is missing (`lib/*.tsp` is read in
+place, so it never makes `dist` stale). CI builds before
+it tests, so it never trips there. The script is in the root `scripts/`, not
+in the package, so it is not published.
+
 **The generated code compiles under the strictest settings.** It lands in an
 app's own source, so the app's `tsconfig` checks it, whatever that holds:
 `noUnusedLocals`, `exactOptionalPropertyTypes`,

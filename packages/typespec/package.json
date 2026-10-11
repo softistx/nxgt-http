@@ -36,7 +36,7 @@
 	"scripts": {
 		"build": "bun run ../../build.ts",
 		"fixtures": "bun run test/generate.ts",
-		"test": "bun run fixtures && bun test src",
+		"test": "bun run ../../scripts/check-dist-fresh.ts . && bun run fixtures && bun test src",
 		"typecheck": "bun run fixtures && tsc --noEmit",
 		"fixtures:typespec": "bun run test/generate.ts --accept"
 	},

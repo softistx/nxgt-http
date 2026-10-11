@@ -218,6 +218,27 @@ Rules carried over from nxgt-core, each learned from a shipped defect:
   replies, `unwrap`, `ok`, `cache`, `events` and `lines`; a builder that
   adds a type to what an app exports gets a case there. The folder is
   typechecked with its package and never built or shipped.
+- **A declaration names its siblings with an extension.** Sources import
+  without one, and tsc copies that into `dist/*.d.ts` (`from './client/types'`).
+  Under a consumer's `moduleResolution: nodenext` (or `node16`) such an import
+  does not resolve, so every type behind it is `any`, and `skipLibCheck: true`
+  hides it (softistx/nxgt-http#132). `build.ts` therefore gives every relative
+  import of an emitted `.d.ts` its `.js` (or `/index.js`) through
+  `scripts/artifacts/dts-imports.ts`, then fails the build on any it left,
+  read with `declarationSpecifiers`. The JavaScript needs nothing: it is
+  bundled, and imports its chunks with their extension. Two checks in
+  `verify:artifacts` hold it: `emit.ts` emits each declaration fixture under
+  `bundler` and under `nodenext`, and the last stage, `nodenext.ts`, compiles
+  a consumer under `module: nodenext` with `skipLibCheck: false` that imports
+  every subpath of every package from the install, and for `@nxgt/httpyz`
+  expects an unknown `createHttpClient` option to be an error (an `any` would
+  make the `@ts-expect-error` unused). Only errors in `node_modules/@nxgt/`
+  and in the fixture count: a dependency's own declarations are not ours.
+  `build.ts`'s rewrite, `dts-imports.ts` and its spec, and `emit.ts`'s
+  second pass are nxgt-data's (softistx/nxgt-data, from nxgt-graphql#53 and
+  nxgt-zod#6), copied as they are; `nodenext.ts` is this repository's own and
+  can be proposed to the others. Hand-written `.d.ts` files are copied
+  untouched, so none may import a sibling without its extension.
 - **Build before typecheck and tests.** `exports` points at `dist/`, so on a
   clean checkout `@nxgt/httpyz` resolves to nothing for the binding. CI builds
   first. `bun run build`, `typecheck` and `test` run the packages through

@@ -31,6 +31,10 @@
  * build on, against the install: a type a consumer's `.d.ts` must name and
  * the entry does not export fails there with TS2883, and nowhere else.
  *
+ * Every package's declarations are compiled under `module: nodenext` with
+ * `skipLibCheck: false`: an extensionless relative import in a `.d.ts` makes
+ * its types `any` there (softistx/nxgt-http#132).
+ *
  * Each check lives in `scripts/artifacts/`, one module per responsibility;
  * this file only runs them in order and stops at the first that fails.
  */
@@ -44,6 +48,7 @@ import { importsDeclared } from './artifacts/imports';
 import { installAsConsumer, type Packed, pack } from './artifacts/install';
 import { binsRun, subpathsLoad } from './artifacts/load';
 import { manifestProblems } from './artifacts/manifest';
+import { declarationsResolve } from './artifacts/nodenext';
 import { type Pkg, readPackages } from './artifacts/packages';
 import { staleBuilds } from './artifacts/stale';
 import { typesReachConsumer } from './artifacts/types';
@@ -98,7 +103,8 @@ async function main(): Promise<boolean> {
 			(await importsDeclared(workdir, packages)) &&
 			(await typesReachConsumer(workdir, packages)) &&
 			(await binsRun(workdir, packages)) &&
-			(await declarationsEmit(workdir, packages))
+			(await declarationsEmit(workdir, packages)) &&
+			(await declarationsResolve(workdir, packages))
 		);
 	} finally {
 		await rm(workdir, { recursive: true, force: true });

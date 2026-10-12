@@ -86,6 +86,115 @@ function bodyReaders(
 	};
 }
 
+/** What reading one response needs, built once by `readReply`. */
+interface Reading {
+	readonly context: CallContext;
+	readonly status: number;
+	readonly response: Response;
+	readonly settings: ReplySettings;
+	readonly readers: ReturnType<typeof bodyReaders>;
+}
+
+const reply = (
+	{ status, response }: Reading,
+	type: string | undefined,
+	data: unknown,
+) => ({ status, type, data, response });
+
+const refused = (
+	{ context, status }: Reading,
+	issues: ValidationIssue[],
+): ValidationError =>
+	new ValidationError(context, {
+		kind: 'response',
+		...context,
+		status,
+		issues,
+	});
+
+const failure = (
+	reading: Reading,
+	code: string,
+	message: string,
+): ValidationError =>
+	refused(reading, [{ target: 'response', path: [], code, message }]);
+
+const parse = (reading: Reading, text: string): unknown => {
+	try {
+		return JSON.parse(text);
+	} catch {
+		throw failure(
+			reading,
+			'invalid_json',
+			`the ${reading.status} reply is not valid JSON`,
+		);
+	}
+};
+
+/** As `/hono` checks a reply with `validateResponses`: JSON and text only. */
+async function settle(
+	reading: Reading,
+	type: string,
+	media: MediaSpec,
+	data: unknown,
+) {
+	const { validate, decode } = reading.settings;
+	if (!validate || !media.schema) return reply(reading, type, data);
+	const result = await check(media.schema, data, 'response');
+	if (!result.ok) throw refused(reading, result.issues);
+	return reply(reading, type, decode ? result.value : data);
+}
+
+/** A call that declares nothing: the reply is read by what the server says it is. */
+async function readUntyped(reading: Reading, header: string | null) {
+	const { readText, readBlob, readForm } = reading.readers;
+	const type = header === null ? undefined : mediaType(header);
+	if (reading.response.body === null) return reply(reading, type, undefined);
+	switch (type === undefined ? undefined : mediaKind(type)) {
+		case 'json': {
+			const text = await readText();
+			return reply(
+				reading,
+				type,
+				text === '' ? undefined : parse(reading, text),
+			);
+		}
+		case 'form':
+			return reply(reading, type, await readForm());
+		case 'binary':
+			return reply(reading, type, await readBlob());
+		default: {
+			const text = await readText();
+			return reply(
+				reading,
+				type,
+				type === undefined && text === '' ? undefined : text,
+			);
+		}
+	}
+}
+
+/** The body of a declared type, read as that type's kind and checked by its schema. */
+async function readDeclared(reading: Reading, type: string, media: MediaSpec) {
+	const { readText, readBlob, readForm } = reading.readers;
+	switch (media.kind) {
+		case 'json': {
+			const text = await readText();
+			// Empty is no JSON: a checked reply says so, as the server does.
+			if (text === '' && !(reading.settings.validate && media.schema)) {
+				return reply(reading, type, undefined);
+			}
+			return settle(reading, type, media, parse(reading, text));
+		}
+		case 'text':
+			return settle(reading, type, media, await readText());
+		case 'form':
+			return reply(reading, type, await readForm());
+		default:
+			return reply(reading, type, await readBlob());
+	}
+}
+
 export async function readReply(
 	context: CallContext,
 	spec: ReplySpec | undefined,
@@ -94,54 +203,14 @@ export async function readReply(
 ): Promise<unknown> {
 	const { status } = response;
 	const header = response.headers.get('content-type');
-	const refused = (issues: ValidationIssue[]): ValidationError =>
-		new ValidationError(context, {
-			kind: 'response',
-			...context,
-			status,
-			issues,
-		});
-	const failure = (code: string, message: string): ValidationError =>
-		refused([{ target: 'response', path: [], code, message }]);
-	const { readText, readBlob, readForm } = bodyReaders(
-		context,
-		response,
-		settings.signal,
-	);
-	const parse = (text: string): unknown => {
-		try {
-			return JSON.parse(text);
-		} catch {
-			throw failure('invalid_json', `the ${status} reply is not valid JSON`);
-		}
-	};
-
-	if (!spec) {
-		const type = header === null ? undefined : mediaType(header);
-		const reply = (data: unknown) => ({ status, type, data, response });
-		if (response.body === null) return reply(undefined);
-		switch (type === undefined ? undefined : mediaKind(type)) {
-			case 'json': {
-				const text = await readText();
-				return reply(text === '' ? undefined : parse(text));
-			}
-			case 'form':
-				return reply(await readForm());
-			case 'binary':
-				return reply(await readBlob());
-			default: {
-				const text = await readText();
-				return reply(type === undefined && text === '' ? undefined : text);
-			}
-		}
-	}
+	const readers = bodyReaders(context, response, settings.signal);
+	const reading: Reading = { context, status, response, settings, readers };
+	if (!spec) return readUntyped(reading, header);
 
 	const declared = spec[status];
 	if (!declared) throw new UndeclaredStatusError(context, response);
 	const types = Object.keys(declared);
-	if (types.length === 0) {
-		return { status, type: undefined, data: undefined, response };
-	}
+	if (types.length === 0) return reply(reading, undefined, undefined);
 	// Untyped, it can only be the one type the status declares.
 	const type =
 		header === null
@@ -152,32 +221,10 @@ export async function readReply(
 	const media = type === undefined ? undefined : declared[type];
 	if (type === undefined || media === undefined) {
 		throw failure(
+			reading,
 			'invalid_content_type',
 			`a ${status} reply is ${types.join(' or ')}, not ${header ?? 'untyped'}`,
 		);
 	}
-	const reply = (data: unknown) => ({ status, type, data, response });
-	/** As `/hono` checks a reply with `validateResponses`: JSON and text only. */
-	const settle = async (data: unknown) => {
-		if (!settings.validate || !media.schema) return reply(data);
-		const result = await check(media.schema, data, 'response');
-		if (!result.ok) throw refused(result.issues);
-		return reply(settings.decode ? result.value : data);
-	};
-	switch (media.kind) {
-		case 'json': {
-			const text = await readText();
-			// Empty is no JSON: a checked reply says so, as the server does.
-			if (text === '' && !(settings.validate && media.schema)) {
-				return reply(undefined);
-			}
-			return settle(parse(text));
-		}
-		case 'text':
-			return settle(await readText());
-		case 'form':
-			return reply(await readForm());
-		default:
-			return reply(await readBlob());
-	}
+	return readDeclared(reading, type, media);
 }

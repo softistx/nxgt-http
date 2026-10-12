@@ -1,5 +1,11 @@
 # @nxgt/httpyz
 
+## 0.4.1
+
+### Patch Changes
+
+- [#149](https://github.com/softistx/nxgt-http/pull/149) [`fa69e2b`](https://github.com/softistx/nxgt-http/commit/fa69e2b3571e53336351bf4a3744b01dcd2b1a3f) Thanks [@SteveGT96](https://github.com/SteveGT96)! - A connection that drops while a reply's body is read throws a `NetworkError` (`reply body cut off`) instead of the runtime's raw `TypeError`. It is not retried, since the reply came. A form that does not parse keeps `formData()`'s own error, and an abort stays as it is. `@nxgt/datasource-rest` maps it as it maps any `NetworkError`: a body cut off is now `SERVICE_UNAVAILABLE`, where the raw `TypeError` was `INTERNAL_SERVER_ERROR`.
+
 ## 0.4.0
 
 ### Minor Changes

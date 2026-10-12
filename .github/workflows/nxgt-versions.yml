@@ -5,8 +5,7 @@ name: nxgt versions
 # patch is admitted by the range the day it is published and tested by nobody
 # until the lock is bumped, and a new 0.x minor is outside the range until the
 # peer is widened. This asks npm every week instead of relying on someone
-# remembering. Copied from nxgt-janus; only the comments and the issue text
-# differ.
+# remembering. Copied from nxgt-janus.
 #
 # Not Dependabot: its Bun updater reads bun.lock up to lockfileVersion 1
 # (MAX_SUPPORTED_LOCKFILE_VERSION in dependabot-core's

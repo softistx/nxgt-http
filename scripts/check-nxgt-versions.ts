@@ -7,8 +7,8 @@
  * only the version `bun.lock` holds. A patch upstream is therefore admitted by
  * the range the day it is published and never tested until someone bumps the
  * lock, and a new `0.x` minor stays outside the range until the peer is
- * widened. This check is what makes
- * that someone the `nxgt-versions` workflow, weekly, instead of memory.
+ * widened. This check is what makes that someone the `nxgt-versions`
+ * workflow, weekly, instead of memory.
  *
  * Dependabot would do it, but not here: its Bun updater reads `bun.lock` up to
  * `lockfileVersion` 1 and this one, written by Bun 1.4.2, is 2.

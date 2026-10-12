@@ -1,9 +1,11 @@
 name: nxgt versions
 
-# The packages here peer the nxgt 0.x libraries they wrap by range, and the
-# specs run only the version bun.lock holds: a new @nxgt/* release is admitted
-# by the range the day it is published and tested by nobody until the lock is
-# bumped. This asks npm every week instead of relying on someone remembering.
+# @nxgt/openapi-codegen peers @nxgt/zod by ^0.1.3 (optional, for
+# `scalars: 'exact'`), and the specs run only the version bun.lock holds: a
+# patch is admitted by the range the day it is published and tested by nobody
+# until the lock is bumped, and a new 0.x minor is outside the range until the
+# peer is widened. This asks npm every week instead of relying on someone
+# remembering. Copied from nxgt-janus.
 #
 # Not Dependabot: its Bun updater reads bun.lock up to lockfileVersion 1
 # (MAX_SUPPORTED_LOCKFILE_VERSION in dependabot-core's
@@ -12,7 +14,7 @@ name: nxgt versions
 #
 # Something behind opens one issue, or updates the one already open, and fails
 # the run; everything current closes it. The bump itself is a pull request
-# like any other, so it runs the whole of CI, Floors included.
+# like any other, so it runs the whole of CI.
 
 on:
   schedule:
@@ -61,11 +63,11 @@ jobs:
         if: steps.check.outputs.status == '1'
         run: |
           {
-            echo 'The specs run only what `bun.lock` holds, so these releases are admitted by the peer ranges and not yet tested:'
+            echo 'The specs run only what `bun.lock` holds, so these releases are not yet tested here:'
             echo
             cat "$RUNNER_TEMP/outdated.txt"
             echo
-            echo 'Bump each devDependency, commit `bun.lock` with it and an empty changeset, and run the suites that use it; AGENTS.md says which, and what the specs run on.'
+            echo 'Bump each devDependency and commit `bun.lock` with it. A patch inside the peer range needs an empty changeset; a new 0.x minor of a peer (`@nxgt/zod`) needs the peer range widened too, with a changeset for the package that declares it. Run the suites that use it; AGENTS.md says which.'
             echo
             echo "Found by $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           } > "$RUNNER_TEMP/body.md"

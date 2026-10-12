@@ -3,9 +3,9 @@ import { HELPERS } from '../operation/helpers';
 import { list } from '../printer';
 import { LOCALS, type Printing } from './printing';
 
-/** The imports, then the helpers the schemas call. */
 const RUNTIME = '@alxia/core';
 
+/** The imports, then the helpers the schemas call. */
 export function preamble(printing: Printing): string[] {
 	const { ctx } = printing;
 	const imports: string[] = [];

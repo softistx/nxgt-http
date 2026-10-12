@@ -4,23 +4,15 @@ import { ALXIA_NAMES, operationConst } from './alxia/names';
 import type { EmitContext } from './context';
 import { OPERATION_INDEXES, paramGroups } from './operation/keys';
 
-/**
- * Every generated name, once. A schema's `XInput`, an operation's `XQuery`,
- * or a name `types.ts` and `hono.ts` declare themselves, can land
- * on a name a schema already has. Interfaces of one name would merge, not
- * fail, so this is the only place the clash is caught.
- */
-export function checkNames(ctx: EmitContext): void {
-	const types = new Map<string, string>();
+/** Who holds each generated name, and the clashes found so far. */
+class Claims {
+	/** `types.ts`'s names, and `hono.ts`'s. */
+	readonly types = new Map<string, string>();
 	/** alxia.ts's values: a module of their own, beside the types. */
-	const values = new Map<string, string>();
-	const diagnostics: Diagnostic[] = [];
-	const claim = (
-		name: string,
-		owner: string,
-		at: Location,
-		owners = types,
-	): void => {
+	readonly values = new Map<string, string>();
+	readonly diagnostics: Diagnostic[] = [];
+
+	claim(name: string, owner: string, at: Location, owners = this.types): void {
 		const holder = owners.get(name);
 		if (holder === undefined) {
 			owners.set(name, owner);
@@ -29,66 +21,106 @@ export function checkNames(ctx: EmitContext): void {
 		const fix = [holder, owner].some((o) => o.startsWith('schema '))
 			? 'Rename the schema with the `names` option'
 			: 'Change the operationId';
-		diagnostics.push({
+		this.diagnostics.push({
 			severity: 'error',
 			code: 'name_collision',
 			message: `${holder} and ${owner} would both generate ${name}. ${fix}`,
 			file: at.file,
 			pointer: at.pointer,
 		});
-	};
+	}
+}
+
+/** The names the files declare themselves, before any schema's. */
+function claimOwn(ctx: EmitContext, claims: Claims): void {
 	const root = { file: ctx.options.rootDir, pointer: '' };
-	for (const name of OPERATION_INDEXES) claim(name, 'types.ts', root);
-	if (ctx.options.dates === 'date') claim('Wire', 'types.ts', root);
+	for (const name of OPERATION_INDEXES) claims.claim(name, 'types.ts', root);
+	if (ctx.options.dates === 'date') claims.claim('Wire', 'types.ts', root);
 	if (ctx.options.hono) {
 		// Declared or imported by hono.ts, which also imports schemas by name.
 		for (const name of ['Replies', 'HonoSpec', 'Hono']) {
-			claim(name, 'hono.ts', root);
+			claims.claim(name, 'hono.ts', root);
 		}
 	}
+}
+
+/** Each schema, alias and their `XInput` types. */
+function claimSchemas(ctx: EmitContext, claims: Claims): void {
 	for (const schema of ctx.ir.schemas) {
-		claim(schema.name, `schema ${schema.name}`, schema.location);
+		claims.claim(schema.name, `schema ${schema.name}`, schema.location);
 	}
 	for (const alias of ctx.ir.aliases) {
-		claim(alias.name, `schema ${alias.name}`, alias.location);
+		claims.claim(alias.name, `schema ${alias.name}`, alias.location);
 	}
 	for (const schema of ctx.ir.schemas) {
 		if (ctx.hasInput(schema.id)) {
-			claim(`${schema.name}Input`, `schema ${schema.name}`, schema.location);
+			claims.claim(
+				`${schema.name}Input`,
+				`schema ${schema.name}`,
+				schema.location,
+			);
 		}
 	}
 	for (const alias of ctx.ir.aliases) {
 		if (ctx.hasInput(alias.target)) {
-			claim(`${alias.name}Input`, `schema ${alias.name}`, alias.location);
+			claims.claim(
+				`${alias.name}Input`,
+				`schema ${alias.name}`,
+				alias.location,
+			);
 		}
 	}
+}
+
+/** Each operation's parameter groups and form type. */
+function claimOperations(ctx: EmitContext, claims: Claims): void {
 	for (const operation of ctx.ir.operations) {
 		const owner = `operation ${operation.operationId}`;
 		for (const group of paramGroups(operation)) {
-			claim(group.name, owner, operation.location);
+			claims.claim(group.name, owner, operation.location);
 		}
 		if (ctx.formOf(operation)) {
-			claim(`${operation.name}Form`, owner, operation.location);
+			claims.claim(`${operation.name}Form`, owner, operation.location);
 		}
 	}
-	if (ctx.options.alxia) {
-		// alxia.ts holds values, not types: its own names, the `z<Name>` it
-		// imports from zod.ts, and one const per operation.
-		for (const name of ALXIA_NAMES) claim(name, 'alxia.ts', root, values);
-		for (const schema of ctx.ir.schemas) {
-			const owner = `schema ${schema.name}`;
-			claim(`z${schema.name}`, owner, schema.location, values);
-		}
-		for (const alias of ctx.ir.aliases) {
-			const owner = `schema ${alias.name}`;
-			claim(`z${alias.name}`, owner, alias.location, values);
-		}
-		for (const operation of ctx.ir.operations) {
-			const owner = `operation ${operation.operationId}`;
-			claim(operationConst(operation), owner, operation.location, values);
-		}
+}
+
+/**
+ * alxia.ts holds values, not types: its own names, the `z<Name>` it
+ * imports from zod.ts, and one const per operation.
+ */
+function claimAlxia(ctx: EmitContext, claims: Claims): void {
+	const { values } = claims;
+	const root = { file: ctx.options.rootDir, pointer: '' };
+	for (const name of ALXIA_NAMES) claims.claim(name, 'alxia.ts', root, values);
+	for (const schema of ctx.ir.schemas) {
+		const owner = `schema ${schema.name}`;
+		claims.claim(`z${schema.name}`, owner, schema.location, values);
 	}
-	if (diagnostics.length > 0) {
-		throw new CodegenError(diagnostics, ctx.options.rootDir);
+	for (const alias of ctx.ir.aliases) {
+		const owner = `schema ${alias.name}`;
+		claims.claim(`z${alias.name}`, owner, alias.location, values);
+	}
+	for (const operation of ctx.ir.operations) {
+		const owner = `operation ${operation.operationId}`;
+		claims.claim(operationConst(operation), owner, operation.location, values);
+	}
+}
+
+/**
+ * Every generated name, once. A schema's `XInput`, an operation's `XQuery`,
+ * or a name `types.ts` and `hono.ts` declare themselves, can land
+ * on a name a schema already has. Interfaces of one name would merge, not
+ * fail, so this is the only place the clash is caught. The claims run in a
+ * fixed order, which is the order of the diagnostics it throws.
+ */
+export function checkNames(ctx: EmitContext): void {
+	const claims = new Claims();
+	claimOwn(ctx, claims);
+	claimSchemas(ctx, claims);
+	claimOperations(ctx, claims);
+	if (ctx.options.alxia) claimAlxia(ctx, claims);
+	if (claims.diagnostics.length > 0) {
+		throw new CodegenError(claims.diagnostics, ctx.options.rootDir);
 	}
 }

@@ -77,6 +77,7 @@ const OPTIONS = new Set<string>([
 	'hono',
 	'alxia',
 	'dates',
+	'scalars',
 	'lint',
 	'names',
 	'legacyNullable',

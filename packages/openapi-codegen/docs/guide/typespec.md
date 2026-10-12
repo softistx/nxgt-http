@@ -170,6 +170,7 @@ row is in the CI fixture.
 | `@query(#{ explode: true }) tags?: string[]` | `explode: true` | `?tags=a&tags=b` |
 | `@error` model behind `@statusCode _: 404` | a `404` response with that schema | a `404` reply, typed |
 | `Pet \| NotFound` as a return type | one response per status | one typed reply per status |
+| `Nxgt.iban`, a scalar of `@nxgt/typespec` | a string schema with its `pattern` and `x-nxgt-scalar: IBAN` | `z.string().regex(…)`, or `ibanSchema` from `@nxgt/zod` with [`scalars: 'exact'`](options.md#scalars) |
 
 ## Request bodies
 

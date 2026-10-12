@@ -628,12 +628,17 @@ one.
 
 **Why:** the scalar's pattern checks the shape. A list (`countryCode`,
 `currency`, `timeZone`, `locale`) or a checksum (`iban`, ISBN) does not fit in
-a pattern. `x-nxgt-scalar` names the exact rule, but `@nxgt/openapi-codegen`
-does not map it to the `@nxgt/zod` schema yet ([roadmap](roadmap.md)).
+a pattern. `x-nxgt-scalar` names the exact rule, and `@nxgt/openapi-codegen`
+maps it to the `@nxgt/zod` schema only with `scalars: 'exact'`; the default is
+`'pattern'`.
 
-**Fix:** until it does, check the value in the handler against the exact
-rule, the list or the checksum, from `@nxgt/zod` or your own table, and answer
-`400` as the generated validator does:
+**Fix:** generate with
+[`scalars: 'exact'`](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-codegen/docs/guide/options.md#scalars)
+(`bun add @nxgt/zod`, then `generate({ …, scalars: 'exact' })`): `iban` is
+checked by `ibanSchema`, `countryCode` by its list of assigned codes. If you
+cannot, check the value in the handler against the exact rule, the list or the
+checksum, from `@nxgt/zod` or your own table, and answer `400` as the generated
+validator does:
 
 ```ts
 if (!knownCountries.has(body.country)) {
@@ -651,7 +656,8 @@ where `@nxgt/graphql-scalars` refuses it.
 tell from `0`. For `nonNegativeInt`, `nonPositiveInt`, `port`, the bound holds,
 so the value passes (`positiveInt` and `negativeInt` refuse it by their bound).
 
-**Fix:** normalise in the handler when the sign matters:
+**Fix:** generate with [`scalars: 'exact'`](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-codegen/docs/guide/options.md#scalars), whose schemas refuse `-0` for
+an integer scalar. Otherwise normalise in the handler when the sign matters:
 
 ```ts
 const quantity = Object.is(body.quantity, -0) ? 0 : body.quantity;

@@ -12,6 +12,7 @@ await generate({
 	hono: false,
 	alxia: false,
 	dates: 'string',
+	scalars: 'pattern',
 	lint: false,
 	names: { 'components/schemas/Error.yaml': 'ApiError' },
 	legacyNullable: 'warn',
@@ -29,6 +30,7 @@ await generate({
 | [`hono`](#hono) | `false` | also write `hono.ts`: typed routes for a Hono app |
 | [`alxia`](#alxia) | `false` | also write `alxia.ts`: each operation as the data an alxia app's `app.route(operation, ...middlewares, handler)` takes |
 | [`dates`](#dates) | `'string'` | a `date-time` as its string, or decoded to a `Date` |
+| [`scalars`](#scalars) | `'pattern'` | a string or numeric scalar of `@nxgt/typespec` checked by its `pattern` or bounds, or by its schema from `@nxgt/zod` |
 | [`lint`](#lint) | `false` | lint the spec with Redocly before generating |
 | [`names`](#names) | `{}` | renames schemas |
 | [`legacyNullable`](#legacynullable) | `'warn'` | tolerate or refuse 3.0's `nullable: true` |
@@ -183,6 +185,94 @@ With `'date'`:
 
 `format: date` stays a string: a day is not an instant, and `new Date()`
 would pin it to a time zone.
+
+## `scalars`
+
+A schema with `x-nxgt-scalar`, a scalar of [`@nxgt/typespec`](typespec.md):
+
+| Value | Validator of `IBAN` |
+| --- | --- |
+| `'pattern'` | `z.string().regex(/^[A-Z]{2}…/)`, the scalar's `pattern` |
+| `'exact'` | `ibanSchema`, the scalar's own schema, imported from `@nxgt/zod` |
+
+A spec with two IBAN schemas and two port schemas, one of each as
+`@nxgt/typespec` declares it and one narrowed, generated with:
+
+```ts
+import { generate } from '@nxgt/openapi-codegen';
+
+await generate({
+	input: 'openapi/openapi.yaml',
+	output: 'src/generated',
+	scalars: 'exact',
+});
+```
+
+writes this `zod.ts`:
+
+```ts
+import { z } from 'zod';
+import { ibanSchema, portSchema } from '@nxgt/zod';
+
+export const zIBAN = ibanSchema.check(z.regex(/^[A-Z]{2}\d{2}[A-Z0-9]{1,30}$/u, 'Invalid string: must match pattern /^[A-Z]{2}\\d{2}[A-Z0-9]{1,30}$/u'));
+
+export const zFrIban = ibanSchema.check(z.regex(/^FR.*$/u, 'Invalid string: must match pattern /^FR.*$/u'));
+
+export const zPort = portSchema;
+
+export const zWellKnownPort = portSchema.check(z.lte(1023, 'Too big: expected number to be <=1023'));
+```
+
+`zIBAN` is the scalar as declared, `zFrIban` the one narrowed to France by a
+`pattern`; `zPort` is the bare schema, `zWellKnownPort` a `maximum` of 1023
+on top of it.
+
+With `'exact'`:
+- **Install `@nxgt/zod` (`^0.1.3`)**, an optional peer: the generated code
+  imports it, the generator never does. It peers on `zod` `>=4.6.5`, so
+  that is the oldest `zod` the generated code can run on, where `'pattern'`
+  needs only the generator's `^4.5.4`.
+- **The spec's `pattern` is kept on top of the scalar's rule**, as
+  `ibanSchema.check(z.regex(/^[A-Z]{2}…/u))`, so the validator is never looser
+  than the spec: a scalar narrowed in TypeSpec
+  (`@pattern("^FR.*$") scalar FrIban extends iban`) still refuses a Belgian
+  IBAN. For a scalar as `@nxgt/typespec` declares it, the canonical pattern is
+  checked beside the schema, redundantly. A `minLength` or `maxLength` the
+  spec adds is kept too, as
+  `ibanSchema.check(z.maxLength(34, 'Too big: expected string to have <=34 characters'))`:
+  `.check()` works on every schema, and the message is Zod's own, written out
+  because a scalar's schema answers with its own (`Invalid IBAN`) otherwise.
+  Since the canonical pattern is checked beside the schema, a refused
+  string can carry **two issues**: the schema's (`Invalid IBAN`) and the
+  pattern's. The numeric scalars do not repeat themselves this way (below).
+- **The numeric scalars are covered too** (`Latitude`, `Longitude`, `Port`,
+  `PositiveInt`, `SafeInt` and the other `Negative`/`NonNegative`/`NonPositive`/
+  `Positive` ones): `portSchema` instead of `z.int32().min(0).max(65535)`.
+  A spec that says `integer` of a float scalar, or the reverse, is not that
+  scalar and keeps its bounds.
+- **A bound the schema already enforces is not written again.** A scalar the
+  spec leaves as `@nxgt/typespec` declares it is the bare `portSchema`, which
+  also keeps one violation from being reported twice. A bound the spec
+  narrows (`@maxValue(1023) scalar WellKnownPort extends port`), and a
+  `multipleOf`, stay on top as `.check()`, with Zod's own messages:
+  `portSchema.check(z.lte(1023, 'Too big: expected number to be <=1023'))`.
+  **`format`** is kept where the scalar's schema is wider: `format: int32` on
+  `SafeInt` adds `.check(z.gte(-2147483648, …), z.lte(2147483647, …))`, as
+  `'pattern'` writes `z.int32()`; `int64` is the safe range every integer
+  scalar's schema stays within, and `float` and `double` check nothing.
+- **`-0` is refused by the integer scalars** (`Port`, `SafeInt`,
+  `NonNegativeInt`, `NonPositiveInt`, as GraphQL's `Int` does). JSON Schema
+  cannot refuse it, so `'pattern'` accepts it everywhere. A float scalar that
+  admits `0` (`NonNegativeFloat`, `Latitude`, …) still accepts it. The
+  messages of a refused value can differ too, as the schema's own bounds
+  answer, not the spec's.
+- **`DateTime`, `Timestamp`, `BigInt` and `Long` stay out.** They decode to
+  another type, so they keep their `pattern`, as `'pattern'` writes it, until
+  `@nxgt/zod` offers their wire schemas
+  ([softistx/nxgt-zod#12](https://github.com/softistx/nxgt-zod/issues/12)).
+- **An `x-nxgt-scalar` that `@nxgt/typespec` does not declare** gets an
+  `unknown_scalar` warning, and is checked by its `pattern` (a string) or
+  its bounds (a number).
 
 ## `lint`
 

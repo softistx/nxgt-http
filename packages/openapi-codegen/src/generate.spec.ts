@@ -382,4 +382,14 @@ describe('generate', () => {
 			),
 		).rejects.toThrow('dates must be string or date, not luxon');
 	});
+
+	it('refuses a scalars option it does not know', async () => {
+		const fs = createMemoryFileSystem({ '/s/openapi.json': SPEC });
+		await expect(
+			generateFiles(
+				{ input: '/s/openapi.json', output: '/s/gen', scalars: 'zod' as never },
+				{ fs },
+			),
+		).rejects.toThrow('scalars must be pattern or exact, not zod');
+	});
 });

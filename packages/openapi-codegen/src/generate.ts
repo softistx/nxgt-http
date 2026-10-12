@@ -1,6 +1,6 @@
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { emitFiles, FILE_NAMES, type GeneratedFile } from './emit';
-import type { Dates, Enums, UnknownKeys } from './emit/context';
+import type { Dates, Enums, Scalars, UnknownKeys } from './emit/context';
 import { CodegenError, type Diagnostic } from './errors';
 import { buildIR, type IROptions } from './ir';
 import {
@@ -10,6 +10,7 @@ import {
 import { type Lint, lintSpec } from './lint';
 import { loadDocument } from './loader/document';
 import type { FileSystem } from './loader/fs';
+import { validateOptions } from './validate-options';
 import { type WriteResult, writeFiles } from './writer/write';
 
 export interface GenerateOptions extends IROptions {
@@ -54,6 +55,17 @@ export interface GenerateOptions extends IROptions {
 	 */
 	dates?: Dates;
 	/**
+	 * A scalar of `@nxgt/typespec` (`x-nxgt-scalar`): checked by its `pattern`
+	 * (`pattern`, the default), or by its own schema from `@nxgt/zod`
+	 * (`exact`), imported by the generated code, which then needs that
+	 * optional peer. The spec's own `pattern`, length bounds and, for a
+	 * number, the bounds and `multipleOf` the schema does not already
+	 * enforce are kept on top of it, as `.check()`s. `DateTime`, `Timestamp`,
+	 * `BigInt` and `Long` decode to another type: they keep their pattern
+	 * either way.
+	 */
+	scalars?: Scalars;
+	/**
 	 * Lint the spec with Redocly before generating: `true` uses the
 	 * `redocly.yaml` beside `input`, or Redocly's defaults; a string names the
 	 * config file. Needs the optional peer `@redocly/openapi-core`. A lint
@@ -88,14 +100,6 @@ export interface GenerateResult extends WriteResult {
 /** Where the files go when no `output` is given, relative to `cwd`. */
 export const DEFAULT_OUTPUT = 'generated/openapi';
 
-const UNKNOWN_KEYS: readonly string[] = ['strip', 'strict', 'loose'];
-const EXTENSIONS: readonly string[] = ['', '.js', '.ts'];
-const ENUMS: readonly string[] = ['object', 'union'];
-const DATES: readonly string[] = ['string', 'date'];
-
-const invalid = (message: string): CodegenError =>
-	new CodegenError([{ severity: 'error', code: 'invalid_option', message }]);
-
 /**
  * Whose 400 `validationErrors` declares: alxia's with `alxia` alone, either
  * with `hono` beside it, since a client cannot tell which one serves the
@@ -113,49 +117,17 @@ export async function generateFiles(
 	options: GenerateOptions,
 	{ cwd = process.cwd(), fs }: GenerateContext = {},
 ): Promise<{ files: GeneratedFile[]; warnings: Diagnostic[] }> {
-	const unknownKeys = options.unknownKeys ?? 'strip';
-	if (!UNKNOWN_KEYS.includes(unknownKeys)) {
-		throw invalid(
-			`unknownKeys must be strip, strict or loose, not ${unknownKeys}`,
-		);
-	}
-	const importExtension = options.importExtension ?? '';
-	if (!EXTENSIONS.includes(importExtension)) {
-		throw invalid(
-			`importExtension must be '', '.js' or '.ts', not ${importExtension}`,
-		);
-	}
-	const enums = options.enums ?? 'object';
-	if (!ENUMS.includes(enums)) {
-		throw invalid(`enums must be object or union, not ${enums}`);
-	}
-	const hono = options.hono ?? false;
-	if (typeof hono !== 'boolean') {
-		throw invalid(`hono must be true or false, not ${String(hono)}`);
-	}
-	const alxia = options.alxia ?? false;
-	if (typeof alxia !== 'boolean') {
-		throw invalid(`alxia must be true or false, not ${String(alxia)}`);
-	}
-	const dates = options.dates ?? 'string';
-	if (!DATES.includes(dates)) {
-		throw invalid(`dates must be string or date, not ${dates}`);
-	}
-	const lint = options.lint ?? false;
-	if (typeof lint !== 'boolean' && (typeof lint !== 'string' || lint === '')) {
-		throw invalid(
-			`lint must be true, false or a Redocly config file, not ${String(lint)}`,
-		);
-	}
-	const validationErrors = options.validationErrors ?? true;
-	if (typeof validationErrors !== 'boolean') {
-		throw invalid(
-			`validationErrors must be true or false, not ${String(validationErrors)}`,
-		);
-	}
-	if (lint !== false && fs !== undefined) {
-		throw invalid('lint reads the spec from disk: it cannot be used with fs');
-	}
+	const {
+		unknownKeys,
+		importExtension,
+		enums,
+		hono,
+		alxia,
+		dates,
+		scalars,
+		lint,
+		validationErrors,
+	} = validateOptions(options, fs !== undefined);
 	const input = resolve(cwd, options.input);
 	const output = resolve(cwd, options.output ?? DEFAULT_OUTPUT);
 	const doc = await loadDocument(input, { fs, cwd });
@@ -176,6 +148,7 @@ export async function generateFiles(
 			hono,
 			alxia,
 			dates,
+			scalars,
 			source: relative(output, input).split(sep).join('/'),
 			rootDir: dirname(doc.entry.file),
 		},

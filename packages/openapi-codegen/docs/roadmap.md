@@ -10,7 +10,10 @@ Nothing in progress.
 
 ## Next
 
-Nothing planned beyond what is under Later.
+- **Exact codecs.** `DateTime`, `Timestamp`, `BigInt` and `Long` under
+  `scalars: 'exact'`, once `@nxgt/zod` offers their wire schemas
+  ([nxgt-zod#12](https://github.com/softistx/nxgt-zod/issues/12)). They keep
+  their pattern until then.
 
 ## Later
 
@@ -46,6 +49,11 @@ Nothing planned beyond what is under Later.
 
 ## Shipped
 
+- **Exact scalars.** `scalars: 'exact'` validates a string or numeric scalar
+  of `@nxgt/typespec` (`x-nxgt-scalar`) by its schema from `@nxgt/zod`, such
+  as `ibanSchema` or `portSchema`, with the spec's own pattern and bounds
+  kept on top, and an `unknown_scalar` warning for a name `@nxgt/typespec`
+  does not declare — 0.10.0.
 - **A `QUERY` sent as a `POST`.** `x-nxgt-method: query` on a `post`
   operation, which `@nxgt/typespec`'s `@queryMethod` writes, marks the
   operation's entry in the `operations` table, `queryMethod: true`, and its

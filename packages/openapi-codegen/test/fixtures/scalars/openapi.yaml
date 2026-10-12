@@ -1,0 +1,247 @@
+openapi: 3.1.0
+info:
+  title: Scalars
+  version: '1'
+  description: >-
+    Generated with `scalars: 'exact'`. Scalars of @nxgt/typespec as a schema, a
+    property, a parameter, an item and an inline body: each is the schema of
+    @nxgt/zod, with the bounds the spec adds. A codec and an unknown scalar keep
+    their pattern. A numeric scalar is the schema of @nxgt/zod too, with the
+    bounds the spec adds.
+paths:
+  /accounts:
+    get:
+      operationId: listAccounts
+      parameters:
+        - name: iban
+          in: query
+          schema: { $ref: '#/components/schemas/IBAN' }
+        - name: ids
+          in: query
+          schema:
+            type: array
+            items: { $ref: '#/components/schemas/UUID' }
+        - name: owner
+          in: query
+          description: An inline scalar, maxLength added by the spec.
+          schema:
+            type: string
+            format: email
+            pattern: ^[^@]+@[^@]+$
+            maxLength: 254
+            x-nxgt-scalar: EmailAddress
+        - name: x-client-ip
+          in: header
+          schema: { $ref: '#/components/schemas/IP' }
+      responses:
+        '200':
+          description: The accounts.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Account' }
+    post:
+      operationId: openAccount
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [owner]
+              properties:
+                owner:
+                  type: string
+                  format: email
+                  pattern: ^[^@]+@[^@]+$
+                  x-nxgt-scalar: EmailAddress
+      responses:
+        '201':
+          description: Opened.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Account' }
+  /places:
+    get:
+      operationId: listPlaces
+      parameters:
+        - name: page
+          in: query
+          schema: { $ref: '#/components/schemas/PositiveInt' }
+        - name: limit
+          in: query
+          description: An inline scalar, narrowed to 100 by the spec.
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+            x-nxgt-scalar: PositiveInt
+        - name: x-port
+          in: header
+          schema: { $ref: '#/components/schemas/Port' }
+      responses:
+        '200':
+          description: The places.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Place' }
+    post:
+      operationId: addPlace
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [latitude]
+              properties:
+                latitude:
+                  type: number
+                  format: double
+                  minimum: -90
+                  maximum: 90
+                  x-nxgt-scalar: Latitude
+      responses:
+        '201':
+          description: Added.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Place' }
+components:
+  schemas:
+    IBAN:
+      type: string
+      format: iban
+      pattern: ^[A-Z]{2}\d{2}[A-Z0-9]{1,30}$
+      x-nxgt-scalar: IBAN
+    FrIban:
+      description: An IBAN narrowed to France, as `@pattern("^FR.*$") scalar FrIban extends iban`.
+      type: string
+      format: iban
+      pattern: ^FR.*$
+      x-nxgt-scalar: IBAN
+    UUID:
+      type: string
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      x-nxgt-scalar: UUID
+    IP:
+      type: string
+      format: ip
+      pattern: ^[0-9a-f.:]+$
+      x-nxgt-scalar: IP
+    DateTime:
+      type: string
+      format: date-time
+      pattern: ^\d{4}-\d{2}-\d{2}T.*$
+      x-nxgt-scalar: DateTime
+    Account:
+      type: object
+      required: [id, iban, openedAt]
+      properties:
+        id: { $ref: '#/components/schemas/UUID' }
+        iban:
+          description: The IBAN, at most 24 characters here.
+          allOf:
+            - { $ref: '#/components/schemas/IBAN' }
+        bounded:
+          type: string
+          format: iban
+          pattern: ^[A-Z]{2}\d{2}[A-Z0-9]{1,30}$
+          minLength: 15
+          maxLength: 24
+          x-nxgt-scalar: IBAN
+        mood:
+          type: string
+          minLength: 1
+          maxLength: 8
+          x-nxgt-scalar: Emoji
+        lastIp:
+          type: [string, 'null']
+          maxLength: 45
+          x-nxgt-scalar: IP
+        peers:
+          type: array
+          items: { $ref: '#/components/schemas/IP' }
+        openedAt: { $ref: '#/components/schemas/DateTime' }
+        legacy:
+          type: string
+          pattern: ^L-\d+$
+          x-nxgt-scalar: Legacy
+    PositiveInt:
+      type: integer
+      format: int32
+      minimum: 1
+      maximum: 2147483647
+      x-nxgt-scalar: PositiveInt
+    Port:
+      type: integer
+      format: int32
+      minimum: 0
+      maximum: 65535
+      x-nxgt-scalar: Port
+    WellKnownPort:
+      description: A Port narrowed to the well-known ones, as `@maxValue(1023) scalar WellKnownPort extends port`.
+      type: integer
+      format: int32
+      minimum: 0
+      maximum: 1023
+      x-nxgt-scalar: Port
+    Latitude:
+      type: number
+      format: double
+      minimum: -90
+      maximum: 90
+      x-nxgt-scalar: Latitude
+    Longitude:
+      type: number
+      format: double
+      minimum: -180
+      maximum: 180
+      x-nxgt-scalar: Longitude
+    PositiveFloat:
+      type: number
+      format: double
+      exclusiveMinimum: 0
+      x-nxgt-scalar: PositiveFloat
+    SafeInt:
+      type: integer
+      format: int64
+      minimum: -9007199254740991
+      maximum: 9007199254740991
+      x-nxgt-scalar: SafeInt
+    Place:
+      type: object
+      required: [latitude, longitude]
+      properties:
+        latitude: { $ref: '#/components/schemas/Latitude' }
+        longitude: { $ref: '#/components/schemas/Longitude' }
+        radius:
+          type: number
+          format: double
+          exclusiveMinimum: 0
+          maximum: 1000
+          multipleOf: 0.5
+          x-nxgt-scalar: PositiveFloat
+        port: { $ref: '#/components/schemas/WellKnownPort' }
+        rank:
+          type: [integer, 'null']
+          format: int32
+          minimum: 1
+          maximum: 2147483647
+          x-nxgt-scalar: PositiveInt
+        ids:
+          type: array
+          items: { $ref: '#/components/schemas/SafeInt' }
+        weight:
+          type: number
+          x-nxgt-scalar: Weight
+        count:
+          description: Says integer of a float scalar, so it is not the scalar.
+          type: integer
+          minimum: 0
+          x-nxgt-scalar: NonNegativeFloat

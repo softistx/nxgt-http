@@ -122,24 +122,71 @@ describe('stringNode', () => {
 				{ format: 'iban', pattern: '^[A-Z]{2}', 'x-nxgt-scalar': 'IBAN' },
 				at,
 			),
-		).toEqual({ kind: 'string', pattern: '^[A-Z]{2}' });
+		).toEqual({ kind: 'string', scalar: 'IBAN', pattern: '^[A-Z]{2}' });
 		expect(s.diagnostics.list).toEqual([]);
+	});
+
+	it('carries the name of a scalar, whatever else the schema holds', () => {
+		const s = state();
+		for (const name of ['IBAN', 'DateTime', 'PositiveInt']) {
+			expect(stringNode(s, { 'x-nxgt-scalar': name }, at)).toMatchObject({
+				kind: 'string',
+				scalar: name,
+			});
+		}
+		expect(s.diagnostics.list).toEqual([]);
+	});
+
+	it('warns once of a scalar @nxgt/typespec does not declare, and still carries it', () => {
+		const s = state();
+		const node = stringNode(s, { 'x-nxgt-scalar': 'Iban' }, at);
+		stringNode(s, { 'x-nxgt-scalar': 'Iban' }, at);
+		expect(node).toEqual({ kind: 'string', scalar: 'Iban' });
+		expect(report(s.diagnostics)).toEqual([
+			{
+				severity: 'warning',
+				code: 'unknown_scalar',
+				message:
+					'`x-nxgt-scalar: Iban` is not a scalar of @nxgt/typespec; it is checked by its `pattern` alone',
+				pointer: '/s/x-nxgt-scalar',
+			},
+		]);
+	});
+
+	it('carries no scalar when x-nxgt-scalar is not a name', () => {
+		const s = state();
+		expect(stringNode(s, { 'x-nxgt-scalar': 5 }, at)).toEqual({
+			kind: 'string',
+		});
+		expect(numberNode(s, true, { 'x-nxgt-scalar': 5 }, at)).toEqual({
+			kind: 'number',
+			integer: true,
+		});
+		expect(s.diagnostics.list).toEqual([]);
+	});
+
+	it('has no scalar for a plain string', () => {
+		expect(stringNode(state(), { type: 'string' }, at)).not.toHaveProperty(
+			'scalar',
+		);
 	});
 
 	it('leaves the standard format of an @nxgt/typespec scalar to its pattern, except date-time', () => {
 		const s = state();
-		const scalar = { 'x-nxgt-scalar': 'X', pattern: '^a$' };
+		const scalar = { 'x-nxgt-scalar': 'IBAN', pattern: '^a$' };
 		for (const format of ['email', 'uri', 'uuid', 'ipv4', 'byte', 'date']) {
 			expect(stringNode(s, { ...scalar, format }, at)).toEqual({
 				kind: 'string',
+				scalar: 'IBAN',
 				pattern: '^a$',
 			});
 		}
 		expect(stringNode(s, { ...scalar, contentEncoding: 'base64' }, at)).toEqual(
-			{ kind: 'string', pattern: '^a$' },
+			{ kind: 'string', scalar: 'IBAN', pattern: '^a$' },
 		);
 		expect(stringNode(s, { ...scalar, format: 'date-time' }, at)).toEqual({
 			kind: 'string',
+			scalar: 'IBAN',
 			format: 'date-time',
 			pattern: '^a$',
 		});
@@ -186,6 +233,35 @@ describe('stringNode', () => {
 });
 
 describe('numberNode', () => {
+	it('carries the name of a scalar next to its bounds', () => {
+		const s = state();
+		expect(
+			numberNode(s, true, { 'x-nxgt-scalar': 'PositiveInt', minimum: 1 }, at),
+		).toEqual({
+			kind: 'number',
+			integer: true,
+			scalar: 'PositiveInt',
+			minimum: 1,
+		});
+		expect(s.diagnostics.list).toEqual([]);
+	});
+
+	it('warns once of a scalar @nxgt/typespec does not declare, and still carries it', () => {
+		const s = state();
+		const node = numberNode(s, false, { 'x-nxgt-scalar': 'Weight' }, at);
+		numberNode(s, false, { 'x-nxgt-scalar': 'Weight' }, at);
+		expect(node).toEqual({ kind: 'number', integer: false, scalar: 'Weight' });
+		expect(report(s.diagnostics)).toEqual([
+			{
+				severity: 'warning',
+				code: 'unknown_scalar',
+				message:
+					'`x-nxgt-scalar: Weight` is not a scalar of @nxgt/typespec; it is checked by its `bounds` alone',
+				pointer: '/s/x-nxgt-scalar',
+			},
+		]);
+	});
+
 	it('says whether it is an integer', () => {
 		expect(numberNode(state(), true, {}, at)).toEqual({
 			kind: 'number',

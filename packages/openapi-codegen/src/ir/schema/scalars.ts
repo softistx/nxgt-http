@@ -7,6 +7,7 @@ import type {
 	StringFormat,
 	StringNode,
 } from '../types';
+import { isNxgtScalar } from './nxgt-scalars';
 import type { SchemaState } from './state';
 
 type ScalarState = Pick<SchemaState, 'diagnostics' | 'warnedFormats'>;
@@ -35,6 +36,23 @@ const isRegExp = (pattern: string): boolean =>
 		}
 	});
 
+/** A scalar name `@nxgt/typespec` does not declare is checked by its `pattern` (a string) or bounds (a number) alone. */
+function warnUnknownScalar(
+	state: ScalarState,
+	scalar: string,
+	at: Location,
+	rule: 'pattern' | 'bounds' = 'pattern',
+): void {
+	const key = `x-nxgt-scalar:${scalar}`;
+	if (isNxgtScalar(scalar) || state.warnedFormats.has(key)) return;
+	state.warnedFormats.add(key);
+	state.diagnostics.warning(
+		'unknown_scalar',
+		`\`x-nxgt-scalar: ${scalar}\` is not a scalar of @nxgt/typespec; it is checked by its \`${rule}\` alone`,
+		child(at, 'x-nxgt-scalar'),
+	);
+}
+
 /** `type: string`: a string, or `binary` for a file. */
 export function stringNode(
 	state: ScalarState,
@@ -58,6 +76,11 @@ export function stringNode(
 	// worth a warning either. `date-time` stays: the `dates: 'date'` option
 	// decodes through it, and `z.iso.datetime()` does not trim.
 	if (s['x-nxgt-scalar'] !== undefined) {
+		const scalar = asString(s['x-nxgt-scalar']);
+		if (scalar !== undefined) {
+			node.scalar = scalar;
+			warnUnknownScalar(state, scalar, at);
+		}
 		if (format === 'date-time') node.format = 'date-time';
 	} else if (format === 'byte' || s['contentEncoding'] === 'base64')
 		node.format = 'byte';
@@ -98,6 +121,11 @@ export function numberNode(
 	at: Location,
 ): SchemaNode {
 	const node: NumberNode = { kind: 'number', integer };
+	const scalar = asString(s['x-nxgt-scalar']);
+	if (scalar !== undefined) {
+		node.scalar = scalar;
+		warnUnknownScalar(state, scalar, at, 'bounds');
+	}
 	const format = asString(s['format']);
 	if (format !== undefined) {
 		if (NUMBER_FORMATS.has(format)) node.format = format as NumberFormat;

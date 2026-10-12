@@ -21,7 +21,11 @@ bun add -d @nxgt/openapi-codegen typescript
 Peers:
 
 - `zod` 4.5.4 or later, **required**. The generated validators import it.
-  Earlier releases refuse valid values in some intersections.
+  Earlier releases refuse valid values in some intersections. With
+  `scalars: 'exact'`, `zod` 4.6.5 or later: see the next peer.
+- `@nxgt/zod` `^0.1.3`, **optional**: only for
+  [`scalars: 'exact'`](docs/guide/options.md#scalars), whose generated code
+  imports it. It peers on `zod` `>=4.6.5`. Add it with `bun add`.
 - `typescript` 6 or 7, **required**: `^6.0.3 || ^7.0.0`, the range every
   `@nxgt` package accepts. The generator does not call it.
 - `@redocly/openapi-core`, **optional**: only for
@@ -135,6 +139,34 @@ import { operations } from './generated/operations';
 const body = zNewEmployee.parse(await request.json());
 const query = operations.listEmployees.query.parse({ page: '2' }); // { page: 2 }
 ```
+
+### Validate scalars exactly
+
+A scalar of [`@nxgt/typespec`](https://github.com/softistx/nxgt-http/blob/develop/packages/typespec/README.md)
+(`iban`, `countryCode`, `port`…) is checked by its pattern or its bounds,
+which cannot hold a checksum or a list. `scalars: 'exact'` checks it by its
+own schema from `@nxgt/zod` instead:
+
+```sh
+bun add @nxgt/zod
+```
+
+```ts
+import { generate } from '@nxgt/openapi-codegen';
+
+await generate({
+	input: 'openapi/openapi.yaml',
+	output: 'src/generated',
+	scalars: 'exact',
+});
+```
+
+An `IBAN` becomes `ibanSchema.check(z.regex(/^[A-Z]{2}…/u, …))` in `zod.ts`,
+imported from `@nxgt/zod`, and a `Port` becomes `portSchema`. The spec's own
+`pattern` and bounds are kept on top, so a scalar narrowed in the spec stays
+narrow. `DateTime`, `Timestamp`, `BigInt` and `Long` keep their pattern. It is
+opt-in: the default is `'pattern'`, as before
+([options](docs/guide/options.md#scalars)).
 
 ### Serve typed Hono routes
 
@@ -344,6 +376,7 @@ this one does not, when it still starts with the generated header. See
 | `hono` | `boolean` | `false` | also write `hono.ts`; `hono` and `@nxgt/openapi-hono` become runtime dependencies ([more](docs/guide/options.md#hono)) |
 | `alxia` | `boolean` | `false` | also write `alxia.ts`: each operation as the data `@alxia/core` 0.4's `app.route(operation, ...middlewares, handler)` takes; imports `@alxia/core` only for a reply of server-sent events ([more](docs/guide/options.md#alxia)) |
 | `dates` | `'string' \| 'date'` | `'string'` | a `date-time` kept as its string, or decoded to a `Date` by a `z.codec` ([more](docs/guide/options.md#dates)) |
+| `scalars` | `'pattern' \| 'exact'` | `'pattern'` | a string or numeric scalar of `@nxgt/typespec` checked by its `pattern` or bounds, or by its schema from `@nxgt/zod`, the spec's own constraints kept on top ([more](docs/guide/options.md#scalars)) |
 | `lint` | `boolean \| string` | `false` | lint with Redocly first: `true` uses the `redocly.yaml` beside `input` or Redocly's defaults, a string names the config file. Needs `@redocly/openapi-core`; cannot be combined with `context.fs` ([more](docs/guide/options.md#lint)) |
 | `names` | `Record<string, string>` | `{}` | renames schemas, keyed by file relative to the root document plus `#pointer` when the schema is not the whole file ([more](docs/guide/options.md#names)) |
 | `legacyNullable` | `'warn' \| 'error'` | `'warn'` | OpenAPI 3.0's `nullable: true`: read with a warning, or refused ([more](docs/guide/options.md#legacynullable)) |
@@ -591,6 +624,7 @@ interface GenerateOptions extends IROptions {
 	hono?: boolean;
 	alxia?: boolean;
 	dates?: Dates;
+	scalars?: Scalars;
 	lint?: Lint | undefined;
 	validationErrors?: boolean;
 }
@@ -681,6 +715,7 @@ The `enums` option.
 
 ```ts
 type Dates = 'string' | 'date';
+type Scalars = 'pattern' | 'exact';
 ```
 
 The `dates` option.
@@ -724,7 +759,7 @@ type DiagnosticCode =
 	| 'remote_ref' | 'pointer_not_found' | 'ref_cycle' | 'missing_version'
 	| 'unsupported_version' | 'invalid_schema' | 'invalid_option'
 	| 'invalid_config' | 'unsupported_keyword' | 'legacy_nullable'
-	| 'unknown_format' | 'not_enforced' | 'discriminator_fallback'
+	| 'unknown_format' | 'unknown_scalar' | 'not_enforced' | 'discriminator_fallback'
 	| 'name_collision' | 'invalid_operation' | 'unsupported_operation'
 	| 'unsupported_parameter' | 'path_parameter_mismatch'
 	| 'missing_operation_id' | 'duplicate_operation_id' | 'ignored'
@@ -1010,6 +1045,7 @@ declare.
 interface StringNode extends Annotations {
 	kind: 'string';
 	format?: StringFormat;
+	scalar?: string;
 	minLength?: number;
 	maxLength?: number;
 	pattern?: string;
@@ -1029,7 +1065,11 @@ type StringFormat =
 The string formats that are validated; `byte` is base64. Another format is
 an `unknown_format` warning. A schema with `x-nxgt-scalar`, a scalar of
 `@nxgt/typespec`, has no `format` in the node but `date-time`, and no warning:
-its `pattern` carries its rule, and the code is `z.string().regex(…)`.
+its name is the node's `scalar`, and its `pattern` carries its rule, so the
+code is `z.string().regex(…)`, or, with `scalars: 'exact'`, the scalar's
+schema from `@nxgt/zod` (`ibanSchema`) with the `pattern` kept on top as
+`.check(z.regex(…))`. A `scalar` that `@nxgt/typespec` does
+not declare is an `unknown_scalar` warning.
 
 ##### `NumberNode`
 
@@ -1037,6 +1077,8 @@ its `pattern` carries its rule, and the code is `z.string().regex(…)`.
 interface NumberNode extends Annotations {
 	kind: 'number';
 	integer: boolean;
+	/** The `x-nxgt-scalar` of a scalar of `@nxgt/typespec`, such as `Port`. */
+	scalar?: string;
 	format?: NumberFormat;
 	minimum?: number;
 	maximum?: number;
@@ -1046,7 +1088,13 @@ interface NumberNode extends Annotations {
 }
 ```
 
-A number or, with `integer`, an integer.
+A number or, with `integer`, an integer. A schema with `x-nxgt-scalar` on a
+number, such as `Port` or `Latitude`, carries its name as `scalar`, and its
+bounds stay in the node: they are `z.int32().min(0).max(65535)`, or, with
+`scalars: 'exact'`, the scalar's schema from `@nxgt/zod` (`portSchema`) with
+the bounds it does not already enforce kept on top as `.check(z.lte(…))`. A
+`scalar` that `@nxgt/typespec` does not declare is an `unknown_scalar`
+warning.
 
 ##### `NumberFormat`
 
@@ -1362,6 +1410,14 @@ export const operations = { getPet, watchTicks /* , … */ } as const;
   it itself; a 400 the spec declares is kept. The client files declare
   alxia's body with `alxia` alone, and a union of it and
   `@nxgt/openapi-hono`'s with `hono` too.
+- **`scalars: 'exact'` imports `@nxgt/zod` at runtime.** Install it
+  (`^0.1.3`) and `zod` 4.6.5 or later as dependencies of the app that holds
+  the generated code. An older `zod` fails when `@nxgt/zod` loads, not at
+  your first `parse()`
+  ([troubleshooting](docs/troubleshooting.md#typeerror-z22currencycode-is-not-a-function)).
+- **An integer scalar refuses `-0` under `scalars: 'exact'`**, as GraphQL's
+  `Int` does; `'pattern'` accepts it, since no JSON Schema keyword can tell
+  `-0` from `0`.
 - **Give `c.json()` a status, and reply with plain objects.** Without a
   status, Hono types a reply with any status, and it matches no declared
   one. A Mongoose document does not type as its schema; return `.lean()`

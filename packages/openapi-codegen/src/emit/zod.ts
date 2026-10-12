@@ -19,6 +19,12 @@ import type {
 } from '../ir/types';
 import { appliesDefault, type EmitContext, type ObjectMode } from './context';
 import {
+	exactNumber,
+	exactString,
+	printsWithoutZ,
+	zodImports,
+} from './nxgt-zod';
+import {
 	docComment,
 	docLines,
 	file,
@@ -39,6 +45,12 @@ export interface Scope {
 	uses?: Set<string>;
 	/** Collects the helpers used, for a file that declares them: `isoDate`. */
 	helpers: Set<string>;
+	/**
+	 * Collects what a file imports for its schemas: `z` when a schema calls it,
+	 * else the `@nxgt/zod` exports. A file that imports `z` and never calls it
+	 * fails an app's `noUnusedLocals`.
+	 */
+	imports: Set<string>;
 }
 
 /** Declared by a file whose validators decode a `date-time`. */
@@ -73,6 +85,7 @@ export function emitZod(ctx: EmitContext): string {
 	const values = new Set<string>();
 	const declared = new Set<string>();
 	const helpers = new Set<string>();
+	const imports = new Set<string>();
 	const blocks: string[] = [];
 	for (const schema of ctx.ir.schemas) {
 		let annotation = '';
@@ -80,10 +93,20 @@ export function emitZod(ctx: EmitContext): string {
 			const input = ctx.typeName(schema.id, true);
 			types.add(schema.name).add(input);
 			annotation = `: z.ZodType<${schema.name}, ${input}>`;
+			imports.add('z');
 		}
-		const scope: Scope = { declared, lazy: false, indent: '', helpers };
+		const scope: Scope = {
+			declared,
+			lazy: false,
+			indent: '',
+			helpers,
+			imports,
+		};
 		const members = ctx.enumOf(schema.id);
-		if (members) values.add(schema.name);
+		if (members) {
+			values.add(schema.name);
+			imports.add('z');
+		}
 		const value = members
 			? `z.enum(${schema.name})${members.nullable ? '.nullable()' : ''}`
 			: expr(ctx, schema.node, scope);
@@ -103,20 +126,20 @@ export function emitZod(ctx: EmitContext): string {
 	// A spec with no schema: no `z` to import, which an app's `noUnusedLocals`
 	// refuses, but still a module, which `operations.ts` imports.
 	if (blocks.length === 0) return file([ctx.header, 'export {};']);
-	const imports = [`import { z } from 'zod';`];
+	const lines = zodImports(imports);
 	if (values.size > 0) {
-		imports.push(
+		lines.push(
 			`import ${list('{ ', [...values].sort(), ' }', '')} from './types${ctx.options.importExtension}';`,
 		);
 	}
 	if (types.size > 0) {
-		imports.push(
+		lines.push(
 			`import type ${list('{ ', [...types].sort(), ' }', '')} from './types${ctx.options.importExtension}';`,
 		);
 	}
 	return file([
 		ctx.header,
-		imports.join('\n'),
+		lines.join('\n'),
 		...(helpers.has('isoDate') ? [ISO_DATE] : []),
 		...blocks,
 	]);
@@ -124,8 +147,15 @@ export function emitZod(ctx: EmitContext): string {
 
 export function expr(ctx: EmitContext, node: SchemaNode, scope: Scope): string {
 	const text = bare(ctx, node, scope);
+	if (callsZ(ctx, node, scope)) scope.imports.add('z');
 	return node.nullable ? `${text}.nullable()` : text;
 }
+
+/** Whether the printed node calls `z`: a reference, or a bare `@nxgt/zod` schema, does not. */
+const callsZ = (ctx: EmitContext, node: SchemaNode, scope: Scope): boolean =>
+	node.kind === 'ref'
+		? !(scope.lazy || scope.declared.has(node.target))
+		: !printsWithoutZ(ctx.options, node);
 
 function bare(ctx: EmitContext, node: SchemaNode, scope: Scope): string {
 	switch (node.kind) {
@@ -134,7 +164,7 @@ function bare(ctx: EmitContext, node: SchemaNode, scope: Scope): string {
 		case 'string':
 			return string(ctx, node, scope);
 		case 'number':
-			return number(node);
+			return exactNumber(ctx.options, node, scope.imports) ?? number(node);
 		case 'boolean':
 			return 'z.boolean()';
 		case 'null':
@@ -178,6 +208,8 @@ export const bounds = (min?: number, max?: number): string =>
 	(max === undefined ? '' : `.max(${max})`);
 
 function string(ctx: EmitContext, node: StringNode, scope: Scope): string {
+	const exact = exactString(ctx.options, node, scope.imports);
+	if (exact !== undefined) return exact;
 	let out = node.format ? STRING_FORMATS[node.format] : 'z.string()';
 	out += bounds(node.minLength, node.maxLength);
 	if (node.pattern !== undefined) {

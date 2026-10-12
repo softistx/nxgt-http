@@ -9,6 +9,8 @@
 import { describe, expect, it } from 'bun:test';
 import { readdir, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { generate } from '@nxgt/openapi-codegen';
+import { scalarSchemas } from '@nxgt/zod';
 import { compile, NodeHost } from '@typespec/compiler';
 import { Hono } from 'hono';
 import { spec, VERSIONS } from '../test/generate';
@@ -22,6 +24,10 @@ import {
 	type ScalarEntry,
 } from '../test/scalars';
 
+/** The numeric scalars, as @nxgt/zod declares them: the ones the generator maps to its schemas. */
+const NUMBER_SCALARS = Object.entries(scalarSchemas)
+	.filter(([, schema]) => schema._zod.def.type === 'number')
+	.map(([name]) => name);
 const LIB = fileURLToPath(new URL('../lib/', import.meta.url));
 const served = { '3.1.0': routes31, '3.2.0': routes32 };
 
@@ -205,4 +211,77 @@ describe.each([...VERSIONS])('the scalars, in OpenAPI %s', (version) => {
 			});
 		},
 	);
+});
+
+describe('the scalars the generator knows', () => {
+	for (const version of VERSIONS) {
+		for (const scalars of ['pattern', 'exact'] as const) {
+			it(`warns of no unknown_scalar in the fixture, ${version}, scalars: '${scalars}'`, async () => {
+				// `check` writes nothing: the files are only compared with the disk.
+				const { warnings } = await generate({
+					input: spec('scalars', version),
+					output: '/nowhere/generated',
+					scalars,
+					check: true,
+				});
+				expect(warnings.filter((w) => w.code === 'unknown_scalar')).toEqual([]);
+			});
+		}
+	}
+});
+
+describe('the numeric scalars, with scalars: exact', () => {
+	// The schemas of @nxgt/zod, not the bounds of the spec: generated beside the
+	// fixtures (git ignores them), then each sample of the registry is run.
+	const output = 'test/generated/scalars-exact';
+	const numeric = entries.filter(
+		(entry): entry is ScalarEntry =>
+			declared(entry) && NUMBER_SCALARS.includes(entry.name),
+	);
+
+	it('accepts and refuses what scalars: pattern does, but -0 of an integer', async () => {
+		await generate({
+			input: spec('scalars', '3.1.0'),
+			output,
+			scalars: 'exact',
+		});
+		const zod = (await import(
+			fileURLToPath(new URL(`../${output}/zod.ts`, import.meta.url))
+		)) as Record<string, { safeParse(value: unknown): { success: boolean } }>;
+		expect(numeric.length).toBe(12);
+		for (const entry of numeric) {
+			const schema = zod[`z${entry.name}`];
+			for (const sample of entry.accept) {
+				expect({
+					[entry.name]: sample,
+					ok: schema?.safeParse(sample).success,
+				}).toEqual({ [entry.name]: sample, ok: true });
+			}
+			for (const sample of entry.refuse) {
+				expect({
+					[entry.name]: sample,
+					ok: schema?.safeParse(sample).success,
+				}).toEqual({ [entry.name]: sample, ok: false });
+			}
+		}
+		// `-0`: no JSON Schema can refuse it, and the schemas of @nxgt/zod do
+		// for an integer, as GraphQL's `Int` does.
+		for (const name of [
+			'NonNegativeInt',
+			'NonPositiveInt',
+			'Port',
+			'SafeInt',
+		]) {
+			expect(zod[`z${name}`]?.safeParse(-0).success, name).toBe(false);
+			expect(zod[`z${name}`]?.safeParse(0).success, name).toBe(true);
+		}
+		for (const name of [
+			'NonNegativeFloat',
+			'NonPositiveFloat',
+			'Latitude',
+			'Longitude',
+		]) {
+			expect(zod[`z${name}`]?.safeParse(-0).success, name).toBe(true);
+		}
+	});
 });

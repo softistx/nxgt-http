@@ -303,3 +303,72 @@ and only then.
 
 **Fix:** add `@alxia/core` to the app's dependencies, as an alxia app
 already has it.
+
+## Scalars
+
+### `Cannot find module '@nxgt/zod'`
+
+**When:** the app imports a file generated with
+[`scalars: 'exact'`](guide/options.md#scalars), or type-checks it. Bun says:
+
+```text
+error: Cannot find module '@nxgt/zod' from '/app/src/generated/zod.ts'
+```
+
+and TypeScript, as error 2307:
+
+```text
+src/generated/zod.ts(4,40): error TS2307: Cannot find module '@nxgt/zod' or its corresponding type declarations.
+```
+
+**Why:** with `scalars: 'exact'`, `zod.ts` imports the schema of each scalar
+from `@nxgt/zod`, by name (`import { ibanSchema } from '@nxgt/zod'`). It is an
+optional peer: the generator never imports it, so nothing installed it.
+
+**Fix:** add it, with a `zod` it accepts, to the app that holds the generated
+code:
+
+```sh
+bun add @nxgt/zod zod
+```
+
+### `` `x-nxgt-scalar: Bogus` is not a scalar of @nxgt/typespec; it is checked by its `pattern` alone ``
+
+**When:** a run warns `unknown_scalar`, with `scalars: 'pattern'` or
+`'exact'`. For a number the message ends "by its `bounds` alone".
+
+**Why:** the schema carries an `x-nxgt-scalar` whose name `@nxgt/typespec`
+does not declare (`Bogus` above): a misspelling (`Iban` for `IBAN`), a scalar
+of a newer `@nxgt/typespec`, or a vendor's own mark. The generator has no
+schema of `@nxgt/zod` to give it, so it is validated by its `pattern` (a
+string) or its bounds (a number), as in `'pattern'` mode.
+
+**Fix:** write the name as `@nxgt/typespec` does, from the scalar's
+`x-nxgt-scalar` in the compiled OpenAPI, or drop the extension if the schema
+is not meant to be one. A scalar of a newer `@nxgt/typespec` needs the newer
+generator that knows it.
+
+### `` TypeError: z22.currencyCode is not a function ``
+
+**When:** the app starts, or imports `zod.ts`, with `scalars: 'exact'` and a
+`zod` older than 4.6.5 (4.5.4, say), at the first import of `@nxgt/zod`,
+before any `parse()`. The first line is:
+
+```text
+TypeError: z22.currencyCode is not a function. (In 'z22.currencyCode({ …
+      at …/node_modules/@nxgt/zod/dist/chunks/index-….js:449:27
+```
+
+The number after `z` (here 22) and the method can differ with the version of
+`@nxgt/zod`: it is any validator `zod` 4.6.5 added.
+
+**Why:** `@nxgt/zod` builds its schemas with the validators of `zod` 4.6.5 and
+later. Its peer range is `zod@">=4.6.5 <5"`, but a package manager
+installs it beside an older `zod` all the same (Bun printed no refusal), and
+type-checking passes, so the first sign is this error. `'pattern'` runs on `zod` 4.5.4.
+
+**Fix:** raise `zod`:
+
+```sh
+bun add zod@^4.6.5
+```

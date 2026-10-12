@@ -1,6 +1,7 @@
 /**
  * An object schema: its own shape, the parents it extends, its mode for
- * the keys it does not declare, and the defaults of its properties.
+ * the keys it does not declare, and the defaults of its properties. One
+ * recursion with `nodes.ts` (see there).
  */
 import { refsOf } from '../../ir/graph';
 import type { ObjectNode, SchemaNode } from '../../ir/types';

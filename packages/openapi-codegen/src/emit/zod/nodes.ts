@@ -1,4 +1,10 @@
-/** Each kind of schema node, printed as the Zod 4 expression that validates it. */
+/**
+ * Each kind of schema node, printed as the Zod 4 expression that validates it.
+ *
+ * One recursion with `objects.ts`, which prints an object's properties through
+ * `expr`: the two import each other, which is safe while neither reads the
+ * other's exports at load time, only inside calls.
+ */
 import type {
 	NumberNode,
 	Scalar,

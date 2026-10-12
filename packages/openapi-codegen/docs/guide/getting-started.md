@@ -7,8 +7,9 @@ bun add zod
 bun add -d @nxgt/openapi-codegen
 ```
 
-The generated validators import `zod` 4.5.4 or later at runtime. The generator
-itself runs on Bun; the code it generates runs anywhere.
+The generated validators import `zod` 4.5.4 or later at runtime (4.6.5 with
+[`scalars: 'exact'`](options.md#scalars), which also imports `@nxgt/zod`).
+The generator itself runs on Bun; the code it generates runs anywhere.
 
 ## Generate
 
@@ -69,8 +70,8 @@ fifth with the [`hono`](options.md#hono) option, and `alxia.ts` with the
 | File | Holds | Imports |
 | --- | --- | --- |
 | `types.ts` | a type per schema, an `as const` object per named enum, and the `Operations` map with its indexes | nothing |
-| `zod.ts` | a `z<Name>` validator per schema | `zod`; from `types.ts`, the enum objects and, when a schema is recursive, its types |
-| `operations.ts` | every operation as data, with its parameter and form validators | `zod`, `zod.ts`, types from `types.ts` |
+| `zod.ts` | a `z<Name>` validator per schema | `zod`, and `@nxgt/zod` with `scalars: 'exact'`; from `types.ts`, the enum objects and, when a schema is recursive, its types |
+| `operations.ts` | every operation as data, with its parameter and form validators | `zod`, `zod.ts`, and `@nxgt/zod` for a scalar written inline with `scalars: 'exact'`, types from `types.ts` |
 | `paths.ts` | `paths`, `operations` and `components`, as openapi-typescript prints them | types from `types.ts` |
 | `hono.ts` | `Replies`, `createRoutes` and `createApi`, bound to the spec | `hono` types, `@nxgt/openapi-hono`, `operations.ts`, types from `types.ts` |
 | `alxia.ts` | each operation as the data an alxia app's `app.route(operation, ...middlewares, handler)` takes, and `operations` | `zod`, `zod.ts`; `eventStream` from `@alxia/core` for a reply of server-sent events |

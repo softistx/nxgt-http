@@ -1,5 +1,11 @@
 # @nxgt/typespec
 
+## 0.13.2
+
+### Patch Changes
+
+- [#144](https://github.com/softistx/nxgt-http/pull/144) [`affd9ce`](https://github.com/softistx/nxgt-http/commit/affd9ce435979460d2f0554c3a58ef877464a2a2) Thanks [@SteveGT96](https://github.com/SteveGT96)! - The guides, the troubleshooting entries and the README say that `@nxgt/openapi-codegen`'s `scalars: 'exact'` checks the exact rules of a scalar (`x-nxgt-scalar`) with the schemas of `@nxgt/zod`, where they said a later release would, and name `scalars: 'exact'` as the fix for a value the pattern lets through and for `-0`. The roadmap moves "Exact scalar rules in the generated code" to Shipped.
+
 ## 0.13.1
 
 ### Patch Changes

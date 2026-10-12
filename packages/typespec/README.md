@@ -339,7 +339,8 @@ model Place {
 Each is an OpenAPI component named as in GraphQL (`Latitude`, `URL`), with a
 `format`, a pattern or bounds approximating the rule, and `x-nxgt-scalar`
 naming it. The exact rules (checksums, ISO and IANA lists) are outside the
-pattern. TypeSpec's own `url` takes any scheme; `httpUrl` takes `http:` and
+pattern; [`@nxgt/openapi-codegen`](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-codegen/docs/guide/options.md#scalars)'s
+`scalars: 'exact'` checks them with the schemas of `@nxgt/zod`. TypeSpec's own `url` takes any scheme; `httpUrl` takes `http:` and
 `https:`. Every scalar by category, in
 [Scalars](docs/guide/scalars.md); the ids, the addresses and the columns, in
 [Scalars and columns](docs/guide/columns.md).

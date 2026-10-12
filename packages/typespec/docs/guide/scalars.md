@@ -67,9 +67,12 @@ components:
 | `description` | The rule in words, and what the pattern leaves out. |
 
 A generator that knows nothing of `x-nxgt-scalar` still validates the pattern
-and the bounds. A later `@nxgt/openapi-codegen` release will map it to the exact
-Zod schema from `@nxgt/zod` ([roadmap](../roadmap.md)); until then, what a
-scalar leaves out is not checked.
+and the bounds. `@nxgt/openapi-codegen` with
+[`scalars: 'exact'`](https://github.com/softistx/nxgt-http/blob/develop/packages/openapi-codegen/docs/guide/options.md#scalars) maps it to the exact Zod
+schema from `@nxgt/zod`, the checksum, the list or the `Intl` rule included;
+with the default `'pattern'`, what a scalar leaves out is not checked. The
+codecs (`dateTime`, `timestamp`, `bigInt`, `long`) keep their pattern under
+`'exact'` too.
 
 ## Names
 

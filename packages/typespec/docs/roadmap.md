@@ -10,9 +10,7 @@ Nothing in progress.
 
 ## Next
 
-- **Exact scalar rules in the generated code.** `@nxgt/openapi-codegen` maps
-  `x-nxgt-scalar` to the exact Zod schema from `@nxgt/zod`: the checksums,
-  the ISO and IANA lists and the `Intl` rules the patterns leave out.
+Nothing planned beyond what is under Later.
 
 ## Later
 
@@ -26,6 +24,15 @@ Nothing in progress.
   optimistic lock is the body's `version` today (`Versioned`).
 
 ## Shipped
+
+### 0.13.2
+
+- **Exact scalar rules in the generated code.** `@nxgt/openapi-codegen`
+  with `scalars: 'exact'` maps `x-nxgt-scalar` to the exact Zod schema from
+  `@nxgt/zod`: the checksums, the ISO and IANA lists, the `Intl` rules and the
+  refusal of `-0` the patterns leave out. The codecs keep their pattern until
+  `@nxgt/zod` offers their wire schemas. The guides and the troubleshooting
+  entries say so.
 
 ### 0.13.0
 

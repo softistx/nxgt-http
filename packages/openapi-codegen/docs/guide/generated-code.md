@@ -108,6 +108,13 @@ export const zEmployee: z.ZodType<Employee, Employee> = zNewEmployee.extend({
 - **Unknown keys are stripped** unless the spec or
   [`unknownKeys`](options.md#unknownkeys) says otherwise.
 - **Defaults are filled in**, a fresh object or array on every parse.
+- **With [`scalars: 'exact'`](options.md#scalars)**, `zod.ts` also imports,
+  by name, the schemas of `@nxgt/zod` that a scalar uses
+  (`import { ibanSchema } from '@nxgt/zod'`), as `zIBAN` is
+  `ibanSchema.check(…)`. `operations.ts` and `alxia.ts` refer to `zIBAN` and
+  `zPort`; they import `@nxgt/zod` themselves only for a scalar written inline
+  in a parameter or a body rather than as a named schema. Nothing else
+  changes.
 
 Every type and its validator are printed from the same reading of the spec.
 The package's own tests check, for every schema of every fixture, that

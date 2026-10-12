@@ -21,7 +21,11 @@ bun add -d @nxgt/openapi-codegen typescript
 Peers:
 
 - `zod` 4.5.4 or later, **required**. The generated validators import it.
-  Earlier releases refuse valid values in some intersections.
+  Earlier releases refuse valid values in some intersections. With
+  `scalars: 'exact'`, `zod` 4.6.5 or later: see the next peer.
+- `@nxgt/zod` `^0.1.3`, **optional**: only for
+  [`scalars: 'exact'`](docs/guide/options.md#scalars), whose generated code
+  imports it. It peers on `zod` `>=4.6.5`. Add it with `bun add`.
 - `typescript` 6 or 7, **required**: `^6.0.3 || ^7.0.0`, the range every
   `@nxgt` package accepts. The generator does not call it.
 - `@redocly/openapi-core`, **optional**: only for
@@ -135,6 +139,34 @@ import { operations } from './generated/operations';
 const body = zNewEmployee.parse(await request.json());
 const query = operations.listEmployees.query.parse({ page: '2' }); // { page: 2 }
 ```
+
+### Validate scalars exactly
+
+A scalar of [`@nxgt/typespec`](https://github.com/softistx/nxgt-http/blob/develop/packages/typespec/README.md)
+(`iban`, `countryCode`, `port`…) is checked by its pattern or its bounds,
+which cannot hold a checksum or a list. `scalars: 'exact'` checks it by its
+own schema from `@nxgt/zod` instead:
+
+```sh
+bun add @nxgt/zod
+```
+
+```ts
+import { generate } from '@nxgt/openapi-codegen';
+
+await generate({
+	input: 'openapi/openapi.yaml',
+	output: 'src/generated',
+	scalars: 'exact',
+});
+```
+
+An `IBAN` becomes `ibanSchema.check(z.regex(/^[A-Z]{2}…/u, …))` in `zod.ts`,
+imported from `@nxgt/zod`, and a `Port` becomes `portSchema`. The spec's own
+`pattern` and bounds are kept on top, so a scalar narrowed in the spec stays
+narrow. `DateTime`, `Timestamp`, `BigInt` and `Long` keep their pattern. It is
+opt-in: the default is `'pattern'`, as before
+([options](docs/guide/options.md#scalars)).
 
 ### Serve typed Hono routes
 
@@ -1378,6 +1410,14 @@ export const operations = { getPet, watchTicks /* , … */ } as const;
   it itself; a 400 the spec declares is kept. The client files declare
   alxia's body with `alxia` alone, and a union of it and
   `@nxgt/openapi-hono`'s with `hono` too.
+- **`scalars: 'exact'` imports `@nxgt/zod` at runtime.** Install it
+  (`^0.1.3`) and `zod` 4.6.5 or later as dependencies of the app that holds
+  the generated code. An older `zod` fails when `@nxgt/zod` loads, not at
+  your first `parse()`
+  ([troubleshooting](docs/troubleshooting.md#typeerror-z22currencycode-is-not-a-function)).
+- **An integer scalar refuses `-0` under `scalars: 'exact'`**, as GraphQL's
+  `Int` does; `'pattern'` accepts it, since no JSON Schema keyword can tell
+  `-0` from `0`.
 - **Give `c.json()` a status, and reply with plain objects.** Without a
   status, Hono types a reply with any status, and it matches no declared
   one. A Mongoose document does not type as its schema; return `.lean()`

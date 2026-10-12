@@ -19,10 +19,8 @@ import type {
 } from '../ir/types';
 import { appliesDefault, type EmitContext, type ObjectMode } from './context';
 import {
-	exactScalar,
-	lengthChecks,
-	numberChecks,
-	patternChecks,
+	exactNumber,
+	exactString,
 	printsWithoutZ,
 	zodImports,
 } from './nxgt-zod';
@@ -166,7 +164,7 @@ function bare(ctx: EmitContext, node: SchemaNode, scope: Scope): string {
 		case 'string':
 			return string(ctx, node, scope);
 		case 'number':
-			return number(ctx, node, scope);
+			return exactNumber(ctx.options, node, scope.imports) ?? number(node);
 		case 'boolean':
 			return 'z.boolean()';
 		case 'null':
@@ -210,13 +208,8 @@ export const bounds = (min?: number, max?: number): string =>
 	(max === undefined ? '' : `.max(${max})`);
 
 function string(ctx: EmitContext, node: StringNode, scope: Scope): string {
-	// The scalar's schema first, then the spec's bounds and pattern kept on
-	// top of it (see `patternChecks`).
-	const exact = exactScalar(ctx.options, node);
-	if (exact !== undefined) {
-		scope.imports.add(exact);
-		return exact + lengthChecks(node) + patternChecks(node);
-	}
+	const exact = exactString(ctx.options, node, scope.imports);
+	if (exact !== undefined) return exact;
 	let out = node.format ? STRING_FORMATS[node.format] : 'z.string()';
 	out += bounds(node.minLength, node.maxLength);
 	if (node.pattern !== undefined) {
@@ -227,13 +220,7 @@ function string(ctx: EmitContext, node: StringNode, scope: Scope): string {
 	return `z.codec(${out}, z.date(), isoDate)`;
 }
 
-function number(ctx: EmitContext, node: NumberNode, scope: Scope): string {
-	// The scalar's schema first, then the spec's bounds kept on top of it.
-	const exact = exactScalar(ctx.options, node);
-	if (exact !== undefined) {
-		scope.imports.add(exact);
-		return exact + numberChecks(node);
-	}
+function number(node: NumberNode): string {
 	let out = !node.integer
 		? 'z.number()'
 		: node.format === 'int32'

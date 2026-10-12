@@ -10,6 +10,7 @@ import { describe, expect, it } from 'bun:test';
 import { readdir, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { generate } from '@nxgt/openapi-codegen';
+import { scalarSchemas } from '@nxgt/zod';
 import { compile, NodeHost } from '@typespec/compiler';
 import { Hono } from 'hono';
 import { spec, VERSIONS } from '../test/generate';
@@ -23,21 +24,10 @@ import {
 	type ScalarEntry,
 } from '../test/scalars';
 
-/** The numeric scalars the generator maps (`NUMBER_SCALARS` of its IR). */
-const NUMBER_SCALARS = [
-	'Latitude',
-	'Longitude',
-	'NegativeFloat',
-	'NegativeInt',
-	'NonNegativeFloat',
-	'NonNegativeInt',
-	'NonPositiveFloat',
-	'NonPositiveInt',
-	'Port',
-	'PositiveFloat',
-	'PositiveInt',
-	'SafeInt',
-];
+/** The numeric scalars, as @nxgt/zod declares them: the ones the generator maps to its schemas. */
+const NUMBER_SCALARS = Object.entries(scalarSchemas)
+	.filter(([, schema]) => schema._zod.def.type === 'number')
+	.map(([name]) => name);
 const LIB = fileURLToPath(new URL('../lib/', import.meta.url));
 const served = { '3.1.0': routes31, '3.2.0': routes32 };
 
@@ -246,8 +236,7 @@ describe('the numeric scalars, with scalars: exact', () => {
 	const output = 'test/generated/scalars-exact';
 	const numeric = entries.filter(
 		(entry): entry is ScalarEntry =>
-			declared(entry) &&
-			(NUMBER_SCALARS as readonly string[]).includes(entry.name),
+			declared(entry) && NUMBER_SCALARS.includes(entry.name),
 	);
 
 	it('accepts and refuses what scalars: pattern does, but -0 of an integer', async () => {
@@ -286,7 +275,12 @@ describe('the numeric scalars, with scalars: exact', () => {
 			expect(zod[`z${name}`]?.safeParse(-0).success, name).toBe(false);
 			expect(zod[`z${name}`]?.safeParse(0).success, name).toBe(true);
 		}
-		for (const name of ['NonNegativeFloat', 'NonPositiveFloat', 'Latitude']) {
+		for (const name of [
+			'NonNegativeFloat',
+			'NonPositiveFloat',
+			'Latitude',
+			'Longitude',
+		]) {
 			expect(zod[`z${name}`]?.safeParse(-0).success, name).toBe(true);
 		}
 	});

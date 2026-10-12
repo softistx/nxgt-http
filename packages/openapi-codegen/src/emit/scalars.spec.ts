@@ -267,6 +267,25 @@ describe('numeric scalars: exact', () => {
 		}
 	});
 
+	it('keeps format: int32 on a scalar whose schema is wider', async () => {
+		const { zod } = await zodOf(
+			{
+				Id: {
+					type: 'integer',
+					format: 'int32',
+					'x-nxgt-scalar': 'SafeInt',
+				},
+			},
+			'exact',
+		);
+		expect(zod).toContain('safeIntSchema.check(z.gte(-2147483648,');
+		const pattern = await zodOf(
+			{ Id: { type: 'integer', format: 'int32', 'x-nxgt-scalar': 'SafeInt' } },
+			'pattern',
+		);
+		expect(pattern.zod).toContain('z.int32()');
+	});
+
 	it('imports no z where the schema stands bare', async () => {
 		const { zod } = await zodOf(
 			{ Port: { type: 'integer', 'x-nxgt-scalar': 'Port' } },

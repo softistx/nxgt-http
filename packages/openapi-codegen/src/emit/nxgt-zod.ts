@@ -47,6 +47,21 @@ export function lengthChecks(node: StringNode): string {
 }
 
 /**
+ * A string scalar with `scalars: 'exact'`: its schema from `@nxgt/zod` (noted
+ * in `imports`), then the spec's length bounds and pattern kept on top of it.
+ */
+export function exactString(
+	options: Pick<EmitOptions, 'scalars'>,
+	node: StringNode,
+	imports: Set<string>,
+): string | undefined {
+	const exact = exactScalar(options, node);
+	if (exact === undefined) return undefined;
+	imports.add(exact);
+	return exact + lengthChecks(node) + patternChecks(node);
+}
+
+/**
  * The spec's own `pattern`, kept on top of the scalar's schema (the owner's
  * decision, 2026-10-11): a scalar narrowed by a pattern of its own
  * (`@pattern("^FR.*$") scalar FrIban extends Nxgt.iban`) is then never
@@ -124,6 +139,35 @@ const RULES: readonly {
 	},
 ];
 
+const INT32 = { minimum: -2147483648, maximum: 2147483647 };
+
+/**
+ * The bounds a number must hold: the spec's keywords, and the range of
+ * `format: int32`, which pattern mode enforces with `z.int32()` and a
+ * scalar's schema (`safeIntSchema`) does not. The format's bound is left out
+ * where the spec's own bound on that side is as tight. (`int64` is `z.int()`
+ * there, the safe range, which every integer scalar's schema stays within;
+ * `float` and `double` check nothing.)
+ */
+function candidates(node: NumberNode): [(typeof RULES)[number], number][] {
+	const out: [(typeof RULES)[number], number][] = [];
+	for (const rule of RULES) {
+		const value = node[rule.key];
+		if (value !== undefined) out.push([rule, value]);
+	}
+	if (!node.integer || node.format !== 'int32') return out;
+	for (const key of ['minimum', 'maximum'] as const) {
+		const rule = RULES.find((r) => r.key === key);
+		if (rule === undefined) continue;
+		const format = boundOf({ [key]: INT32[key] }, rule.side, true);
+		const spec = boundOf(node, rule.side, true);
+		if (format !== undefined && !(spec && implies(spec, format, rule.side))) {
+			out.push([rule, INT32[key]]);
+		}
+	}
+	return out;
+}
+
 /**
  * The bounds of a number as checks, kept on top of the scalar's schema
  * (`.min()` and `.max()` are on `ZodNumber` only, and a scalar's schema is not
@@ -139,9 +183,7 @@ export function numberChecks(node: NumberNode): string {
 			? undefined
 			: exactNumberScalar(node.scalar, node.integer)?.bounds) ?? {};
 	const checks: string[] = [];
-	for (const rule of RULES) {
-		const value = node[rule.key];
-		if (value === undefined) continue;
+	for (const [rule, value] of candidates(node)) {
 		const mine = boundOf(own, rule.side, node.integer);
 		const spec = boundOf({ [rule.key]: value }, rule.side, node.integer);
 		if (
@@ -159,6 +201,22 @@ export function numberChecks(node: NumberNode): string {
 		checks.push(`z.multipleOf(${node.multipleOf}, ${jsString(message)})`);
 	}
 	return checks.length === 0 ? '' : `.check(${checks.join(', ')})`;
+}
+
+/**
+ * A numeric scalar with `scalars: 'exact'`: its schema from `@nxgt/zod`
+ * (noted in `imports`) and the spec's bounds on top, or none for a number
+ * that is no exact scalar.
+ */
+export function exactNumber(
+	options: Pick<EmitOptions, 'scalars'>,
+	node: NumberNode,
+	imports: Set<string>,
+): string | undefined {
+	const exact = exactScalar(options, node);
+	if (exact === undefined) return undefined;
+	imports.add(exact);
+	return exact + numberChecks(node);
 }
 
 /** Whether the node prints as a bare `@nxgt/zod` schema, with no call of `z`. */

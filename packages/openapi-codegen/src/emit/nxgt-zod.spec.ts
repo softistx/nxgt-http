@@ -114,6 +114,28 @@ describe('numberChecks', () => {
 		);
 	});
 
+	it('keeps the range of format: int32, which the schema of a wider scalar does not enforce', () => {
+		const safe = {
+			kind: 'number',
+			integer: true,
+			scalar: 'SafeInt',
+			format: 'int32',
+		} as const;
+		expect(numberChecks(safe)).toBe(
+			".check(z.gte(-2147483648, 'Too small: expected number to be >=-2147483648'), z.lte(2147483647, 'Too big: expected number to be <=2147483647'))",
+		);
+		// A tighter bound of the spec stands for its side.
+		expect(numberChecks({ ...safe, minimum: 0, maximum: 9 })).toBe(
+			".check(z.gte(0, 'Too small: expected number to be >=0'), z.lte(9, 'Too big: expected number to be <=9'))",
+		);
+		// A scalar within int32 needs nothing more; int64 and a float format check nothing here.
+		expect(numberChecks({ ...safe, scalar: 'Port' })).toBe('');
+		expect(numberChecks({ ...safe, format: 'int64' })).toBe('');
+		expect(numberChecks({ ...safe, integer: false, scalar: 'Latitude' })).toBe(
+			'',
+		);
+	});
+
 	it('keeps every bound of a number that is no known scalar', () => {
 		expect(
 			numberChecks({ kind: 'number', integer: true, minimum: 1, maximum: 9 }),

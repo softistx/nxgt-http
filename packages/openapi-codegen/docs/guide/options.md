@@ -210,6 +210,9 @@ With `'exact'`:
   `ibanSchema.check(z.maxLength(34, 'Too big: expected string to have <=34 characters'))`:
   `.check()` works on every schema, and the message is Zod's own, written out
   because a scalar's schema answers with its own (`Invalid IBAN`) otherwise.
+  Since the canonical pattern is checked besides the schema, a refused
+  string can carry **two issues**: the schema's (`Invalid IBAN`) and the
+  pattern's. The numeric scalars do not repeat themselves this way (below).
 - **The numeric scalars are covered too** (`Latitude`, `Longitude`, `Port`,
   `PositiveInt`, `SafeInt` and the other `Negative`/`NonNegative`/`NonPositive`/
   `Positive` ones): `portSchema` instead of `z.int32().min(0).max(65535)`. A
@@ -225,7 +228,11 @@ With `'exact'`:
   the schemas of `@nxgt/zod` refuse it for an integer scalar (`Port`,
   `SafeInt`, `NonNegativeInt`, `NonPositiveInt`, as GraphQL's `Int` does);
   a float scalar that admits `0` (`NonNegativeFloat`, `Latitude`, …) still
-  accepts it. The messages of a refused value can differ too, as the
+  accepts it. **`format`** is kept where the scalar's schema is wider:
+  `format: int32` on `SafeInt` adds `.check(z.gte(-2147483648, …),
+  z.lte(2147483647, …))`, as `'pattern'` writes `z.int32()`; `int64` is the
+  safe range every integer scalar's schema stays within, and `float` and
+  `double` check nothing. The messages of a refused value can differ too, as the
   schema's own bounds answer, not the spec's.
 - **`DateTime`, `Timestamp`, `BigInt` and `Long` stay out.** They decode to
   another type, so they keep their `pattern`, as `'pattern'` writes it.

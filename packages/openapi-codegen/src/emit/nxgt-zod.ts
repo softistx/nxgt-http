@@ -6,6 +6,7 @@
 import {
 	exactNumberScalar,
 	exactSchema,
+	INT32,
 	type NumberBounds,
 } from '../ir/schema/nxgt-scalars';
 import type { NumberNode, SchemaNode, StringNode } from '../ir/types';
@@ -138,8 +139,6 @@ const RULES: readonly {
 		message: 'Too big: expected number to be <',
 	},
 ];
-
-const INT32 = { minimum: -2147483648, maximum: 2147483647 };
 
 /**
  * The bounds a number must hold: the spec's keywords, and the range of

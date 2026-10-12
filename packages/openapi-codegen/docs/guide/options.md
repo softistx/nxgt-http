@@ -30,7 +30,7 @@ await generate({
 | [`hono`](#hono) | `false` | also write `hono.ts`: typed routes for a Hono app |
 | [`alxia`](#alxia) | `false` | also write `alxia.ts`: each operation as the data an alxia app's `app.route(operation, ...middlewares, handler)` takes |
 | [`dates`](#dates) | `'string'` | a `date-time` as its string, or decoded to a `Date` |
-| [`scalars`](#scalars) | `'pattern'` | a string or numeric scalar of `@nxgt/typespec` checked by its `pattern`, or by its schema from `@nxgt/zod` |
+| [`scalars`](#scalars) | `'pattern'` | a string or numeric scalar of `@nxgt/typespec` checked by its `pattern` or bounds, or by its schema from `@nxgt/zod` |
 | [`lint`](#lint) | `false` | lint the spec with Redocly before generating |
 | [`names`](#names) | `{}` | renames schemas |
 | [`legacyNullable`](#legacynullable) | `'warn'` | tolerate or refuse 3.0's `nullable: true` |
@@ -205,12 +205,12 @@ With `'exact'`:
   than the spec: a scalar narrowed in TypeSpec
   (`@pattern("^FR.*$") scalar FrIban extends iban`) still refuses a Belgian
   IBAN. For a scalar as `@nxgt/typespec` declares it, the canonical pattern is
-  checked besides the schema, redundantly. A `minLength` or `maxLength` the
+  checked beside the schema, redundantly. A `minLength` or `maxLength` the
   spec adds is kept too, as
   `ibanSchema.check(z.maxLength(34, 'Too big: expected string to have <=34 characters'))`:
   `.check()` works on every schema, and the message is Zod's own, written out
   because a scalar's schema answers with its own (`Invalid IBAN`) otherwise.
-  Since the canonical pattern is checked besides the schema, a refused
+  Since the canonical pattern is checked beside the schema, a refused
   string can carry **two issues**: the schema's (`Invalid IBAN`) and the
   pattern's. The numeric scalars do not repeat themselves this way (below).
 - **The numeric scalars are covered too** (`Latitude`, `Longitude`, `Port`,

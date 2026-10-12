@@ -87,7 +87,7 @@ export interface NumberScalar {
 	bounds: NumberBounds;
 }
 
-const INT32 = { minimum: -2147483648, maximum: 2147483647 };
+export const INT32 = { minimum: -2147483648, maximum: 2147483647 };
 const SAFE = { minimum: -9007199254740991, maximum: 9007199254740991 };
 
 /**

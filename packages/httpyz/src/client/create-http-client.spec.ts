@@ -435,7 +435,9 @@ describe('errors', () => {
 						async pull(controller) {
 							controller.enqueue(new TextEncoder().encode('{"data":'));
 							await Bun.sleep(5);
-							controller.error(new Error('gone'));
+							controller.error(
+								new Error('expected: the server drops the body mid-way'),
+							);
 						},
 					}),
 					{ headers: { 'content-type': 'application/json' } },

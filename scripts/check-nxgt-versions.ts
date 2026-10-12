@@ -3,10 +3,11 @@
  * Lists every `@nxgt/*` devDependency whose locked version is behind npm's
  * `latest`.
  *
- * The packages here peer the nxgt `0.x` libraries they wrap by range —
- * `>=<floor> <1` — and the specs run only the version `bun.lock` holds. A new
- * release upstream is therefore admitted by the range the day it is published
- * and never tested until someone bumps the lock. This check is what makes
+ * `@nxgt/openapi-codegen` peers `@nxgt/zod` by `^0.1.3`, and the specs run
+ * only the version `bun.lock` holds. A patch upstream is therefore admitted by
+ * the range the day it is published and never tested until someone bumps the
+ * lock, and a new `0.x` minor stays outside the range until the peer is
+ * widened. This check is what makes
  * that someone the `nxgt-versions` workflow, weekly, instead of memory.
  *
  * Dependabot would do it, but not here: its Bun updater reads `bun.lock` up to

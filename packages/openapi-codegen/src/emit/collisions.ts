@@ -111,7 +111,8 @@ function claimAlxia(ctx: EmitContext, claims: Claims): void {
  * Every generated name, once. A schema's `XInput`, an operation's `XQuery`,
  * or a name `types.ts` and `hono.ts` declare themselves, can land
  * on a name a schema already has. Interfaces of one name would merge, not
- * fail, so this is the only place the clash is caught.
+ * fail, so this is the only place the clash is caught. The claims run in a
+ * fixed order, which is the order of the diagnostics it throws.
  */
 export function checkNames(ctx: EmitContext): void {
 	const claims = new Claims();

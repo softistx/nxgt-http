@@ -238,7 +238,7 @@ codes has the code `custom`.
 
 | Error | When |
 | --- | --- |
-| `NetworkError` | fetch failed: no connection, a refused one, a CORS refusal; or a stream's connection dropped for good. `cause` is fetch's error |
+| `NetworkError` | fetch failed: no connection, a refused one, a CORS refusal; the connection dropped while the reply's body was read; or a stream's connection dropped for good. `cause` is fetch's error |
 | `TimeoutError` | no reply within `timeout`. `timeout` is the limit |
 | `UndeclaredStatusError` | a status the call's `responses` do not declare, or a stream opened with any status but a 2xx or 204. `status`, and `response`, unread |
 | `ValidationError` | a reply its declaration does not describe; or, from a binding, a request refused before it was sent. `failure` has every issue |
@@ -343,6 +343,9 @@ pass:
 
 Only a method that may be repeated is retried, which is every method but
 POST and PATCH: a POST that got no reply may still have been carried out.
+
+A reply whose body is cut off is not retried: the reply came, so the
+`NetworkError` reaches the caller, who may call again.
 
 The wait before each retry is random, up to 300 ms doubled at each retry. A
 reply's `Retry-After`, in seconds or as a date, wins over it. A `Retry-After`
@@ -622,13 +625,22 @@ The base of every error a call throws, but an abort. Its message is
 
 ```ts
 class NetworkError extends ClientError {
-	constructor(context: CallContext, options?: ErrorOptions);
+	constructor(
+		context: CallContext,
+		options?: ErrorOptions,
+		stage?: 'reply' | 'body',
+	);
 }
 ```
 
 fetch threw, or a stream's connection dropped and was not reconnected. Its
 message ends `no reply came back`, and `cause` is fetch's error. It is the
 one error `retry` retries.
+
+With `stage: 'body'`, the headers came and the connection dropped while the
+body was read: its message ends `reply body cut off`, and `cause` is the
+runtime's error (Bun's `The socket connection was closed unexpectedly`).
+`retry` does not retry it, since the reply came.
 
 ##### `TimeoutError`
 

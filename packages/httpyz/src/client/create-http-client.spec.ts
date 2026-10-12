@@ -367,6 +367,92 @@ describe('errors', () => {
 		expect((aborted as Error).name).toBe('AbortError');
 	});
 
+	/** Headers at once, then the start of a body whose connection drops, as fetch's does. */
+	const cut = (type: string) => async () =>
+		new Response(
+			new ReadableStream<Uint8Array>({
+				start(controller) {
+					controller.enqueue(new TextEncoder().encode('{"data":'));
+					controller.error(new TypeError('socket closed unexpectedly'));
+				},
+			}),
+			{ headers: { 'content-type': type } },
+		);
+
+	it('throws a NetworkError when the connection drops while the body is read', async () => {
+		for (const type of ['application/json', 'text/plain', 'image/png']) {
+			const dropped = await failure(
+				stub(cut(type)).get('/health', {
+					responses: { 200: { [type]: null } },
+				}),
+			);
+			expect(dropped, type).toBeInstanceOf(NetworkError);
+			expect((dropped as Error).message).toBe(
+				'GET /health: reply body cut off',
+			);
+			expect((dropped as Error).cause).toBeInstanceOf(TypeError);
+		}
+		const untyped = await failure(
+			stub(cut('multipart/form-data')).get('/health'),
+		);
+		expect(untyped).toBeInstanceOf(NetworkError);
+	});
+
+	it('does not retry a body cut off: the reply came, and is not sent again', async () => {
+		let calls = 0;
+		const dropped = await failure(
+			stub(
+				async () => {
+					calls++;
+					return cut('application/json')();
+				},
+				{ retry: 2 },
+			).get('/health'),
+		);
+		expect(dropped).toBeInstanceOf(NetworkError);
+		expect(calls).toBe(1);
+	});
+
+	it("keeps formData()'s own error for a form that does not parse", async () => {
+		const broken = await failure(
+			stub(
+				async () =>
+					new Response('not a form', {
+						headers: { 'content-type': 'multipart/form-data; boundary=x' },
+					}),
+			).get('/health'),
+		);
+		expect(broken).not.toBeInstanceOf(NetworkError);
+		expect(broken).toBeInstanceOf(TypeError);
+	});
+
+	it('throws a NetworkError when a real server drops the connection mid-body', async () => {
+		const server = Bun.serve({
+			port: 0,
+			fetch: () =>
+				new Response(
+					new ReadableStream<Uint8Array>({
+						async pull(controller) {
+							controller.enqueue(new TextEncoder().encode('{"data":'));
+							await Bun.sleep(5);
+							controller.error(new Error('gone'));
+						},
+					}),
+					{ headers: { 'content-type': 'application/json' } },
+				),
+		});
+		try {
+			const http = createHttpClient({ baseUrl: server.url.href });
+			const dropped = await failure(http.get('/health'));
+			expect(dropped).toBeInstanceOf(NetworkError);
+			expect((dropped as Error).message).toBe(
+				'GET /health: reply body cut off',
+			);
+		} finally {
+			server.stop(true);
+		}
+	});
+
 	it('lets an abort the caller asked for through as it is', async () => {
 		const controller = new AbortController();
 		const pending = failure(

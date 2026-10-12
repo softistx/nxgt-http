@@ -28,6 +28,7 @@ export function paramObject(
 		}
 		return `\t${propertyKey(paramKey(param))}: ${value},`;
 	});
+	scope('\t').imports.add('z');
 	return `z.object({\n${entries.join('\n')}\n})`;
 }
 
@@ -45,6 +46,7 @@ export function formObject(
 	indent = '',
 ): string {
 	const inner = `${indent}\t`;
+	scope(inner).imports.add('z');
 	const entries = object.properties.map((property) => {
 		let value = fromString(ctx, property.schema, helpers, scope(inner));
 		if (ctx.resolve(property.schema).kind === 'array') {
@@ -95,6 +97,7 @@ export function fromString(
 		case 'literal':
 			return literalFromString(ctx, node, resolved.values, helpers, scope);
 		case 'union': {
+			scope.imports.add('z');
 			const inner: Scope = { ...scope, indent: `${scope.indent}\t` };
 			const variants = resolved.variants.map((variant) =>
 				fromString(ctx, variant, helpers, inner),
@@ -102,6 +105,7 @@ export function fromString(
 			return `z.union(${list('[', variants, ']', scope.indent)})`;
 		}
 		case 'array':
+			scope.imports.add('z');
 			return `z.array(${fromString(ctx, resolved.items, helpers, scope)})${bounds(resolved.minItems, resolved.maxItems)}`;
 		default:
 			return expr(ctx, node, scope);
@@ -125,13 +129,14 @@ function literalFromString(
 	] as const) {
 		const some = values.filter((value) => typeof value === kind);
 		if (some.length === 0) continue;
-		const piece =
-			some.length === values.length ? whole : literal(some, scope.indent);
+		const all = some.length === values.length;
+		const piece = all ? whole : literal(some, scope.indent);
+		if (!all) scope.imports.add('z');
 		if (helper) helpers.add(helper);
 		pieces.push(helper ? `${helper}.pipe(${piece})` : piece);
 	}
 	const [only] = pieces;
-	return pieces.length === 1 && only !== undefined
-		? only
-		: `z.union(${list('[', pieces, ']', scope.indent)})`;
+	if (pieces.length === 1 && only !== undefined) return only;
+	scope.imports.add('z');
+	return `z.union(${list('[', pieces, ']', scope.indent)})`;
 }

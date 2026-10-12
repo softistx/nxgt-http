@@ -14,7 +14,6 @@ export function preamble(printing: Printing): string[] {
 	}
 	const helpers = [...printing.helpers];
 	if (
-		printing.zod ||
 		printing.imports.has('z') ||
 		helpers.some((h) => h === 'numeric' || h === 'flag')
 	) {

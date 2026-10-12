@@ -527,6 +527,34 @@ describe('alxia.ts', () => {
 		expect(code).toContain('\t\t\t200: z.string(),\n\t\t\t201: z.unknown(),');
 	});
 
+	it('imports z only when a schema calls it: a reference or a bare @nxgt/zod schema does not', async () => {
+		const pet = { type: 'object', properties: { name: { type: 'string' } } };
+		const email = { type: 'string', 'x-nxgt-scalar': 'EmailAddress' };
+		const spec = doc(
+			{
+				'/pets': {
+					post: {
+						operationId: 'addPet',
+						requestBody: { required: true, content: json(email) },
+						responses: {
+							'200': {
+								description: 'ok',
+								content: json({ $ref: '#/components/schemas/Pet' }),
+							},
+						},
+					},
+				},
+			},
+			{ Pet: pet },
+		);
+		const exact = await alxia(spec, { scalars: 'exact' });
+		expect(exact.code).toContain('\t\tbody: emailAddressSchema,');
+		expect(exact.code).not.toContain("import { z } from 'zod';");
+		const pattern = await alxia(spec);
+		expect(pattern.code).toContain('\t\tbody: z.string(),');
+		expect(pattern.code).toContain("import { z } from 'zod';");
+	});
+
 	it('writes an empty table, importing nothing, when alxia can route no operation', async () => {
 		const { code } = await alxia(
 			doc({ '/t': { trace: { operationId: 'traced', responses: ok } } }),

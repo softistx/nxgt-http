@@ -31,11 +31,13 @@ export interface Printing {
 	uses: Set<string>;
 	/** What `expr` needs declared: the date codec. */
 	codecs: Set<string>;
-	/** The `@nxgt/zod` exports (and `z`) the schemas call. */
+	/**
+	 * The `@nxgt/zod` exports the schemas call, and `z` when one calls it:
+	 * recorded where the call is printed, never read back from the text, as a
+	 * default or a pattern may hold `z.` too.
+	 */
 	imports: Set<string>;
 	declared: ReadonlySet<string>;
-	/** Whether a printed schema calls `z.` itself, so `z` is imported. */
-	zod: boolean;
 	eventStream: boolean;
 }
 
@@ -53,9 +55,9 @@ export function scope(printing: Printing, indent: string): Scope {
 	};
 }
 
-/** `text`, noting whether it calls `z.` itself. */
-export function note(printing: Printing, text: string): string {
-	if (/\bz\./.test(text)) printing.zod = true;
+/** `text`, a schema this file prints itself, which calls `z`. */
+export function callsZ(printing: Printing, text: string): string {
+	printing.imports.add('z');
 	return text;
 }
 

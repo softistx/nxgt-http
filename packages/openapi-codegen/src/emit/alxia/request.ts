@@ -10,7 +10,13 @@ import { formObject, fromString } from '../operation/from-string';
 import { valueSchema } from '../operation/read';
 import { propertyKey } from '../printer';
 import { expr, withDefault } from '../zod';
-import { type Issue, note, type Printing, preferred, scope } from './printing';
+import {
+	callsZ,
+	type Issue,
+	type Printing,
+	preferred,
+	scope,
+} from './printing';
 
 /**
  * Whether a parameter's validator takes the string alxia hands it: alxia
@@ -56,15 +62,18 @@ export function paramsObject(
 		if (ctx.resolve(param.schema).kind === 'array') {
 			if (location === 'header') {
 				printing.locals.add('headerList');
-				value = `z.preprocess(headerList, ${value})`;
+				value = callsZ(printing, `z.preprocess(headerList, ${value})`);
 			} else if (location === 'query') {
 				if (param.explode) printing.helpers.add('repeated');
 				else printing.locals.add('commas');
-				value = `z.preprocess(${param.explode ? 'repeated' : 'commas'}, ${value})`;
+				value = callsZ(
+					printing,
+					`z.preprocess(${param.explode ? 'repeated' : 'commas'}, ${value})`,
+				);
 			}
 		}
 		if (location === 'path' && !takesString(printing, schema)) {
-			value = `z.string().pipe(${value})`;
+			value = callsZ(printing, `z.string().pipe(${value})`);
 		}
 		const fallback = param.schema.default;
 		if (!param.required) {
@@ -73,9 +82,9 @@ export function paramsObject(
 					? '.optional()'
 					: withDefault(ctx, param.schema, fallback.value);
 		}
-		return `${inner}${propertyKey(paramKey(param))}: ${note(printing, value)},`;
+		return `${inner}${propertyKey(paramKey(param))}: ${value},`;
 	});
-	return note(printing, `z.object({\n${entries.join('\n')}\n${indent}})`);
+	return callsZ(printing, `z.object({\n${entries.join('\n')}\n${indent}})`);
 }
 
 /** The body's schema, read as alxia reads a body: JSON, a form, or text. */
@@ -125,8 +134,11 @@ export function bodySchema(
 			});
 		}
 	} else {
-		text = media.kind === 'text' ? 'z.string()' : 'z.unknown()';
+		text = callsZ(
+			printing,
+			media.kind === 'text' ? 'z.string()' : 'z.unknown()',
+		);
 	}
 	if (!body.required) text += '.optional()';
-	return { text: note(printing, text) };
+	return { text };
 }

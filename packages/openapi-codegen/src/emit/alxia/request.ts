@@ -5,11 +5,12 @@ import type {
 	ParamLocation,
 	SchemaNode,
 } from '../../ir/types';
-import { paramKey } from '../context';
 import { formObject, fromString } from '../operation/from-string';
+import { paramKey } from '../operation/keys';
 import { valueSchema } from '../operation/read';
 import { propertyKey } from '../printer';
-import { expr, withDefault } from '../zod';
+import { expr } from '../zod/nodes';
+import { withDefault } from '../zod/objects';
 import {
 	callsZ,
 	type Issue,

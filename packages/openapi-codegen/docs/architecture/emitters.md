@@ -7,7 +7,7 @@
 | File | Printed by |
 | --- | --- |
 | `types.ts` | `schemaTypes` (`src/emit/types.ts`), then `operationTypes` (`src/emit/operations.ts`) |
-| `zod.ts` | `emitZod` (`src/emit/zod.ts`) |
+| `zod.ts` | `emitZod` (`src/emit/zod/`) |
 | `operations.ts` | `emitOperations` (`src/emit/operations.ts`) |
 | `paths.ts` | `emitPaths` (`src/emit/paths.ts`) |
 | `hono.ts` | `emitHono` (`src/emit/hono.ts`), with `hono` only |
@@ -18,7 +18,10 @@ generator independent of the compiler version its consumers run.
 
 ## `EmitContext` (`context.ts`)
 
-What both printers must agree on, computed once:
+What both printers must agree on, computed once. The emitter options are
+typed in `options.ts`; the operation keys and parameter groups are in
+`operation/keys.ts`; the two passes the constructor runs are `findLoosened`
+(`loosened.ts`) and `checkNames` (`collisions.ts`):
 
 - **Which schemas need an `XInput` type.** A schema needs one when a
   property's default is filled in (`appliesDefault`: optional, with a
@@ -62,7 +65,11 @@ What both printers must agree on, computed once:
   - There is no TypeScript `enum`: it is nominal, and `erasableSyntaxOnly`
     refuses it.
 
-## Zod (`src/emit/zod.ts`)
+## Zod (`src/emit/zod/`)
+
+`index.ts` has `emitZod`; `scope.ts` the `Scope` a printing tracks;
+`nodes.ts` prints each node kind; `objects.ts` an object, its parents, its
+mode and its defaults.
 
 - **Order.** Schemas come in the IR's dependency order, so a
   non-recursive schema only ever refers to one already declared.
@@ -89,7 +96,7 @@ What both printers must agree on, computed once:
   - An `additionalProperties: false` on a member whose siblings strip
     refuses nothing, and its extra keys are dropped. The same happens to a
     strict parent under `.extend()`, which takes the child's mode. JSON
-    Schema would refuse those keys, so `#findLoosened` adds a
+    Schema would refuse those keys, so `findLoosened` adds a
     `not_enforced` warning.
 - **Defaults.** An object or array default is printed as a closure,
   `.default(() => ({}))`, so no two parses share one mutable value.
@@ -179,7 +186,7 @@ generator does not depend on the runtime. Change both together.
 - **Imports are namespaced:** `import type * as Hono from 'hono'` and
   `import * as runtime from '@nxgt/openapi-hono'`. Schema types are
   imported by name, so `Replies`, `HonoSpec` and `Hono` are claimed in
-  `#checkNames`, as a schema's name would be.
+  `checkNames`, as a schema's name would be.
 
 ## alxia (`src/emit/alxia/`)
 
@@ -189,7 +196,7 @@ Written only with the `alxia` option: one `as const` object per operation,
 `operations`, below a comment saying how the route validates and checks
 replies (`USAGE`). It reuses the operation readers (`fromString` and
 `formObject` from `operation/from-string.ts`, `valueSchema` from
-`operation/read.ts`, the runtime helpers from `operation/helpers.ts`) and `zod.ts`'s `expr`, so a
+`operation/read.ts`, the runtime helpers from `operation/helpers.ts`) and `zod/nodes.ts`'s `expr`, so a
 parameter or a form is read from text exactly as the Hono engine reads it.
 Only what alxia hands over differs:
 
@@ -228,7 +235,7 @@ Only what alxia hands over differs:
 - **Names:** each constant is named by `operationConst` (`names.ts`): the
   `operationId`, camelCased when it is not an identifier, and suffixed
   `Operation` when it is a reserved word or `Number`, `Array` or `Date`,
-  which the helpers call. With `alxia`, `#checkNames` claims those, every
+  which the helpers call. With `alxia`, `checkNames` claims those, every
   `z<Name>` the file may import, and the file's own names (`ALXIA_NAMES`),
   in a namespace apart from the types: an operation may share its id with a
   schema's type name.

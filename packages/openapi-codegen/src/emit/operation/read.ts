@@ -6,7 +6,7 @@ import type {
 	ParamIR,
 	SchemaNode,
 } from '../../ir/types';
-import { type ParamGroup, paramKey } from '../context';
+import { type ParamGroup, paramKey } from './keys';
 
 /** A parameter's schema as it is validated: documented as the parameter, never null. */
 export function valueSchema(param: ParamIR): SchemaNode {

@@ -64,6 +64,6 @@ app.
 
 - `src/generate.ts`: the whole pipeline, options included, in about a
   hundred lines.
-- `src/ir/types.ts`: the IR, the contract between the stages.
+- `src/ir/types/`: the IR, the contract between the stages.
 - `test/fixtures/kitchen-sink/openapi.yaml`, and the snapshot of what it
   generates in `src/emit/__snapshots__/`: every mapping, side by side.

@@ -11,12 +11,9 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { GeneratedFile } from '../src/emit';
-import {
-	type Dates,
-	EmitContext,
-	paramGroups,
-	type Scalars,
-} from '../src/emit/context';
+import { EmitContext } from '../src/emit/context';
+import { paramGroups } from '../src/emit/operation/keys';
+import type { Dates, Scalars } from '../src/emit/options';
 import { file, jsString } from '../src/emit/printer';
 import { generateFiles } from '../src/generate';
 import { buildIR } from '../src/ir';

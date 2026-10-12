@@ -1,10 +1,11 @@
 import type { Diagnostic } from '../errors';
 import type { ApiIR, OperationIR } from '../ir/types';
 import { emitAlxia } from './alxia';
-import { EmitContext, type EmitOptions } from './context';
+import { EmitContext } from './context';
 import { warnCookies } from './cookies';
 import { emitHono } from './hono';
 import { emitOperations, operationTypes } from './operations';
+import type { EmitOptions } from './options';
 import { emitPaths } from './paths';
 import { file } from './printer';
 import { schemaTypes, WIRE_TYPE } from './types';

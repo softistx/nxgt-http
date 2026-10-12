@@ -2,7 +2,7 @@
 import type { MediaIR } from '../../ir/types';
 import type { EmitContext } from '../context';
 import type { Helper } from '../operation/helpers';
-import type { Scope } from '../zod';
+import type { Scope } from '../zod/scope';
 
 export type Local = 'commas' | 'headerList';
 

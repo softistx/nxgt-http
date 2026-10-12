@@ -2,7 +2,8 @@
 
 `buildIR(doc, options)` (`src/ir/index.ts`) reads what a loaded spec means and
 reduces every way JSON Schema has of saying a thing to one shape. The types
-are in `src/ir/types.ts`. They are the contract between the loader and the
+are in `src/ir/types/`: the schema nodes in `schema.ts`, the operations in
+`operation.ts`, and `ApiIR` in `index.ts`, which re-exports both. They are the contract between the loader and the
 emitters.
 
 ```ts

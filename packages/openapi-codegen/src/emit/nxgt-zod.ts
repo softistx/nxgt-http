@@ -10,7 +10,7 @@ import {
 	type NumberBounds,
 } from '../ir/schema/nxgt-scalars';
 import type { NumberNode, SchemaNode, StringNode } from '../ir/types';
-import type { EmitOptions } from './context';
+import type { EmitOptions } from './options';
 import { jsString, list, regexLiteral } from './printer';
 
 /** The `@nxgt/zod` export that validates the node, with `scalars: 'exact'` and a scalar that has one. */

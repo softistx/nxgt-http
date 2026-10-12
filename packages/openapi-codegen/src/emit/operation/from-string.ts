@@ -4,10 +4,13 @@
  * it uses in `helpers`, which `operations.ts` then declares.
  */
 import type { ObjectNode, Scalar, SchemaNode } from '../../ir/types';
-import { type EmitContext, type ParamGroup, paramKey } from '../context';
+import type { EmitContext } from '../context';
 import { list, propertyKey } from '../printer';
-import { bounds, expr, literal, type Scope, withDefault } from '../zod';
+import { bounds, expr, literal } from '../zod/nodes';
+import { withDefault } from '../zod/objects';
+import type { Scope } from '../zod/scope';
 import type { Helper } from './helpers';
+import { type ParamGroup, paramKey } from './keys';
 import { valueSchema } from './read';
 
 /** A parameter location's validator: each parameter read from text, defaults applied. */

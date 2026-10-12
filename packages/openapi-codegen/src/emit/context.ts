@@ -1,4 +1,4 @@
-import { CodegenError, type Diagnostic } from '../errors';
+import type { Diagnostic } from '../errors';
 import type {
 	ApiIR,
 	LiteralNode,
@@ -6,95 +6,16 @@ import type {
 	NamedSchema,
 	ObjectNode,
 	OperationIR,
-	ParamIR,
 	Property,
 	SchemaNode,
 } from '../ir/types';
-import type { Location } from '../loader/location';
-import { ALXIA_NAMES, operationConst } from './alxia/names';
-
-/** What an object does with keys it does not declare, when the spec does not say. */
-export type UnknownKeys = 'strip' | 'strict' | 'loose';
-
-/** A named enum as an `as const` object that `z.enum()` reuses, or as a plain union. */
-export type Enums = 'object' | 'union';
-
-/** A `date-time` as the string JSON carries, or decoded to a `Date`. */
-export type Dates = 'string' | 'date';
-
-/** How a scalar of `@nxgt/typespec` is validated: by its `pattern`, or by the schema of `@nxgt/zod`. */
-export type Scalars = 'pattern' | 'exact';
-
-/** What an object does with undeclared keys once the `unknownKeys` default is applied. */
-export type ObjectMode = UnknownKeys | { schema: SchemaNode };
-
-export interface EmitOptions {
-	unknownKeys: UnknownKeys;
-	enums: Enums;
-	/** Appended to imports between generated files: `.js` works under every `moduleResolution`. */
-	importExtension: '' | '.js' | '.ts';
-	/** The spec, relative to the output directory, for the header. */
-	source: string;
-	/** Where diagnostics are reported relative to. */
-	rootDir: string;
-	/** Also emit `hono.ts`. */
-	hono?: boolean;
-	/** Also emit `alxia.ts`. */
-	alxia?: boolean;
-	/** `date-time` as a string (the default), or decoded to a `Date` by a codec. */
-	dates?: Dates;
-	/**
-	 * A scalar of `@nxgt/typespec` by its pattern (the default), or by its
-	 * `@nxgt/zod` schema, the spec's `pattern` and length bounds kept on top as
-	 * `.check()`s.
-	 */
-	scalars?: Scalars;
-}
+import { checkNames } from './collisions';
+import { findLoosened } from './loosened';
+import type { EmitOptions, ObjectMode } from './options';
 
 /** A property whose default the validator fills in: optional going in, present coming out. */
 export const appliesDefault = (property: Property): boolean =>
 	!property.required && property.schema.default !== undefined;
-
-/** What `types.ts` declares beside the schemas, printed by `operationTypes`. */
-export const OPERATION_INDEXES = [
-	'Operations',
-	'ClientOperations',
-	'OperationsByRoute',
-	'PathsByMethod',
-	'OperationsByTag',
-	'PathsByTag',
-] as const;
-
-/** An operation's route, its key in `OperationsByRoute`: `put /employees/{id}`. */
-export const routeKey = (operation: OperationIR): string =>
-	`${operation.method} ${operation.path}`;
-
-/** Header names are case-insensitive: validated headers are keyed lowercased, as Hono reads them. */
-export const paramKey = (param: ParamIR): string =>
-	param.in === 'header' ? param.name.toLowerCase() : param.name;
-
-/** An operation's parameters in one location, validated together. */
-export interface ParamGroup {
-	/** Where Hono's `c.req.valid()` finds them. */
-	target: 'param' | 'query' | 'header';
-	/** `GetPetQuery`, whose validator is `zGetPetQuery`. */
-	name: string;
-	params: ParamIR[];
-}
-
-const GROUPS = [
-	['path', 'param', 'Param'],
-	['query', 'query', 'Query'],
-	['header', 'header', 'Header'],
-] as const;
-
-export function paramGroups(operation: OperationIR): ParamGroup[] {
-	return GROUPS.flatMap(([location, target, suffix]) => {
-		const params = operation.parameters.filter((p) => p.in === location);
-		if (params.length === 0) return [];
-		return [{ target, name: `${operation.name}${suffix}`, params }];
-	});
-}
 
 /** The IR plus what both emitters need to agree on. */
 export class EmitContext {
@@ -116,8 +37,8 @@ export class EmitContext {
 		this.#byId = new Map(ir.schemas.map((schema) => [schema.id, schema]));
 		this.#fixpoint(this.#dated, (node) => this.datesIn(node));
 		this.#fixpoint(this.#inputs, (node) => this.inputDiffers(node));
-		this.#findLoosened();
-		this.#checkNames();
+		this.warnings.push(...findLoosened(this));
+		checkNames(this);
 	}
 
 	get header(): string {
@@ -338,196 +259,6 @@ export class EmitContext {
 				set.add(schema.id);
 				changed = true;
 			}
-		}
-	}
-
-	/**
-	 * An `additionalProperties: false` on an `allOf` member that the generated
-	 * validator cannot keep. JSON Schema refuses every key that member does not
-	 * declare. A Zod intersection refuses a key only when every member does,
-	 * and `.extend()` takes the child's mode, so beside a member that strips
-	 * the extra keys are dropped instead.
-	 */
-	#findLoosened(): void {
-		const refuses = (
-			node: SchemaNode,
-			seen = new Set<SchemaNode>(),
-		): boolean => {
-			const target = this.resolve(node);
-			if (seen.has(target)) return true;
-			seen.add(target);
-			switch (target.kind) {
-				case 'object':
-					return this.mode(target) === 'strict';
-				case 'union':
-					return target.variants.every((v) => refuses(v, seen));
-				case 'intersection':
-					return target.members.some((m) => refuses(m, seen));
-				case 'record':
-				case 'unknown':
-					// Any key goes.
-					return false;
-				default:
-					return true;
-			}
-		};
-		const said = (node: SchemaNode): boolean => {
-			const target = this.resolve(node);
-			return target.kind === 'object' && target.additional === 'strict';
-		};
-		for (const schema of this.ir.schemas) {
-			let loosened = false;
-			let unsealed = false;
-			const visit = (node: SchemaNode): void => {
-				if (node.kind === 'array') visit(node.items);
-				else if (node.kind === 'record') visit(node.values);
-				else if (node.kind === 'ref') {
-					if (node.sealed && !refuses(node)) unsealed = true;
-				} else if (node.kind === 'union') {
-					if (node.sealed && !node.variants.every((v) => refuses(v))) {
-						unsealed = true;
-					}
-					node.variants.forEach(visit);
-				} else if (node.kind === 'intersection') {
-					if (node.sealed && !node.members.every((m) => refuses(m))) {
-						unsealed = true;
-					}
-					if (
-						node.members.some(said) &&
-						!node.members.every((m) => refuses(m))
-					) {
-						loosened = true;
-					}
-					node.members.forEach(visit);
-				} else if (node.kind === 'object') {
-					const parents = node.extends.map(
-						(target): SchemaNode => ({ kind: 'ref', target }),
-					);
-					const strict = this.mode(node) === 'strict';
-					// Without properties of its own, or of a parent's that `required`
-					// restates, the object adds no member to the intersection.
-					const shapeless =
-						node.properties.length === 0 &&
-						!(node.requires ?? []).some(
-							(name) => this.propertyOf(node, name) !== undefined,
-						);
-					const kept = parents.every((p) => this.isZodObject(p))
-						? strict
-						: parents.every((p) => refuses(p)) && (strict || shapeless);
-					if (parents.some(said) && !kept) loosened = true;
-					for (const property of node.properties) visit(property.schema);
-					if (typeof node.additional === 'object') {
-						visit(node.additional.schema);
-					}
-				}
-			};
-			visit(schema.node);
-			if (unsealed) {
-				this.warnings.push({
-					severity: 'warning',
-					code: 'not_enforced',
-					message: `${schema.name}: \`unevaluatedProperties: false\` is not enforced over a $ref member that accepts keys it does not declare: they are dropped, not refused. Give that member \`additionalProperties: false\`, or set \`unknownKeys: 'strict'\``,
-					file: schema.location.file,
-					pointer: schema.location.pointer,
-				});
-			}
-			if (!loosened) continue;
-			this.warnings.push({
-				severity: 'warning',
-				code: 'not_enforced',
-				message: `${schema.name}: \`additionalProperties: false\` on an allOf member is not enforced. A key it does not declare is dropped, not refused, when another member accepts it`,
-				file: schema.location.file,
-				pointer: schema.location.pointer,
-			});
-		}
-	}
-
-	/**
-	 * Every generated name, once. A schema's `XInput`, an operation's `XQuery`,
-	 * or a name `types.ts` and `hono.ts` declare themselves, can land
-	 * on a name a schema already has. Interfaces of one name would merge, not
-	 * fail, so this is the only place the clash is caught.
-	 */
-	#checkNames(): void {
-		const types = new Map<string, string>();
-		/** alxia.ts's values: a module of their own, beside the types. */
-		const values = new Map<string, string>();
-		const diagnostics: Diagnostic[] = [];
-		const claim = (
-			name: string,
-			owner: string,
-			at: Location,
-			owners = types,
-		): void => {
-			const holder = owners.get(name);
-			if (holder === undefined) {
-				owners.set(name, owner);
-				return;
-			}
-			const fix = [holder, owner].some((o) => o.startsWith('schema '))
-				? 'Rename the schema with the `names` option'
-				: 'Change the operationId';
-			diagnostics.push({
-				severity: 'error',
-				code: 'name_collision',
-				message: `${holder} and ${owner} would both generate ${name}. ${fix}`,
-				file: at.file,
-				pointer: at.pointer,
-			});
-		};
-		const root = { file: this.options.rootDir, pointer: '' };
-		for (const name of OPERATION_INDEXES) claim(name, 'types.ts', root);
-		if (this.options.dates === 'date') claim('Wire', 'types.ts', root);
-		if (this.options.hono) {
-			// Declared or imported by hono.ts, which also imports schemas by name.
-			for (const name of ['Replies', 'HonoSpec', 'Hono']) {
-				claim(name, 'hono.ts', root);
-			}
-		}
-		for (const schema of this.ir.schemas) {
-			claim(schema.name, `schema ${schema.name}`, schema.location);
-		}
-		for (const alias of this.ir.aliases) {
-			claim(alias.name, `schema ${alias.name}`, alias.location);
-		}
-		for (const schema of this.ir.schemas) {
-			if (this.#inputs.has(schema.id)) {
-				claim(`${schema.name}Input`, `schema ${schema.name}`, schema.location);
-			}
-		}
-		for (const alias of this.ir.aliases) {
-			if (this.#inputs.has(alias.target)) {
-				claim(`${alias.name}Input`, `schema ${alias.name}`, alias.location);
-			}
-		}
-		for (const operation of this.ir.operations) {
-			const owner = `operation ${operation.operationId}`;
-			for (const group of paramGroups(operation)) {
-				claim(group.name, owner, operation.location);
-			}
-			if (this.formOf(operation)) {
-				claim(`${operation.name}Form`, owner, operation.location);
-			}
-		}
-		if (this.options.alxia) {
-			// alxia.ts holds values, not types: its own names, the `z<Name>` it
-			// imports from zod.ts, and one const per operation.
-			for (const name of ALXIA_NAMES) claim(name, 'alxia.ts', root, values);
-			for (const schema of this.ir.schemas) {
-				const owner = `schema ${schema.name}`;
-				claim(`z${schema.name}`, owner, schema.location, values);
-			}
-			for (const alias of this.ir.aliases) {
-				const owner = `schema ${alias.name}`;
-				claim(`z${alias.name}`, owner, alias.location, values);
-			}
-			for (const operation of this.ir.operations) {
-				const owner = `operation ${operation.operationId}`;
-				claim(operationConst(operation), owner, operation.location, values);
-			}
-		}
-		if (diagnostics.length > 0) {
-			throw new CodegenError(diagnostics, this.options.rootDir);
 		}
 	}
 }

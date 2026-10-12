@@ -1,8 +1,9 @@
 /** `Operations` in `types.ts`: what a handler gets, parameters and bodies as validated, and the replies. */
 import type { MediaIR, OperationIR } from '../../ir/types';
-import { type EmitContext, paramGroups } from '../context';
+import type { EmitContext } from '../context';
 import { docComment, jsString, propertyKey } from '../printer';
 import { type } from '../types';
+import { paramGroups } from './keys';
 import { operationDocs } from './read';
 import { streamLine } from './stream-types';
 

@@ -7,7 +7,7 @@ export {
 	type SharedConfig,
 } from './config';
 export type { GeneratedFile } from './emit';
-export type { Dates, Enums, Scalars, UnknownKeys } from './emit/context';
+export type { Dates, Enums, Scalars, UnknownKeys } from './emit/options';
 export {
 	CodegenError,
 	type Diagnostic,

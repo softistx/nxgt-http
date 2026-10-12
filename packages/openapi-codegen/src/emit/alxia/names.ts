@@ -1,7 +1,7 @@
 /**
  * The names `alxia.ts` declares. They share one module, apart from the types
- * of `types.ts`, so `EmitContext.#checkNames` claims them in a namespace of
- * their own.
+ * of `types.ts`, so `checkNames` (`../collisions.ts`) claims them in a
+ * namespace of their own.
  */
 import { RESERVED } from '../../ir/schemas';
 import type { OperationIR } from '../../ir/types';

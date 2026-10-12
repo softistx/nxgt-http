@@ -1,5 +1,5 @@
 /** The helpers a validator of `operations.ts` may use, declared once at the top of the file. */
-import { ISO_DATE } from '../zod';
+import { ISO_DATE } from '../zod/scope';
 
 export type Helper = 'flag' | 'isoDate' | 'none' | 'numeric' | 'repeated';
 

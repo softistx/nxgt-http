@@ -1,5 +1,5 @@
 /** The checks of `generateFiles`' options, and their defaults. */
-import type { Dates, Enums, Scalars, UnknownKeys } from './emit/context';
+import type { Dates, Enums, Scalars, UnknownKeys } from './emit/options';
 import { CodegenError } from './errors';
 import type { GenerateOptions } from './generate';
 import type { Lint } from './lint';

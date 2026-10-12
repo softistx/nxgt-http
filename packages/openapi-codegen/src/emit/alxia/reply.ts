@@ -1,7 +1,7 @@
 /** The replies of an `alxia.ts` route: a schema per status, or why alxia cannot send one. */
 import type { MediaIR, SchemaNode } from '../../ir/types';
 import { propertyKey } from '../printer';
-import { expr } from '../zod';
+import { expr } from '../zod/nodes';
 import { callsZ, type Printing, preferred, scope } from './printing';
 
 /** A line break or a NUL, which alxia refuses in an event name. */

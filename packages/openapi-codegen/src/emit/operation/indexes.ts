@@ -1,7 +1,8 @@
 /** The indexes of `types.ts`: operations by route and by tag, paths by method and by tag. */
 import { HTTP_METHODS, type OperationIR } from '../../ir/types';
-import { type EmitContext, routeKey } from '../context';
+import type { EmitContext } from '../context';
 import { jsString, propertyKey } from '../printer';
+import { routeKey } from './keys';
 
 /** `OperationsByRoute`, `PathsByMethod`, `OperationsByTag` and `PathsByTag`, in that order. */
 export function operationIndexes(ctx: EmitContext): string[] {

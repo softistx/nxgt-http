@@ -1,6 +1,6 @@
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { emitFiles, FILE_NAMES, type GeneratedFile } from './emit';
-import type { Dates, Enums, Scalars, UnknownKeys } from './emit/context';
+import type { Dates, Enums, Scalars, UnknownKeys } from './emit/options';
 import { CodegenError, type Diagnostic } from './errors';
 import { buildIR, type IROptions } from './ir';
 import {

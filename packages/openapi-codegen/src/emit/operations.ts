@@ -11,19 +11,20 @@
  * Each part lives under `operation/`, one file per role; this file only
  * puts them in order.
  */
-import { type EmitContext, paramGroups } from './context';
+import type { EmitContext } from './context';
 import { nxgtImport } from './nxgt-zod';
 import { clientOperationsType } from './operation/client-types';
 import { formObject, paramObject } from './operation/from-string';
 import { operationsType } from './operation/handler-types';
 import { HELPERS, type Helper } from './operation/helpers';
 import { operationIndexes } from './operation/indexes';
+import { paramGroups } from './operation/keys';
 import { groupObject } from './operation/read';
 import { SPEC_TYPES } from './operation/spec-types';
 import { operationTable } from './operation/table';
 import { docComment, list } from './printer';
 import { type } from './types';
-import type { Scope } from './zod';
+import type { Scope } from './zod/scope';
 
 // ---------------------------------------------------------------- types.ts
 

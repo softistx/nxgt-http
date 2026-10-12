@@ -1,8 +1,9 @@
 /** `ClientOperations` in `types.ts`: what a client sends and gets back, per operation. */
 import type { MediaIR, OperationIR } from '../../ir/types';
-import { type EmitContext, paramGroups } from '../context';
+import type { EmitContext } from '../context';
 import { docComment, jsString, propertyKey } from '../printer';
 import { type } from '../types';
+import { paramGroups } from './keys';
 import { groupObject, operationDocs } from './read';
 import { streamLine } from './stream-types';
 

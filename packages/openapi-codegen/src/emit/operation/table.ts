@@ -1,9 +1,11 @@
 /** The `operations` table of `operations.ts`: each operation as data, with its validators. */
 import type { MediaIR, OperationIR } from '../../ir/types';
-import { type EmitContext, type ParamGroup, paramGroups } from '../context';
+import type { EmitContext } from '../context';
 import { jsString, list, propertyKey } from '../printer';
-import { expr, type Scope } from '../zod';
+import { expr } from '../zod/nodes';
+import type { Scope } from '../zod/scope';
 import type { Helper } from './helpers';
+import { type ParamGroup, paramGroups } from './keys';
 
 /** `export const operations`, typed by `OperationSpec`; a location with no parameters reads with `none`. */
 export function operationTable(

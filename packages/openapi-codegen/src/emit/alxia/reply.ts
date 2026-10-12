@@ -2,7 +2,7 @@
 import type { MediaIR, SchemaNode } from '../../ir/types';
 import { propertyKey } from '../printer';
 import { expr } from '../zod';
-import { note, type Printing, preferred, scope } from './printing';
+import { callsZ, type Printing, preferred, scope } from './printing';
 
 /** A line break or a NUL, which alxia refuses in an event name. */
 const BREAK = /[\r\n\0]/;
@@ -56,7 +56,7 @@ export function replySchema(
 	| { skip: string } {
 	const { ctx } = printing;
 	if (content.length === 0) {
-		return { text: note(printing, 'z.undefined()'), media: '', others: [] };
+		return { text: callsZ(printing, 'z.undefined()'), media: '', others: [] };
 	}
 	const declarable = content.filter(
 		(m) =>
@@ -78,9 +78,12 @@ export function replySchema(
 	} else if (media.schema) {
 		text = expr(ctx, media.schema, at);
 	} else {
-		text = media.kind === 'text' ? 'z.string()' : 'z.unknown()';
+		text = callsZ(
+			printing,
+			media.kind === 'text' ? 'z.string()' : 'z.unknown()',
+		);
 	}
-	return { text: note(printing, text), media: media.mediaType, others };
+	return { text, media: media.mediaType, others };
 }
 
 /** `eventStream(zItem)`, or `eventStream({ tick: zTick, … })`. */

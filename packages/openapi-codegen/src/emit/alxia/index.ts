@@ -41,7 +41,6 @@ const blank = (ctx: EmitContext): Printing => ({
 	codecs: new Set(),
 	imports: new Set(),
 	declared: new Set(ctx.ir.schemas.map((schema) => schema.id)),
-	zod: false,
 	eventStream: false,
 });
 
@@ -52,7 +51,6 @@ function merge(into: Printing, from: Printing): void {
 	for (const key of MERGED) {
 		for (const value of from[key]) (into[key] as Set<string>).add(value);
 	}
-	into.zod ||= from.zod;
 	into.eventStream ||= from.eventStream;
 }
 

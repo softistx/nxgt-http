@@ -140,7 +140,8 @@ through the client's `retry`, `auth`, `use` and timeout, and the client's
 
 `send` returns the `Response` unread, with the deadline still on its signal:
 reading that body after `timeout` rejects with the signal's `DOMException`
-named `TimeoutError`, not httpyz's `TimeoutError`.
+named `TimeoutError`, not httpyz's `TimeoutError`, and a connection that drops
+while it is read rejects with the runtime's `TypeError`, not a `NetworkError`.
 
 ```ts
 const response = await http.send(new Request('https://api.example.com/export'), {
@@ -238,7 +239,7 @@ codes has the code `custom`.
 
 | Error | When |
 | --- | --- |
-| `NetworkError` | fetch failed: no connection, a refused one, a CORS refusal; the connection dropped while the reply's body was read; or a stream's connection dropped for good. `cause` is fetch's error |
+| `NetworkError` | fetch failed: no connection, a refused one, a CORS refusal; the connection dropped while the reply's body was read; or a stream's connection dropped for good. `cause` is the error underneath |
 | `TimeoutError` | no reply within `timeout`. `timeout` is the limit |
 | `UndeclaredStatusError` | a status the call's `responses` do not declare, or a stream opened with any status but a 2xx or 204. `status`, and `response`, unread |
 | `ValidationError` | a reply its declaration does not describe; or, from a binding, a request refused before it was sent. `failure` has every issue |
@@ -345,7 +346,8 @@ Only a method that may be repeated is retried, which is every method but
 POST and PATCH: a POST that got no reply may still have been carried out.
 
 A reply whose body is cut off is not retried: the reply came, so the
-`NetworkError` reaches the caller, who may call again.
+`NetworkError` reaches the caller, who may call again. A body that stalls
+past `timeout` is a `TimeoutError` instead.
 
 The wait before each retry is random, up to 300 ms doubled at each retry. A
 reply's `Retry-After`, in seconds or as a date, wins over it. A `Retry-After`
@@ -633,14 +635,16 @@ class NetworkError extends ClientError {
 }
 ```
 
-fetch threw, or a stream's connection dropped and was not reconnected. Its
-message ends `no reply came back`, and `cause` is fetch's error. It is the
-one error `retry` retries.
+fetch threw, a stream's connection dropped and was not reconnected, or the
+connection dropped while a reply's body was read. `cause` is the error
+underneath.
 
-With `stage: 'body'`, the headers came and the connection dropped while the
-body was read: its message ends `reply body cut off`, and `cause` is the
-runtime's error (Bun's `The socket connection was closed unexpectedly`).
-`retry` does not retry it, since the reply came.
+- No reply: its message ends `no reply came back`, and `cause` is fetch's
+  error. It is the one error `retry` retries.
+- `stage: 'body'`: the headers came and the body was cut off. Its message ends
+  `reply body cut off`, and `cause` is the runtime's error (Bun's
+  `The socket connection was closed unexpectedly`). `retry` does not retry
+  it, since the reply came.
 
 ##### `TimeoutError`
 

@@ -68,31 +68,117 @@ export const CODEC_SCALARS: readonly string[] = [
 	'Timestamp',
 ];
 
-/** The numeric scalars, which `scalars: 'exact'` does not cover yet. */
-export const NUMBER_SCALARS: readonly string[] = [
-	'Latitude',
-	'Longitude',
-	'NegativeFloat',
-	'NegativeInt',
-	'NonNegativeFloat',
-	'NonNegativeInt',
-	'NonPositiveFloat',
-	'NonPositiveInt',
-	'Port',
-	'PositiveFloat',
-	'PositiveInt',
-	'SafeInt',
-];
+/** The bounds of a number, as the keywords of JSON Schema name them. */
+export interface NumberBounds {
+	minimum?: number;
+	maximum?: number;
+	exclusiveMinimum?: number;
+	exclusiveMaximum?: number;
+}
+
+/**
+ * A numeric scalar's `@nxgt/zod` export, whether its schema is an integer, and
+ * the bounds that schema already enforces (a spec's bound it implies is not
+ * checked a second time).
+ */
+export interface NumberScalar {
+	schema: string;
+	integer: boolean;
+	bounds: NumberBounds;
+}
+
+export const INT32 = { minimum: -2147483648, maximum: 2147483647 };
+const SAFE = { minimum: -9007199254740991, maximum: 9007199254740991 };
+
+/**
+ * The numeric scalars of `@nxgt/typespec` that `scalars: 'exact'` validates
+ * with the schema of `@nxgt/zod`, by their `x-nxgt-scalar` name. `integer` is
+ * what the schema accepts: a spec that says `integer` of a float scalar (or
+ * the reverse) is not the scalar, and keeps its bounds. `nxgt-scalars.spec.ts`
+ * holds `bounds` to the JSON Schema of each `@nxgt/zod` schema.
+ */
+export const NUMBER_SCALARS: Readonly<Record<string, NumberScalar>> = {
+	Latitude: {
+		schema: 'latitudeSchema',
+		integer: false,
+		bounds: { minimum: -90, maximum: 90 },
+	},
+	Longitude: {
+		schema: 'longitudeSchema',
+		integer: false,
+		bounds: { minimum: -180, maximum: 180 },
+	},
+	NegativeFloat: {
+		schema: 'negativeFloatSchema',
+		integer: false,
+		bounds: { exclusiveMaximum: 0 },
+	},
+	NegativeInt: {
+		schema: 'negativeIntSchema',
+		integer: true,
+		bounds: { minimum: INT32.minimum, exclusiveMaximum: 0 },
+	},
+	NonNegativeFloat: {
+		schema: 'nonNegativeFloatSchema',
+		integer: false,
+		bounds: { minimum: 0 },
+	},
+	NonNegativeInt: {
+		schema: 'nonNegativeIntSchema',
+		integer: true,
+		bounds: { minimum: 0, maximum: INT32.maximum },
+	},
+	NonPositiveFloat: {
+		schema: 'nonPositiveFloatSchema',
+		integer: false,
+		bounds: { maximum: 0 },
+	},
+	NonPositiveInt: {
+		schema: 'nonPositiveIntSchema',
+		integer: true,
+		bounds: { minimum: INT32.minimum, maximum: 0 },
+	},
+	Port: {
+		schema: 'portSchema',
+		integer: true,
+		bounds: { minimum: 0, maximum: 65535 },
+	},
+	PositiveFloat: {
+		schema: 'positiveFloatSchema',
+		integer: false,
+		bounds: { exclusiveMinimum: 0 },
+	},
+	PositiveInt: {
+		schema: 'positiveIntSchema',
+		integer: true,
+		bounds: { exclusiveMinimum: 0, maximum: INT32.maximum },
+	},
+	SafeInt: { schema: 'safeIntSchema', integer: true, bounds: SAFE },
+};
 
 const KNOWN = new Set([
 	...Object.keys(STRING_SCALARS),
 	...CODEC_SCALARS,
-	...NUMBER_SCALARS,
+	...Object.keys(NUMBER_SCALARS),
 ]);
 
 /** Whether `name` is an `x-nxgt-scalar` that `@nxgt/typespec` declares. */
 export const isNxgtScalar = (name: string): boolean => KNOWN.has(name);
 
-/** The `@nxgt/zod` export that validates the scalar `name`, if it has an exact one. */
+/** The `@nxgt/zod` export that validates the string scalar `name`, if it has an exact one. */
 export const exactSchema = (name: string): string | undefined =>
 	Object.hasOwn(STRING_SCALARS, name) ? STRING_SCALARS[name] : undefined;
+
+/**
+ * The `@nxgt/zod` schema of the numeric scalar `name`, if it has one and
+ * it is an integer exactly when the spec's is.
+ */
+export const exactNumberScalar = (
+	name: string,
+	integer: boolean,
+): NumberScalar | undefined => {
+	const scalar = Object.hasOwn(NUMBER_SCALARS, name)
+		? NUMBER_SCALARS[name]
+		: undefined;
+	return scalar?.integer === integer ? scalar : undefined;
+};

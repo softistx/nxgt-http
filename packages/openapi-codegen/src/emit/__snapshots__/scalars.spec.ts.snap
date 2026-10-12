@@ -50,8 +50,38 @@ export const zAccount = z.object({
 	legacy: z.string().regex(/^L-\\d+$/u).optional(),
 });
 
+export const zPositiveInt = z.int32().min(1).max(2147483647);
+
+export const zPort = z.int32().min(0).max(65535);
+
+/** A Port narrowed to the well-known ones, as \`@maxValue(1023) scalar WellKnownPort extends port\`. */
+export const zWellKnownPort = z.int32().min(0).max(1023);
+
+export const zLatitude = z.number().min(-90).max(90);
+
+export const zLongitude = z.number().min(-180).max(180);
+
+export const zPositiveFloat = z.number().gt(0);
+
+export const zSafeInt = z.int().min(-9007199254740991).max(9007199254740991);
+
+export const zPlace = z.object({
+	latitude: zLatitude,
+	longitude: zLongitude,
+	radius: z.number().gt(0).max(1000).multipleOf(0.5).optional(),
+	port: zWellKnownPort.optional(),
+	rank: z.int32().min(1).max(2147483647).nullable().optional(),
+	ids: z.array(zSafeInt).optional(),
+	weight: z.number().optional(),
+	count: z.int().min(0).optional(),
+});
+
 export const zOpenAccountBody = z.object({
 	owner: z.string().regex(/^[^@]+@[^@]+$/u),
+});
+
+export const zAddPlaceBody = z.object({
+	latitude: z.number().min(-90).max(90),
 });
 "
 `;
@@ -59,7 +89,19 @@ export const zOpenAccountBody = z.object({
 exports[`scalars: exact prints the schema of @nxgt/zod, imported by name where it is used: exact/zod.ts 1`] = `
 "
 import { z } from 'zod';
-import { emailAddressSchema, emojiSchema, ibanSchema, ipSchema, uuidSchema } from '@nxgt/zod';
+import {
+	emailAddressSchema,
+	emojiSchema,
+	ibanSchema,
+	ipSchema,
+	latitudeSchema,
+	longitudeSchema,
+	portSchema,
+	positiveFloatSchema,
+	positiveIntSchema,
+	safeIntSchema,
+	uuidSchema,
+} from '@nxgt/zod';
 
 /** The 400 \`@nxgt/openapi-hono\` or alxia answers a request with when its validators refuse it: the spec is served by either. */
 export const zValidationErrorBody = z.union([
@@ -107,8 +149,38 @@ export const zAccount = z.object({
 	legacy: z.string().regex(/^L-\\d+$/u).optional(),
 });
 
+export const zPositiveInt = positiveIntSchema;
+
+export const zPort = portSchema;
+
+/** A Port narrowed to the well-known ones, as \`@maxValue(1023) scalar WellKnownPort extends port\`. */
+export const zWellKnownPort = portSchema.check(z.lte(1023, 'Too big: expected number to be <=1023'));
+
+export const zLatitude = latitudeSchema;
+
+export const zLongitude = longitudeSchema;
+
+export const zPositiveFloat = positiveFloatSchema;
+
+export const zSafeInt = safeIntSchema;
+
+export const zPlace = z.object({
+	latitude: zLatitude,
+	longitude: zLongitude,
+	radius: positiveFloatSchema.check(z.lte(1000, 'Too big: expected number to be <=1000'), z.multipleOf(0.5, 'Invalid number: must be a multiple of 0.5')).optional(),
+	port: zWellKnownPort.optional(),
+	rank: positiveIntSchema.nullable().optional(),
+	ids: z.array(zSafeInt).optional(),
+	weight: z.number().optional(),
+	count: z.int().min(0).optional(),
+});
+
 export const zOpenAccountBody = z.object({
 	owner: emailAddressSchema.check(z.regex(/^[^@]+@[^@]+$/u, 'Invalid string: must match pattern /^[^@]+@[^@]+$/u')),
+});
+
+export const zAddPlaceBody = z.object({
+	latitude: latitudeSchema,
 });
 "
 `;

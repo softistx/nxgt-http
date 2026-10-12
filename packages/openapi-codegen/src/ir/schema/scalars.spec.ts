@@ -153,14 +153,15 @@ describe('stringNode', () => {
 		]);
 	});
 
-	it('carries no scalar when x-nxgt-scalar is not a name, and a number node has none', () => {
+	it('carries no scalar when x-nxgt-scalar is not a name', () => {
 		const s = state();
 		expect(stringNode(s, { 'x-nxgt-scalar': 5 }, at)).toEqual({
 			kind: 'string',
 		});
-		expect(
-			numberNode(s, true, { 'x-nxgt-scalar': 'PositiveInt', minimum: 1 }, at),
-		).toEqual({ kind: 'number', integer: true, minimum: 1 });
+		expect(numberNode(s, true, { 'x-nxgt-scalar': 5 }, at)).toEqual({
+			kind: 'number',
+			integer: true,
+		});
 		expect(s.diagnostics.list).toEqual([]);
 	});
 
@@ -232,6 +233,35 @@ describe('stringNode', () => {
 });
 
 describe('numberNode', () => {
+	it('carries the name of a scalar next to its bounds', () => {
+		const s = state();
+		expect(
+			numberNode(s, true, { 'x-nxgt-scalar': 'PositiveInt', minimum: 1 }, at),
+		).toEqual({
+			kind: 'number',
+			integer: true,
+			scalar: 'PositiveInt',
+			minimum: 1,
+		});
+		expect(s.diagnostics.list).toEqual([]);
+	});
+
+	it('warns once of a scalar @nxgt/typespec does not declare, and still carries it', () => {
+		const s = state();
+		const node = numberNode(s, false, { 'x-nxgt-scalar': 'Weight' }, at);
+		numberNode(s, false, { 'x-nxgt-scalar': 'Weight' }, at);
+		expect(node).toEqual({ kind: 'number', integer: false, scalar: 'Weight' });
+		expect(report(s.diagnostics)).toEqual([
+			{
+				severity: 'warning',
+				code: 'unknown_scalar',
+				message:
+					'`x-nxgt-scalar: Weight` is not a scalar of @nxgt/typespec; it is checked by its `bounds` alone',
+				pointer: '/s/x-nxgt-scalar',
+			},
+		]);
+	});
+
 	it('says whether it is an integer', () => {
 		expect(numberNode(state(), true, {}, at)).toEqual({
 			kind: 'number',

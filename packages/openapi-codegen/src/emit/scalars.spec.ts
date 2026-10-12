@@ -79,13 +79,13 @@ describe('scalars: exact', () => {
 			"export const zIBAN = ibanSchema.check(z.regex(/^[A-Z]{2}\\d{2}[A-Z0-9]{1,30}$/u, 'Invalid string: must match pattern /^[A-Z]{2}\\\\d{2}[A-Z0-9]{1,30}$/u'));",
 		);
 		expect(files['zod.ts']).toContain(
-			"import { emailAddressSchema, emojiSchema, ibanSchema, ipSchema, uuidSchema } from '@nxgt/zod';",
+			"import {\n\temailAddressSchema,\n\temojiSchema,\n\tibanSchema,\n\tipSchema,\n\tlatitudeSchema,\n\tlongitudeSchema,\n\tportSchema,\n\tpositiveFloatSchema,\n\tpositiveIntSchema,\n\tsafeIntSchema,\n\tuuidSchema,\n} from '@nxgt/zod';",
 		);
 		expect(files['operations.ts']).toContain(
-			"import { emailAddressSchema } from '@nxgt/zod';",
+			"import { emailAddressSchema, positiveIntSchema } from '@nxgt/zod';",
 		);
 		expect(files['alxia.ts']).toContain(
-			"import { emailAddressSchema } from '@nxgt/zod';",
+			"import { emailAddressSchema, positiveIntSchema } from '@nxgt/zod';",
 		);
 		expect(files['types.ts']).not.toContain('@nxgt/zod');
 		expect(withoutHeader(files['zod.ts'])).toMatchSnapshot('exact/zod.ts');
@@ -192,17 +192,142 @@ describe('the zod import of zod.ts', () => {
 	});
 });
 
-describe('an x-nxgt-scalar that is not on a string', () => {
+describe('numeric scalars: exact', () => {
+	it('prints the bare schema of @nxgt/zod when the spec adds nothing, and its bounds are not checked twice', async () => {
+		const { 'zod.ts': zod } = await generated('exact');
+		expect(zod).toContain('export const zPort = portSchema;');
+		expect(zod).toContain('export const zPositiveInt = positiveIntSchema;');
+		expect(zod).toContain('export const zPositiveFloat = positiveFloatSchema;');
+		expect(zod).toContain('export const zLatitude = latitudeSchema;');
+	});
+
+	it('keeps what the spec adds on top, with the messages of Zod', async () => {
+		const { 'zod.ts': zod } = await generated('exact');
+		expect(zod).toContain(
+			"export const zWellKnownPort = portSchema.check(z.lte(1023, 'Too big: expected number to be <=1023'));",
+		);
+		expect(zod).toContain(
+			"radius: positiveFloatSchema.check(z.lte(1000, 'Too big: expected number to be <=1000'), z.multipleOf(0.5, 'Invalid number: must be a multiple of 0.5')).optional()",
+		);
+		expect(zod).toContain('rank: positiveIntSchema.nullable().optional()');
+	});
+
+	it('pipes a parameter from the string it arrives as', async () => {
+		const { 'operations.ts': ops } = await generated('exact');
+		expect(ops).toContain('page: numeric.pipe(zPositiveInt).optional()');
+		expect(ops).toContain(
+			"limit: numeric.pipe(positiveIntSchema.check(z.lte(100, 'Too big: expected number to be <=100'))).optional()",
+		);
+	});
+
+	it('keeps the spec narrower than the scalar', () => {
+		expect(ok(Z.zPort, 65535)).toBe(true);
+		expect(ok(Z.zWellKnownPort, 1023)).toBe(true);
+		expect(ok(Z.zWellKnownPort, 1024)).toBe(false);
+		expect(Z.zWellKnownPort.safeParse(1024).error?.issues[0]?.message).toBe(
+			'Too big: expected number to be <=1023',
+		);
+		const place = { latitude: 48.8, longitude: 2.3 };
+		expect(ok(Z.zPlace, place)).toBe(true);
+		expect(ok(Z.zPlace, { ...place, radius: 10.5 })).toBe(true);
+		expect(ok(Z.zPlace, { ...place, radius: 10.2 })).toBe(false);
+		expect(ok(Z.zPlace, { ...place, radius: 1000.5 })).toBe(false);
+		expect(ok(Z.zPlace, { ...place, rank: null })).toBe(true);
+		expect(ok(Z.zPlace, { ...place, rank: 0 })).toBe(false);
+		expect(ok(Z.zPlace, { ...place, latitude: 90.5 })).toBe(false);
+		expect(ok(Z.zPlace, { ...place, ids: [1, 9007199254740991] })).toBe(true);
+		expect(ok(Z.zPlace, { ...place, ids: [9007199254740992] })).toBe(false);
+	});
+
+	it('validates a parameter and a body', () => {
+		const { query, header } = operations.listPlaces;
+		expect(ok(query, { page: '2', limit: '100' })).toBe(true);
+		expect(ok(query, { page: '0' })).toBe(false);
+		expect(ok(query, { limit: '101' })).toBe(false);
+		expect(ok(query, { limit: '1.5' })).toBe(false);
+		expect(ok(header, { 'x-port': '8080' })).toBe(true);
+		expect(ok(header, { 'x-port': '65536' })).toBe(false);
+		expect(ok(Z.zAddPlaceBody, { latitude: 91 })).toBe(false);
+		expect(ok(Z.zAddPlaceBody, { latitude: 45 })).toBe(true);
+	});
+
+	it('leaves an unknown scalar and a scalar of the wrong kind to their bounds, with a warning for the first', async () => {
+		const { 'zod.ts': zod } = await generated('exact');
+		expect(zod).toContain('weight: z.number().optional()');
+		expect(zod).toContain('count: z.int().min(0).optional()');
+	});
+
+	it('warns of an unknown numeric scalar, in both modes', async () => {
+		for (const scalars of ['pattern', 'exact'] as const) {
+			const { warnings } = await zodOf(
+				{ W: { type: 'number', 'x-nxgt-scalar': 'Weight' } },
+				scalars,
+			);
+			expect(warnings.map((w) => w.code)).toEqual(['unknown_scalar']);
+		}
+	});
+
+	it('keeps format: int32 on a scalar whose schema is wider', async () => {
+		const { zod } = await zodOf(
+			{
+				Id: {
+					type: 'integer',
+					format: 'int32',
+					'x-nxgt-scalar': 'SafeInt',
+				},
+			},
+			'exact',
+		);
+		expect(zod).toContain('safeIntSchema.check(z.gte(-2147483648,');
+		const pattern = await zodOf(
+			{ Id: { type: 'integer', format: 'int32', 'x-nxgt-scalar': 'SafeInt' } },
+			'pattern',
+		);
+		expect(pattern.zod).toContain('z.int32()');
+	});
+
+	it('imports no z where the schema stands bare', async () => {
+		const { zod } = await zodOf(
+			{ Port: { type: 'integer', 'x-nxgt-scalar': 'Port' } },
+			'exact',
+		);
+		expect(zod).not.toContain("from 'zod'");
+		expect(zod).toContain("import { portSchema } from '@nxgt/zod';");
+		expect(zod).toContain('export const zPort = portSchema;');
+	});
+
+	it('leaves pattern mode as it was', async () => {
+		const { zod } = await zodOf(
+			{
+				Port: {
+					type: 'integer',
+					format: 'int32',
+					minimum: 0,
+					maximum: 65535,
+					'x-nxgt-scalar': 'Port',
+				},
+			},
+			'pattern',
+		);
+		expect(zod).toContain('export const zPort = z.int32().min(0).max(65535);');
+		expect(zod).not.toContain('@nxgt/zod');
+	});
+});
+
+describe('an x-nxgt-scalar that is not on the type its schema is', () => {
 	const schemas = {
-		Count: { type: 'integer', 'x-nxgt-scalar': 'PositiveInt', minimum: 1 },
+		Count: { type: 'number', 'x-nxgt-scalar': 'PositiveInt', minimum: 1 },
+		Ratio: { type: 'integer', 'x-nxgt-scalar': 'PositiveFloat' },
+		Name: { type: 'integer', 'x-nxgt-scalar': 'IBAN' },
 		Odd: { type: 'string', 'x-nxgt-scalar': 5 },
+		Serial: { type: 'string', 'x-nxgt-scalar': 'Port' },
 	};
 
-	it('is no string scalar: nothing changes with exact, and no warning', async () => {
+	it('is no exact scalar: nothing changes with exact, and no warning', async () => {
 		const exact = await zodOf(schemas, 'exact');
 		const pattern = await zodOf(schemas, 'pattern');
 		expect(exact.zod).toBe(pattern.zod);
-		expect(exact.zod).toContain('export const zCount = z.int().min(1);');
+		expect(exact.zod).toContain('export const zCount = z.number().min(1);');
 		expect(exact.zod).toContain('export const zOdd = z.string();');
 		expect(exact.warnings).toEqual([]);
 	});

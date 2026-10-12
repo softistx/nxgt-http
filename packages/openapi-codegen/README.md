@@ -344,7 +344,7 @@ this one does not, when it still starts with the generated header. See
 | `hono` | `boolean` | `false` | also write `hono.ts`; `hono` and `@nxgt/openapi-hono` become runtime dependencies ([more](docs/guide/options.md#hono)) |
 | `alxia` | `boolean` | `false` | also write `alxia.ts`: each operation as the data `@alxia/core` 0.4's `app.route(operation, ...middlewares, handler)` takes; imports `@alxia/core` only for a reply of server-sent events ([more](docs/guide/options.md#alxia)) |
 | `dates` | `'string' \| 'date'` | `'string'` | a `date-time` kept as its string, or decoded to a `Date` by a `z.codec` ([more](docs/guide/options.md#dates)) |
-| `scalars` | `'pattern' \| 'exact'` | `'pattern'` | a string scalar of `@nxgt/typespec` checked by its `pattern`, or by its schema from `@nxgt/zod`, the pattern kept on top ([more](docs/guide/options.md#scalars)) |
+| `scalars` | `'pattern' \| 'exact'` | `'pattern'` | a string or numeric scalar of `@nxgt/typespec` checked by its `pattern` or bounds, or by its schema from `@nxgt/zod`, the spec's own constraints kept on top ([more](docs/guide/options.md#scalars)) |
 | `lint` | `boolean \| string` | `false` | lint with Redocly first: `true` uses the `redocly.yaml` beside `input` or Redocly's defaults, a string names the config file. Needs `@redocly/openapi-core`; cannot be combined with `context.fs` ([more](docs/guide/options.md#lint)) |
 | `names` | `Record<string, string>` | `{}` | renames schemas, keyed by file relative to the root document plus `#pointer` when the schema is not the whole file ([more](docs/guide/options.md#names)) |
 | `legacyNullable` | `'warn' \| 'error'` | `'warn'` | OpenAPI 3.0's `nullable: true`: read with a warning, or refused ([more](docs/guide/options.md#legacynullable)) |
@@ -1045,6 +1045,8 @@ not declare is an `unknown_scalar` warning.
 interface NumberNode extends Annotations {
 	kind: 'number';
 	integer: boolean;
+	/** The `x-nxgt-scalar` of a scalar of `@nxgt/typespec`, such as `Port`. */
+	scalar?: string;
 	format?: NumberFormat;
 	minimum?: number;
 	maximum?: number;
@@ -1054,7 +1056,13 @@ interface NumberNode extends Annotations {
 }
 ```
 
-A number or, with `integer`, an integer.
+A number or, with `integer`, an integer. A schema with `x-nxgt-scalar` on a
+number, such as `Port` or `Latitude`, carries its name as `scalar`, and its
+bounds stay in the node: they are `z.int32().min(0).max(65535)`, or, with
+`scalars: 'exact'`, the scalar's schema from `@nxgt/zod` (`portSchema`) with
+the bounds it does not already enforce kept on top as `.check(z.lte(…))`. A
+`scalar` that `@nxgt/typespec` does not declare is an `unknown_scalar`
+warning.
 
 ##### `NumberFormat`
 

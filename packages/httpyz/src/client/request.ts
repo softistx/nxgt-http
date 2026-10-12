@@ -45,7 +45,7 @@ export const request = async (
 			built.context,
 			responses === undefined ? undefined : toSpec(responses),
 			response,
-			{ validate, decode },
+			{ validate, decode, signal },
 		);
 	} catch (error) {
 		// The deadline covers the body too: fetch resolves at the headers, and

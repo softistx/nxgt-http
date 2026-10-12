@@ -53,8 +53,17 @@ export class ClientError extends Error {
 export class NetworkError extends ClientError {
 	override name = 'NetworkError';
 
-	constructor(context: CallContext, options?: ErrorOptions) {
-		super(context, 'no reply came back', options);
+	/** `body`: the headers came, and the connection dropped while the body was read. */
+	constructor(
+		context: CallContext,
+		options?: ErrorOptions,
+		stage: 'reply' | 'body' = 'reply',
+	) {
+		super(
+			context,
+			stage === 'body' ? 'reply body cut off' : 'no reply came back',
+			options,
+		);
 	}
 }
 

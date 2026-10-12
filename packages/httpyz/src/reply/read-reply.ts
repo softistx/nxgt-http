@@ -1,6 +1,7 @@
 /** A response read into a reply: one the call declares, checked by its schema. */
 import {
 	type CallContext,
+	NetworkError,
 	UndeclaredStatusError,
 	ValidationError,
 	type ValidationIssue,
@@ -19,6 +20,8 @@ export interface ReplySettings {
 	readonly validate: boolean;
 	/** Returns what the schema outputs, not what it was given. */
 	readonly decode: boolean;
+	/** The call's signal: a body read it aborted fails as the abort, not as the network. */
+	readonly signal?: AbortSignal | undefined;
 }
 
 interface MediaSpec {
@@ -53,6 +56,36 @@ export function toSpec(responses: Responses): ReplySpec {
 	return spec;
 }
 
+/**
+ * The body, read as text, bytes or a form. fetch resolves at the headers, so a
+ * connection that drops while the body streams rejects the read with the
+ * runtime's own TypeError: it is a NetworkError, unless the call's signal
+ * aborted it.
+ */
+function bodyReaders(
+	context: CallContext,
+	response: Response,
+	signal: AbortSignal | undefined,
+) {
+	const read = async <T>(reading: () => Promise<T>): Promise<T> => {
+		try {
+			return await reading();
+		} catch (error) {
+			if (signal?.aborted) throw error;
+			throw new NetworkError(context, { cause: error }, 'body');
+		}
+	};
+	return {
+		readText: () => read(() => response.text()),
+		readBlob: () => read(() => response.blob()),
+		// The bytes first, so a form that does not parse keeps formData()'s own error.
+		readForm: async () =>
+			new Response(await read(() => response.arrayBuffer()), {
+				headers: response.headers,
+			}).formData(),
+	};
+}
+
 export async function readReply(
 	context: CallContext,
 	spec: ReplySpec | undefined,
@@ -70,6 +103,11 @@ export async function readReply(
 		});
 	const failure = (code: string, message: string): ValidationError =>
 		refused([{ target: 'response', path: [], code, message }]);
+	const { readText, readBlob, readForm } = bodyReaders(
+		context,
+		response,
+		settings.signal,
+	);
 	const parse = (text: string): unknown => {
 		try {
 			return JSON.parse(text);
@@ -84,15 +122,15 @@ export async function readReply(
 		if (response.body === null) return reply(undefined);
 		switch (type === undefined ? undefined : mediaKind(type)) {
 			case 'json': {
-				const text = await response.text();
+				const text = await readText();
 				return reply(text === '' ? undefined : parse(text));
 			}
 			case 'form':
-				return reply(await response.formData());
+				return reply(await readForm());
 			case 'binary':
-				return reply(await response.blob());
+				return reply(await readBlob());
 			default: {
-				const text = await response.text();
+				const text = await readText();
 				return reply(type === undefined && text === '' ? undefined : text);
 			}
 		}
@@ -128,7 +166,7 @@ export async function readReply(
 	};
 	switch (media.kind) {
 		case 'json': {
-			const text = await response.text();
+			const text = await readText();
 			// Empty is no JSON: a checked reply says so, as the server does.
 			if (text === '' && !(settings.validate && media.schema)) {
 				return reply(undefined);
@@ -136,10 +174,10 @@ export async function readReply(
 			return settle(parse(text));
 		}
 		case 'text':
-			return settle(await response.text());
+			return settle(await readText());
 		case 'form':
-			return reply(await response.formData());
+			return reply(await readForm());
 		default:
-			return reply(await response.blob());
+			return reply(await readBlob());
 	}
 }

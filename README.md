@@ -47,7 +47,7 @@ issues.
 
 ## Development
 
-Bun 1.4.2.
+Bun 1.4.3.
 
 ```sh
 bun install

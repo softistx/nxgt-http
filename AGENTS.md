@@ -379,6 +379,26 @@ now the packages' own source holds them too.
   open, and alxia and nxgt-data copy them from here as they are.
 - `@nxgt/openapi-nuxt`'s `test/app` is checked against the tsconfigs
   `nuxi prepare` writes, not this one: they are Nuxt's.
+- **The checker is `tsc`, not Bun's `bun check`.** Bun 1.4.3 ships a type
+  checker, `bun check` (there is no `bun tsc`: that runs `node_modules`'
+  `tsc`). Measured on Bun 1.4.3 against `tsc` 6.0.3 on the 13 projects
+  `typecheck` covers, from a clean build: the same result everywhere (no
+  error, and the same seven errors at the same positions when some were
+  planted in `@nxgt/httpyz`), and 7 to 70 times faster (`@nxgt/openapi-hono`
+  9.0 s → 1.0 s, `tsconfig.generated.json` 5.4 s → 0.1 s). It still does
+  not replace `tsc`, for three reasons:
+  - it embeds its own TypeScript (6.0.3), so the Newest peers job, which
+    typechecks against TypeScript 7, the top of `^6.0.3 || ^7.0.0`, would
+    check 6.0.3 again;
+  - it emits nothing, and the build's declarations come from
+    `tsc --emitDeclarationOnly` (The build), as do `verify:artifacts`'
+    consumer checks;
+  - a `check` script shadows it: `bun check` in this repository, at the root
+    or anywhere under it without a `package.json` of its own, runs
+    `biome check`. Only a package without a `check` script reaches the
+    built-in.
+  Revisit when it can follow the installed `typescript`, or when TypeScript
+  7 is the floor of the peer range.
 
 ## Releasing
 

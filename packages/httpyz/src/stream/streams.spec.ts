@@ -349,6 +349,81 @@ describe('http.events()', () => {
 		expect(slow).toMatchObject({ items: [{ data: 'a' }, { data: 'b' }] });
 		expect(slow.error).toBeUndefined();
 	});
+
+	it('reconnects after a connection that failed to open, and keeps its Last-Event-ID', async () => {
+		const { http, sent } = scripted([
+			() => reply(['id: 1\ndata: a\n\n']),
+			() => {
+				throw new TypeError('fetch failed');
+			},
+			() => reply(['id: 2\ndata: b\n\n']),
+			noContent,
+		]);
+		const { items, error } = await drain(
+			http.events('/feed', { reconnect: { delay: 1 } }),
+		);
+		expect(error).toBeUndefined();
+		expect(items.map((event) => event.data)).toEqual(['a', 'b']);
+		expect(sent.map((request) => request.headers.get('last-event-id'))).toEqual(
+			[null, '1', '1', '2'],
+		);
+	});
+
+	it('counts its attempts in a row: an event resets them, and a drop past them throws', async () => {
+		const drops = () => reply(['data: x\n\n'], { end: new TypeError('reset') });
+		const resetting = scripted([drops, drops, drops, noContent]);
+		const reset = await drain(
+			resetting.http.events('/feed', { reconnect: { attempts: 1, delay: 1 } }),
+		);
+		expect(reset.items).toHaveLength(3);
+		expect(reset.error).toBeUndefined();
+		expect(resetting.sent).toHaveLength(4);
+
+		const silent = () => reply([], { end: new TypeError('reset') });
+		const exhausted = scripted([silent, silent, silent]);
+		const gaveUp = await drain(
+			exhausted.http.events('/feed', { reconnect: { attempts: 2, delay: 1 } }),
+		);
+		expect(gaveUp.error).toBeInstanceOf(NetworkError);
+		expect(((gaveUp.error as NetworkError).cause as Error).message).toBe(
+			'reset',
+		);
+		expect(exhausted.sent).toHaveLength(3);
+	});
+
+	it('reconnects after a stream that ended cleanly, and stops when attempts are spent', async () => {
+		const { http, sent } = scripted([
+			() => reply([]),
+			() => reply([]),
+			() => reply([]),
+		]);
+		const { items, error } = await drain(
+			http.events('/feed', { reconnect: { attempts: 2, delay: 1 } }),
+		);
+		expect(items).toEqual([]);
+		expect(error).toBeUndefined();
+		expect(sent).toHaveLength(3);
+	});
+
+	it('ends on close() while it waits to reconnect', async () => {
+		const { http, sent } = scripted([() => reply(['data: a\n\n'])]);
+		const stream = http.events('/feed', { reconnect: { delay: 60_000 } });
+		const items: unknown[] = [];
+		const started = Date.now();
+		for await (const event of stream) {
+			items.push(event);
+			setTimeout(() => stream.close(), 10);
+		}
+		expect(items).toHaveLength(1);
+		expect(Date.now() - started).toBeLessThan(5_000);
+		expect(sent).toHaveLength(1);
+	});
+
+	it('is read once', async () => {
+		const stream = scripted([noContent]).http.events('/feed');
+		await drain(stream);
+		expect(() => stream[Symbol.asyncIterator]()).toThrow(TypeError);
+	});
 });
 
 describe('http.lines()', () => {

@@ -11,7 +11,7 @@
  * workflow, weekly, instead of memory.
  *
  * Dependabot would do it, but not here: its Bun updater reads `bun.lock` up to
- * `lockfileVersion` 1 and this one, written by Bun 1.4.2, is 2.
+ * `lockfileVersion` 1 and this one, written by Bun 1.4.3, is 2.
  *
  * Exits 0 when everything is current, 1 when something is behind, 2 when it
  * could not tell — a registry that does not answer is a failure, never

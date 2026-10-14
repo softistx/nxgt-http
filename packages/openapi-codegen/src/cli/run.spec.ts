@@ -260,6 +260,79 @@ describe('nxgt-openapi', () => {
 		}
 	});
 
+	it('prints each warning on stderr and still exits 0', async () => {
+		const cwd = await project({
+			'warn.json': JSON.stringify({
+				openapi: '3.1.0',
+				info: { title: 't', version: '1' },
+				paths: {},
+				components: { schemas: { A: { type: 'string', nullable: true } } },
+			}),
+		});
+		const { code, out, err } = await cli(
+			['generate', '-i', 'warn.json', '-o', 'gen'],
+			cwd,
+		);
+		expect(code).toBe(0);
+		expect(err).toStartWith('warning warn.json');
+		expect(err).toContain('[legacy_nullable]');
+		expect(out).toBe('warn.json → gen: 4 written, 0 unchanged');
+	});
+
+	it('reports a stale file, not only a missing one, under --check', async () => {
+		const cwd = await project();
+		const args = ['generate', '-i', 'openapi.json', '-o', 'gen'];
+		await cli(args, cwd);
+		await writeFile(join(cwd, 'gen/types.ts'), '// edited\n');
+		const check = await cli([...args, '--check'], cwd);
+		expect(check.code).toBe(1);
+		expect(check.out).toBe(
+			'openapi.json → gen: out of date, run nxgt-openapi generate\n  gen/types.ts',
+		);
+		expect(await Bun.file(join(cwd, 'gen/types.ts')).text()).toBe(
+			'// edited\n',
+		);
+	});
+
+	it('words each command line mistake, after the usage it prints', async () => {
+		const cwd = await project();
+		const cases: [string[], string][] = [
+			[[], 'nxgt-openapi needs a command'],
+			[['build'], 'unknown command: build'],
+			[['generate', 'extra'], 'unknown command: generate extra'],
+			[['generate', '-i', ''], '--input needs a path'],
+			[['generate', '-o', ''], '--output needs a path'],
+			[['generate', '-c', ''], '--config needs a path'],
+			[
+				['generate', '-c', 'x.ts', '-i', 'a'],
+				'pass either --config, or --input',
+			],
+			[['generate', '-o', 'gen'], '--output goes with --input'],
+		];
+		for (const [args, message] of cases) {
+			const { code, out, err } = await cli(args, cwd);
+			expect(code).toBe(2);
+			expect(out).toBe('');
+			expect(err).toStartWith(`${message}\n\nUsage: nxgt-openapi generate`);
+		}
+		const unknown = await cli(['generate', '--nope'], cwd);
+		expect(unknown.err).toContain('Usage: nxgt-openapi generate');
+	});
+
+	it('lints with --lint even when the config does not ask for it', async () => {
+		const cwd = await project({
+			'redocly.yaml': 'rules:\n  info-license: error\n',
+			'plain.config.mjs':
+				"export default { input: 'openapi.json', output: 'gen' };\n",
+		});
+		const { code, err } = await cli(
+			['generate', '-c', 'plain.config.mjs', '--lint'],
+			cwd,
+		);
+		expect(code).toBe(1);
+		expect(err).toEndWith('(info-license) [lint_error]');
+	});
+
 	it('runs as a process, reporting the version of its package.json', async () => {
 		const manifest = await Bun.file(
 			join(import.meta.dir, '../../package.json'),

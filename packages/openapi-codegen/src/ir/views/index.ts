@@ -32,6 +32,30 @@ export { READ, WRITE } from './direction';
 const MARKED_ROOT = (d: Direction) =>
 	`a ${d.root} that is \`${d.mark}\` is kept: there is nothing to leave out of it`;
 
+/**
+ * The named schemas a marked root points at and that carry the mark
+ * themselves: kept as they are, so no view of them is made. A schema such a
+ * root merely reaches is not blocked: another body may need its view.
+ */
+function keptWhole(
+	whole: readonly Root[],
+	named: ViewContext['named'],
+	direction: Direction,
+): Set<string> {
+	const ids = new Set<string>();
+	for (const { node } of whole) {
+		let current = node;
+		for (let hops = 0; hops < 64 && current.kind === 'ref'; hops++) {
+			if (current[direction.mark] === true) break;
+			ids.add(current.target);
+			const target = named.get(current.target);
+			if (!target) break;
+			current = target.node;
+		}
+	}
+	return ids;
+}
+
 /** The shared state of a run, with the roots that are marked themselves (kept whole). */
 function makeContext(
 	api: ApiIR,
@@ -52,7 +76,7 @@ function makeContext(
 		roots,
 		kept: new WeakMap(),
 		...reachedSets(api, before, direction, roots, blockedRefs, named),
-		blocked: new Set(blockedRefs),
+		blocked: keptWhole(whole, named, direction),
 		differing: new Set(),
 	};
 	return { ctx, whole };

@@ -409,6 +409,36 @@ describe('write views', () => {
 		expect(out).not.toBe(kept);
 		expect(kept).toEqual(before);
 	});
+
+	it('gives a plain body the Write view although another body is readOnly itself', async () => {
+		for (const marked of [
+			{ ...ref('Pet'), readOnly: true },
+			{ ...object({ pet: ref('Pet') }), readOnly: true },
+			ref('Whole'),
+		]) {
+			const ir = await api(
+				{
+					Pet: object({ id: ro, name: { type: 'string' } }),
+					Whole: { ...object({ pet: ref('Pet') }), readOnly: true },
+				},
+				[marked, ref('Pet')],
+			);
+			expect(names(ir).filter((n) => n.endsWith('Write'))).toEqual([
+				'PetWrite',
+			]);
+			expect(props(named(ir, 'Pet').node)).toEqual(['id', 'name']);
+			expect(bodyOf(ir, 0)).not.toEqual({
+				kind: 'ref',
+				target: named(ir, 'PetWrite').id,
+			});
+			expect(props(named(ir, 'PetWrite').node)).toEqual(['name']);
+			expect(bodyOf(ir, 1)).toEqual({
+				kind: 'ref',
+				target: named(ir, 'PetWrite').id,
+			});
+			expect(ir.warnings.map((w) => w.message).join()).toContain('readOnly');
+		}
+	});
 });
 
 /** The 200 reply of GET /r<i>, as the first media type of its first response. */
@@ -596,5 +626,27 @@ describe('read views', () => {
 			ir.operations.find((o) => o.operationId === 'send')?.body?.content[0]
 				?.schema,
 		).toEqual({ kind: 'ref', target: named(ir, 'Shared').id });
+	});
+
+	it('gives a plain reply the Read view although another reply is writeOnly itself', async () => {
+		const ir = await api(
+			{ Pet: object({ secret: wo, name: { type: 'string' } }) },
+			[],
+			[{ ...ref('Pet'), writeOnly: true }, ref('Pet')],
+			'omit',
+			'omit',
+		);
+		expect(names(ir)).toEqual(['Pet', 'PetRead']);
+		expect(props(named(ir, 'Pet').node)).toEqual(['secret', 'name']);
+		expect(props(named(ir, 'PetRead').node)).toEqual(['name']);
+		expect(replyOf(ir, 0)).toMatchObject({
+			kind: 'ref',
+			target: named(ir, 'Pet').id,
+		});
+		expect(replyOf(ir, 1)).toEqual({
+			kind: 'ref',
+			target: named(ir, 'PetRead').id,
+		});
+		expect(ir.warnings.map((w) => w.message).join()).toContain('writeOnly');
 	});
 });

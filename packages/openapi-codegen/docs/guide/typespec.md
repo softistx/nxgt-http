@@ -178,7 +178,7 @@ With implicit visibility, `@typespec/openapi3` reuses the read model for a
 request body when the only difference is `readOnly` properties. The
 generator leaves `readOnly` properties out of request bodies
 ([`readOnly`](options.md#readonly), on by default), so the reused model
-works as the body: `Pet` is sent as `PetWrite`, without `id`, and returned as
+works as the body: `Pet` is sent as `PetWrite`, without `id` (the emitter keeps one `Pet` with `readOnly: true` on `id`, which the generator then splits), and returned as
 `Pet`. `Create<T>` is no longer needed for that. Name the visibility when the
 body should differ in other ways (a `MergePatchUpdate<T>`, or a model whose
 properties are visible to `Create` only), or when you want the body to have

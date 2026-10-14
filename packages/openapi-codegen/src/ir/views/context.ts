@@ -17,7 +17,7 @@ export interface ViewContext {
 	byRoots: Set<string>;
 	/** Schemas something other than a root reaches. */
 	elsewhere: Set<string>;
-	/** Roots that are themselves marked: kept whole. */
+	/** Named schemas that are themselves marked and pointed at by a marked root: kept whole. */
 	blocked: Set<string>;
 	/** Per object, the property names the mark must not remove. */
 	kept: WeakMap<ObjectNode, Set<string>>;

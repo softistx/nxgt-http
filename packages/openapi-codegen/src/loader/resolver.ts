@@ -1,87 +1,14 @@
 import { dirname, resolve } from 'node:path';
 import { Diagnostics } from '../errors';
+import { findRefCycles } from './cycles';
 import { type FileSystem, isNotFound } from './fs';
 import { child, type Location, locationId } from './location';
 import { ParseFailure, parseDocument } from './parse';
 import { lookup } from './pointer';
+import { isReference, type Resolved, refKey, splitRef } from './reference';
+import { steps } from './walk';
 
-/**
- * Keys whose value is literal data. A `{ $ref }` inside an `example` is an
- * example payload, not a reference, and following it would report a missing
- * file that was never meant to exist.
- */
-const LITERAL_KEYS = new Set([
-	'example',
-	'default',
-	'const',
-	'enum',
-	'value',
-	'dataValue',
-	'serializedValue',
-]);
-
-/**
- * Keys whose value maps user-chosen names to objects. One level inside, a key
- * is a name: a property called `default` or `example` is a schema there, not
- * a keyword to skip.
- */
-const NAME_MAP_KEYS = new Set([
-	'paths',
-	'webhooks',
-	'schemas',
-	'responses',
-	'parameters',
-	'examples',
-	'requestBodies',
-	'headers',
-	'securitySchemes',
-	'links',
-	'callbacks',
-	'pathItems',
-	'mediaTypes',
-	'properties',
-	'patternProperties',
-	'$defs',
-	'definitions',
-	'dependentSchemas',
-	'content',
-	'encoding',
-	'variables',
-]);
-
-/** What a Reference Object may carry besides `$ref`: overrides, not schema. */
-const REFERENCE_KEYS = new Set(['$ref', 'summary', 'description']);
-
-const REMOTE = /^[a-z][a-z\d+.-]*:/i;
-
-type Reference = { $ref: string; summary?: unknown; description?: unknown };
-
-/** An object that is nothing but a `$ref` — a hop to follow, not a node. */
-export function isReference(value: unknown): value is Reference {
-	if (value === null || typeof value !== 'object' || Array.isArray(value)) {
-		return false;
-	}
-	const object = value as Record<string, unknown>;
-	return (
-		typeof object['$ref'] === 'string' &&
-		Object.keys(object).every((key) => REFERENCE_KEYS.has(key))
-	);
-}
-
-export interface Resolved<T = unknown> {
-	value: T;
-	/** Where `value` really lives, after every `$ref` hop. */
-	location: Location;
-	/** `locationId(location)`: equal for every route to the same node. */
-	id: string;
-	/** Where each hop landed, in order; empty when `value` was no reference. */
-	hops: Location[];
-	/** Written next to the outermost `$ref` that has one; overrides the target's. */
-	summary?: string | undefined;
-	description?: string | undefined;
-}
-
-const refKey = (file: string, ref: string) => `${file}\0${ref}`;
+export { isReference, type Resolved };
 
 /**
  * Loads the files of a spec and resolves `$ref`s between them.
@@ -225,27 +152,9 @@ export class Resolver {
 	}
 
 	async #walk(node: unknown, at: Location, names: boolean): Promise<void> {
-		if (Array.isArray(node)) {
-			for (const [index, item] of node.entries()) {
-				await this.#walk(item, child(at, index), false);
-			}
-			return;
-		}
-		if (node === null || typeof node !== 'object') return;
-		const object = node as Record<string, unknown>;
-		if (!names && '$ref' in object) await this.#follow(object['$ref'], at);
-		for (const [key, value] of Object.entries(object)) {
-			if (names) {
-				await this.#walk(value, child(at, key), false);
-				continue;
-			}
-			if (key === '$ref' || key.startsWith('x-') || LITERAL_KEYS.has(key)) {
-				continue;
-			}
-			// JSON Schema `examples` is a list of literal values; OpenAPI's is a
-			// map of Example Objects, which may themselves be `$ref`s.
-			if (key === 'examples' && Array.isArray(value)) continue;
-			await this.#walk(value, child(at, key), NAME_MAP_KEYS.has(key));
+		for (const step of steps(node, at, names)) {
+			if ('ref' in step) await this.#follow(step.ref, step.at);
+			else await this.#walk(step.node, step.at, step.names);
 		}
 	}
 
@@ -275,75 +184,28 @@ export class Resolver {
 		site: Location,
 		at: Location,
 	): Promise<Location | undefined> {
-		if (REMOTE.test(ref)) {
-			this.diagnostics.error(
-				'remote_ref',
-				`$ref "${ref}" is not a relative file; remote and URN references are not supported`,
-				at,
-			);
+		const split = splitRef(ref);
+		if ('code' in split) {
+			this.diagnostics.error(split.code, split.message, at);
 			return undefined;
 		}
-		const hash = ref.indexOf('#');
-		let path: string;
-		let pointer: string;
-		try {
-			path = decodeURIComponent(hash === -1 ? ref : ref.slice(0, hash));
-			pointer = decodeURIComponent(hash === -1 ? '' : ref.slice(hash + 1));
-		} catch {
-			this.diagnostics.error(
-				'invalid_ref',
-				`$ref "${ref}" is not a valid URI reference`,
-				at,
-			);
-			return undefined;
-		}
-		if (pointer !== '' && !pointer.startsWith('/')) {
-			this.diagnostics.error(
-				'invalid_ref',
-				`$ref "${ref}": only JSON pointer fragments (#/…) are supported, not anchors`,
-				at,
-			);
-			return undefined;
-		}
+		const { path, pointer } = split;
 		if (path === '') return { file: site.file, pointer };
 		const loaded = await this.load(resolve(dirname(site.file), path), at);
 		return loaded && { file: loaded.file, pointer };
 	}
 
-	/**
-	 * A chain of pure `$ref`s that comes back on itself stands for nothing.
-	 * A schema that contains a `$ref` to itself is fine — that is recursion, and
-	 * never reaches here, because its node is not a pure reference.
-	 */
+	/** Reports each cycle of pure `$ref`s once, however many routes lead in. */
 	#checkCycles(): void {
-		for (const start of this.#targets.values()) {
-			const path: string[] = [];
-			let at: Location | undefined = start;
-			while (at) {
-				const id = locationId(at);
-				const index = path.indexOf(id);
-				if (index !== -1) {
-					const cycle = path.slice(index);
-					const key = [...cycle].sort().join('\n');
-					if (!this.#cycles.has(key)) {
-						this.#cycles.add(key);
-						this.diagnostics.error(
-							'ref_cycle',
-							`$ref cycle: ${[...cycle, cycle[0]].join(' → ')}`,
-							at,
-						);
-					}
-					break;
-				}
-				path.push(id);
-				const document = this.#documents.get(at.file);
-				const found: ReturnType<typeof lookup> | undefined =
-					document && lookup(document, at.pointer);
-				const value: unknown = found?.found ? found.value : undefined;
-				at = isReference(value)
-					? this.#targets.get(refKey(at.file, value.$ref))
-					: undefined;
-			}
+		for (const { ids, at } of findRefCycles(this.#targets, this.#documents)) {
+			const key = [...ids].sort().join('\n');
+			if (this.#cycles.has(key)) continue;
+			this.#cycles.add(key);
+			this.diagnostics.error(
+				'ref_cycle',
+				`$ref cycle: ${[...ids, ids[0]].join(' → ')}`,
+				at,
+			);
 		}
 	}
 }

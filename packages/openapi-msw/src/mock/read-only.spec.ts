@@ -68,4 +68,16 @@ describe('readOnly and writeOnly views', () => {
 		const reply = await api.post('/pets', { json: { name: 'Rex' } });
 		expect(unwrap(reply, 200).name).toBe('Rex');
 	});
+
+	it('strips a password a reply carries anyway', async () => {
+		const api = clientOf([
+			mock.post('/users', ({ response }) =>
+				response.ok({ id: 'u1', email: 'a@b.c', password: 'leak' } as never),
+			),
+		]);
+		const reply = await api.post('/users', {
+			json: { id: 'u1', email: 'a@b.c', password: 'hunter2' },
+		});
+		expect(reply.data).toEqual({ id: 'u1', email: 'a@b.c' });
+	});
 });

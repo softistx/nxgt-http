@@ -58,4 +58,23 @@ describe('readOnly and writeOnly views', () => {
 			.catch((caught: unknown) => caught);
 		expect(error).toBeInstanceOf(ValidationError);
 	});
+
+	it('strips a password a reply carries anyway', async () => {
+		// A server that does not check its replies and leaks the password.
+		const leaky = new Hono();
+		createRoutes(leaky).post('/users', (c) =>
+			c.json({ ...c.req.valid('json') } as never, 200),
+		);
+		const probe = createOpenApiClient<ClientOperations, OperationsByRoute>(
+			createHttpClient({
+				baseUrl: 'http://api.test',
+				fetch: async (request) => leaky.fetch(request),
+			}),
+			operations,
+		);
+		const reply = await probe.post('/users', {
+			json: { id: 'u1', email: 'a@b.c', password: 'hunter2' },
+		});
+		expect(reply.data).toEqual({ id: 'u1', email: 'a@b.c' });
+	});
 });

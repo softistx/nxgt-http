@@ -530,4 +530,71 @@ describe('read views', () => {
 			'a response that is `writeOnly` is kept',
 		);
 	});
+
+	it('retargets a stream item and the data of an event to their Read views', async () => {
+		const secret = object({ id: { type: 'string' }, token: wo });
+		const doc = JSON.stringify({
+			openapi: '3.2.0',
+			info: { title: 't', version: '1' },
+			paths: {
+				'/feed': {
+					get: {
+						operationId: 'feed',
+						responses: {
+							'200': {
+								description: 'ok',
+								content: {
+									'application/jsonl': { itemSchema: secret },
+									'text/event-stream': {
+										itemSchema: {
+											type: 'object',
+											properties: {
+												event: { const: 'update' },
+												data: {
+													type: 'string',
+													contentMediaType: 'application/json',
+													contentSchema: ref('Shared'),
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				'/shared': {
+					post: {
+						operationId: 'send',
+						requestBody: {
+							content: { 'application/json': { schema: ref('Shared') } },
+						},
+						responses: { '204': { description: 'ok' } },
+					},
+				},
+			},
+			components: { schemas: { Shared: secret } },
+		});
+		const ir = await buildIR(
+			await loadDocument(ROOT, { fs: createMemoryFileSystem({ [ROOT]: doc }) }),
+			{ readOnly: 'omit', writeOnly: 'omit' },
+		);
+		expect(names(ir)).toEqual(['Shared', 'SharedRead', 'Feed200ResponseItem']);
+		const read = named(ir, 'SharedRead').id;
+		const media = ir.operations.find((o) => o.operationId === 'feed')
+			?.responses[0]?.content;
+		const lines = media?.find((m) => m.kind === 'jsonl');
+		const events = media?.find((m) => m.kind === 'sse');
+		// The item, an inline object only responses use, is stripped where it stands.
+		expect(props(named(ir, 'Feed200ResponseItem').node)).toEqual(['id']);
+		expect(lines?.item).toEqual({
+			kind: 'ref',
+			target: named(ir, 'Feed200ResponseItem').id,
+		});
+		expect(events?.events?.[0]?.data).toEqual({ kind: 'ref', target: read });
+		expect(
+			ir.operations.find((o) => o.operationId === 'send')?.body?.content[0]
+				?.schema,
+		).toEqual({ kind: 'ref', target: named(ir, 'Shared').id });
+	});
 });

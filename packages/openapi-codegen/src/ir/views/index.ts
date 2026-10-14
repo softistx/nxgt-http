@@ -22,12 +22,72 @@ import { refsOf } from '../graph';
 import type { ApiIR, SchemaNode } from '../types';
 import { isMarked, type ViewContext } from './context';
 import { differs, findDiffering } from './differing';
-import { type Direction, mapNodes, rootsOf } from './direction';
+import { type Direction, mapNodes, type Root, rootsOf } from './direction';
 import { keepDiscriminators } from './discriminators';
 import { reachedSets } from './reach';
 import { assemble, viewNode } from './rewrite';
 
 export { READ, WRITE } from './direction';
+
+const MARKED_ROOT = (d: Direction) =>
+	`a ${d.root} that is \`${d.mark}\` is kept: there is nothing to leave out of it`;
+
+/** The shared state of a run, with the roots that are marked themselves (kept whole). */
+function makeContext(
+	api: ApiIR,
+	before: ApiIR,
+	direction: Direction,
+	roots: Root[],
+	diagnostics: Diagnostics,
+): { ctx: ViewContext; whole: Root[] } {
+	const named = new Map(api.schemas.map((s) => [s.id, s]));
+	const whole = roots.filter(({ node }) =>
+		isMarked({ named, direction }, node),
+	);
+	const blockedRefs = whole.flatMap(({ node }) => refsOf(node));
+	const ctx: ViewContext = {
+		direction,
+		named,
+		diagnostics,
+		roots,
+		kept: new WeakMap(),
+		...reachedSets(api, before, direction, roots, blockedRefs, named),
+		blocked: new Set(blockedRefs),
+		differing: new Set(),
+	};
+	return { ctx, whole };
+}
+
+/** A root that is marked itself has nothing to leave out: say so. */
+function warnWhole(ctx: ViewContext, whole: readonly Root[]): void {
+	for (const { operation } of whole) {
+		ctx.diagnostics.warning(
+			'ignored',
+			MARKED_ROOT(ctx.direction),
+			operation.location,
+		);
+	}
+}
+
+/** The schemas with their views in place; a clashing view name is an error. */
+function assembleViews(
+	ctx: ViewContext,
+	api: ApiIR,
+	overrideKey: (at: Location) => string,
+): ApiIR['schemas'] {
+	const taken = new Map<string, Location>([
+		...api.schemas.map((s) => [s.name, s.location] as const),
+		...api.aliases.map((a) => [a.name, a.location] as const),
+	]);
+	return assemble(ctx, api.schemas, taken, (name, source, other) => {
+		ctx.diagnostics.error(
+			'name_collision',
+			`the ${ctx.direction.tag} view of ${source.name} would be named ${name}, as is another schema (${overrideKey(other)}). ` +
+				`Rename that one with the \`names\` option, e.g. names: { '${overrideKey(other)}': '${name}2' }`,
+			source.location,
+		);
+	});
+}
 
 /**
  * `api` seen from `direction`. `before`: the API as it was before an earlier
@@ -44,28 +104,14 @@ export function views(
 	const roots = rootsOf(api, direction);
 	if (roots.length === 0) return api;
 
-	const named = new Map(api.schemas.map((s) => [s.id, s]));
-	const whole = roots.filter(({ node }) =>
-		isMarked({ named, direction }, node),
-	);
-	const blockedRefs = whole.flatMap(({ node }) => refsOf(node));
-	const ctx: ViewContext = {
+	const { ctx, whole } = makeContext(
+		api,
+		before,
 		direction,
-		named,
-		diagnostics,
 		roots,
-		kept: new WeakMap(),
-		...reachedSets(api, before, direction, roots, blockedRefs, named),
-		blocked: new Set(blockedRefs),
-		differing: new Set(),
-	};
-	for (const { operation } of whole) {
-		diagnostics.warning(
-			'ignored',
-			`a ${direction.root} that is \`${direction.mark}\` is kept: there is nothing to leave out of it`,
-			operation.location,
-		);
-	}
+		diagnostics,
+	);
+	warnWhole(ctx, whole);
 	keepDiscriminators(ctx);
 	findDiffering(ctx);
 
@@ -75,18 +121,7 @@ export function views(
 	);
 	if (ctx.differing.size === 0 && sending.length === 0) return api;
 
-	const taken = new Map<string, Location>([
-		...api.schemas.map((s) => [s.name, s.location] as const),
-		...api.aliases.map((a) => [a.name, a.location] as const),
-	]);
-	const schemas = assemble(ctx, api.schemas, taken, (name, source, other) => {
-		diagnostics.error(
-			'name_collision',
-			`the ${direction.tag} view of ${source.name} would be named ${name}, as is another schema (${overrideKey(other)}). ` +
-				`Rename that one with the \`names\` option, e.g. names: { '${overrideKey(other)}': '${name}2' }`,
-			source.location,
-		);
-	});
+	const schemas = assembleViews(ctx, api, overrideKey);
 	const view = (node: SchemaNode) =>
 		isWhole(node) ? node : viewNode(ctx, node);
 	const operations = api.operations.map((operation) =>

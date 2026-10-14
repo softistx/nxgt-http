@@ -61,6 +61,40 @@ function parse(args: readonly string[]) {
 	}
 }
 
+type Parsed = Exclude<ReturnType<typeof parse>, Error>;
+type Values = Parsed['values'];
+
+/** Where the command reads relative paths and prints. */
+interface Io {
+	cwd: string;
+	out: (line: string) => void;
+	err: (line: string) => void;
+}
+
+/** The message for a command line that is wrong, or `undefined` when it is fine. */
+function usageError({ values, positionals }: Parsed): string | undefined {
+	const [command, ...rest] = positionals;
+	if (command === undefined) return 'nxgt-openapi needs a command';
+	if (command !== 'generate' || rest.length > 0) {
+		return `unknown command: ${positionals.join(' ')}`;
+	}
+	const { config, input, output } = values;
+	for (const [flag, value] of [
+		['--config', config],
+		['--input', input],
+		['--output', output],
+	] as const) {
+		if (value === '') return `${flag} needs a path`;
+	}
+	if (config !== undefined && (input !== undefined || output !== undefined)) {
+		return 'pass either --config, or --input';
+	}
+	if (output !== undefined && input === undefined) {
+		return '--output goes with --input';
+	}
+	return undefined;
+}
+
 export async function run(
 	args: readonly string[],
 	{
@@ -76,76 +110,85 @@ export async function run(
 	};
 	const parsed = parse(args);
 	if (parsed instanceof Error) return usage(parsed.message);
-	const { values, positionals } = parsed;
-	if (values.help) {
+	if (parsed.values.help) {
 		out(USAGE);
 		return 0;
 	}
-	if (values.version) {
+	if (parsed.values.version) {
 		out(version);
 		return 0;
 	}
-	const [command, ...rest] = positionals;
-	if (command === undefined) return usage('nxgt-openapi needs a command');
-	if (command !== 'generate' || rest.length > 0) {
-		return usage(`unknown command: ${positionals.join(' ')}`);
-	}
-	const { config, input, output } = values;
-	for (const [flag, value] of [
-		['--config', config],
-		['--input', input],
-		['--output', output],
-	] as const) {
-		if (value === '') return usage(`${flag} needs a path`);
-	}
-	if (config !== undefined && (input !== undefined || output !== undefined)) {
-		return usage('pass either --config, or --input');
-	}
-	if (output !== undefined && input === undefined) {
-		return usage('--output goes with --input');
-	}
+	const wrong = usageError(parsed);
+	if (wrong !== undefined) return usage(wrong);
 
+	const io = { cwd, out, err };
 	try {
-		const { configs, base } =
-			input !== undefined
-				? {
-						configs: [{ input, ...(output === undefined ? {} : { output }) }],
-						base: cwd,
-					}
-				: await fromFile(config, cwd);
-		// One spec that fails does not stop the others: each reports its own.
-		let stale = 0;
-		let failed = 0;
-		for (const one of configs) {
-			try {
-				stale += await generateOne(one, {
-					base,
-					cwd,
-					check: values.check === true,
-					lint: values.lint === true,
-					out,
-					err,
-				});
-			} catch (error) {
-				failed++;
-				if (error instanceof CodegenError) {
-					for (const d of error.diagnostics) err(formatDiagnostic(d, cwd));
-				} else if (isSystemError(error)) {
-					// An output that is a file, a directory it cannot write…
-					err(`error ${error.message}`);
-				} else {
-					throw error;
-				}
-			}
-		}
-		return stale > 0 || failed > 0 ? 1 : 0;
+		const { configs, base } = await specsOf(parsed.values, cwd);
+		return await generateAll(configs, base, parsed.values, io);
 	} catch (error) {
 		if (!(error instanceof CodegenError)) throw error;
 		// One line per diagnostic, warnings included, not the message: that one
 		// speaks of "the OpenAPI document", which a config error is not about.
-		for (const d of error.diagnostics) err(formatDiagnostic(d, cwd));
+		reportDiagnostics(error, cwd, err);
 		return 1;
 	}
+}
+
+/** The specs to generate: the one `--input` names, or those of the config file. */
+async function specsOf(
+	{ config, input, output }: Values,
+	cwd: string,
+): Promise<{ configs: CodegenConfig[]; base: string }> {
+	if (input === undefined) return fromFile(config, cwd);
+	return {
+		configs: [{ input, ...(output === undefined ? {} : { output }) }],
+		base: cwd,
+	};
+}
+
+/**
+ * Generates each spec. One that fails does not stop the others: each reports
+ * its own. Returns the exit code.
+ */
+async function generateAll(
+	configs: readonly CodegenConfig[],
+	base: string,
+	{ check, lint }: Values,
+	{ cwd, out, err }: Io,
+): Promise<number> {
+	let stale = 0;
+	let failed = 0;
+	for (const one of configs) {
+		try {
+			stale += await generateOne(one, {
+				base,
+				cwd,
+				check: check === true,
+				lint: lint === true,
+				out,
+				err,
+			});
+		} catch (error) {
+			failed++;
+			if (error instanceof CodegenError) {
+				reportDiagnostics(error, cwd, err);
+			} else if (isSystemError(error)) {
+				// An output that is a file, a directory it cannot write…
+				err(`error ${error.message}`);
+			} else {
+				throw error;
+			}
+		}
+	}
+	return stale > 0 || failed > 0 ? 1 : 0;
+}
+
+function reportDiagnostics(
+	error: CodegenError,
+	cwd: string,
+	err: (line: string) => void,
+): void {
+	for (const d of error.diagnostics) err(formatDiagnostic(d, cwd));
 }
 
 /** A failure of the file system, such as `EACCES` or `ENOTDIR`, not a bug. */

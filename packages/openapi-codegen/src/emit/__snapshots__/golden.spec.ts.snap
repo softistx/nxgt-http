@@ -11966,6 +11966,17 @@ export interface Problem {
 	message: string;
 }
 
+/** A toy: its \`id\` is the server's to set. */
+export interface Toy {
+	id: string;
+	name: string;
+}
+
+/** A toy: its \`id\` is the server's to set. */
+export interface ToyWrite {
+	name: string;
+}
+
 export interface ListPetsQuery {
 	status?: Status | undefined;
 	tags?: string[] | undefined;
@@ -11988,6 +11999,10 @@ export interface PetsUpdateParam {
 
 export interface PetsDeleteParam {
 	petId: string;
+}
+
+export interface ToysReadToyParam {
+	toyId: string;
 }
 
 export interface Operations {
@@ -12102,6 +12117,43 @@ export interface Operations {
 			};
 		};
 	};
+	Toys_addToy: {
+		method: 'post';
+		path: '/toys';
+		honoPath: '/toys';
+		param: {};
+		query: {};
+		header: {};
+		json: ToyWrite;
+		responses: {
+			/** The request has succeeded. */
+			200: {
+				'application/json': Toy;
+			};
+			/** The request, as the server refused it. */
+			400: {
+				'application/json': ValidationErrorBody;
+			};
+		};
+	};
+	Toys_readToy: {
+		method: 'get';
+		path: '/toys/{toyId}';
+		honoPath: '/toys/:toyId';
+		param: ToysReadToyParam;
+		query: {};
+		header: {};
+		responses: {
+			/** The request has succeeded. */
+			200: {
+				'application/json': Toy;
+			};
+			/** The request, as the server refused it. */
+			400: {
+				'application/json': ValidationErrorBody;
+			};
+		};
+	};
 }
 
 /** What a client sends and gets back: \`args\` after the operationId, and each declared \`reply\`. */
@@ -12198,6 +12250,34 @@ export interface ClientOperations {
 			| { status: 400; type: 'application/json'; data: ValidationErrorBody }
 			| { status: 404; type: 'application/json'; data: Problem };
 	};
+	Toys_addToy: {
+		method: 'post';
+		path: '/toys';
+		args: [input: {
+			json: ToyWrite;
+		}];
+		reply:
+			| { status: 200; type: 'application/json'; data: Toy }
+			| { status: 400; type: 'application/json'; data: ValidationErrorBody };
+		wire:
+			| { status: 200; type: 'application/json'; data: Toy }
+			| { status: 400; type: 'application/json'; data: ValidationErrorBody };
+	};
+	Toys_readToy: {
+		method: 'get';
+		path: '/toys/{toyId}';
+		args: [input: {
+			param: {
+				toyId: string;
+			};
+		}];
+		reply:
+			| { status: 200; type: 'application/json'; data: Toy }
+			| { status: 400; type: 'application/json'; data: ValidationErrorBody };
+		wire:
+			| { status: 200; type: 'application/json'; data: Toy }
+			| { status: 400; type: 'application/json'; data: ValidationErrorBody };
+	};
 }
 
 /** The operation behind each route: \`routes.put(path)\` finds it here. */
@@ -12207,13 +12287,15 @@ export interface OperationsByRoute {
 	'get /pets/{petId}': 'Pets_read';
 	'patch /pets/{petId}': 'Pets_update';
 	'delete /pets/{petId}': 'Pets_delete';
+	'post /toys': 'Toys_addToy';
+	'get /toys/{toyId}': 'Toys_readToy';
 }
 
 /** The paths with an operation for each method. */
 export interface PathsByMethod {
-	get: '/pets' | '/pets/{petId}';
+	get: '/pets' | '/pets/{petId}' | '/toys/{toyId}';
 	put: never;
-	post: '/pets';
+	post: '/pets' | '/toys';
 	delete: '/pets/{petId}';
 	options: never;
 	head: never;
@@ -12225,6 +12307,7 @@ export interface PathsByMethod {
 /** The operations under each tag. */
 export interface OperationsByTag {
 	Pets: 'listPets' | 'Pets_create' | 'Pets_read' | 'Pets_update' | 'Pets_delete';
+	Toys: 'Toys_addToy' | 'Toys_readToy';
 }
 
 /** \`PathsByMethod\`, for each tag. */
@@ -12237,6 +12320,17 @@ export interface PathsByTag {
 		options: never;
 		head: never;
 		patch: '/pets/{petId}';
+		trace: never;
+		query: never;
+	};
+	Toys: {
+		get: '/toys/{toyId}';
+		put: never;
+		post: '/toys';
+		delete: never;
+		options: never;
+		head: never;
+		patch: never;
 		trace: never;
 		query: never;
 	};
@@ -12353,6 +12447,17 @@ export const zProblem = z.object({
 	code: z.string(),
 	message: z.string(),
 });
+
+/** A toy: its \`id\` is the server's to set. */
+export const zToy = z.object({
+	id: z.string(),
+	name: z.string(),
+});
+
+/** A toy: its \`id\` is the server's to set. */
+export const zToyWrite = z.object({
+	name: z.string(),
+});
 "
 `;
 
@@ -12367,6 +12472,8 @@ import {
 	zPetPage,
 	zProblem,
 	zStatus,
+	zToy,
+	zToyWrite,
 	zValidationErrorBody,
 } from './zod';
 import type { ClientOperations, Operations } from './types';
@@ -12448,6 +12555,10 @@ export const zPetsUpdateParam = z.object({
 
 export const zPetsDeleteParam = z.object({
 	petId: z.guid(),
+});
+
+export const zToysReadToyParam = z.object({
+	toyId: z.string(),
 });
 
 export const operations: {
@@ -12580,6 +12691,50 @@ export const operations: {
 			},
 		},
 	},
+	Toys_addToy: {
+		method: 'post',
+		path: '/toys',
+		honoPath: '/toys',
+		tags: ['Toys'],
+		parameters: [],
+		param: none,
+		query: none,
+		header: none,
+		body: {
+			required: true,
+			content: {
+				'application/json': { kind: 'json', schema: zToyWrite },
+			},
+		},
+		responses: {
+			200: {
+				'application/json': { kind: 'json', schema: zToy },
+			},
+			400: {
+				'application/json': { kind: 'json', schema: zValidationErrorBody },
+			},
+		},
+	},
+	Toys_readToy: {
+		method: 'get',
+		path: '/toys/{toyId}',
+		honoPath: '/toys/:toyId',
+		tags: ['Toys'],
+		parameters: [
+			{ name: 'toyId', in: 'path', required: true, explode: false, list: false },
+		],
+		param: zToysReadToyParam,
+		query: none,
+		header: none,
+		responses: {
+			200: {
+				'application/json': { kind: 'json', schema: zToy },
+			},
+			400: {
+				'application/json': { kind: 'json', schema: zValidationErrorBody },
+			},
+		},
+	},
 };
 "
 `;
@@ -12601,6 +12756,8 @@ import type {
 	Species,
 	SpeciesMergePatchUpdate,
 	Status,
+	Toy,
+	ToyWrite,
 	ValidationErrorBody,
 } from './types';
 
@@ -12640,6 +12797,40 @@ export interface paths {
 		patch: operations['Pets_update'];
 		trace?: never;
 	};
+	'/toys': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post: operations['Toys_addToy'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/toys/{toyId}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				toyId: string;
+			};
+			cookie?: never;
+		};
+		get: operations['Toys_readToy'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 }
 
 export type webhooks = Record<string, never>;
@@ -12659,6 +12850,8 @@ export interface components {
 		PetMergePatchUpdate: PetMergePatchUpdate;
 		PetPage: PetPage;
 		Problem: Problem;
+		Toy: Toy;
+		ToyWrite: ToyWrite;
 	};
 	responses: never;
 	parameters: never;
@@ -12881,6 +13074,70 @@ export interface operations {
 			};
 		};
 	};
+	Toys_addToy: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': ToyWrite;
+			};
+		};
+		responses: {
+			/** The request has succeeded. */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': Toy;
+				};
+			};
+			/** The request, as the server refused it. */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': ValidationErrorBody;
+				};
+			};
+		};
+	};
+	Toys_readToy: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				toyId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** The request has succeeded. */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': Toy;
+				};
+			};
+			/** The request, as the server refused it. */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': ValidationErrorBody;
+				};
+			};
+		};
+	};
 }
 "
 `;
@@ -12900,6 +13157,7 @@ import type {
 	Pet,
 	PetPage,
 	Problem,
+	Toy,
 	ValidationErrorBody,
 } from './types';
 
@@ -12926,6 +13184,12 @@ export interface Replies {
 		| Hono.TypedResponse<null, 204, 'body'>
 		| Hono.TypedResponse<ValidationErrorBody, 400, 'json'>
 		| Hono.TypedResponse<Problem, 404, 'json'>;
+	Toys_addToy:
+		| Hono.TypedResponse<Toy, 200, 'json'>
+		| Hono.TypedResponse<ValidationErrorBody, 400, 'json'>;
+	Toys_readToy:
+		| Hono.TypedResponse<Toy, 200, 'json'>
+		| Hono.TypedResponse<ValidationErrorBody, 400, 'json'>;
 }
 
 /** The spec, as \`@nxgt/openapi-hono\` reads it. */
@@ -12973,7 +13237,16 @@ exports[`generated code is unchanged for typespec: typespec/alxia.ts 1`] = `
  */
 
 import { z } from 'zod';
-import { zCreatePet, zPet, zPetMergePatchUpdate, zPetPage, zProblem, zStatus } from './zod';
+import {
+	zCreatePet,
+	zPet,
+	zPetMergePatchUpdate,
+	zPetPage,
+	zProblem,
+	zStatus,
+	zToy,
+	zToyWrite,
+} from './zod';
 
 /** A number in a path, a query, a header or a cookie: digits, where z.coerce.number() would read '' as 0. */
 const numeric = z
@@ -13070,6 +13343,32 @@ export const Pets_delete = {
 	},
 } as const;
 
+export const Toys_addToy = {
+	method: 'POST',
+	path: '/toys',
+	schema: {
+		body: zToyWrite,
+		response: {
+			200: zToy,
+		},
+		detail: { operationId: 'Toys_addToy', tags: ['Toys'] },
+	},
+} as const;
+
+export const Toys_readToy = {
+	method: 'GET',
+	path: '/toys/:toyId',
+	schema: {
+		params: z.object({
+			toyId: z.string(),
+		}),
+		response: {
+			200: zToy,
+		},
+		detail: { operationId: 'Toys_readToy', tags: ['Toys'] },
+	},
+} as const;
+
 /** Every operation alxia routes, by operationId: \`app.route(operations.listPets, ...middlewares, handler)\`. */
 export const operations = {
 	listPets,
@@ -13077,6 +13376,8 @@ export const operations = {
 	Pets_read,
 	Pets_update,
 	Pets_delete,
+	Toys_addToy,
+	Toys_readToy,
 } as const;
 "
 `;

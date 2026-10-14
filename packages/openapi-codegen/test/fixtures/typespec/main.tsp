@@ -77,6 +77,14 @@ model Pet {
   serial: int64;
 }
 
+/** A toy: its `id` is the server's to set. */
+model Toy {
+  @visibility(Lifecycle.Read)
+  id: string;
+
+  name: string;
+}
+
 /** A page of items, and the cursor to the next one. */
 @friendlyName("{name}Page", Item)
 model Page<Item> {
@@ -135,4 +143,15 @@ interface Pets {
 
   @delete
   delete(@path @format("uuid") petId: string): NoContentResponse | NotFound;
+}
+
+@route("/toys")
+@tag("Toys")
+interface Toys {
+  // The body is the read model itself: no `Create<Toy>`.
+  @post
+  addToy(@body toy: Toy): Toy;
+
+  @get
+  readToy(@path toyId: string): Toy;
 }

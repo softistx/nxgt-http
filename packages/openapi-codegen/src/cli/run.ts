@@ -183,6 +183,7 @@ async function generateAll(
 	return stale > 0 || failed > 0 ? 1 : 0;
 }
 
+/** Writes each of a failed generation's diagnostics to stderr, one line apiece. */
 function reportDiagnostics(
 	error: CodegenError,
 	cwd: string,

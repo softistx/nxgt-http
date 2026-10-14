@@ -7,9 +7,8 @@ history.
 ## Now
 
 - **Input types without `readOnly` properties** — a request body type that
-  leaves out what the server sets. Today `readOnly` has no effect, so a
-  TypeSpec body with implicit visibility requires those properties; declare
-  the body as `Create<T>` meanwhile.
+  leaves out what the server sets, and its mirror: a reply type that leaves
+  out the `writeOnly` properties the server never sends back.
 
 ## Next
 

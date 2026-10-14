@@ -1427,10 +1427,11 @@ export const operations = { getPet, watchTicks /* , … */ } as const;
 - **`date-time` stays a string**, validated as RFC 3339 with its offset:
   `2024-01-01T00:00:00` without `Z` is refused. `dates: 'date'` decodes it
   to a `Date` instead; `format: date` stays a string either way.
-- **`writeOnly` is not enforced, and `readOnly` only leaves a property out
-  of request bodies.** A response keeps it. A `readOnly` property sent anyway
-  is not in the write schema: `unknownKeys` drops it (the default) or refuses
-  it (`'strict'`).
+- **`readOnly` only leaves a property out of request bodies.** A response
+  keeps it. A `readOnly` property sent anyway is not in the write schema:
+  `unknownKeys` drops it (the default) or refuses it (`'strict'`).
+- **`writeOnly` is not enforced.** A reply type still lists a `writeOnly`
+  property, and a reply check still requires it when it is `required`.
 - **Imports carry no extension** (`./types`), as a bundler resolves them.
   Under `moduleResolution: node16` or `nodenext`, or run by Node without a
   bundler, set `importExtension: '.js'`.

@@ -19,9 +19,10 @@ export interface IROptions {
 	/** OpenAPI 3.0's `nullable: true`: read as `type: [T, 'null']` with a warning, or refused. */
 	legacyNullable?: 'warn' | 'error';
 	/**
-	 * `readOnly` properties in what a client sends: `'omit'` leaves them out of
-	 * request bodies, through `<Name>Write` copies of the schemas that
-	 * responses share; `'keep'` (the default) leaves every schema as it is.
+	 * `readOnly` properties in what a client sends: `'omit'` leaves them out
+	 * of request bodies, through `<Name>Write` copies of the schemas that
+	 * responses share; `'keep'` (the default of `buildIR`) leaves every
+	 * schema as it is.
 	 */
 	readOnly?: 'omit' | 'keep';
 }

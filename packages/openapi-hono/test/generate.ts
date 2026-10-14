@@ -27,12 +27,14 @@ const CASES = [
 	'dates',
 	'streams',
 	'typespec',
+	'read-only',
 ] as const;
 
 /** What a case is generated with, beside `hono`. */
 const OPTIONS: { [name: string]: { dates?: Dates } } = {
 	dates: { dates: 'date' },
 	streams: { dates: 'date' },
+	'read-only': { dates: 'date' },
 };
 
 async function fixtureFiles(name: string): Promise<GeneratedFile[]> {

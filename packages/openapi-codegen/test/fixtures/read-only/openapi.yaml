@@ -1,0 +1,122 @@
+openapi: 3.1.0
+info:
+  title: Read only
+  version: '1'
+  description: >-
+    Properties marked `readOnly` are the server's to set. A request body leaves
+    them out: `Pet` is shared with responses, so bodies get a `PetWrite` copy;
+    `Draft` is only sent, so it is stripped in place.
+paths:
+  /pets:
+    get:
+      operationId: listPets
+      responses:
+        '200':
+          description: The pets.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Pet' }
+    post:
+      operationId: createPet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Pet' }
+      responses:
+        '200':
+          description: Created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Pet' }
+  /pets/batch:
+    post:
+      operationId: createPets
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items: { $ref: '#/components/schemas/Pet' }
+      responses:
+        '204':
+          description: Created.
+  /dogs:
+    post:
+      operationId: createDog
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Dog' }
+      responses:
+        '200':
+          description: Created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Dog' }
+  /owners:
+    post:
+      operationId: createOwner
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Owner' }
+      responses:
+        '200':
+          description: Created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Owner' }
+  /drafts:
+    post:
+      operationId: createDraft
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Draft' }
+      responses:
+        '204':
+          description: Saved.
+components:
+  schemas:
+    Pet:
+      type: object
+      required: [id, createdAt, name]
+      properties:
+        id: { type: string, format: uuid, readOnly: true }
+        createdAt: { type: string, format: date-time, readOnly: true }
+        name: { type: string }
+        status: { type: string, enum: [available, sold], default: available }
+        birthday: { type: string, format: date-time, default: '2020-01-01T00:00:00Z' }
+        owner: { $ref: '#/components/schemas/Owner' }
+    Owner:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string, readOnly: true }
+        name: { type: string }
+    Animal:
+      type: object
+      required: [id, species]
+      properties:
+        id: { type: string, readOnly: true }
+        species: { type: string }
+    Dog:
+      allOf:
+        - $ref: '#/components/schemas/Animal'
+        - type: object
+          required: [barks]
+          properties:
+            barks: { type: boolean }
+    Draft:
+      type: object
+      required: [revision, title]
+      properties:
+        revision: { type: integer, readOnly: true }
+        title: { type: string }

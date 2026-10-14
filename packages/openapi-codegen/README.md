@@ -168,6 +168,37 @@ narrow. `DateTime`, `Timestamp`, `BigInt` and `Long` keep their pattern. It is
 opt-in: the default is `'pattern'`, as before
 ([options](docs/guide/options.md#scalars)).
 
+### Send a body without the server's properties
+
+A property marked `readOnly` is the server's to set. By default
+(`readOnly: 'omit'`) a request body leaves it out, and a response keeps it:
+
+```yaml
+# openapi.yaml: Pet is the body of createPet and the response of listPets
+Pet:
+  type: object
+  required: [id, name]
+  properties:
+    id: { type: string, readOnly: true }
+    name: { type: string }
+```
+
+```ts
+import type { PetWrite } from './generated/types';
+import { zPet, zPetWrite } from './generated/zod';
+
+const body: PetWrite = { name: 'Rex' }; // no `id`
+zPetWrite.parse(body); // accepted
+zPet.parse(body); // refused: a response carries `id`
+```
+
+`Pet` stays the response type. `PetWrite` and `zPetWrite` are the copy
+without `id`; a schema that only request bodies use is stripped in place and
+keeps its name. The client's body argument, the `json` of a Hono handler and
+the validator in `operations.ts` all use the write view. `readOnly: 'keep'`
+restores the earlier output
+([options](docs/guide/options.md#readonly)).
+
 ### Serve typed Hono routes
 
 With `hono: true` in the config:
@@ -288,8 +319,8 @@ model Pet {
 @route("/pets")
 interface Pets {
   @get list(): Pet[];
-  // Create<Pet> leaves out `id`: `readOnly` has no effect on the generated code.
-  @post create(@body pet: Create<Pet>): { @statusCode _: 201; @body pet: Pet };
+  // the body is generated as PetWrite, without `id`, since it is `readOnly`
+  @post create(@body pet: Pet): { @statusCode _: 201; @body pet: Pet };
 }
 ```
 
@@ -297,7 +328,7 @@ interface Pets {
 bunx --no-install tsp compile api && bunx nxgt-openapi generate -i openapi/openapi.yaml -o src/generated
 ```
 
-`Create<Pet>` becomes `CreatePet`, `Pets_list` and `Pets_create` are the
+`Pets_list` and `Pets_create` are the
 operation ids, and everything downstream reads the spec as it reads any
 other. [Authoring the spec in TypeSpec](docs/guide/typespec.md) has what each
 construct becomes, and how to name operations and templates.
@@ -377,6 +408,7 @@ this one does not, when it still starts with the generated header. See
 | `alxia` | `boolean` | `false` | also write `alxia.ts`: each operation as the data `@alxia/core` 0.4's `app.route(operation, ...middlewares, handler)` takes; imports `@alxia/core` only for a reply of server-sent events ([more](docs/guide/options.md#alxia)) |
 | `dates` | `'string' \| 'date'` | `'string'` | a `date-time` kept as its string, or decoded to a `Date` by a `z.codec` ([more](docs/guide/options.md#dates)) |
 | `scalars` | `'pattern' \| 'exact'` | `'pattern'` | a string or numeric scalar of `@nxgt/typespec` checked by its `pattern` or bounds, or by its schema from `@nxgt/zod`, the spec's own constraints kept on top ([more](docs/guide/options.md#scalars)) |
+| `readOnly` | `'omit' \| 'keep'` | `'omit'` | a request body leaves out the `readOnly` properties (a `<Name>Write` view where responses share the schema), or keeps every schema as written ([more](docs/guide/options.md#readonly)) |
 | `lint` | `boolean \| string` | `false` | lint with Redocly first: `true` uses the `redocly.yaml` beside `input` or Redocly's defaults, a string names the config file. Needs `@redocly/openapi-core`; cannot be combined with `context.fs` ([more](docs/guide/options.md#lint)) |
 | `names` | `Record<string, string>` | `{}` | renames schemas, keyed by file relative to the root document plus `#pointer` when the schema is not the whole file ([more](docs/guide/options.md#names)) |
 | `legacyNullable` | `'warn' \| 'error'` | `'warn'` | OpenAPI 3.0's `nullable: true`: read with a warning, or refused ([more](docs/guide/options.md#legacynullable)) |
@@ -625,6 +657,7 @@ interface GenerateOptions extends IROptions {
 	alxia?: boolean;
 	dates?: Dates;
 	scalars?: Scalars;
+	readOnly?: 'omit' | 'keep';
 	lint?: Lint | undefined;
 	validationErrors?: boolean;
 }
@@ -1394,9 +1427,11 @@ export const operations = { getPet, watchTicks /* , … */ } as const;
 - **`date-time` stays a string**, validated as RFC 3339 with its offset:
   `2024-01-01T00:00:00` without `Z` is refused. `dates: 'date'` decodes it
   to a `Date` instead; `format: date` stays a string either way.
-- **`readOnly` and `writeOnly` are not enforced.** A required `readOnly`
-  property is required in a request body too. Give requests their own
-  schema.
+- **`readOnly` only leaves a property out of request bodies.** A response
+  keeps it. A `readOnly` property sent anyway is not in the write schema:
+  `unknownKeys` drops it (the default) or refuses it (`'strict'`).
+- **`writeOnly` is not enforced.** A reply type still lists a `writeOnly`
+  property, and a reply check still requires it when it is `required`.
 - **Imports carry no extension** (`./types`), as a bundler resolves them.
   Under `moduleResolution: node16` or `nodenext`, or run by Node without a
   bundler, set `importExtension: '.js'`.

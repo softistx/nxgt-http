@@ -92,6 +92,32 @@ queued and built later by `drain()`. That is what makes a fragment shared by
 forty files one schema, and what lets recursion be detected instead of
 unrolled.
 
+## Write views (`src/ir/write-views/`)
+
+Run after the IR is built, when `readOnly` is `'omit'`. It returns the same
+`ApiIR` when no request body reaches a `readOnly` property, and never changes
+its input. One role per file:
+
+- `reach.ts`: which named schemas the request bodies reach, and which the
+  rest of the API (responses, parameters) reaches too. The second kind is
+  copied; a schema only bodies reach is rewritten in place.
+- `discriminators.ts`: a `readOnly` property that is a union's
+  discriminator is recorded as kept, with an `ignored` warning. A body schema
+  that is itself `readOnly` is also kept whole, with a warning.
+- `differing.ts`: the set of schemas that differ for writing, found to a
+  fixpoint: an object with a property to drop, or one reaching such a schema
+  through a `$ref`, `extends`, a list, a record, a union or an intersection.
+  A fixpoint, since schemas reach each other in cycles.
+- `rewrite.ts`: `writeNode` builds the view of a node, and `assemble` puts
+  the schemas back in emit order. A copy has the id `<id>#write` and the name
+  `<Name>Write`, placed right after its original; a clash with an existing
+  name is a `name_collision` error that spells out the `names` override.
+  The body media types are pointed at the views.
+- `context.ts`: the shared state, and the test for a dropped property.
+
+The emitters then see the views as ordinary named schemas, which is why
+`PetWriteInput` follows from the same rule as `PetInput`.
+
 ## Order and recursion (`src/ir/graph.ts`)
 
 `finalize()` runs Tarjan's strongly connected components over the

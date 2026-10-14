@@ -17,10 +17,17 @@ examples come from a second one, with a pet store's parameters and a form.
 | `getPet`'s path, query or header parameters | `GetPetParam`, `GetPetQuery`, `GetPetHeader` | `zGetPetParam`, … |
 | `upload`'s form body, read from text | the body's own type | `zUploadForm`, in `operations.ts` |
 | a schema whose defaults make input differ from output | `Employee` and `EmployeeInput` | `zEmployee` |
+| a schema with `readOnly` properties that a request body uses and a response does too | `Pet`, and `PetWrite` for the body (`PetWriteInput` when its input differs) | `zPet`, `zPetWrite` |
 
 Scalars and lists written inline stay inline: only objects, unions,
 intersections and maps get a name. Two schemas that would get the same name
 are an error. Rename one with the [`names` option](options.md#names).
+
+`<Name>Write` is the [`readOnly`](options.md#readonly) option's view of a
+schema for request bodies: the client's body argument, the `json` of a Hono
+handler and the validator in `operations.ts` use it, and a response keeps
+`<Name>`. A schema that only request bodies use is stripped in place and
+keeps its name. A schema already named `<Name>Write` is a `name_collision`.
 
 ## `types.ts`
 

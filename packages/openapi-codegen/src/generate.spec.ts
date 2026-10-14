@@ -397,6 +397,20 @@ describe('generate', () => {
 		).rejects.toThrow('readOnly must be omit or keep, not drop');
 	});
 
+	it('refuses a writeOnly option it does not know', async () => {
+		const fs = createMemoryFileSystem({ '/s/openapi.json': SPEC });
+		await expect(
+			generateFiles(
+				{
+					input: '/s/openapi.json',
+					output: '/s/gen',
+					writeOnly: 'drop' as never,
+				},
+				{ fs },
+			),
+		).rejects.toThrow('writeOnly must be omit or keep, not drop');
+	});
+
 	it('refuses a scalars option it does not know', async () => {
 		const fs = createMemoryFileSystem({ '/s/openapi.json': SPEC });
 		await expect(

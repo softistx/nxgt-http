@@ -8,6 +8,7 @@ const ROOT = '/spec/openapi.json';
 
 const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
 const ro = { type: 'string', readOnly: true };
+const wo = { type: 'string', writeOnly: true };
 const object = (properties: Record<string, unknown>, required?: string[]) => ({
 	type: 'object',
 	properties,
@@ -20,6 +21,7 @@ async function api(
 	bodies: unknown[],
 	responses: unknown[] = [],
 	readOnly: 'omit' | 'keep' = 'omit',
+	writeOnly: 'omit' | 'keep' = 'keep',
 ): Promise<ApiIR> {
 	const paths: Record<string, unknown> = {};
 	bodies.forEach((schema, i) => {
@@ -52,7 +54,7 @@ async function api(
 	});
 	return buildIR(
 		await loadDocument(ROOT, { fs: createMemoryFileSystem({ [ROOT]: doc }) }),
-		{ readOnly },
+		{ readOnly, writeOnly },
 	);
 }
 
@@ -401,10 +403,131 @@ describe('write views', () => {
 		const spec = { A: object({ id: ro, n: { type: 'string' } }) };
 		const kept = await api(spec, [ref('A')], [ref('A')], 'keep');
 		const before = structuredClone(kept);
-		const { writeViews } = await import('./write-views');
+		const { views, WRITE } = await import('./views');
 		const { Diagnostics } = await import('../errors');
-		const out = writeViews(kept, new Diagnostics(), () => '');
+		const out = views(kept, WRITE, new Diagnostics(), () => '');
 		expect(out).not.toBe(kept);
 		expect(kept).toEqual(before);
+	});
+});
+
+/** The 200 reply of GET /r<i>, as the first media type of its first response. */
+const replyOf = (ir: ApiIR, i = 0): SchemaNode | undefined =>
+	ir.operations.find((o) => o.operationId === `reply${i}`)?.responses[0]
+		?.content[0]?.schema;
+
+describe('read views', () => {
+	const user = object(
+		{ id: { type: 'string' }, password: wo, name: { type: 'string' } },
+		['id', 'password'],
+	);
+
+	it('does nothing under keep, and with no writeOnly property', async () => {
+		const kept = await api({ U: user }, [ref('U')], [ref('U')]);
+		expect(names(kept)).toEqual(['U']);
+		const plain = { A: object({ a: { type: 'string' } }) };
+		expect(await api(plain, [ref('A')], [ref('A')], 'omit', 'omit')).toEqual(
+			await api(plain, [ref('A')], [ref('A')], 'keep', 'keep'),
+		);
+	});
+
+	it('copies a schema the bodies share as <Name>Read, right after it', async () => {
+		const ir = await api({ U: user }, [ref('U')], [ref('U')], 'omit', 'omit');
+		expect(names(ir)).toEqual(['U', 'URead']);
+		const u = named(ir, 'U');
+		const read = named(ir, 'URead');
+		expect(read.id).toBe(`${u.id}#read`);
+		expect(props(u.node)).toEqual(['id', 'password', 'name']);
+		expect(props(read.node)).toEqual(['id', 'name']);
+		expect(
+			(read.node as ObjectNode).properties.map((p) => [p.name, p.required]),
+		).toEqual([
+			['id', true],
+			['name', false],
+		]);
+		expect(replyOf(ir)).toEqual({ kind: 'ref', target: read.id });
+		expect(bodyOf(ir)).toEqual({ kind: 'ref', target: u.id });
+	});
+
+	it('strips a schema only the responses reach, in place', async () => {
+		const ir = await api({ U: user }, [], [ref('U')], 'omit', 'omit');
+		expect(names(ir)).toEqual(['U']);
+		expect(props(named(ir, 'U').node)).toEqual(['id', 'name']);
+	});
+
+	it('follows $ref, allOf and arrays, and points refs at the read view', async () => {
+		const ir = await api(
+			{
+				Cred: object({ secret: wo, hint: { type: 'string' } }),
+				Account: {
+					allOf: [ref('Cred'), object({ owner: ref('Cred') })],
+				},
+			},
+			[ref('Account')],
+			[{ type: 'array', items: ref('Account') }],
+			'omit',
+			'omit',
+		);
+		expect(names(ir)).toEqual(['Cred', 'CredRead', 'Account', 'AccountRead']);
+		const account = named(ir, 'AccountRead').node;
+		const reply = replyOf(ir) as { kind: 'array'; items: SchemaNode };
+		expect(reply.items).toEqual({
+			kind: 'ref',
+			target: named(ir, 'AccountRead').id,
+		});
+		expect(JSON.stringify(account)).toContain(named(ir, 'CredRead').id);
+		expect(JSON.stringify(account)).not.toContain(`"${named(ir, 'Cred').id}"`);
+	});
+
+	it('gives a schema with both marks a Write and a Read view', async () => {
+		const both = object({ id: ro, password: wo, name: { type: 'string' } });
+		const ir = await api({ P: both }, [ref('P')], [ref('P')], 'omit', 'omit');
+		expect(names(ir)).toEqual(['P', 'PRead', 'PWrite']);
+		expect(props(named(ir, 'P').node)).toEqual(['id', 'password', 'name']);
+		expect(props(named(ir, 'PWrite').node)).toEqual(['password', 'name']);
+		expect(props(named(ir, 'PRead').node)).toEqual(['id', 'name']);
+		expect(bodyOf(ir)).toEqual({ kind: 'ref', target: named(ir, 'PWrite').id });
+		expect(replyOf(ir)).toEqual({ kind: 'ref', target: named(ir, 'PRead').id });
+	});
+
+	it('copies for reading a schema a body-only write view stripped in place', async () => {
+		const ir = await api(
+			{ P: object({ id: ro, password: wo }) },
+			[ref('P')],
+			[],
+			'omit',
+			'omit',
+		);
+		expect(names(ir)).toEqual(['P']);
+		expect(props(named(ir, 'P').node)).toEqual(['password']);
+	});
+
+	it('explains a name collision and how to fix it', async () => {
+		const error = await api(
+			{ U: user, URead: object({ x: { type: 'string' } }) },
+			[ref('U')],
+			[ref('U')],
+			'omit',
+			'omit',
+		).catch((e: unknown) => e);
+		const message = (error as Error).message;
+		expect(message).toContain('name_collision');
+		expect(message).toContain('read view of U');
+		expect(message).toContain('URead');
+		expect(message).toContain("names: { '");
+	});
+
+	it('warns about a response that is itself writeOnly, and keeps it', async () => {
+		const ir = await api(
+			{ S: { ...object({ a: wo }), writeOnly: true } },
+			[],
+			[ref('S')],
+			'omit',
+			'omit',
+		);
+		expect(props(named(ir, 'S').node)).toEqual(['a']);
+		expect(ir.warnings.map((w) => w.message).join()).toContain(
+			'a response that is `writeOnly` is kept',
+		);
 	});
 });

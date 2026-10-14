@@ -92,31 +92,46 @@ queued and built later by `drain()`. That is what makes a fragment shared by
 forty files one schema, and what lets recursion be detected instead of
 unrolled.
 
-## Write views (`src/ir/write-views/`)
+## Views (`src/ir/views/`)
 
-Run after the IR is built, when `readOnly` is `'omit'`. It returns the same
-`ApiIR` when no request body reaches a `readOnly` property, and never changes
-its input. One role per file:
+Run after the IR is built, once per direction: `WRITE` when `readOnly` is
+`'omit'` (roots: the request bodies; drops `readOnly`; copies are
+`<Name>Write`), then `READ` when `writeOnly` is `'omit'` (roots: the
+responses, with a stream's items and events; drops `writeOnly`; copies are
+`<Name>Read`). The two passes are one implementation, parameterised by a
+`Direction`. Each returns the same `ApiIR` when its roots reach no property to
+drop, and never changes its input. One role per file:
 
-- `reach.ts`: which named schemas the request bodies reach, and which the
-  rest of the API (responses, parameters) reaches too. The second kind is
-  copied; a schema only bodies reach is rewritten in place.
-- `discriminators.ts`: a `readOnly` property that is a union's
-  discriminator is recorded as kept, with an `ignored` warning. A body schema
-  that is itself `readOnly` is also kept whole, with a warning.
-- `differing.ts`: the set of schemas that differ for writing, found to a
-  fixpoint: an object with a property to drop, or one reaching such a schema
-  through a `$ref`, `extends`, a list, a record, a union or an intersection.
-  A fixpoint, since schemas reach each other in cycles.
-- `rewrite.ts`: `writeNode` builds the view of a node, and `assemble` puts
-  the schemas back in emit order. A copy has the id `<id>#write` and the name
-  `<Name>Write`, placed right after its original; a clash with an existing
-  name is a `name_collision` error that spells out the `names` override.
-  The body media types are pointed at the views.
+- `direction.ts`: `WRITE` and `READ`: the mark dropped, the suffix and id tag
+  of a copy, and which media are the roots and which are the other side. Also
+  the helpers that read and map a media type's schemas.
+- `reach.ts`: which named schemas the roots reach, and which the rest of the
+  API (the other direction's media, parameters) reaches too. The second kind
+  is copied; a schema only the roots reach is rewritten in place. `READ` runs
+  on the output of `WRITE` but takes the bodies from the API as it was before
+  it, so a schema bodies used keeps counting as shared even when `WRITE` gave
+  them a copy of their own.
+- `discriminators.ts`: a marked property that is a union's discriminator is
+  recorded as kept, with an `ignored` warning. A root schema that is itself
+  marked is also kept whole, with a warning.
+- `differing.ts`: the set of schemas that differ for the direction, found to
+  a fixpoint: an object with a property to drop, or one reaching such a
+  schema through a `$ref`, `extends`, a list, a record, a union or an
+  intersection. A fixpoint, since schemas reach each other in cycles.
+- `rewrite.ts`: `viewNode` builds the view of a node, and `assemble` puts
+  the schemas back in emit order. A copy has the id `<id>#write` or
+  `<id>#read` and the name `<Name>Write` or `<Name>Read`, placed right after
+  its original; a clash with an existing name is a `name_collision` error
+  that spells out the `names` override. The roots' media types are pointed at
+  the views, and a `$ref` inside a view at that direction's view.
 - `context.ts`: the shared state, and the test for a dropped property.
+- `index.ts`: `views(api, direction, …)`.
 
-The emitters then see the views as ordinary named schemas, which is why
-`PetWriteInput` follows from the same rule as `PetInput`.
+A schema with both marks that bodies and responses share comes out as the
+schema as written, `<Name>Write` and `<Name>Read`; the Read copy is made from
+the schema as written, not from the Write one. The emitters then see the
+views as ordinary named schemas, which is why `PetWriteInput` and
+`UserReadInput` follow from the same rule as `PetInput`.
 
 ## Order and recursion (`src/ir/graph.ts`)
 

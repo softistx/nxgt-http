@@ -14,6 +14,7 @@ await generate({
 	dates: 'string',
 	scalars: 'pattern',
 	readOnly: 'omit',
+	writeOnly: 'omit',
 	lint: false,
 	names: { 'components/schemas/Error.yaml': 'ApiError' },
 	legacyNullable: 'warn',
@@ -33,6 +34,7 @@ await generate({
 | [`dates`](#dates) | `'string'` | a `date-time` as its string, or decoded to a `Date` |
 | [`scalars`](#scalars) | `'pattern'` | a string or numeric scalar of `@nxgt/typespec` checked by its `pattern` or bounds, or by its schema from `@nxgt/zod` |
 | [`readOnly`](#readonly) | `'omit'` | request bodies leave out `readOnly` properties, or keep every schema as written |
+| [`writeOnly`](#writeonly) | `'omit'` | responses leave out `writeOnly` properties, or keep every schema as written |
 | [`lint`](#lint) | `false` | lint the spec with Redocly before generating |
 | [`names`](#names) | `{}` | renames schemas |
 | [`legacyNullable`](#legacynullable) | `'warn'` | tolerate or refuse 3.0's `nullable: true` |
@@ -338,6 +340,75 @@ export const zPetWrite = z.object({
 
 A spec with no `readOnly` property in a request body generates the same
 files as before. `'keep'` gives the output of earlier versions for any spec.
+
+## `writeOnly`
+
+A `writeOnly` property is something the client sets (a password), so a
+server does not send it. It is the mirror of [`readOnly`](#readonly):
+
+| Value | Request bodies | Responses |
+| --- | --- | --- |
+| `'omit'` | unchanged | use a read view, without the `writeOnly` properties |
+| `'keep'` | unchanged | use every schema as written, `writeOnly` ignored |
+
+With `'omit'`, for every schema a response reaches that has a `writeOnly`
+property, or reaches one that has, the generator emits a read view:
+
+```yaml
+User:
+  type: object
+  required: [id, email, password]
+  properties:
+    id: { type: string }
+    email: { type: string }
+    password: { type: string, writeOnly: true }
+```
+
+```ts
+export interface User {
+	id: string;
+	email: string;
+	password: string;
+}
+export interface UserRead {
+	id: string;
+	email: string;
+}
+export const zUserRead = z.object({ id: z.string(), email: z.string() });
+```
+
+- **Shared with a request body** (or a parameter): the schema keeps its name
+  and is what the body uses, and gains a copy, `User` and `UserRead`, `zUser`
+  and `zUserRead`. When the validator's input differs from its output (a
+  `date-time` as a string, with `dates: 'date'`), the copy also gets
+  `UserReadInput`, as `User` gets `UserInput`.
+- **Used by responses only**: stripped in place, with no new name.
+- **Nested `$ref`s and `allOf` parents** point at their read views:
+  `AdminRead extends UserRead`, `owner: UserRead`. Arrays, maps, unions and
+  intersections of such schemas are followed too, and so are the items of a
+  stream and the data of server-sent events.
+- **Where it applies.** The `reply` types of the client, a Hono handler's
+  response and its `validateResponses` check, the response validators of the
+  `operations.ts` table (which `@nxgt/openapi-httpyz` and
+  `@nxgt/openapi-msw` check replies with), and the msw mocks' typed
+  `response`. Request bodies keep the property and still require it.
+- **A `writeOnly` field sent anyway** by a server is not in the read schema,
+  so [`unknownKeys`](#unknownkeys) decides: dropped with `'strip'` (the
+  default), refused with `'strict'`.
+- **A `writeOnly` discriminator is kept** in what a server sends, with an
+  `ignored` warning. **A response schema that is itself `writeOnly`** is
+  kept whole, with an `ignored` warning.
+- **Both kinds on one schema.** A schema with `readOnly` and `writeOnly`
+  properties that bodies and responses share gets both views: `Account`
+  (as written), `AccountWrite` (no `readOnly`, for bodies) and `AccountRead`
+  (no `writeOnly`, for responses). A `$ref` inside a view points at that
+  direction's view of its target.
+- **Names.** A copy takes `<Name>Read`. If another schema already has that
+  name, the run fails with a `name_collision`; rename that other one with
+  [`names`](#names).
+
+A spec with no `writeOnly` property in a response generates the same files as
+before. `'keep'` gives the output of earlier versions for any spec.
 
 ## `lint`
 

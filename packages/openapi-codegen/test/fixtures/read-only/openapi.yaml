@@ -5,7 +5,11 @@ info:
   description: >-
     Properties marked `readOnly` are the server's to set. A request body leaves
     them out: `Pet` is shared with responses, so bodies get a `PetWrite` copy;
-    `Draft` is only sent, so it is stripped in place.
+    `Draft` is only sent, so it is stripped in place. Properties marked
+    `writeOnly` are the client's to set. A response leaves them out: `User` is
+    shared with bodies, so replies get a `UserRead` copy; `Receipt` is only
+    replied, so it is stripped in place; `Account` has both kinds, so it gets
+    a `AccountWrite` and an `AccountRead`.
 paths:
   /pets:
     get:
@@ -83,6 +87,78 @@ paths:
       responses:
         '204':
           description: Saved.
+  /users:
+    post:
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/User' }
+      responses:
+        '200':
+          description: Created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+  /teams:
+    post:
+      operationId: createTeam
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Team' }
+      responses:
+        '200':
+          description: Created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Team' }
+  /admins:
+    get:
+      operationId: listAdmins
+      responses:
+        '200':
+          description: The admins.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Admin' }
+    post:
+      operationId: createAdmin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Admin' }
+      responses:
+        '204':
+          description: Created.
+  /receipts:
+    get:
+      operationId: getReceipt
+      responses:
+        '200':
+          description: The receipt.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Receipt' }
+  /accounts:
+    post:
+      operationId: createAccount
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Account' }
+      responses:
+        '200':
+          description: Created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Account' }
 components:
   schemas:
     Pet:
@@ -120,3 +196,46 @@ components:
       properties:
         revision: { type: integer, readOnly: true }
         title: { type: string }
+    User:
+      type: object
+      required: [id, email, password]
+      properties:
+        id: { type: string }
+        email: { type: string }
+        password: { type: string, writeOnly: true }
+        joinedAt: { type: string, format: date-time }
+    Credential:
+      type: object
+      required: [username, token]
+      properties:
+        username: { type: string }
+        token: { type: string, writeOnly: true }
+    Team:
+      type: object
+      required: [name, owner]
+      properties:
+        name: { type: string }
+        owner: { $ref: '#/components/schemas/User' }
+        credentials:
+          type: array
+          items: { $ref: '#/components/schemas/Credential' }
+    Admin:
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - type: object
+          required: [level]
+          properties:
+            level: { type: integer }
+    Receipt:
+      type: object
+      required: [number, pin]
+      properties:
+        number: { type: string }
+        pin: { type: string, writeOnly: true }
+    Account:
+      type: object
+      required: [id, name, secret]
+      properties:
+        id: { type: string, readOnly: true }
+        name: { type: string }
+        secret: { type: string, writeOnly: true }

@@ -79,6 +79,7 @@ const OPTIONS = new Set<string>([
 	'dates',
 	'scalars',
 	'readOnly',
+	'writeOnly',
 	'lint',
 	'names',
 	'legacyNullable',

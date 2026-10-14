@@ -1,12 +1,12 @@
 import { dirname } from 'node:path';
 import { CodegenError, Diagnostics } from '../errors';
 import type { LoadedDocument } from '../loader/document';
-import { child } from '../loader/location';
+import { child, type Location } from '../loader/location';
 import { asString, isObject } from '../util';
 import { OperationBuilder } from './operations';
 import { SchemaBuilder } from './schemas';
 import type { ApiIR } from './types';
-import { writeViews } from './write-views';
+import { READ, views, WRITE } from './views';
 
 export interface IROptions {
 	/**
@@ -25,6 +25,13 @@ export interface IROptions {
 	 * schema as it is.
 	 */
 	readOnly?: 'omit' | 'keep';
+	/**
+	 * `writeOnly` properties in what a server replies: `'omit'` leaves them
+	 * out of responses, through `<Name>Read` copies of the schemas that
+	 * bodies share; `'keep'` (the default of `buildIR`) leaves every schema
+	 * as it is.
+	 */
+	writeOnly?: 'omit' | 'keep';
 }
 
 /**
@@ -85,10 +92,15 @@ export function buildIR(doc: LoadedDocument, options: IROptions = {}): ApiIR {
 		operations,
 		warnings: [],
 	};
-	const result =
+	const overrideKey = (at: Location) => schemas.overrideKey(at);
+	const written =
 		options.readOnly === 'omit'
-			? writeViews(api, diagnostics, (at) => schemas.overrideKey(at))
+			? views(api, WRITE, diagnostics, overrideKey)
 			: api;
+	const result =
+		options.writeOnly === 'omit'
+			? views(written, READ, diagnostics, overrideKey, api)
+			: written;
 	if (diagnostics.hasErrors) throw new CodegenError(diagnostics.list, rootDir);
 	return { ...result, warnings: diagnostics.warnings };
 }

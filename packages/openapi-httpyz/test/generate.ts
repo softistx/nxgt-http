@@ -16,3 +16,13 @@ await generate(
 	{ input: 'fixtures/openapi.yaml', output: 'generated/dates', dates: 'date' },
 	{ cwd },
 );
+// The codegen's `readOnly` / `writeOnly` fixture, which only the default
+// options give views to: bodies leave out `readOnly`, replies `writeOnly`.
+await generate(
+	{
+		input: '../../openapi-codegen/test/fixtures/read-only/openapi.yaml',
+		output: 'generated/read-only',
+		hono: true,
+	},
+	{ cwd },
+);

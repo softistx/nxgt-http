@@ -168,7 +168,7 @@ narrow. `DateTime`, `Timestamp`, `BigInt` and `Long` keep their pattern. It is
 opt-in: the default is `'pattern'`, as before
 ([options](docs/guide/options.md#scalars)).
 
-### Send a body without the server's properties
+### Send a body without the server's properties, read a reply without the client's
 
 A property marked `readOnly` is the server's to set. By default
 (`readOnly: 'omit'`) a request body leaves it out, and a response keeps it:
@@ -198,6 +198,36 @@ keeps its name. The client's body argument, the `json` of a Hono handler and
 the validator in `operations.ts` all use the write view. `readOnly: 'keep'`
 restores the earlier output
 ([options](docs/guide/options.md#readonly)).
+
+A property marked `writeOnly` is the client's to set (a password), and the
+reply side is the mirror. By default (`writeOnly: 'omit'`) a reply leaves it
+out and a request body keeps it:
+
+```yaml
+# User is the body of createUser and its 200 response
+User:
+  type: object
+  required: [id, password]
+  properties:
+    id: { type: string }
+    password: { type: string, writeOnly: true }
+```
+
+```ts
+import type { User, UserRead } from './generated/types';
+
+const body: User = { id: 'u1', password: 'hunter2' }; // the request needs it
+const reply: UserRead = { id: 'u1' }; // the reply has none
+```
+
+`User` stays the request body type. `UserRead` and `zUserRead` are the copy
+without `password`: the client's reply types, a Hono handler's response, the
+response validators and `validateResponses` all use it, so a server that
+never sends `password` passes its own checks. A schema that only responses
+use is stripped in place and keeps its name; one with both kinds of property
+gets `PetWrite` (no `readOnly`) and `PetRead` (no `writeOnly`).
+`writeOnly: 'keep'` restores the earlier output
+([options](docs/guide/options.md#writeonly)).
 
 ### Serve typed Hono routes
 
@@ -409,6 +439,7 @@ this one does not, when it still starts with the generated header. See
 | `dates` | `'string' \| 'date'` | `'string'` | a `date-time` kept as its string, or decoded to a `Date` by a `z.codec` ([more](docs/guide/options.md#dates)) |
 | `scalars` | `'pattern' \| 'exact'` | `'pattern'` | a string or numeric scalar of `@nxgt/typespec` checked by its `pattern` or bounds, or by its schema from `@nxgt/zod`, the spec's own constraints kept on top ([more](docs/guide/options.md#scalars)) |
 | `readOnly` | `'omit' \| 'keep'` | `'omit'` | a request body leaves out the `readOnly` properties (a `<Name>Write` view where responses share the schema), or keeps every schema as written ([more](docs/guide/options.md#readonly)) |
+| `writeOnly` | `'omit' \| 'keep'` | `'omit'` | a response leaves out the `writeOnly` properties (a `<Name>Read` view where request bodies share the schema), or keeps every schema as written ([more](docs/guide/options.md#writeonly)) |
 | `lint` | `boolean \| string` | `false` | lint with Redocly first: `true` uses the `redocly.yaml` beside `input` or Redocly's defaults, a string names the config file. Needs `@redocly/openapi-core`; cannot be combined with `context.fs` ([more](docs/guide/options.md#lint)) |
 | `names` | `Record<string, string>` | `{}` | renames schemas, keyed by file relative to the root document plus `#pointer` when the schema is not the whole file ([more](docs/guide/options.md#names)) |
 | `legacyNullable` | `'warn' \| 'error'` | `'warn'` | OpenAPI 3.0's `nullable: true`: read with a warning, or refused ([more](docs/guide/options.md#legacynullable)) |
@@ -658,6 +689,7 @@ interface GenerateOptions extends IROptions {
 	dates?: Dates;
 	scalars?: Scalars;
 	readOnly?: 'omit' | 'keep';
+	writeOnly?: 'omit' | 'keep';
 	lint?: Lint | undefined;
 	validationErrors?: boolean;
 }
@@ -1430,8 +1462,11 @@ export const operations = { getPet, watchTicks /* , … */ } as const;
 - **`readOnly` only leaves a property out of request bodies.** A response
   keeps it. A `readOnly` property sent anyway is not in the write schema:
   `unknownKeys` drops it (the default) or refuses it (`'strict'`).
-- **`writeOnly` is not enforced.** A reply type still lists a `writeOnly`
-  property, and a reply check still requires it when it is `required`.
+- **`writeOnly` only leaves a property out of replies.** A request body
+  keeps it. A `writeOnly` property a server sends anyway is not in the read
+  schema: `unknownKeys` drops it (the default) or refuses it (`'strict'`).
+  The generated Hono routes and the msw mocks check against the read view
+  too.
 - **Imports carry no extension** (`./types`), as a bundler resolves them.
   Under `moduleResolution: node16` or `nodenext`, or run by Node without a
   bundler, set `importExtension: '.js'`.

@@ -106,6 +106,29 @@ await generate({
 `readOnly: 'keep'` also avoids the copy, at the price of bodies that require
 the `readOnly` properties.
 
+### `the read view of User would be named UserRead, as is another schema`
+
+**When:** generating from a spec with a `writeOnly` property in a response.
+The full message ends with the key to rename:
+`Rename that one with the \`names\` option, e.g. names: { '…': 'UserRead2' }` (`name_collision`).
+
+**Why:** the schema `User` is shared with request bodies, so its reply view
+is a copy named `UserRead`, and the spec already has a schema with that name.
+
+**Fix:** rename the existing schema with [`names`](guide/options.md#names),
+using the key the message prints:
+
+```ts
+await generate({
+	input: 'openapi/openapi.yaml',
+	output: 'src/generated',
+	names: { 'openapi.yaml#/components/schemas/UserRead': 'UserReadModel' },
+});
+```
+
+`writeOnly: 'keep'` also avoids the copy, at the price of replies that
+include the `writeOnly` properties.
+
 ### A page is typed `PetsList200Response` instead of `PetPage`
 
 **When:** an operation returns a template instance, such as `Page<Pet>`.

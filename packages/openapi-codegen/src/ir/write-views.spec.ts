@@ -282,4 +282,129 @@ describe('write views', () => {
 		expect(props(named(ir, 'A').node)).toEqual(['x']);
 		expect(ir.warnings.map((w) => w.message).join()).toContain('readOnly');
 	});
+
+	it('copies a schema a response reaches only through another response schema', async () => {
+		const ir = await api(
+			{
+				Inner: object({ id: ro }),
+				Reply: object({ inner: ref('Inner') }),
+				Body: object({ inner: ref('Inner') }),
+			},
+			[ref('Body')],
+			[ref('Reply')],
+		);
+		expect(names(ir)).toEqual(['Inner', 'InnerWrite', 'Reply', 'Body']);
+		expect(props(named(ir, 'Inner').node)).toEqual(['id']);
+		expect(props(named(ir, 'InnerWrite').node)).toEqual([]);
+	});
+
+	it('follows additionalProperties', async () => {
+		const ir = await api(
+			{
+				A: object({ id: ro }),
+				M: {
+					type: 'object',
+					properties: { k: { type: 'string' } },
+					additionalProperties: ref('A'),
+				},
+			},
+			[ref('M')],
+			[ref('A')],
+		);
+		const m = named(ir, 'M').node as ObjectNode;
+		expect(m.additional).toEqual({
+			schema: { kind: 'ref', target: named(ir, 'AWrite').id },
+		});
+	});
+
+	it('follows an intersection', async () => {
+		const ir = await api(
+			{
+				A: object({ id: ro }),
+				B: object({ b: { type: 'string' } }),
+				U: { oneOf: [ref('A'), ref('B')] },
+				I: { allOf: [ref('U'), object({ c: { type: 'string' } })] },
+			},
+			[ref('I')],
+			[ref('A')],
+		);
+		const i = named(ir, 'I').node;
+		expect(i.kind).toBe('intersection');
+		expect(names(ir)).toContain('AWrite');
+		const u = named(ir, 'U').node;
+		expect(u.kind === 'union' && u.variants[0]).toEqual({
+			kind: 'ref',
+			target: named(ir, 'AWrite').id,
+		});
+	});
+
+	it('follows readOnly inherited through a diamond', async () => {
+		const ir = await api(
+			{
+				Root: object({ id: ro, r: { type: 'string' } }, ['id']),
+				Left: { allOf: [ref('Root'), object({ l: { type: 'string' } })] },
+				Right: { allOf: [ref('Root'), object({ rt: { type: 'string' } })] },
+				Both: { allOf: [ref('Left'), ref('Right')] },
+			},
+			[ref('Both')],
+			[ref('Root')],
+		);
+		expect(names(ir)).toContain('RootWrite');
+		const both = named(ir, 'Both').node as ObjectNode;
+		expect(both.extends).toEqual([named(ir, 'Left').id, named(ir, 'Right').id]);
+		const left = named(ir, 'Left').node as ObjectNode;
+		expect(left.extends).toEqual([named(ir, 'RootWrite').id]);
+		expect(left.requires).toBeUndefined();
+	});
+
+	it('treats a body behind an alias like its schema', async () => {
+		const ir = await api(
+			{ A: object({ id: ro, n: { type: 'string' } }), Z: ref('A') },
+			[ref('Z')],
+		);
+		expect(ir.aliases.map((a) => a.name)).toEqual(['Z']);
+		expect(props(named(ir, 'A').node)).toEqual(['n']);
+	});
+
+	it('explains a name collision and how to fix it', async () => {
+		const error = await api(
+			{ A: object({ id: ro }), AWrite: object({ x: { type: 'string' } }) },
+			[ref('A')],
+			[ref('A')],
+		).catch((e: unknown) => e);
+		const message = (error as Error).message;
+		expect(message).toContain('name_collision');
+		expect(message).toContain('AWrite');
+		expect(message).toContain("names: { '");
+		expect(message).toContain('components/schemas/AWrite');
+	});
+
+	it('copies what a readOnly body that is kept whole reaches', async () => {
+		const ir = await api(
+			{
+				Inner: object({ id: ro }),
+				Whole: { ...object({ inner: ref('Inner') }), readOnly: true },
+				Other: object({ inner: ref('Inner') }),
+			},
+			[ref('Whole'), ref('Other')],
+		);
+		expect(props(named(ir, 'Inner').node)).toEqual(['id']);
+		expect(names(ir)).toContain('InnerWrite');
+		const whole = named(ir, 'Whole').node as ObjectNode;
+		expect(whole.properties[0]?.schema).toEqual({
+			kind: 'ref',
+			target: named(ir, 'Inner').id,
+		});
+	});
+
+	it('leaves the input IR untouched', async () => {
+		const spec = { A: object({ id: ro, n: { type: 'string' } }) };
+		const kept = await api(spec, [ref('A')], [ref('A')], 'keep');
+		const before = structuredClone(kept);
+		const { writeViews } = await import('./write-views');
+		const { Diagnostics } = await import('../errors');
+		const out = writeViews(kept, new Diagnostics(), () => '');
+		expect(out).not.toBe(kept);
+		expect(kept).toEqual(before);
+	});
 });

@@ -85,7 +85,9 @@ export function buildIR(doc: LoadedDocument, options: IROptions = {}): ApiIR {
 		warnings: [],
 	};
 	const result =
-		options.readOnly === 'omit' ? writeViews(api, diagnostics) : api;
+		options.readOnly === 'omit'
+			? writeViews(api, diagnostics, (at) => schemas.overrideKey(at))
+			: api;
 	if (diagnostics.hasErrors) throw new CodegenError(diagnostics.list, rootDir);
 	return { ...result, warnings: diagnostics.warnings };
 }

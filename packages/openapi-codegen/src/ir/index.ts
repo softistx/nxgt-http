@@ -21,7 +21,7 @@ export interface IROptions {
 	/**
 	 * `readOnly` properties in what a client sends: `'omit'` leaves them out of
 	 * request bodies, through `<Name>Write` copies of the schemas that
-	 * responses share; `'keep'` (the default) leaves every schema as it is.
+	 * responses share; `'keep'` (the default of `buildIR`) leaves every schema as it is.
 	 */
 	readOnly?: 'omit' | 'keep';
 }

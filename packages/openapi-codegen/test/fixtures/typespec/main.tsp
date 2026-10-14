@@ -118,7 +118,8 @@ interface Pets {
   read(@path @format("uuid") petId: string): Pet | NotFound;
 
   // `Create<Pet>`, not `Pet`: without it the body reuses `Pet`, whose
-  // read-only properties are required, and the generator ignores `readOnly`.
+  // read-only properties are required. The generator (readOnly: 'omit') would
+  // also leave them out of a `PetWrite` view, but the spec says it itself.
   @post
   create(@body pet: Create<Pet>): {
     @statusCode _: 201;

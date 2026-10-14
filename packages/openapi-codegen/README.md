@@ -225,7 +225,7 @@ without `password`: the client's reply types, a Hono handler's response, the
 response validators and `validateResponses` all use it, so a server that
 never sends `password` passes its own checks. A schema that only responses
 use is stripped in place and keeps its name; one with both kinds of property
-gets `PetWrite` (no `readOnly`) and `PetRead` (no `writeOnly`).
+gets `UserWrite` (no `readOnly`) and `UserRead` (no `writeOnly`).
 `writeOnly: 'keep'` restores the earlier output
 ([options](docs/guide/options.md#writeonly)).
 

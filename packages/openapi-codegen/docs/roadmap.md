@@ -20,10 +20,6 @@ Nothing in progress.
 - **A native TypeSpec emitter** — TypeSpec compiled straight to the
   generator's output, without going through OpenAPI. Decided once the
   TypeSpec → OpenAPI 3.1 path has been used in practice.
-- **Input types without `readOnly` properties** — a request body type that
-  leaves out what the server sets. Today `readOnly` has no effect, so a
-  TypeSpec body with implicit visibility requires those properties; declare
-  the body as `Create<T>` meanwhile.
 - **More of the spec in `alxia.ts`** — binary bodies and replies, JSON
   Lines, events whose data is text, and several media types on one body or
   reply, once alxia reads or sends them; such an operation is left out
@@ -48,6 +44,12 @@ Nothing in progress.
   or 3.2.
 
 ## Shipped
+
+- **Input types without `readOnly` properties.** `readOnly: 'omit'` (the
+  default) types and checks each request body with a `<Name>Write` view that
+  leaves out what the server sets, and `writeOnly: 'omit'` types and checks
+  each reply with a `<Name>Read` view that leaves out what the server never
+  sends back; `'keep'` restores the schema as written — 0.11.0.
 
 - **Exact scalars.** `scalars: 'exact'` validates a string or numeric scalar
   of `@nxgt/typespec` (`x-nxgt-scalar`) by its schema from `@nxgt/zod`, such

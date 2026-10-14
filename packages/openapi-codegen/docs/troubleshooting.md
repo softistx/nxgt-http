@@ -65,19 +65,69 @@ The declared properties must fit the record's `T`: the model is generated as
 @post create(@body pet: Pet): Pet;
 ```
 
+and the generated request type or validator still requires `id`.
+
 **Why:** with implicit visibility, `@typespec/openapi3` reuses `Pet` for the
 body and marks its `@visibility(Lifecycle.Read)` properties
-`readOnly: true`, still required. `readOnly` has no effect on the generated
-code ([Annotations](guide/schema-mapping.md#annotations)), so the request
-type and its validator require them.
+`readOnly: true`, still required. The generator leaves them out of request
+bodies unless the [`readOnly` option](guide/options.md#readonly) is
+`'keep'`; the code was generated with it set, or by a version before it
+existed.
 
-**Fix:** name the body's visibility. `Create<Pet>` emits `CreatePet`
-without them.
+**Fix:** regenerate with the default, or remove `readOnly: 'keep'`. The body
+is then `PetWrite`.
 
-```tsp
-@post create(@body pet: Create<Pet>): Pet;
-@patch update(@path id: string, @body pet: MergePatchUpdate<Pet>): Pet;
+```ts
+await generate({ input: 'openapi/openapi.yaml', output: 'src/generated' });
 ```
+
+`Create<Pet>` also works: it emits `CreatePet` without them.
+
+### `the write view of Pet would be named PetWrite, as is another schema`
+
+**When:** generating from a spec with a `readOnly` property in a request
+body. The full message ends with the key to rename:
+`Rename that one with the \`names\` option, e.g. names: { '…': 'PetWrite2' }` (`name_collision`).
+
+**Why:** the schema `Pet` is shared with responses, so its request body view
+is a copy named `PetWrite`, and the spec already has a schema with that name.
+
+**Fix:** rename the existing schema with [`names`](guide/options.md#names),
+using the key the message prints:
+
+```ts
+await generate({
+	input: 'openapi/openapi.yaml',
+	output: 'src/generated',
+	names: { 'openapi.yaml#/components/schemas/PetWrite': 'PetWriteModel' },
+});
+```
+
+`readOnly: 'keep'` also avoids the copy, at the price of bodies that require
+the `readOnly` properties.
+
+### `the read view of User would be named UserRead, as is another schema`
+
+**When:** generating from a spec with a `writeOnly` property in a response.
+The full message ends with the key to rename:
+`Rename that one with the \`names\` option, e.g. names: { '…': 'UserRead2' }` (`name_collision`).
+
+**Why:** the schema `User` is shared with request bodies, so its reply view
+is a copy named `UserRead`, and the spec already has a schema with that name.
+
+**Fix:** rename the existing schema with [`names`](guide/options.md#names),
+using the key the message prints:
+
+```ts
+await generate({
+	input: 'openapi/openapi.yaml',
+	output: 'src/generated',
+	names: { 'openapi.yaml#/components/schemas/UserRead': 'UserReadModel' },
+});
+```
+
+`writeOnly: 'keep'` also avoids the copy, at the price of replies that
+include the `writeOnly` properties.
 
 ### A page is typed `PetsList200Response` instead of `PetPage`
 

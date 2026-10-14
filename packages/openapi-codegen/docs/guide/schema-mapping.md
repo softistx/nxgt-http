@@ -118,8 +118,15 @@ variants passes.
 
 `description` and `deprecated` become JSDoc on the type. `default` is
 documented as `@default`, and filled in when it sits on an optional property.
-`readOnly`, `writeOnly`, `title`, `example` and `examples` have no effect on
-the generated code.
+`title`, `example` and `examples` have no effect on the generated code.
+
+`readOnly` leaves a property out of request bodies: they use a `<Name>Write`
+view of the schema, or the schema stripped in place when only bodies use it,
+and responses keep the property. `writeOnly` is the mirror: responses use
+a `<Name>Read` view (or the schema stripped in place), and request bodies
+keep the property. The [`readOnly`](options.md#readonly) and
+[`writeOnly`](options.md#writeonly) options have the rules and `'keep'`
+turns each off.
 
 ## `unevaluatedProperties: false`
 

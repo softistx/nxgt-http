@@ -27,6 +27,13 @@ export const CASES = [
 	'dates',
 	'scalars',
 	'streams',
+	// `readOnly` and `writeOnly` properties: the default leaves them out of
+	// request bodies and of replies.
+	'read-only',
+	// The same spec with both kept: bodies and replies are the schemas as written.
+	'read-only-keep',
+	// With `writeOnly: 'keep'` alone: replies keep theirs, bodies still lose `readOnly`.
+	'write-only-keep',
 	// Generated with alxia alone: cookies, named events, alxia's 400.
 	'alxia',
 	// Authored in TypeSpec: `openapi.yaml` is what `main.tsp` compiles to.
@@ -42,10 +49,25 @@ export const CONFORMANCE = [
 	'oai-tags-3.2',
 ] as const;
 
+interface Options {
+	dates?: Dates;
+	scalars?: Scalars;
+	hono?: boolean;
+	readOnly?: 'omit' | 'keep';
+	writeOnly?: 'omit' | 'keep';
+}
+
+/** A case that reads another case's spec. */
+const SPECS: { [name: string]: string } = {
+	'read-only-keep': 'read-only',
+	'write-only-keep': 'read-only',
+};
+
 /** What a case is generated with, beside `hono` and `alxia`. */
-const OPTIONS: {
-	[name: string]: { dates?: Dates; scalars?: Scalars; hono?: boolean };
-} = {
+const OPTIONS: { [name: string]: Options } = {
+	'read-only': { dates: 'date' },
+	'read-only-keep': { dates: 'date', readOnly: 'keep', writeOnly: 'keep' },
+	'write-only-keep': { dates: 'date', writeOnly: 'keep' },
 	dates: { dates: 'date' },
 	scalars: { scalars: 'exact' },
 	// Dated, so a stream's items are typed both decoded and as JSON carries them.
@@ -56,7 +78,7 @@ const OPTIONS: {
 
 /** A fixture's generated files, then its `agreement.ts`, with absolute paths. */
 export async function fixtureFiles(name: string): Promise<GeneratedFile[]> {
-	const input = `${TEST_DIR}fixtures/${name}/openapi.yaml`;
+	const input = `${TEST_DIR}fixtures/${SPECS[name] ?? name}/openapi.yaml`;
 	const output = `${TEST_DIR}generated/${name}`;
 	const options = OPTIONS[name] ?? {};
 	const { files } = await generateFiles({
@@ -75,11 +97,11 @@ export async function fixtureFiles(name: string): Promise<GeneratedFile[]> {
 	];
 }
 
-async function agreement(
-	input: string,
-	options: { dates?: Dates; scalars?: Scalars; hono?: boolean },
-): Promise<string> {
-	const ir = buildIR(await loadDocument(input));
+async function agreement(input: string, options: Options): Promise<string> {
+	const ir = buildIR(await loadDocument(input), {
+		readOnly: options.readOnly ?? 'omit',
+		writeOnly: options.writeOnly ?? 'omit',
+	});
 	const ctx = new EmitContext(ir, {
 		unknownKeys: 'strip',
 		enums: 'object',
@@ -88,7 +110,9 @@ async function agreement(
 		alxia: true,
 		source: '',
 		rootDir: TEST_DIR,
-		...options,
+		...(options.dates ? { dates: options.dates } : {}),
+		...(options.scalars ? { scalars: options.scalars } : {}),
+		...(options.hono === undefined ? {} : { hono: options.hono }),
 	});
 	const schemas = [
 		...ir.schemas.map((s) => ({ name: s.name, id: s.id })),

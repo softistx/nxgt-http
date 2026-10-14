@@ -4,6 +4,7 @@ info:
   version: 0.0.0
 tags:
   - name: Pets
+  - name: Toys
 paths:
   /pets:
     get:
@@ -163,6 +164,43 @@ paths:
                 $ref: '#/components/schemas/Problem'
       tags:
         - Pets
+  /toys:
+    post:
+      operationId: Toys_addToy
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Toy'
+      tags:
+        - Toys
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Toy'
+  /toys/{toyId}:
+    get:
+      operationId: Toys_readToy
+      parameters:
+        - name: toyId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Toy'
+      tags:
+        - Toys
 components:
   schemas:
     Cat:
@@ -403,6 +441,18 @@ components:
         - pending
         - adopted
       description: How far a pet has come through adoption.
+    Toy:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          readOnly: true
+        name:
+          type: string
+      description: "A toy: its `id` is the server's to set."
 servers:
   - url: https://api.example.com
     description: Production

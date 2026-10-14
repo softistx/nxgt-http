@@ -75,6 +75,28 @@ describe('defineConfig', () => {
 });
 
 describe('loadConfig', () => {
+	it('reads readOnly from a config file', async () => {
+		const dir = await mkdtemp(join(tmpdir(), 'openapi-config-'));
+		dirs.push(dir);
+		await writeFile(
+			join(dir, 'openapi-codegen.config.mjs'),
+			"export default { input: 'a.yaml', readOnly: 'keep' };\n",
+		);
+		const { configs } = await loadConfig(undefined, dir);
+		expect(configs[0]?.readOnly).toBe('keep');
+	});
+
+	it('reads writeOnly from a config file', async () => {
+		const dir = await mkdtemp(join(tmpdir(), 'openapi-config-'));
+		dirs.push(dir);
+		await writeFile(
+			join(dir, 'openapi-codegen.config.mjs'),
+			"export default { input: 'a.yaml', writeOnly: 'keep' };\n",
+		);
+		const { configs } = await loadConfig(undefined, dir);
+		expect(configs[0]?.writeOnly).toBe('keep');
+	});
+
 	it('refuses two configs that write to the same directory', async () => {
 		const dir = await mkdtemp(join(tmpdir(), 'openapi-config-'));
 		dirs.push(dir);

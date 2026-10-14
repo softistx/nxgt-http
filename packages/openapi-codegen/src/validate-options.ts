@@ -9,6 +9,8 @@ const EXTENSIONS: readonly string[] = ['', '.js', '.ts'];
 const ENUMS: readonly string[] = ['object', 'union'];
 const DATES: readonly string[] = ['string', 'date'];
 const SCALARS: readonly string[] = ['pattern', 'exact'];
+const READ_ONLY: readonly string[] = ['omit', 'keep'];
+const WRITE_ONLY: readonly string[] = ['omit', 'keep'];
 
 const invalid = (message: string): CodegenError =>
 	new CodegenError([{ severity: 'error', code: 'invalid_option', message }]);
@@ -21,6 +23,8 @@ export interface ValidOptions {
 	alxia: boolean;
 	dates: Dates;
 	scalars: Scalars;
+	readOnly: 'omit' | 'keep';
+	writeOnly: 'omit' | 'keep';
 	lint: Lint;
 	validationErrors: boolean;
 }
@@ -66,6 +70,14 @@ export function validateOptions(
 	if (!SCALARS.includes(scalars)) {
 		throw invalid(`scalars must be pattern or exact, not ${scalars}`);
 	}
+	const readOnly = options.readOnly ?? 'omit';
+	if (!READ_ONLY.includes(readOnly)) {
+		throw invalid(`readOnly must be omit or keep, not ${readOnly}`);
+	}
+	const writeOnly = options.writeOnly ?? 'omit';
+	if (!WRITE_ONLY.includes(writeOnly)) {
+		throw invalid(`writeOnly must be omit or keep, not ${writeOnly}`);
+	}
 	const lint = options.lint ?? false;
 	if (typeof lint !== 'boolean' && (typeof lint !== 'string' || lint === '')) {
 		throw invalid(
@@ -89,6 +101,8 @@ export function validateOptions(
 		alxia,
 		dates,
 		scalars,
+		readOnly,
+		writeOnly,
 		lint,
 		validationErrors,
 	};

@@ -163,8 +163,8 @@ row is in the CI fixture.
 | `Record<int32>` | `unevaluatedProperties: { type: integer }` | `{ [key: string]: number }` |
 | `utcDateTime \| null` | `anyOf: [date-time, null]` | `string \| null`, or `Date \| null` with [`dates: 'date'`](options.md#dates) |
 | `int64` | `format: int64` | `number`, `z.int()`: a safe integer |
-| `@visibility(Lifecycle.Read)` | `readOnly: true` | no effect: see [Request bodies](#request-bodies) |
-| `Create<Pet>` | a `CreatePet` schema, without the read-only properties | `CreatePet` |
+| `@visibility(Lifecycle.Read)` | `readOnly: true` | left out of request bodies, kept in responses: see [Request bodies](#request-bodies) |
+| `Create<Pet>` | a `CreatePet` schema, without the read-only properties | `CreatePet` (needed only to also drop other visibilities, or for a distinct name) |
 | `MergePatchUpdate<Pet>` | an `application/merge-patch+json` body: every property optional, and those that were optional also nullable | `PetMergePatchUpdate`, read from that media type |
 | `@query limit?: int32 = 20` | an optional parameter with `default: 20` | filled in with 20 when absent, on the server side |
 | `@query(#{ explode: true }) tags?: string[]` | `explode: true` | `?tags=a&tags=b` |
@@ -176,8 +176,13 @@ row is in the CI fixture.
 
 With implicit visibility, `@typespec/openapi3` reuses the read model for a
 request body when the only difference is `readOnly` properties. The
-generator ignores `readOnly`, so the body would require `id` and the other
-read-only properties. Name the visibility the body takes:
+generator leaves `readOnly` properties out of request bodies
+([`readOnly`](options.md#readonly), on by default), so the reused model
+works as the body: `Pet` is sent as `PetWrite`, without `id` (the emitter keeps one `Pet` with `readOnly: true` on `id`, which the generator then splits), and returned as
+`Pet`. `Create<T>` is no longer needed for that. Name the visibility when the
+body should differ in other ways (a `MergePatchUpdate<T>`, or a model whose
+properties are visible to `Create` only), or when you want the body to have
+its own name:
 
 ```tsp
 @post create(@body pet: Create<Pet>): Pet;

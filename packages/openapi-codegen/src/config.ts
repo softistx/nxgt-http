@@ -78,6 +78,8 @@ const OPTIONS = new Set<string>([
 	'alxia',
 	'dates',
 	'scalars',
+	'readOnly',
+	'writeOnly',
 	'lint',
 	'names',
 	'legacyNullable',

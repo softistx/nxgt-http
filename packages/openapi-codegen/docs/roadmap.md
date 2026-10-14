@@ -6,7 +6,10 @@ history.
 
 ## Now
 
-Nothing in progress.
+- **Input types without `readOnly` properties** — a request body type that
+  leaves out what the server sets. Today `readOnly` has no effect, so a
+  TypeSpec body with implicit visibility requires those properties; declare
+  the body as `Create<T>` meanwhile.
 
 ## Next
 
@@ -20,10 +23,6 @@ Nothing in progress.
 - **A native TypeSpec emitter** — TypeSpec compiled straight to the
   generator's output, without going through OpenAPI. Decided once the
   TypeSpec → OpenAPI 3.1 path has been used in practice.
-- **Input types without `readOnly` properties** — a request body type that
-  leaves out what the server sets. Today `readOnly` has no effect, so a
-  TypeSpec body with implicit visibility requires those properties; declare
-  the body as `Create<T>` meanwhile.
 - **More of the spec in `alxia.ts`** — binary bodies and replies, JSON
   Lines, events whose data is text, and several media types on one body or
   reply, once alxia reads or sends them; such an operation is left out

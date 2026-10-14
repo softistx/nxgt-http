@@ -6,6 +6,7 @@ import { asString, isObject } from '../util';
 import { OperationBuilder } from './operations';
 import { SchemaBuilder } from './schemas';
 import type { ApiIR } from './types';
+import { writeViews } from './write-views';
 
 export interface IROptions {
 	/**
@@ -17,6 +18,12 @@ export interface IROptions {
 	names?: Record<string, string>;
 	/** OpenAPI 3.0's `nullable: true`: read as `type: [T, 'null']` with a warning, or refused. */
 	legacyNullable?: 'warn' | 'error';
+	/**
+	 * `readOnly` properties in what a client sends: `'omit'` leaves them out of
+	 * request bodies, through `<Name>Write` copies of the schemas that
+	 * responses share; `'keep'` (the default) leaves every schema as it is.
+	 */
+	readOnly?: 'omit' | 'keep';
 }
 
 /**
@@ -67,7 +74,7 @@ export function buildIR(doc: LoadedDocument, options: IROptions = {}): ApiIR {
 	if (diagnostics.hasErrors) throw new CodegenError(diagnostics.list, rootDir);
 
 	const info = isObject(doc.document['info']) ? doc.document['info'] : {};
-	return {
+	const api: ApiIR = {
 		openapi: doc.openapi,
 		version: doc.version,
 		title: asString(info['title']),
@@ -75,6 +82,10 @@ export function buildIR(doc: LoadedDocument, options: IROptions = {}): ApiIR {
 		schemas: named,
 		aliases: schemas.aliases,
 		operations,
-		warnings: diagnostics.warnings,
+		warnings: [],
 	};
+	const result =
+		options.readOnly === 'omit' ? writeViews(api, diagnostics) : api;
+	if (diagnostics.hasErrors) throw new CodegenError(diagnostics.list, rootDir);
+	return { ...result, warnings: diagnostics.warnings };
 }

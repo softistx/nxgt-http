@@ -1,23 +1,23 @@
 /**
  * A union's discriminator is how a server tells its variants apart, so a
- * `readOnly` mark on it must not remove it from what a client sends: it is
- * kept, with a warning. This step records which properties are kept.
+ * mark on it must not remove it from what the view carries: it is kept, with
+ * a warning. This step records which properties are kept.
  */
 import type { ObjectNode, SchemaNode } from '../types';
-import { isReadOnly, type WriteContext } from './context';
+import { isMarked, type ViewContext } from './context';
 import { children } from './reach';
 
-/** Records every union discriminator of what the bodies reach. */
-export function keepDiscriminators(ctx: WriteContext): void {
+/** Records every union discriminator of what the roots reach. */
+export function keepDiscriminators(ctx: ViewContext): void {
 	const warned = new Set<string>();
-	for (const { schema } of ctx.bodies) scan(ctx, schema, warned);
-	for (const id of ctx.byBodies) {
+	for (const { node } of ctx.roots) scan(ctx, node, warned);
+	for (const id of ctx.byRoots) {
 		const schema = ctx.named.get(id);
 		if (schema) scan(ctx, schema.node, warned);
 	}
 }
 
-function scan(ctx: WriteContext, node: SchemaNode, warned: Set<string>): void {
+function scan(ctx: ViewContext, node: SchemaNode, warned: Set<string>): void {
 	if (node.kind === 'union' && node.discriminator !== undefined) {
 		for (const variant of node.variants) {
 			if (variant.kind === 'ref') {
@@ -38,7 +38,7 @@ function scan(ctx: WriteContext, node: SchemaNode, warned: Set<string>): void {
 }
 
 function protect(
-	ctx: WriteContext,
+	ctx: ViewContext,
 	id: string,
 	name: string,
 	warned: Set<string>,
@@ -52,11 +52,11 @@ function protect(
 }
 
 function protectIn(
-	ctx: WriteContext,
+	ctx: ViewContext,
 	schema:
 		| {
 				id: string;
-				location: Parameters<WriteContext['diagnostics']['warning']>[2];
+				location: Parameters<ViewContext['diagnostics']['warning']>[2];
 		  }
 		| undefined,
 	object: ObjectNode,
@@ -70,11 +70,11 @@ function protectIn(
 		set.add(name);
 		ctx.kept.set(object, set);
 		const key = `${schema?.id}:${name}`;
-		if (isReadOnly(ctx, own.schema) && !warned.has(key)) {
+		if (isMarked(ctx, own.schema) && !warned.has(key)) {
 			warned.add(key);
 			ctx.diagnostics.warning(
 				'ignored',
-				`\`${name}\` is the discriminator of a union and \`readOnly\`: kept in what a client sends`,
+				`\`${name}\` is the discriminator of a union and \`${ctx.direction.mark}\`: kept in what ${ctx.direction.reader}`,
 				schema?.location,
 			);
 		}

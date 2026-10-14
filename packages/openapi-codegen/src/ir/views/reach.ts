@@ -1,21 +1,12 @@
 /**
- * Which named schemas the request bodies reach, and which the rest of the
- * API does: only the second kind forces a body-only schema to be copied
- * rather than stripped in place.
+ * Which named schemas the roots reach, and which the rest of the API does:
+ * only the second kind forces a schema the roots reach to be copied rather
+ * than stripped in place.
  */
 
 import { refsOf } from '../graph';
-import type { ApiIR, MediaIR, NamedSchema, SchemaNode } from '../types';
-import type { BodySchema } from './context';
-
-/** The ids a media type's schema, items and events point at. */
-export function mediaRefs(media: MediaIR): string[] {
-	return [
-		...(media.schema ? refsOf(media.schema) : []),
-		...(media.item ? refsOf(media.item) : []),
-		...(media.events ?? []).flatMap((e) => (e.data ? refsOf(e.data) : [])),
-	];
-}
+import type { ApiIR, NamedSchema, SchemaNode } from '../types';
+import { type Direction, mediaRefs, type Root } from './direction';
 
 /** Every named schema these ids lead to, themselves included. */
 export function reach(
@@ -57,34 +48,39 @@ export function children(node: SchemaNode): SchemaNode[] {
 }
 
 /**
- * `byBodies`: reached from a request body. `elsewhere`: reached from a
- * parameter, a reply, a schema no body reaches, or a body that is kept whole
- * (`blockedRefs`) — all of which see the schema as it is.
+ * `byRoots`: reached from the direction's media. `elsewhere`: reached from
+ * a parameter, the other direction's media, a schema no root reaches, or a
+ * root that is kept whole (`blockedRefs`) — all of which see the schema as
+ * it is. `before` is the API as it was before an earlier pass moved its
+ * media onto views of their own: the other direction is read from it, so
+ * that a schema which bodies used keeps counting as shared.
  */
 export function reachedSets(
 	api: ApiIR,
-	bodies: readonly BodySchema[],
+	before: ApiIR,
+	direction: Direction,
+	roots: readonly Root[],
 	blockedRefs: readonly string[],
 	named: ReadonlyMap<string, NamedSchema>,
-): { byBodies: Set<string>; elsewhere: Set<string> } {
-	const byBodies = reach(
-		bodies.flatMap(({ schema }) => refsOf(schema)),
+): { byRoots: Set<string>; elsewhere: Set<string> } {
+	const byRoots = reach(
+		roots.flatMap(({ node }) => refsOf(node)),
 		named,
 	);
 	const elsewhere = reach(
 		[
 			...blockedRefs,
-			...api.operations.flatMap((operation) => [
+			...before.operations.flatMap((operation) => [
 				...[...operation.parameters, ...operation.cookies].flatMap((p) =>
 					refsOf(p.schema),
 				),
-				...operation.responses.flatMap((r) => r.content.flatMap(mediaRefs)),
+				...direction.opposite(operation).flatMap(mediaRefs),
 			]),
 			...api.schemas
-				.filter((s) => !byBodies.has(s.id))
+				.filter((s) => !byRoots.has(s.id))
 				.flatMap((s) => refsOf(s.node)),
 		],
 		named,
 	);
-	return { byBodies, elsewhere };
+	return { byRoots, elsewhere };
 }

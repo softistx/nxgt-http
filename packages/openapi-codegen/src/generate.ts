@@ -75,6 +75,16 @@ export interface GenerateOptions extends IROptions {
 	 */
 	readOnly?: 'omit' | 'keep';
 	/**
+	 * A `writeOnly` property is something the client sets, so a server does
+	 * not send it. `omit` (the default): replies use a `<Name>Read` view of
+	 * each schema that has one, without those properties (a schema only
+	 * replies use is stripped in place), so the client's reply types, the
+	 * response validators and `validateResponses` no longer expect them;
+	 * request bodies keep them. `keep`: every schema is used as written, in
+	 * replies too.
+	 */
+	writeOnly?: 'omit' | 'keep';
+	/**
 	 * Lint the spec with Redocly before generating: `true` uses the
 	 * `redocly.yaml` beside `input`, or Redocly's defaults; a string names the
 	 * config file. Needs the optional peer `@redocly/openapi-core`. A lint
@@ -135,6 +145,7 @@ export async function generateFiles(
 		dates,
 		scalars,
 		readOnly,
+		writeOnly,
 		lint,
 		validationErrors,
 	} = validateOptions(options, fs !== undefined);
@@ -145,7 +156,7 @@ export async function generateFiles(
 	if (linted.some((d) => d.severity === 'error')) {
 		throw new CodegenError(linted, dirname(input));
 	}
-	const built = buildIR(doc, { ...options, readOnly });
+	const built = buildIR(doc, { ...options, readOnly, writeOnly });
 	const ir = validationErrors
 		? withValidationErrors(built, doc.entry, validationServer(hono, alxia))
 		: built;

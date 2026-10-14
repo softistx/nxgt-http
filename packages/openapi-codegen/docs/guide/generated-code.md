@@ -18,6 +18,7 @@ examples come from a second one, with a pet store's parameters and a form.
 | `upload`'s form body, read from text | the body's own type | `zUploadForm`, in `operations.ts` |
 | a schema whose defaults make input differ from output | `Employee` and `EmployeeInput` | `zEmployee` |
 | a schema with `readOnly` properties that a request body uses and a response does too | `Pet`, and `PetWrite` for the body (`PetWriteInput` when its input differs) | `zPet`, `zPetWrite` |
+| a schema with `writeOnly` properties that a response uses and a request body does too | `User`, and `UserRead` for the reply (`UserReadInput` when its input differs) | `zUser`, `zUserRead` |
 
 Scalars and lists written inline stay inline: only objects, unions,
 intersections and maps get a name. Two schemas that would get the same name
@@ -28,6 +29,13 @@ schema for request bodies: the client's body argument, the `json` of a Hono
 handler and the validator in `operations.ts` use it, and a response keeps
 `<Name>`. A schema that only request bodies use is stripped in place and
 keeps its name. A schema already named `<Name>Write` is a `name_collision`.
+
+`<Name>Read` is the [`writeOnly`](options.md#writeonly) option's view for
+replies: the client's `reply` types, a Hono handler's response and the
+response validators use it, and a request body keeps `<Name>`. A schema that
+only responses use is stripped in place. A schema with both kinds of property
+has all three: `<Name>`, `<Name>Write` and `<Name>Read`. A schema already
+named `<Name>Read` is a `name_collision`.
 
 ## `types.ts`
 

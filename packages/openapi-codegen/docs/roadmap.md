@@ -6,9 +6,7 @@ history.
 
 ## Now
 
-- **Input types without `readOnly` properties** — a request body type that
-  leaves out what the server sets, and its mirror: a reply type that leaves
-  out the `writeOnly` properties the server never sends back.
+Nothing in progress.
 
 ## Next
 
@@ -46,6 +44,12 @@ history.
   or 3.2.
 
 ## Shipped
+
+- **Input types without `readOnly` properties.** `readOnly: 'omit'` (the
+  default) types and checks each request body with a `<Name>Write` view that
+  leaves out what the server sets, and `writeOnly: 'omit'` types and checks
+  each reply with a `<Name>Read` view that leaves out what the server never
+  sends back; `'keep'` restores the schema as written — 0.11.0.
 
 - **Exact scalars.** `scalars: 'exact'` validates a string or numeric scalar
   of `@nxgt/typespec` (`x-nxgt-scalar`) by its schema from `@nxgt/zod`, such

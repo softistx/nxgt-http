@@ -452,9 +452,8 @@ publishes to npm.
 
 - Biome, with tabs and single quotes. Run `./node_modules/.bin/biome check
   --write` before committing, and `bunx biome ci` must pass, as in CI.
-- Commit messages: `<type>: <Capitalized summary>`, with types `feat`, `fix`,
-  `update`, `chore`, `docs`, `typo`, and `ci` for the workflows and the setup
-  action.
+- Commit messages and PR titles follow the global Conventional Commits rule
+  ("Commits" in `~/.claude/CLAUDE.md`).
 - A repository script is a TypeScript file run by Bun, with Bun Shell, not a
   `.sh`.
 - **Imports carry no extension**: `import { operations } from

@@ -474,6 +474,20 @@ It reconnects as `EventSource` does: when the connection drops or the
 stream ends, it waits, then connects again with `Last-Event-ID`. The wait is
 3 seconds until the stream sends a `retry:`.
 
+`onOpen` tells you when a connection is open, which a quiet stream's first
+event may never do. It gets the reply of each connection once it is accepted
+(a 2xx but 204), before any event is read, and again after each
+reconnection; a refused reply does not call it. Leave the body to the
+stream. An error it throws is logged with `console.error` and does not end
+the stream. `lines` takes it too, once.
+
+```ts
+const feed = http.events('/items/{id}/events', {
+	param: { id },
+	onOpen: () => setStatus('live'), // also after each reconnection
+});
+```
+
 - It never reconnects after an error status, which throws an
   `UndeclaredStatusError`, nor after a 204, which ends the stream. A server
   ends a stream for good with a 204.
@@ -1009,6 +1023,7 @@ The options of `http.events()`, with `CallOptions` and the request's
 | `onUnknownEvent` | `(event: ServerEvent) => void` | gets an event `events` does not declare |
 | `reconnect` | `boolean \| ReconnectOptions` | default: on, but for POST and PATCH |
 | `lastEventId` | `string` | sent as `Last-Event-ID` on the first connection |
+| `onOpen` | `(response: Response) => void` | called when each connection is accepted, before any event, and after each reconnection |
 | `method` | `Method` | default: `get` |
 | `validate` | `boolean` | checks each event's data; default: `true` |
 | `decode` | `boolean` | yields what each schema outputs; default: `true` |
@@ -1030,6 +1045,7 @@ The options of `http.lines()`, with `CallOptions` and the request's
 | Field | Type | Description |
 | --- | --- | --- |
 | `item` | `I extends StandardSchemaV1` | checks each line; without it, each is yielded parsed, as `unknown` |
+| `onOpen` | `(response: Response) => void` | called when the connection is accepted, before any line is read |
 | `method` | `Method` | default: `get` |
 | `validate` | `boolean` | default: `true` |
 | `decode` | `boolean` | default: `true` |

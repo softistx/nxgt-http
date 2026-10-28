@@ -19,6 +19,7 @@ type StreamGiven = Given & {
 	readonly method?: Method;
 	readonly validate?: boolean;
 	readonly decode?: boolean;
+	readonly onOpen?: (response: Response) => void;
 };
 
 export type EventsGiven = StreamGiven & {
@@ -100,6 +101,7 @@ export const events = (
 		lastEventId,
 		validate = true,
 		decode = true,
+		onOpen,
 		method = 'get',
 		latest,
 		...own
@@ -119,6 +121,7 @@ export const events = (
 		signal: call.signal ?? undefined,
 		validate,
 		decode,
+		onOpen,
 		events,
 		onUnknownEvent,
 		reconnect: reconnects && {
@@ -139,6 +142,7 @@ export const lines = (
 		item,
 		validate = true,
 		decode = true,
+		onOpen,
 		method = 'get',
 		latest,
 		...own
@@ -160,6 +164,7 @@ export const lines = (
 		signal: call.signal ?? undefined,
 		validate,
 		decode,
+		onOpen,
 		item,
 	});
 };

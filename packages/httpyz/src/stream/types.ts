@@ -45,6 +45,14 @@ interface StreamOptions<Decoded extends boolean> extends CallOptions {
 	validate?: boolean;
 	/** Yields what each schema outputs, rather than what it was given. Default: `true`. */
 	decode?: Decoded;
+	/**
+	 * Called with the reply of each connection once it is accepted (a 2xx
+	 * but 204, of the right media type), before any item is read, and again
+	 * after each reconnection. Not called for a refused reply. An error it
+	 * throws is logged and does not end the stream. Leave the body to the
+	 * stream.
+	 */
+	onOpen?: (response: Response) => void;
 }
 
 export interface EventsOptions<

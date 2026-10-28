@@ -25,6 +25,8 @@ export interface StreamSettings {
 	readonly signal: AbortSignal | undefined;
 	readonly validate: boolean;
 	readonly decode: boolean;
+	/** Told of each connection once it is accepted, before its body is read. */
+	readonly onOpen: ((response: Response) => void) | undefined;
 }
 
 const failure = (
@@ -68,6 +70,18 @@ export async function opened(
 		]);
 	}
 	return true;
+}
+
+/**
+ * Tells `onOpen` of an accepted connection. What it throws is logged: it
+ * must not end the stream.
+ */
+export function announce(settings: StreamSettings, response: Response): void {
+	try {
+		settings.onOpen?.(response);
+	} catch (error) {
+		console.error('@nxgt/httpyz: onOpen threw', error);
+	}
 }
 
 /** A JSON text, through its schema as a reply is checked. */

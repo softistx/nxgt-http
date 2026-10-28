@@ -1,5 +1,11 @@
 # @nxgt/httpyz
 
+## 0.5.0
+
+### Minor Changes
+
+- [#166](https://github.com/softistx/nxgt-http/pull/166) [`56b58a1`](https://github.com/softistx/nxgt-http/commit/56b58a159dcbe66f41573ce1d3fc964191b4dd21) Thanks [@SteveGT96](https://github.com/SteveGT96)! - Add an `onOpen` option to `http.events()` and `http.lines()`, called with the reply of each connection once it is accepted (a 2xx but 204), before any item is read, and again after each reconnection. It is not called for a refused reply, and an error it throws is logged without ending the stream.
+
 ## 0.4.1
 
 ### Patch Changes

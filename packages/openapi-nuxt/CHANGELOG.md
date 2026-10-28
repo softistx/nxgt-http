@@ -1,5 +1,14 @@
 # @nxgt/openapi-nuxt
 
+## 0.3.4
+
+### Patch Changes
+
+- Updated dependencies [[`56b58a1`](https://github.com/softistx/nxgt-http/commit/56b58a159dcbe66f41573ce1d3fc964191b4dd21)]:
+  - @nxgt/httpyz@0.5.0
+  - @nxgt/httpyz-query@0.2.6
+  - @nxgt/openapi-httpyz@0.3.3
+
 ## 0.3.3
 
 ### Patch Changes

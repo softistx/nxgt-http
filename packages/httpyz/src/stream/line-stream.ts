@@ -1,7 +1,13 @@
 /** `http.lines()`: JSON Lines, NDJSON or JSON text sequences, a record at a time. */
 import { NetworkError } from '../errors/errors';
 import type { StandardSchemaV1 } from '../schema/standard-schema';
-import { opened, Reading, type StreamSettings, settle } from './connection';
+import {
+	announce,
+	opened,
+	Reading,
+	type StreamSettings,
+	settle,
+} from './connection';
 import { createLineParser } from './line-parser';
 import type { Stream } from './types';
 
@@ -33,6 +39,7 @@ export function lineStream(settings: LineSettings): Stream<unknown> {
 				throw error;
 			}
 			if (!(await opened(settings, response, LINE_TYPES))) return;
+			announce(settings, response);
 			const parser = createLineParser();
 			const reader = reading.read(response);
 			for (;;) {

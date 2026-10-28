@@ -5,6 +5,7 @@
  */
 import { NetworkError } from '../errors/errors';
 import {
+	announce,
 	opened,
 	pause,
 	Reading,
@@ -78,9 +79,9 @@ async function connect(session: Session): Promise<Response | 'retry' | 'end'> {
 		if (error instanceof NetworkError && (await again(session))) return 'retry';
 		throw error;
 	}
-	return (await opened(settings, response, ['text/event-stream']))
-		? response
-		: 'end';
+	if (!(await opened(settings, response, ['text/event-stream']))) return 'end';
+	announce(settings, response);
+	return response;
 }
 
 /**

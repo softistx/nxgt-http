@@ -3,7 +3,7 @@
  * against replies made by hand, where a test needs to say when a stream
  * drops, stalls or ends.
  */
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it, mock, spyOn } from 'bun:test';
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { z } from 'zod';
@@ -419,6 +419,52 @@ describe('http.events()', () => {
 		expect(sent).toHaveLength(1);
 	});
 
+	it('signals each connection once it is accepted, before any event, and again after a reconnection', async () => {
+		const log: string[] = [];
+		const { http } = scripted([
+			() => reply([], { end: new TypeError('reset') }),
+			() => reply(['data: a\n\n']),
+			noContent,
+		]);
+		const stream = http.events('/feed', {
+			reconnect: { delay: 1 },
+			onOpen: (response) => log.push(`open ${response.status}`),
+		});
+		for await (const event of stream) log.push(`event ${event.data}`);
+		expect(log).toEqual(['open 200', 'open 200', 'event a']);
+	});
+
+	it('does not signal a refused connection or a 204', async () => {
+		const opens: number[] = [];
+		const onOpen = (response: Response) => opens.push(response.status);
+		const refused = scripted([() => new Response('no', { status: 403 })]);
+		const failed = await drain(refused.http.events('/feed', { onOpen }));
+		expect(failed.error).toBeInstanceOf(UndeclaredStatusError);
+		const ended = scripted([noContent]);
+		await drain(ended.http.events('/feed', { onOpen }));
+		expect(opens).toEqual([]);
+	});
+
+	it('logs an error onOpen throws, and carries on', async () => {
+		const logged = spyOn(console, 'error').mockImplementation(() => {});
+		try {
+			const { http } = scripted([() => reply(['data: a\n\n'])]);
+			const { items, error } = await drain(
+				http.events('/feed', {
+					reconnect: false,
+					onOpen: () => {
+						throw new Error('boom');
+					},
+				}),
+			);
+			expect(error).toBeUndefined();
+			expect(items).toHaveLength(1);
+			expect(logged).toHaveBeenCalledTimes(1);
+		} finally {
+			logged.mockRestore();
+		}
+	});
+
 	it('is read once', async () => {
 		const stream = scripted([noContent]).http.events('/feed');
 		await drain(stream);
@@ -486,5 +532,47 @@ describe('http.lines()', () => {
 		);
 		expect(dropped.items).toEqual([1]);
 		expect(dropped.error).toBeInstanceOf(NetworkError);
+	});
+
+	it('signals its connection before any record, and not a refused one', async () => {
+		const log: string[] = [];
+		const onOpen = (response: Response) => log.push(`open ${response.status}`);
+		const { http } = scripted([() => ndjson(['1\n'])]);
+		for await (const row of http.lines('/export', { onOpen })) {
+			log.push(`row ${row}`);
+		}
+		expect(log).toEqual(['open 200', 'row 1']);
+		const refused = scripted([() => new Response('no', { status: 500 })]);
+		await drain(refused.http.lines('/export', { onOpen }));
+		expect(log).toHaveLength(2);
+	});
+
+	it('does not signal a 204 or a reply of another media type, and logs a throwing onOpen', async () => {
+		const onOpen = mock((_: Response) => {});
+		await drain(scripted([noContent]).http.lines('/export', { onOpen }));
+		const wrong = await drain(
+			scripted([() => reply(['1\n'], { type: 'text/plain' })]).http.lines(
+				'/export',
+				{ onOpen },
+			),
+		);
+		expect(wrong.error).toBeInstanceOf(ValidationError);
+		expect(onOpen).not.toHaveBeenCalled();
+
+		const logged = spyOn(console, 'error').mockImplementation(() => {});
+		try {
+			const { items, error } = await drain(
+				scripted([() => ndjson(['1\n'])]).http.lines('/export', {
+					onOpen: () => {
+						throw new Error('boom');
+					},
+				}),
+			);
+			expect(error).toBeUndefined();
+			expect(items).toEqual([1]);
+			expect(logged).toHaveBeenCalledTimes(1);
+		} finally {
+			logged.mockRestore();
+		}
 	});
 });

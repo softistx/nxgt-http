@@ -483,6 +483,20 @@ stream ends, it waits, then connects again with `Last-Event-ID`. The wait is
   until a `retry:`.
 - `lastEventId` resumes a stream from an ID of your own.
 
+`onOpen` tells you when a connection is open, which a quiet stream's first
+event may never do. It gets the reply of each connection once it is accepted
+(a 2xx but 204), before any event is read, and again after each
+reconnection; a refused reply does not call it. Leave the body to the
+stream. An error it throws is logged with `console.error` and does not end
+the stream. `lines` takes it too, once.
+
+```ts
+const feed = http.events('/items/{id}/events', {
+	param: { id },
+	onOpen: () => setStatus('live'), // also after each reconnection
+});
+```
+
 Each connection is a request of its own: its `headers` run again, and it
 goes through `retry`, `auth` and `use`, so a refreshed token is sent.
 
@@ -499,7 +513,7 @@ A blank line is skipped, and the last record needs no line end. `lines`
 never reconnects. A 204 ends it, and any other status but a 2xx throws an
 `UndeclaredStatusError`. It asks for `application/jsonl, application/x-ndjson`
 and reads `application/jsonl`, `application/x-ndjson`, `application/ndjson`,
-`application/jsonlines`, `application/x-jsonlines` and `application/json-seq`.
+`application/jsonlines`, `application/x-jsonlines` and `application/json-seq`. `onOpen` is called once, when the connection is accepted.
 
 ### Ending a stream
 
@@ -1009,6 +1023,7 @@ The options of `http.events()`, with `CallOptions` and the request's
 | `onUnknownEvent` | `(event: ServerEvent) => void` | gets an event `events` does not declare |
 | `reconnect` | `boolean \| ReconnectOptions` | default: on, but for POST and PATCH |
 | `lastEventId` | `string` | sent as `Last-Event-ID` on the first connection |
+| `onOpen` | `(response: Response) => void` | called when each connection is accepted, before any event, and after each reconnection |
 | `method` | `Method` | default: `get` |
 | `validate` | `boolean` | checks each event's data; default: `true` |
 | `decode` | `boolean` | yields what each schema outputs; default: `true` |
@@ -1030,6 +1045,7 @@ The options of `http.lines()`, with `CallOptions` and the request's
 | Field | Type | Description |
 | --- | --- | --- |
 | `item` | `I extends StandardSchemaV1` | checks each line; without it, each is yielded parsed, as `unknown` |
+| `onOpen` | `(response: Response) => void` | called when the connection is accepted, before any line is read |
 | `method` | `Method` | default: `get` |
 | `validate` | `boolean` | default: `true` |
 | `decode` | `boolean` | default: `true` |

@@ -3,7 +3,7 @@
  * against replies made by hand, where a test needs to say when a stream
  * drops, stalls or ends.
  */
-import { describe, expect, it, spyOn } from 'bun:test';
+import { describe, expect, it, mock, spyOn } from 'bun:test';
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { z } from 'zod';
@@ -545,5 +545,34 @@ describe('http.lines()', () => {
 		const refused = scripted([() => new Response('no', { status: 500 })]);
 		await drain(refused.http.lines('/export', { onOpen }));
 		expect(log).toHaveLength(2);
+	});
+
+	it('does not signal a 204 or a reply of another media type, and logs a throwing onOpen', async () => {
+		const onOpen = mock((_: Response) => {});
+		await drain(scripted([noContent]).http.lines('/export', { onOpen }));
+		const wrong = await drain(
+			scripted([() => reply(['1\n'], { type: 'text/plain' })]).http.lines(
+				'/export',
+				{ onOpen },
+			),
+		);
+		expect(wrong.error).toBeInstanceOf(ValidationError);
+		expect(onOpen).not.toHaveBeenCalled();
+
+		const logged = spyOn(console, 'error').mockImplementation(() => {});
+		try {
+			const { items, error } = await drain(
+				scripted([() => ndjson(['1\n'])]).http.lines('/export', {
+					onOpen: () => {
+						throw new Error('boom');
+					},
+				}),
+			);
+			expect(error).toBeUndefined();
+			expect(items).toEqual([1]);
+			expect(logged).toHaveBeenCalledTimes(1);
+		} finally {
+			logged.mockRestore();
+		}
 	});
 });

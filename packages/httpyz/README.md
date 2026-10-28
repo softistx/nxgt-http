@@ -474,6 +474,15 @@ It reconnects as `EventSource` does: when the connection drops or the
 stream ends, it waits, then connects again with `Last-Event-ID`. The wait is
 3 seconds until the stream sends a `retry:`.
 
+- It never reconnects after an error status, which throws an
+  `UndeclaredStatusError`, nor after a 204, which ends the stream. A server
+  ends a stream for good with a 204.
+- It does not reconnect a POST or a PATCH, unless `reconnect` says so.
+- `reconnect: false` never reconnects. `{ attempts, delay }` gives up after
+  `attempts` reconnections in a row without an event, and waits `delay`
+  until a `retry:`.
+- `lastEventId` resumes a stream from an ID of your own.
+
 `onOpen` tells you when a connection is open, which a quiet stream's first
 event may never do. It gets the reply of each connection once it is accepted
 (a 2xx but 204), before any event is read, and again after each
@@ -487,15 +496,6 @@ const feed = http.events('/items/{id}/events', {
 	onOpen: () => setStatus('live'), // also after each reconnection
 });
 ```
-
-- It never reconnects after an error status, which throws an
-  `UndeclaredStatusError`, nor after a 204, which ends the stream. A server
-  ends a stream for good with a 204.
-- It does not reconnect a POST or a PATCH, unless `reconnect` says so.
-- `reconnect: false` never reconnects. `{ attempts, delay }` gives up after
-  `attempts` reconnections in a row without an event, and waits `delay`
-  until a `retry:`.
-- `lastEventId` resumes a stream from an ID of your own.
 
 Each connection is a request of its own: its `headers` run again, and it
 goes through `retry`, `auth` and `use`, so a refreshed token is sent.
@@ -513,7 +513,7 @@ A blank line is skipped, and the last record needs no line end. `lines`
 never reconnects. A 204 ends it, and any other status but a 2xx throws an
 `UndeclaredStatusError`. It asks for `application/jsonl, application/x-ndjson`
 and reads `application/jsonl`, `application/x-ndjson`, `application/ndjson`,
-`application/jsonlines`, `application/x-jsonlines` and `application/json-seq`.
+`application/jsonlines`, `application/x-jsonlines` and `application/json-seq`. `onOpen` is called once, when the connection is accepted.
 
 ### Ending a stream
 
